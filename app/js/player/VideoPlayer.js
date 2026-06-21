@@ -104,19 +104,24 @@ class VideoPlayer {
             throw new Error('Video element not initialized');
         }
 
+        // Prefer the server's signed stream URL: the stream route is gated and the
+        // <video> element can't attach a Bearer header. Fall back to the unsigned
+        // url for older servers that don't mint one.
+        const streamUrl = playbackInfo.stream_url || playbackInfo.url;
+
         Logger.info('Loading video', {
             method: playbackInfo.method,
-            url: playbackInfo.url?.substring(0, 50) + '...',
+            url: streamUrl?.substring(0, 50) + '...',
         });
 
         this.currentSource = playbackInfo;
 
         if (playbackInfo.method === 'transcode' && playbackInfo.protocol === 'HLS') {
             // Use HLS player for transcoded content
-            await this.loadHLS(playbackInfo.url, playbackInfo);
+            await this.loadHLS(streamUrl, playbackInfo);
         } else {
             // Direct play
-            await this.loadDirect(playbackInfo.url, playbackInfo);
+            await this.loadDirect(streamUrl, playbackInfo);
         }
 
         this.isReady = true;
