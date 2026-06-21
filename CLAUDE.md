@@ -12,7 +12,7 @@ npm run build            # production bundle → dist/
 npm run watch            # rebuild on change
 npm test                 # full Jest run (jsdom)
 npm run test:unit        # tests/unit/** only
-npm run test:integration # tests/integration/** (directory not yet present — passes empty)
+npm run test:integration # tests/integration/** (smoke.test.js)
 npx jest tests/unit/api/ApiClient.test.js     # single file
 npx jest -t "should create instance"          # single test by name
 npm run lint             # ESLint over app/js
@@ -26,10 +26,12 @@ Tizen `.wgt` signing happens in Tizen Studio (or `tizen` CLI) against `scripts/p
 
 **Entry**: `app/js/main.js` → singleton `App` (`app/js/ui/App.js`) → `window.app`.
 
-- **`app/js/ui/`** — view classes (`HomeView.js`, `LibraryView.js`, `DetailView.js`, `PlayerView.js`) + `Router.js`. `App.js` owns view registry. Views are plain ES classes with `show()`/`hide()`/`load(params)`; no framework. Manual focus management — no pointer/mouse events.
+- **`app/js/ui/`** — view classes (`HomeView.js`, `LibraryView.js`, `DetailView.js`, `PlayerView.js`, `SettingsView.js`) + `Router.js`. `App.js` owns view registry. Views are plain ES classes with `show()`/`hide()`/`load(params)`; no framework. Manual focus management — no pointer/mouse events.
 - **`app/js/api/`** — `ApiClient.js` is the single HTTP entry point, owns the device-profile that drives direct-play vs transcode. `AuthManager.js`, `SessionManager.js`, `LibraryManager.js`, `PlayerManager.js` are thin singleton coordinators. 401 → `restoreSession()`; errors surface as `ApiError`.
-- **`app/js/player/`** — `VideoPlayer.js` facade. Direct-play uses `<video>`; HLS uses `HlsPlayer.js` (extends `hls.js`). **Old HLS instance must `.destroy()` before creating new one** (TV memory). Events: `ready` `play` `pause` `ended` `error` `qualityChanged` `timeupdate`.
+- **`app/js/player/`** — `VideoPlayer.js` facade. Direct-play uses `<video>`; HLS uses `HlsPlayer.js` (extends `hls.js`). **Old HLS instance must `.destroy()` before creating new one** (TV memory). Events: `ready` `play` `pause` `ended` `error` `qualityChanged` `timeupdate`. `SkipButton.js` renders Skip Intro/Outro overlays.
 - **`app/js/remote/`** — `RemoteManager.js` singleton key capture; `KeyMapping.js` maps Samsung codes (10009 `BACK`, 415 `PLAY`, color keys 403–406) to semantic actions. `PlayerRemoteHandler.js` swaps active handler during playback via `activate()`/`deactivate()`.
+- **`app/js/hub/`** — Hub Mode. `hubConfig.js` holds connection state (`direct`/`relay`); `hubApi.js` signs in and lists claimed servers; `hubAwareApi.js` wraps `ApiClient` to route requests through the hub when enabled.
+- **`app/js/syncplay/`** — `SyncPlayService.js`: synchronized playback across clients (NTP-style offset averaging, WebSocket group comms).
 - **`app/js/utils/`** — `Logger.js`, `Storage.js` (localStorage wrapper — TV storage is limited), `Helpers.js`. Use these, not browser APIs directly.
 - **`app/js/config/constants.js`** — bitrates, codecs, intervals, focus class names.
 
@@ -61,7 +63,7 @@ Jest + `jsdom`; config inline in `package.json`. Tests mirror source at `tests/u
 
 - **`package-lock.json` gitignored** — CI uses `npm install`. Don't switch back to `npm ci` without coordinating.
 - **Mixed module systems in tooling**: `webpack.config.js` is ESM but `scripts/build.js`, `scripts/debug.js`, `scripts/package.js` use CommonJS `require()`. They will fail under `"type": "module"` if run directly — invoke via npm scripts. If you touch a `scripts/*.js`, rename to `.cjs` or convert to ESM.
-- **`tests/integration/` is referenced but does not exist** — `npm run test:integration` passes with "no tests found."
+- **`tests/integration/`** now exists with `smoke.test.js` — `npm run test:integration` runs it (was previously empty).
 - **Tizen app id mismatch**: `app/config.xml` uses `phlix.app.phlixtizen` while `README.md` deployment example uses `org.phlix.phlixtv`. `config.xml` is authoritative.
 - `.github/workflows/test.yml` and `.github/workflows/lint.yml` run on push — keep them green.
 

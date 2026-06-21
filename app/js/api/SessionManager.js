@@ -62,7 +62,9 @@ class SessionManager {
             isPlaying: true,
             position: options.startPosition || 0,
             duration: playbackInfo.media_item?.run_time_ticks || 0,
-            streamUrl: playbackInfo.playback_info?.url,
+            // Prefer the server's signed stream URL (the stream route is gated and
+            // the <video> element can't attach a Bearer header); fall back to url.
+            streamUrl: playbackInfo.playback_info?.stream_url || playbackInfo.playback_info?.url,
             method: playbackInfo.playback_info?.method,
             startTime: Date.now(),
         };
