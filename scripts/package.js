@@ -1,39 +1,54 @@
 /**
  * Tizen packaging script
- * Creates .wgt package for Samsung TV deployment
+ * Creates the `package/` directory (input to Tizen Studio / `tizen` CLI .wgt
+ * signing) from the Vite build output.
+ *
+ * ESM module ("type":"module" in package.json). Run via `npm run package`,
+ * which builds first (`npm run build` → dist/) then invokes this.
  */
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const PKG_NAME = 'phlix-tizen';
-const VERSION = '1.0.0';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const root = path.join(__dirname, '..');
+const distDir = path.join(root, 'dist');
+const pkgDir = path.join(root, 'package');
 
-const packageApp = () => {
-    console.log('Packaging Tizen app...');
+function packageApp() {
+  console.log('Packaging Tizen app...');
 
-    // Ensure dist exists
-    if (!fs.existsSync(path.join(__dirname, '../dist'))) {
-        console.error('Run build first: npm run build');
-        process.exit(1);
-    }
+  if (!fs.existsSync(distDir)) {
+    console.error('Run build first: npm run build');
+    process.exit(1);
+  }
 
-    // Create package directory
-    const pkgDir = path.join(__dirname, '../package');
-    if (fs.existsSync(pkgDir)) {
-        fs.rmSync(pkgDir, { recursive: true });
-    }
-    fs.mkdirSync(pkgDir);
+  // Fresh package directory.
+  if (fs.existsSync(pkgDir)) {
+    fs.rmSync(pkgDir, { recursive: true });
+  }
+  fs.mkdirSync(pkgDir);
 
-    // Copy dist files
-    execSync(`cp -r ${path.join(__dirname, '../dist')}/* ${pkgDir}/`, { stdio: 'inherit' });
+  // Copy the Vite output (index.html + assets/ at the widget root).
+  execSync(`cp -r ${distDir}/* ${pkgDir}/`, { stdio: 'inherit' });
 
-    // Copy config
-    execSync(`cp ${path.join(__dirname, '../app/config.xml')} ${pkgDir}/`, { stdio: 'inherit' });
+  // Copy the Tizen widget manifest to the package root.
+  execSync(`cp ${path.join(root, 'app/config.xml')} ${pkgDir}/`, { stdio: 'inherit' });
 
-    console.log('Package created in:', pkgDir);
-    console.log('Note: Use Tizen Studio to sign and deploy the .wgt file');
-};
+  // Sanity-check: the widget entry + manifest must be at the package root.
+  const indexAtRoot = fs.existsSync(path.join(pkgDir, 'index.html'));
+  const configAtRoot = fs.existsSync(path.join(pkgDir, 'config.xml'));
+  if (!indexAtRoot || !configAtRoot) {
+    console.error(
+      `Packaging incomplete: index.html=${indexAtRoot}, config.xml=${configAtRoot} at ${pkgDir}`
+    );
+    process.exit(1);
+  }
+
+  console.log('Package created in:', pkgDir);
+  console.log('Note: Use Tizen Studio (or the tizen CLI) to sign and deploy the .wgt file');
+}
 
 packageApp();

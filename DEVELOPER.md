@@ -1,446 +1,348 @@
 # Phlix Tizen - Developer Guide
 
-This document provides detailed information for developers working on the Phlix Tizen TV application.
+This document is the developer reference for the Phlix Tizen TV application.
+
+The Tizen client is a **thin Vue 3 consumer of `@phlix/ui`**. It does not contain any media/library/auth/player UI of its own — `@phlix/ui`'s `createPhlixApp()` renders the entire application. This repo provides only:
+
+1. The boot glue (`src/main.ts` + `resolveConfig` / `deviceId` / `polyfills`).
+2. The Tizen remote → player/router bridge (`src/tizenBridge.ts` + `src/remote/*`).
+3. Spatial-navigation gating for the TV (`src/SpatialNavHost.vue`).
+4. The Tizen `.wgt` manifest + packaging (`app/config.xml`, `scripts/package.js`).
+
+It mirrors the Windows/Electron client's thin-consumer shape (`electronBridge` ↔ `tizenBridge`, `resolveConfig` ↔ `resolveConfig`). To change a screen, a feature, theming, or the player, edit **`phlix-ui`** — not this repo.
+
+Pinned dependencies: `@phlix/ui` `github:detain/phlix-ui#v0.53.0`, `@phlix/contracts` `#v0.1.1`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
 
 ## Architecture Overview
 
-The Phlix Tizen app follows a modular architecture with clear separation of concerns:
+```
+                            index.html  (repo root = Vite root)
+                                  │  loads /src/main.ts
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         src/main.ts  boot()                            │
+│  1. import './polyfills'  (structuredClone first)                      │
+│  2. resolveAppConfig({serverUrl, envUrl})  → { app:'server', apiBase } │
+│  3. resolveDeviceId(localStorage)          → 'tizen-…'                  │
+│  4. buildPhlixHeaders({deviceType:'samsung-tizen'})  (@phlix/contracts) │
+│  5. createPhlixApp({ … playerHlsConfig:TIZEN_HLS_CONFIG }) (@phlix/ui)  │
+│         .mount('#phlix-app')                                           │
+│  6. installTizenBridge(app)                                            │
+│  7. createApp(SpatialNavHost).use(pinia).use(router)                   │
+│         .mount('#phlix-spatial-host')   (2nd app, shared pinia+router) │
+└───────────────┬───────────────────────────────────────┬───────────────┘
+                │                                         │
+                ▼                                         ▼
+   ┌────────────────────────┐               ┌──────────────────────────┐
+   │   @phlix/ui app          │               │  SpatialNavHost.vue        │
+   │   (#phlix-app)           │               │  (#phlix-spatial-host)     │
+   │  all browse/detail/      │               │  useSpatialNav({ enabled })│
+   │  player/settings/auth    │               │  D-pad nav, off on player  │
+   └──────────┬───────────────┘               └──────────────────────────┘
+              │ usePlayerStore / vue-router
+              ▼
+   ┌────────────────────────┐    'action' events    ┌─────────────────────┐
+   │   tizenBridge.ts         │ ◄──────────────────── │  remote/RemoteManager│
+   │  wireTizenBridge(...)    │                       │  (singleton)         │
+   │  PLAY/PAUSE/STOP/FF/REW/ │                       │  remote/KeyMapping   │
+   │  BACK/HOME               │                       │  (Samsung key codes) │
+   └────────────────────────┘                       └─────────────────────┘
+```
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        App.js                               │
-│              (Main Application Controller)                 │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-        ┌─────────────┼─────────────┐
-        ▼             ▼             ▼
-┌───────────┐ ┌───────────┐ ┌───────────┐
-│  Router.js │ │  Views    │ │  Managers  │
-│            │ │            │ │            │
-│ Navigation│ │ HomeView   │ │ ApiClient  │
-│ Routing    │ │ LibraryView│ │ SessionMgr│
-│ History    │ │ DetailView │ │ PlayerMgr │
-│            │ │ PlayerView│ │ AuthMgr   │
-└─────────────┘ └───────────┘ └───────────┘
-                                        │
-                    ┌───────────────────┼───────────────────┐
-                    ▼                   ▼                   ▼
-              ┌───────────┐       ┌───────────┐     ┌───────────┐
-              │VideoPlayer│       │RemoteMgr  │     │ Storage   │
-              │           │       │           │     │           │
-              │ HlsPlayer │       │KeyMapping │     │ Logger   │
-              │ Subtitle  │       │RemoteHndlr│     │ Helpers  │
-              └───────────┘       └───────────┘     └───────────┘
-```
+### Why two Vue apps?
+
+`createPhlixApp()` installs and owns Pinia + vue-router and exposes them on
+`application.config.globalProperties.$pinia` / `$router`. `main.ts` reads those
+two instances and mounts `SpatialNavHost` as a **second** tiny `createApp(...)`
+using the SAME pinia + router. The host's `useRoute()` / `usePreferencesStore()`
+therefore observe the real shared state. The host is renderless (`<div
+style="display:none">`); its only job is to call `useSpatialNav` with an
+`enabled` predicate so D-pad navigation can be turned off on the player route.
 
 ## Component Structure
 
-### Entry Point (`app/js/main.js`)
+### Entry point (`src/main.ts`)
 
-The application bootstrap process:
+`boot()` is an `async` function (exported for tests; invoked via `void boot()`):
 
-1. Loads configuration from `tizen.env`
-2. Initializes logging system
-3. Creates the App instance
-4. Sets up global error handlers
+1. `import './polyfills'` is the very first line so `structuredClone` exists before any `@phlix/ui` module loads.
+2. Reads the persisted server URL from `localStorage['phlix.serverUrl']`, the build-time `import.meta.env.VITE_PHLIX_SERVER_URL`, and the device id.
+3. `resolveAppConfig({ serverUrl, envUrl })` decides `{ app, apiBase }`.
+4. `buildPhlixHeaders({ deviceId, deviceName: 'Phlix for Samsung TV', deviceType: 'samsung-tizen' })`.
+5. `createPhlixApp({ app, apiBase, deviceHeaders, defaultTv: true, defaultTheme: 'nocturne', branding: { wordmark: 'Phlix' }, playerHlsConfig: TIZEN_HLS_CONFIG })`.
+6. `.mount('#phlix-app')`, then `installTizenBridge(application)`.
+7. Mount `SpatialNavHost` as the second app.
 
-### App Core (`app/js/ui/App.js`)
+`TIZEN_HLS_CONFIG` lives at the top of `main.ts`:
 
-The main application controller that:
-- Manages view lifecycle
-- Coordinates navigation
-- Handles authentication state
-- Bridges views with managers
-
-### Views (`app/js/ui/`)
-
-Each view is a self-contained UI module:
-
-| View | Purpose |
-|------|---------|
-| `HomeView.js` | Media server selection, user greeting |
-| `LibraryView.js` | Grid display of library items |
-| `DetailView.js` | Item details, play button, info |
-| `PlayerView.js` | Video playback controls overlay |
-
-Views extend a common pattern:
-```javascript
-class SomeView {
-    constructor(container) {
-        this.container = container;
-        this.element = null;
-    }
-
-    show() { /* Render and display */ }
-    hide() { /* Hide from DOM */ }
-    load(data) { /* Fetch and render data */ }
-}
-```
-
-### API Client (`app/js/api/ApiClient.js`)
-
-The central hub for all server communication:
-
-```
-ApiClient
-├── Authentication
-│   ├── login(username, password)
-│   ├── register(email, username, password)
-│   ├── logout()
-│   └── restoreSession()
-├── Session Management
-│   ├── createSession()
-│   └── getSessions()
-├── Library Operations
-│   ├── getLibraries()
-│   ├── getLibraryItems(libraryId, options)
-│   └── getItem(itemId)
-├── Playback
-│   ├── getItemPlaybackInfo(itemId, options)
-│   ├── playItem(itemId, options)
-│   ├── stopPlayback()
-│   ├── pausePlayback()
-│   ├── resumePlayback()
-│   └── seekPlayback(positionTicks)
-└── User Data
-    ├── updateUserData(itemId, userData)
-    ├── markWatched(itemId)
-    ├── toggleFavorite(itemId)
-    └── reportPlaybackProgress(positionTicks, isPaused)
-```
-
-#### API Error Handling
-
-The `ApiError` class provides structured error information:
-
-```javascript
-try {
-    await api.login(username, password);
-} catch (error) {
-    if (error instanceof ApiError) {
-        console.log(error.status);  // HTTP status code
-        console.log(error.message); // User-friendly message
-        console.log(error.data);    // Additional error data
-    }
-}
-```
-
-### Video Player (`app/js/player/VideoPlayer.js`)
-
-The player supports multiple playback methods:
-
-#### Direct Play
-For formats the TV can natively decode (MP4, MKV with supported codecs):
-```javascript
-await videoPlayer.load({
-    method: 'DirectPlay',
-    url: 'https://server/media.mkv'
-});
-```
-
-#### HLS Streaming
-For transcoded content using HLS.js:
-```javascript
-await videoPlayer.load({
-    method: 'Transcode',
-    protocol: 'HLS',
-    url: 'https://server/stream.m3u8',
-    preferredQuality: 'auto'
-});
-```
-
-#### Player Events
-```javascript
-videoPlayer.on('ready', (info) => { /* Video ready to play */ });
-videoPlayer.on('play', () => { /* Playback started */ });
-videoPlayer.on('pause', () => { /* Playback paused */ });
-videoPlayer.on('ended', () => { /* Playback finished */ });
-videoPlayer.on('error', (err) => { /* Handle error */ });
-videoPlayer.on('qualityChanged', (level) => { /* Quality switched */ });
-videoPlayer.on('timeupdate', (data) => { /* Position update */ });
-```
-
-### Remote Control Handling (`app/js/remote/`)
-
-#### Key Mapping (`KeyMapping.js`)
-
-Maps Samsung remote codes to application actions:
-
-```javascript
-const KEY_MAPPING = {
-    'MediaPlayPause': 'playPause',
-    'MediaStop': 'stop',
-    'ArrowUp': 'up',
-    'ArrowDown': 'down',
-    // ...
+```ts
+const TIZEN_HLS_CONFIG = {
+  maxBufferLength: 60,
+  maxMaxBufferLength: 180,
+  maxBufferSize: 100 * 1000 * 1000,
+  backBufferLength: 90,
+  capLevelToPlayerSize: true,
+  enableSoftwareAES: true
 };
 ```
 
-#### Remote Manager (`RemoteManager.js`)
+This is forwarded to `@phlix/ui`'s player via `playerHlsConfig` to keep HLS
+buffers bounded on RAM-constrained Samsung webviews. **Tune HLS here, not in
+`phlix-ui`.**
 
-Singleton that:
-- Captures keydown events from Tizen
-- Maps keys to actions
-- Prevents default TV behavior when needed
-- Supports key repeat for smooth navigation
+### Config resolution (`src/resolveConfig.ts`)
 
-#### Player Remote Handler (`PlayerRemoteHandler.js`)
+Pure, unit-testable:
 
-Activated during playback to handle transport controls:
-
-```javascript
-PlayerRemoteHandler.activate();  // Enable playback controls
-PlayerRemoteHandler.deactivate(); // Return to navigation mode
+```ts
+resolveAppConfig({ serverUrl, envUrl }): { app: 'server' | 'hub'; apiBase: string }
 ```
 
-### Session Manager (`app/js/api/SessionManager.js`)
+Server mode only — Tizen has no hub-config IPC like the Electron client. The
+precedence is persisted `serverUrl` → build-time `envUrl` → `http://localhost:8096`.
+The `app: 'hub'` member exists in the shape for forward-compatibility but is
+never returned today; the function shape deliberately mirrors the Windows
+`resolveConfig` so a hub branch can be added later without churn.
 
-Manages playback session state with the server:
+### Device id (`src/deviceId.ts`)
 
-```javascript
-sessionManager.on('playbackStarted', (data) => {
-    // Notify server that playback began
-});
+Pure `resolveDeviceId(storage)` returns the persisted `phlix.deviceId`, or
+generates one (preferring `crypto.randomUUID()` → `tizen-<uuid>`, with a
+timestamp + monotonic-counter fallback for ancient webviews — no `Math.random`,
+so tests stay deterministic) and persists it. A stable device id lets the server
+track sessions/devices via the `X-Phlix-Device-ID` header.
 
-sessionManager.on('playbackStopped', () => {
-    // Notify server that playback ended
-});
+### Polyfills (`src/polyfills.ts`)
+
+Installs a `structuredClone` deep-clone fallback (`JSON.parse(JSON.stringify(...))`)
+for pre-Chrome-98 Tizen webviews. `@phlix/ui`'s SettingsForm relies on
+`structuredClone`. This module MUST be the first import in `main.ts`.
+
+### Spatial navigation (`src/SpatialNavHost.vue`)
+
+A renderless component (its template is `<div style="display:none" />`). In
+`setup()`:
+
+```ts
+const route = useRoute();
+const prefs = usePreferencesStore();
+useSpatialNav({ enabled: () => Boolean(prefs.tv) && route.name !== 'player' });
 ```
 
-## API Client Design
+`useSpatialNav` re-reads `enabled` on every keydown. Spatial nav is on for D-pad
+browsing when the TV layout is active, and DISABLED on the `player` route so
+`@phlix/ui`'s own Arrow seek/volume shortcuts win.
 
-### Request Flow
+> If `@phlix/ui` ever renames `usePreferencesStore().tv` or its player route name,
+> update both the getter here and the `getRoute()` comparison in `tizenBridge.ts`.
+
+### Tizen remote bridge (`src/tizenBridge.ts`)
+
+Two exports:
+
+- **`wireTizenBridge(remote, player, router, getRoute)`** — pure wiring helper.
+  Subscribes to the remote's `'action'` events and maps them onto a player store
+  and a router. Dependencies are structurally typed (`BridgeRemote` /
+  `BridgePlayer` / `BridgeRouter` / `BridgeRoute`) so it can be exercised with
+  fakes and no real Vue app or DOM. Returns a cleanup function that unsubscribes
+  (it prefers the unsubscribe returned by `on()`, and falls back to `off()`).
+  No-op safe when `remote` is null/undefined.
+- **`installTizenBridge(app)`** — pulls `$pinia` / `$router` off
+  `app.config.globalProperties`, resolves `usePlayerStore(pinia)`, sets
+  `getRoute = () => router.currentRoute.value`, and delegates to
+  `wireTizenBridge` with the `RemoteManager` singleton.
+
+Action map:
+
+| Remote action     | Effect                                                              |
+|-------------------|---------------------------------------------------------------------|
+| `PLAY` / `PLAY_PAUSE` | toggle: `player.playing ? pause() : play()`                     |
+| `PAUSE`           | `player.pause()`                                                    |
+| `STOP`            | `player.closePlayer()`                                              |
+| `FAST_FORWARD`    | `player.seekBy(repeat ? 30 : 10)`                                   |
+| `REWIND`          | `player.seekBy(repeat ? -30 : -10)`                                 |
+| `BACK`            | on `route.name === 'player'`: `closePlayer()` + `router.back()`; else `router.back()` |
+| `HOME`            | `router.push('/app')`                                               |
+| arrows / ENTER / color keys / etc. | **not bridged** — spatial-nav + native focus own them  |
+
+### Remote input (`src/remote/`)
+
+- **`RemoteManager.ts`** — the single source of TV-remote events (the analogue
+  of Electron media events). A class with a default singleton export. Listens to
+  `keydown` / `keyup` on `document` (guarded for jsdom), maps the key code via
+  `KeyMapping`, and emits `'keydown'` / `'keyup'` / `'action'`. Held keys repeat
+  (`keyRepeatDelay = 500`, `keyRepeatInterval = 100`) for seek-accel. `on()`
+  returns an unsubscribe function; `destroy()` removes the DOM listeners and
+  clears subscribers.
+- **`KeyMapping.ts`** — maps Samsung Tizen key codes to action names
+  (`10009` `BACK`, `415` `PLAY`, `413` `STOP`, `19` `PAUSE`, `417`
+  `FAST_FORWARD`, `412` `REWIND`, `403`–`406` color keys, etc.). **Retargeted
+  for the Vue migration:** the arrow keys (`LEFT`/`UP`/`RIGHT`/`DOWN`) and
+  `ENTER` remain in `KEY_MAP` (for logging) but were removed from
+  `isRepeatable`, `isImmediate`, AND `isHandled`. So `RemoteManager` neither
+  `preventDefault`s nor emits actions for them — `@phlix/ui`'s `useSpatialNav`
+  owns D-pad navigation directly on `document`, and ENTER is native focus
+  activation. If RemoteManager also handled arrows, its key-repeat would fire
+  phantom navigation on top of spatial-nav.
+
+## Streaming and device profile
+
+The Tizen client no longer posts a JSON device profile to choose direct-play vs
+transcode. Instead it sends the device type header (via `buildPhlixHeaders`):
 
 ```
-App Code
-    │
-    ▼
-ApiClient.request(method, path, body, options)
-    │
-    ▼
-┌─ Add Headers ─────────────────────────────┐
-│  Content-Type: application/json          │
-│  Authorization: Bearer {token}          │
-│  X-Phlix-Device-ID: {deviceId}           │
-│  X-Phlix-Session-ID: {sessionId}         │
-└─────────────────────────────────────────┘
-    │
-    ▼
-fetch(url, config)
-    │
-    ▼
-┌─ Error Handling ────────────────────────┐
-│  401: Token expired → restoreSession()  │
-│  408: Timeout → AbortError             │
-│  4xx/5xx: ApiError with status         │
-└─────────────────────────────────────────┘
-    │
-    ▼
-Return parsed JSON response
+X-Phlix-Device-Type: samsung-tizen
+X-Phlix-Device-ID:   tizen-<uuid>
 ```
 
-### Device Profile
+**phlix-server** maps `X-Phlix-Device-Type: samsung-tizen` to the appropriate
+streaming/transcode quality profile server-side. Do not reintroduce a
+client-posted device profile. HLS playback behaviour on the client is tuned only
+through `TIZEN_HLS_CONFIG` → `playerHlsConfig` (buffer sizes, level cap, software
+AES).
 
-The ApiClient sends a device profile for playback decisions:
-
-```javascript
-{
-    Name: 'Samsung Tizen TV',
-    MaxStreamingBitrate: 80000000,  // 80 Mbps
-    MaxStaticBitrate: 80000000,
-    SupportedMediaTypes: ['Video', 'Audio'],
-    DirectPlayProfiles: [{
-        Container: 'mkv,mp4,webm',
-        Type: 'Video',
-        VideoCodec: 'h264,hevc,vp9',
-        AudioCodec: 'aac,ac3,eac3,dts,flac'
-    }],
-    TranscodingProfiles: [{
-        Container: 'ts',
-        Type: 'Video',
-        VideoCodec: 'h264',
-        AudioCodec: 'aac,ac3'
-    }]
-}
-```
-
-## Building and Testing Guide
+## Building, Testing, Packaging
 
 ### Prerequisites
 
-- Node.js 18+
-- npm 8+
-- Tizen Studio (for TV deployment)
+- Node.js 22.12+ (`engines.node` is `>=22.12.0`)
+- npm (CI uses `npm install`, not `npm ci` — `package-lock.json` is gitignored)
+- Tizen Studio (for `.wgt` signing + TV deployment)
 
 ### Setup
 
 ```bash
-# Clone and install
-git clone https://github.com/detain/phlix-tizen.git
-cd phlix-tizen
+git clone https://github.com/detain/phlix-tizen-client.git
+cd phlix-tizen-client
 npm install
 ```
 
-### Development Workflow
+### Development workflow
 
 ```bash
-# Start dev server with hot reload
-npm run serve
-
-# Run tests in watch mode
-npm test -- --watch
-
-# Build development bundle
-npm run build:dev
-
-# Production build
-npm run build
+npm run dev          # vite dev server at :8080
+npm run test:watch   # vitest in watch mode
+npm run typecheck    # vue-tsc --noEmit
+npm run lint         # eslint .
+npm run lint:fix     # eslint . --fix
 ```
 
-### Code Style
+Set `VITE_PHLIX_SERVER_URL` (e.g. in a `.env` / shell env) to point the dev
+server at a real Phlix server, or set `localStorage['phlix.serverUrl']` in the
+running app.
 
-The project uses ESLint for code quality:
-- Module imports/exports
-- No unused variables
-- Consistent formatting
+### Production build + packaging
 
 ```bash
-# Check for issues
-npm run lint
-
-# Auto-fix issues
-npm run lint -- --fix
+npm run build        # vue-tsc --noEmit && vite build → dist/
+npm run package      # build, then node scripts/package.js → package/
 ```
 
-### Writing Tests
+`scripts/package.js` (ESM) copies the Vite `dist/` (index.html + assets) and
+`app/config.xml` into a fresh `package/` directory at the widget root, and
+sanity-checks that both `index.html` and `config.xml` land there. Tizen Studio
+(or the `tizen` CLI) then signs the `package/` contents into a signed `.wgt`.
+See `docs/signing.md` for the full certificate + signing flow.
 
-Place tests in `tests/unit/` mirroring the source structure:
+> `base: './'` in `vite.config.ts` is MANDATORY — a `.wgt` runs from a `file://`
+> origin on the TV, so absolute `/assets` paths would 404.
 
-```javascript
-// tests/unit/api/ApiClient.test.js
-import { ApiClient } from '../../app/js/api/ApiClient.js';
+### Writing tests
 
-describe('ApiClient', () => {
-    let apiClient;
+Vitest + jsdom + `@vue/test-utils`. Tests live in `tests/unit/*.test.ts`,
+co-located by module name (the `src/` tree is flat). `tests/test-setup.ts`
+installs an in-memory localStorage mock. Pure helpers (`resolveConfig`,
+`deviceId`, `wireTizenBridge`) are tested directly with fakes; `main.test.ts`
+mocks `@phlix/ui`, `@phlix/contracts`, `tizenBridge`, `SpatialNavHost`, and
+`vue`'s `createApp` to assert the boot wiring (`defaultTv: true`,
+`deviceType: 'samsung-tizen'`, `playerHlsConfig` present, mounts, bridge install,
+2nd-app `use(pinia).use(router).mount('#phlix-spatial-host')`).
 
-    beforeEach(() => {
-        apiClient = new ApiClient('http://localhost:8096', 'test-device');
-    });
+```ts
+// tests/unit/resolveConfig.test.ts
+import { describe, it, expect } from 'vitest';
+import { resolveAppConfig } from '@/resolveConfig';
 
-    it('should create instance with correct base URL', () => {
-        expect(apiClient.baseUrl).toBe('http://localhost:8096');
-    });
+describe('resolveAppConfig', () => {
+  it('prefers the persisted server URL', () => {
+    expect(resolveAppConfig({ serverUrl: 'http://tv:8096', envUrl: null }))
+      .toEqual({ app: 'server', apiBase: 'http://tv:8096' });
+  });
 });
 ```
 
-### Building for Production
-
-```bash
-# Create production bundle
-npm run build
-
-# Package for Tizen
-node scripts/package.js
-
-# Output: dist/org.phlix.phlixtv.wgt
-```
-
-### Debugging
-
-```bash
-# Start debug server
-node scripts/debug.js
-
-# In Tizen Studio:
-# Run → Debug As → Tizen TV Application
-```
-
-### Performance Considerations
-
-1. **Lazy Loading**: Views are loaded on demand
-2. **HLS Buffering**: Configured for 30s buffer to handle network jitter
-3. **Image Loading**: Thumbnails loaded as items scroll into view
-4. **Memory**: Old HLS players destroyed before creating new ones
-
-### Tizen-Specific Notes
-
-1. **No Web Audio API**: Use HTML5 video element for audio
-2. **Limited Storage**: Use Storage.js wrapper for localStorage
-3. **No Pointer Events**: Use keydown/keyup events only
-4. **Focus Management**: Manual focus handling required
+Run a single file: `npx vitest run tests/unit/tizenBridge.test.ts`; a single
+test: `npx vitest run -t "BACK"`.
 
 ## Common Tasks
 
-### Adding a New View
+### Add a new screen / route
 
-1. Create `app/js/ui/NewView.js`:
-```javascript
-export default class NewView {
-    constructor(container) {
-        this.container = container;
-    }
+Screens live in `@phlix/ui`. Add the route + view there. If the Tizen client
+needs to inject a Tizen-only route, pass it through `createPhlixApp`'s config in
+`main.ts` (e.g. an `extraRoutes` / `extraRoute` option if the `@phlix/ui`
+version exposes one) rather than building UI in this repo. There is no local
+router or view layer to edit here.
 
-    show() { /* Implementation */ }
-    hide() { /* Implementation */ }
-    load(params) { /* Fetch and display data */ }
-}
-```
+### Map a new remote key to an action
 
-2. Register in `App.js`:
-```javascript
-this.views.set('new', new NewView(container));
-```
+1. Add or confirm the Samsung key code → action name in `src/remote/KeyMapping.ts`'s
+   `KEY_MAP`.
+2. Add the action to `IMMEDIATE_ACTIONS` (fires on keydown) or `REPEATABLE_ACTIONS`
+   (fires repeatedly while held) — both feed `HANDLED_ACTIONS`, which controls
+   `preventDefault`. Do NOT add arrows/ENTER here (spatial-nav + native focus
+   own them).
+3. Handle the new action in `wireTizenBridge`'s `switch` in `src/tizenBridge.ts`,
+   acting on the `BridgePlayer` / `BridgeRouter` deps. Extend the `BridgePlayer` /
+   `BridgeRouter` interfaces if you need a new player/router method.
+4. Add a case to `tests/unit/tizenBridge.test.ts`.
 
-3. Add route in `App.js`:
-```javascript
-this.router.addRoute('/new', () => this.showView('new'));
-```
+### Tune HLS for the TV
 
-### Adding a New API Endpoint
+Edit `TIZEN_HLS_CONFIG` in `src/main.ts`. It is passed verbatim as
+`playerHlsConfig` to `@phlix/ui`'s player. Keep buffers bounded for Samsung RAM.
 
-1. Add method to `ApiClient.js`:
-```javascript
-async getNewData(id) {
-    return this.request('GET', `/NewEndpoint/${id}`);
-}
-```
+### Change a Tizen privilege or app metadata
 
-2. Export if needed:
-```javascript
-export { ApiClient, ApiError, /* export new items */ };
-```
+Edit `app/config.xml` (the `.wgt` manifest). `scripts/package.js` copies it to
+the `package/` root. New TV capabilities usually mean a new `<tizen:privilege>`.
 
-3. Add unit tests in `tests/unit/api/`
+### Point the client at a server
 
-### Adding Remote Control Support
+Set `localStorage['phlix.serverUrl']` (runtime) or `VITE_PHLIX_SERVER_URL`
+(build/dev). Resolution lives in `src/resolveConfig.ts`.
 
-1. Add key mapping in `KeyMapping.js`:
-```javascript
-const KEY_MAPPING = {
-    ...existing,
-    'NewKey': 'newAction'
-};
-```
+## Tizen-Specific Notes
 
-2. Handle in appropriate handler:
-```javascript
-if (action === 'newAction') {
-    // Handle new action
-}
-```
+1. **No pointer/mouse** — keyboard/D-pad only. Browse navigation is
+   `useSpatialNav` (gated by `SpatialNavHost.vue`); transport keys flow through
+   `RemoteManager` → `tizenBridge`. No manual focus code lives in this repo.
+2. **Fixed `1920x1080`** viewport (`index.html` meta).
+3. **`structuredClone` polyfill** loads first (`src/polyfills.ts`).
+4. **RAM-bounded HLS** via `playerHlsConfig` (`TIZEN_HLS_CONFIG`).
+5. **`base: './'`** in Vite is required for the `file://` `.wgt` origin.
 
 ## Troubleshooting
 
-### Debug Logging
+### Build / typecheck failures referencing `@phlix/ui`
 
-Enable detailed logging in `app/js/utils/Logger.js` or via `LOG_LEVEL` env var.
+`@phlix/ui` v0.53.0 must export `createPhlixApp`, `useSpatialNav`,
+`usePreferencesStore`, `usePlayerStore` and accept `playerHlsConfig` + `defaultTv`
+in its app config. If the pinned tag lacks one, `vue-tsc` / `vite build` will
+flag it — bump the pin or adjust the consumer.
 
-### Network Issues
+### D-pad navigation does nothing / double-navigates
 
-Check CORS configuration on Phlix server - TV must be allowed to make requests.
+Check `SpatialNavHost.vue`'s `enabled` predicate and that arrows are NOT in
+`KeyMapping`'s `isHandled` set (they must pass through to spatial-nav).
 
-### Playback Failures
+### Playback transport keys do nothing
 
-1. Check server logs for codec support
-2. Verify network connectivity
-3. Try direct play vs transcoded playback
+Verify `installTizenBridge` ran (after `mount`) and that the action is handled in
+`wireTizenBridge`'s `switch`. Confirm the route name comparison (`'player'`)
+matches the `@phlix/ui` player route.
+
+### Network / CORS issues
+
+The Phlix server must allow the TV origin. The CSP in `index.html` permits
+`http`/`https`/`ws`/`wss` connect-src for LAN servers.
