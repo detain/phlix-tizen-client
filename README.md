@@ -1,11 +1,18 @@
 # Phlix Tizen TV App
 
+[![Tests](https://github.com/detain/phlix-tizen-client/actions/workflows/test.yml/badge.svg)](https://github.com/detain/phlix-tizen-client/actions/workflows/test.yml)
+[![Lint](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml/badge.svg)](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml)
+[![Vue 3](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
+![Platform](https://img.shields.io/badge/platform-Samsung%20Tizen-1428A0?logo=samsung&logoColor=white)
+[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.53.0-f5a524)](https://github.com/detain/phlix-ui)
+
 Samsung Smart TV client application for Phlix Media Server, built with Tizen SDK.
 
 ## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
+- [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -17,40 +24,50 @@ Samsung Smart TV client application for Phlix Media Server, built with Tizen SDK
 
 ## Overview
 
-Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Media Server, allowing users to browse their media library and play content directly on their television. The app is built using vanilla JavaScript with webpack for bundling and supports both direct play and transcoded streaming via HLS.
+Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Media Server, letting users browse their media library and play content on their television. It is a **thin Vue 3 consumer of [`@phlix/ui`](https://github.com/detain/phlix-ui)** — the entire UI (browse, detail, player, settings, auth) is rendered by `@phlix/ui`'s `createPhlixApp()`, and this repository contributes the boot glue, the Tizen remote-control bridge, and TV spatial-navigation gating. The build pipeline is Vite + TypeScript, packaged as a signed `.wgt` widget for Tizen. HLS streaming is provided by `@phlix/ui`'s player and tuned for Samsung TV memory limits.
 
 ## Features
 
 - **Library Browsing**: Browse movies, TV shows, music, and other media from Phlix
-- **Video Playback**: Support for direct play and HLS streaming with quality selection
-- **Remote Control**: Full Samsung remote control support with intuitive navigation
+- **Video Playback**: Direct play and HLS streaming with quality selection, tuned for TV memory
+- **Remote Control**: Samsung remote support — spatial D-pad navigation plus transport keys (play/pause/stop/seek/back/home)
 - **User Authentication**: Secure login with Phlix account credentials
 - **Progress Tracking**: Automatic resume from last playback position
-- **Subtitle Support**: Multiple subtitle tracks and languages
-- **Audio Tracks**: Multiple audio track selection
+- **Subtitle & Audio Tracks**: Multiple subtitle and audio track selection
 - **Search**: Search across your media library
-- **Favorites**: Mark items as favorites
-- **Watch History**: Track watched items
-- **Hub Mode**: Connect to a Phlix Hub to access and manage claimed servers with direct-LAN or relay-based routing
-- **SyncPlay**: Watch together with friends and family with synchronized playback across multiple devices
+- **Favorites & Watch History**: Mark favorites and track watched items
+- **Theming**: Ships the `nocturne` theme by default
+
+> Provided by `@phlix/ui`. To add or change a feature/screen, edit `phlix-ui`.
+
+## Tech Stack
+
+- **Vue 3** + **Pinia** + **vue-router** (peer dependencies)
+- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.53.0` — the entire application UI via `createPhlixApp()`
+- **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.1.1` — `buildPhlixHeaders` (device headers)
+- **Vite** + `@vitejs/plugin-vue` (build target `chrome100`, `base: './'`)
+- **Vitest** + jsdom + `@vue/test-utils` (tests)
+- **TypeScript** + `vue-tsc` (typecheck)
+- **Flat ESLint** (`eslint.config.mjs`)
+- **Tizen** `.wgt` packaging via `app/config.xml` + `scripts/package.js`
 
 ## Prerequisites
 
 ### Development Environment
 
-- **Node.js**: Version 18 or higher
-- **npm**: Version 8 or higher (included with Node.js)
+- **Node.js**: Version 22.12 or higher (`engines.node` is `>=22.12.0`)
+- **npm**: Included with Node.js
 - **Git**: For version control
 
 ### Samsung TV Development
 
-- **Tizen Studio**: Version 4.0 or higher
+- **Tizen Studio**: Version 4.0 or higher (for `.wgt` signing + deployment)
 - **Samsung TV SDK**: Tizen TV Extensions
-- **Samsung Smart TV**: 2016 model or newer (Tizen OS)
+- **Samsung Smart TV**: Tizen OS device (`config.xml` `required_version` is `6.5`)
 
 ### Phlix Media Server
 
-- **Phlix Media Server**: Version 4.8 or higher
+- **Phlix Media Server**: A running Phlix server reachable from the TV
 - **Network**: TV and server must be on the same network
 
 ## Installation
@@ -58,8 +75,8 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/detain/phlix-tizen.git
-cd phlix-tizen
+git clone https://github.com/detain/phlix-tizen-client.git
+cd phlix-tizen-client
 ```
 
 ### 2. Install Dependencies
@@ -68,105 +85,104 @@ cd phlix-tizen
 npm install
 ```
 
-### 3. Configure Environment
+> CI uses `npm install` (not `npm ci`) — `package-lock.json` is gitignored.
 
-Create a `tizen.env` file in the project root (see [Configuration](#configuration) section).
-
-### 4. Start Development Server
+### 3. Start the Dev Server
 
 ```bash
-npm run serve
+npm run dev
 ```
 
-The app will be available at `http://localhost:8080`.
+The app is served at `http://localhost:8080`. Point it at a server via the
+`VITE_PHLIX_SERVER_URL` environment variable, or set `phlix.serverUrl` in the
+app's `localStorage` at runtime.
 
 ## Configuration
 
-### Environment Variables
+### Server URL
 
-Create or edit `tizen.env` in the project root:
+The client resolves which server to talk to in this order (see `src/resolveConfig.ts`):
 
-```env
-PHLIX_SERVER_URL=http://192.168.1.100:8096
-PHLIX_DEVICE_NAME=Living Room TV
-LOG_LEVEL=info
-```
+1. `localStorage['phlix.serverUrl']` (set at runtime in the app)
+2. `import.meta.env.VITE_PHLIX_SERVER_URL` (build/dev-time env)
+3. `http://localhost:8096` (default)
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PHLIX_SERVER_URL` | URL of your Phlix Media Server | `http://localhost:8096` |
-| `PHLIX_DEVICE_NAME` | Display name for this TV device | `Samsung Tizen TV` |
-| `LOG_LEVEL` | Logging verbosity | `info` |
+The client sends `X-Phlix-Device-Type: samsung-tizen` and a stable
+`X-Phlix-Device-ID` (persisted as `phlix.deviceId`). **The server** maps the
+device-type header to the appropriate streaming/transcode quality profile — the
+client does not post a device profile.
 
 ### Tizen Configuration
 
-The `app/config.xml` file contains Tizen-specific settings:
+`app/config.xml` is the Tizen widget (`.wgt`) manifest:
 
-- App ID and version
-- Network access permissions
-- TV capabilities declaration
-- Focus navigation settings
+- App ID (`phlix.app.phlixtizen`) and version
+- `required_version` (`6.5`)
+- Network access (`<access origin="*">`) and TV privileges (`internet`, `tv.inputdevice`, `tv.window`, `tv.audio`, `network.get`, `application.launch`, `filesystem.read`)
+- Landscape / maximized viewmode
+
+### HLS Tuning
+
+`TIZEN_HLS_CONFIG` in `src/main.ts` is forwarded to `@phlix/ui`'s player via
+`playerHlsConfig` to keep HLS buffers bounded on RAM-constrained Samsung
+webviews (`maxBufferLength`, `capLevelToPlayerSize`, `enableSoftwareAES`, etc.).
 
 ## Building the App
 
-### Development Build
+### Type-check
 
 ```bash
-# Build with development settings
-npm run build:dev
-
-# Watch for changes and rebuild
-npm run watch
+npm run typecheck   # vue-tsc --noEmit
 ```
 
 ### Production Build
 
 ```bash
-# Create production bundle
-npm run build
+npm run build       # vue-tsc --noEmit && vite build
 ```
 
-Output is placed in the `dist/` directory.
+Output is placed in the `dist/` directory (`index.html` + `assets/`).
 
 ### Packaging for Tizen
 
 ```bash
-# Package the app for Tizen
-node scripts/package.js
+npm run package     # npm run build, then node scripts/package.js
 ```
 
-This creates a `.wgt` widget file in the `dist/` directory.
+This assembles the `package/` directory (the Vite `dist/` plus `app/config.xml`
+at the widget root). Tizen Studio (or the `tizen` CLI) then signs `package/`
+into a `.wgt`. See [`docs/signing.md`](docs/signing.md) for the certificate +
+signing flow.
+
+> `base: './'` in `vite.config.ts` is required — a `.wgt` runs from a `file://`
+> origin on the TV, so absolute asset paths would 404.
 
 ## Testing
 
 ### Run All Tests
 
 ```bash
-npm test
+npm test            # vitest run (jsdom)
 ```
 
-### Run Unit Tests Only
+### Watch Mode
 
 ```bash
-npm run test:unit
+npm run test:watch
 ```
 
-### Run Integration Tests
+### Single File / Test
 
 ```bash
-npm run test:integration
+npx vitest run tests/unit/tizenBridge.test.ts
+npx vitest run -t "BACK"
 ```
 
 ### Code Linting
 
 ```bash
-npm run lint
-```
-
-### Run Linting with Auto-fix
-
-```bash
-npm run lint -- --fix
+npm run lint        # eslint .
+npm run lint:fix    # eslint . --fix
 ```
 
 ## Deployment to TV
@@ -195,45 +211,36 @@ npm run lint -- --fix
 ### Option 2: CLI Deployment
 
 ```bash
-# Package the app
-npm run build
-node scripts/package.js
+# Build and package
+npm run package
 
-# Deploy via Tizen CLI
-tizen install -n dist/org.phlix.phlixtv.wgt -t <TV_IP>
-
-# Launch on TV
-tizen launch -n org.phlix.phlixtv
+# Sign package/ into a .wgt with Tizen Studio (or the tizen CLI), then:
+tizen install -n <signed>.wgt -t <TV_IP>
+tizen launch  -n phlix.app.phlixtizen
 ```
 
-### Option 3: Debugging
-
-```bash
-# Start debug server
-node scripts/debug.js
-
-# In Tizen Studio, attach debugger to running app
-```
+The app id `phlix.app.phlixtizen` comes from `app/config.xml` (authoritative).
+See [`docs/signing.md`](docs/signing.md) for signing details.
 
 ## Remote Control
 
-The app supports full Samsung remote control navigation:
+D-pad navigation is handled by `@phlix/ui`'s spatial navigation
+(`useSpatialNav`); transport keys are routed by the Tizen bridge
+(`src/tizenBridge.ts`) to the player and router.
 
 | Button | Action |
 |--------|--------|
-| Arrow Up/Down/Left/Right | Navigate through items |
-| OK | Select item / Enter |
-| Back | Go back / Return |
-| Play/Pause | Toggle playback |
-| Stop | Stop playback and return to library |
-| Fast Forward | Seek forward 10 seconds |
-| Rewind | Seek backward 10 seconds |
-| Red (Color) | Toggle subtitles |
-| Green (Color) | Cycle audio tracks |
-| Yellow (Color) | Cycle quality levels |
-| Blue (Color) | Toggle favorite |
-| Info | Show/hide playback info panel |
-| Tools | Show options menu |
+| Arrow Up/Down/Left/Right | Spatial navigation between focusable items |
+| OK / Enter | Activate the focused item (native focus) |
+| Back | Leave the player (and go back), or navigate back |
+| Home | Return to the home route (`/app`) |
+| Play / Pause | Toggle playback |
+| Stop | Close the player |
+| Fast Forward | Seek forward 10s (30s when held) |
+| Rewind | Seek backward 10s (30s when held) |
+
+On the player route, spatial navigation is disabled so the player's own Arrow
+seek/volume shortcuts take over.
 
 ## Supported Codecs
 
@@ -264,68 +271,39 @@ The app supports full Samsung remote control navigation:
 ## Project Structure
 
 ```
-phlix-tizen/
+phlix-tizen-client/
+├── index.html               # Vite entry (repo root); mounts #phlix-app + #phlix-spatial-host
+├── src/
+│   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host; TIZEN_HLS_CONFIG
+│   ├── polyfills.ts         # structuredClone fallback (imported first)
+│   ├── resolveConfig.ts     # pure resolveAppConfig({serverUrl, envUrl})
+│   ├── deviceId.ts          # pure resolveDeviceId(storage) → persisted phlix.deviceId
+│   ├── SpatialNavHost.vue   # renderless useSpatialNav gate (off on player route)
+│   ├── tizenBridge.ts       # RemoteManager 'action' → usePlayerStore + router
+│   └── remote/
+│       ├── RemoteManager.ts # TV-remote event singleton (keydown/keyup/action)
+│       └── KeyMapping.ts     # Samsung key codes → actions (arrows/ENTER not handled)
 ├── app/
-│   ├── index.html           # Main HTML entry point
-│   ├── config.xml           # Tizen configuration
-│   ├── js/
-│   │   ├── main.js          # Application bootstrap
-│   │   ├── api/            # API client modules
-│   │   │   ├── ApiClient.js
-│   │   │   ├── AuthManager.js
-│   │   │   ├── LibraryManager.js
-│   │   │   ├── PlayerManager.js
-│   │   │   └── SessionManager.js
-│   │   ├── player/          # Video player components
-│   │   │   ├── VideoPlayer.js
-│   │   │   ├── HlsPlayer.js
-│   │   │   ├── SubtitleRenderer.js
-│   │   │   └── QualitySelector.js
-│   │   ├── remote/          # Remote control handling
-│   │   │   ├── RemoteManager.js
-│   │   │   ├── PlayerRemoteHandler.js
-│   │   │   └── KeyMapping.js
-│   │   ├── ui/              # User interface views
-│   │   │   ├── App.js
-│   │   │   ├── Router.js
-│   │   │   ├── HomeView.js
-│   │   │   ├── LibraryView.js
-│   │   │   ├── DetailView.js
-│   │   │   └── PlayerView.js
-│   │   ├── syncplay/         # SyncPlay synchronized playback
-│   │   │   └── SyncPlayService.js
-│   │   ├── config/          # Configuration
-│   │   │   └── constants.js
-│   │   └── utils/           # Utility functions
-│   │       ├── Logger.js
-│   │       ├── Storage.js
-│   │       └── Helpers.js
-│   └── css/                 # Stylesheets
-│       ├── style.css
-│       ├── player.css
-│       ├── components.css
-│       └── themes/
-│           └── dark.css
-├── scripts/                  # Build scripts
-│   ├── build.js
-│   ├── package.js
-│   └── debug.js
-├── tests/                    # Test files
+│   └── config.xml           # Tizen .wgt manifest (privileges, app id, version)
+├── scripts/
+│   └── package.js           # assembles package/ from dist/ + config.xml (ESM)
+├── tests/
+│   ├── test-setup.ts        # in-memory localStorage mock
 │   └── unit/
-│       ├── api/
-│       │   └── ApiClient.test.js
-│       ├── remote/
-│       │   └── KeyMapping.test.js
-│       ├── syncplay/
-│       │   └── SyncPlayService.test.js
-│       └── utils/
-│           └── Helpers.test.js
-├── .github/
-│   └── workflows/
-│       ├── test.yml
-│       └── lint.yml
-├── babel.config.js           # Babel configuration
-├── webpack.config.js         # Webpack configuration
+│       ├── resolveConfig.test.ts
+│       ├── deviceId.test.ts
+│       ├── tizenBridge.test.ts
+│       ├── SpatialNavHost.test.ts
+│       └── main.test.ts
+├── docs/
+│   └── signing.md           # certificate + .wgt signing guide
+├── .github/workflows/
+│   ├── test.yml             # npm test (vitest)
+│   └── lint.yml             # npm run lint + npm run build
+├── vite.config.ts           # base: './', target chrome100
+├── vitest.config.ts
+├── eslint.config.mjs        # flat config
+├── tsconfig.json
 ├── package.json
 └── README.md
 ```
@@ -334,21 +312,22 @@ phlix-tizen/
 
 ### App Won't Start
 
-1. Ensure your TV supports Tizen OS (2016+ models)
-2. Check that the TV is connected to the same network as the server
-3. Verify the Phlix Media Server is running and accessible
+1. Ensure your TV runs Tizen OS (`config.xml` `required_version` 6.5)
+2. Check that the TV is on the same network as the server
+3. Verify the Phlix Media Server is running and the resolved server URL is reachable
+4. Confirm the build used `base: './'` (absolute asset paths 404 from the `file://` `.wgt` origin)
 
 ### Playback Issues
 
-1. For buffering issues, check network bandwidth
-2. If direct play fails, the server may transcode (slower start)
-3. Check server logs for codec compatibility warnings
+1. For buffering, check network bandwidth and the `TIZEN_HLS_CONFIG` buffer sizes in `src/main.ts`
+2. Quality/transcode decisions are made server-side from the `X-Phlix-Device-Type: samsung-tizen` header
+3. Check server logs for codec/transcode warnings
 
 ### Remote Not Working
 
-1. Ensure no other device is controlling the TV
-2. Try restarting the TV
-3. Check that the remote's batteries are fresh
+1. D-pad navigation comes from `@phlix/ui`'s spatial navigation — verify the TV layout is active and you are not on the player route
+2. Transport keys (play/stop/seek) flow through `src/tizenBridge.ts` — confirm `installTizenBridge` ran after mount
+3. Ensure no other device is controlling the TV; check the remote batteries
 
 ## License
 

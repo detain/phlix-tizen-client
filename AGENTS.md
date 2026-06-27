@@ -1,67 +1,72 @@
 # AGENTS.md
 
-Samsung Tizen TV client for Phlix Media Server. Vanilla JS (ES2022 modules) → webpack → Babel (Chrome 100 target) → Tizen 2.3+ Chromium TV browser. HLS via `hls.js`.
+Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phlix/ui`** — TypeScript → Vite (`@vitejs/plugin-vue`, target `chrome100`, `base:'./'`) → Tizen Chromium TV webview, packaged as a signed `.wgt`. All UI is rendered by `@phlix/ui`'s `createPhlixApp()`; this repo is boot glue + the Tizen remote/spatial-nav bridge (mirrors the Windows client). HLS comes from `@phlix/ui`'s player, RAM-tuned via `playerHlsConfig`. Pinned `@phlix/ui#v0.53.0`, `@phlix/contracts#v0.1.1`; peer deps Vue 3 + Pinia + vue-router.
 
 ## Commands
 
 ```bash
 npm install              # package-lock.json gitignored — CI uses `npm install`
-npm run serve            # webpack-dev-server :8080
-npm run build:dev        # dev bundle → dist/
-npm run build            # prod bundle → dist/
-npm run watch            # rebuild on change
-npm test                 # Jest jsdom
-npm run test:unit        # tests/unit/**
-npm run test:integration # tests/integration/** (smoke.test.js)
-npx jest tests/unit/api/ApiClient.test.js  # single file
-npx jest -t "name fragment"                # single test
-npm run lint             # ESLint over app/js
-npm run lint -- --fix    # autofix
-node scripts/package.js  # wrap dist/ into package/ for Tizen Studio signing
+npm run dev              # vite dev server :8080
+npm run build            # vue-tsc --noEmit && vite build → dist/
+npm run typecheck        # vue-tsc --noEmit
+npm run preview          # preview built dist/
+npm test                 # vitest run (jsdom)
+npm run test:watch       # vitest watch
+npx vitest run tests/unit/tizenBridge.test.ts  # single file
+npx vitest run -t "BACK"                        # single test
+npm run lint             # eslint . (flat config)
+npm run lint:fix         # eslint . --fix
+npm run package          # build + node scripts/package.js → package/
 ```
+
+No webpack, no Babel, no Jest.
 
 ## Architecture
 
-**Entry**: `app/js/main.js` → singleton `App` (`app/js/ui/App.js`) → `window.app`.
+**Entry**: `index.html` (repo root = Vite root) → `/src/main.ts`, mounting `#phlix-app` + `#phlix-spatial-host`.
 
-- **`app/js/ui/`**: `HomeView.js` · `LibraryView.js` · `DetailView.js` · `PlayerView.js` · `SettingsView.js` · `Router.js` · `App.js`. Plain ES classes with `show()`/`hide()`/`load(params)`. Manual focus.
-- **`app/js/api/`**: `ApiClient.js` is the only HTTP entry point and owns the device-profile. Managers: `AuthManager.js` · `SessionManager.js` · `LibraryManager.js` · `PlayerManager.js`. 401 → `restoreSession()`. Errors → `ApiError`.
-- **`app/js/player/`**: `VideoPlayer.js` facade · `HlsPlayer.js` (extends `hls.js`) · `SubtitleRenderer.js` · `QualitySelector.js` · `SkipButton.js` (Skip Intro/Outro overlays). **Always `.destroy()` the prior HLS instance before creating a new one.**
-- **`app/js/remote/`**: `RemoteManager.js` singleton · `KeyMapping.js` (Samsung codes — 10009 BACK, 415 PLAY, 403–406 colors) · `PlayerRemoteHandler.js` (swapped in via `activate()`/`deactivate()`).
-- **`app/js/hub/`**: Hub Mode. `hubConfig.js` holds connection state (`direct`/`relay`); `hubApi.js` signs in and lists claimed servers; `hubAwareApi.js` wraps `ApiClient` to route requests through the hub when enabled.
-- **`app/js/syncplay/`**: `SyncPlayService.js` — synchronized playback across clients (NTP-style offset averaging, WebSocket group comms).
-- **`app/js/utils/`**: `Logger.js` · `Storage.js` (localStorage wrapper) · `Helpers.js`.
-- **`app/js/config/constants.js`**: bitrates, codecs, intervals, focus classes.
+`main.ts` `boot()`: import `./polyfills` first → resolve server URL (`localStorage['phlix.serverUrl']` → `VITE_PHLIX_SERVER_URL` → `localhost:8096`, via `resolveConfig.ts`) → `resolveDeviceId` (`deviceId.ts`) → `buildPhlixHeaders({deviceType:'samsung-tizen'})` → `createPhlixApp({app, apiBase, deviceHeaders, defaultTv:true, defaultTheme:'nocturne', branding:{wordmark:'Phlix'}, playerHlsConfig:TIZEN_HLS_CONFIG}).mount('#phlix-app')` → `installTizenBridge(app)` → mount a 2nd `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')` reusing the main app's pinia + router.
 
-**Rule**: views never call `fetch` directly — manager → `ApiClient`. New endpoint: method on `ApiClient.js`, exposed via the matching manager.
+- **`src/main.ts`**: boot + `createPhlixApp` config + `TIZEN_HLS_CONFIG` + 2nd-app mount.
+- **`src/polyfills.ts`**: `structuredClone` fallback — imported FIRST (older Tizen lacks it; `@phlix/ui` needs it).
+- **`src/resolveConfig.ts`**: pure `resolveAppConfig` → `{app:'server', apiBase}` (server-mode only).
+- **`src/deviceId.ts`**: pure `resolveDeviceId(storage)`, persisted `phlix.deviceId`.
+- **`src/SpatialNavHost.vue`**: renderless; `useSpatialNav({enabled: () => Boolean(prefs.tv) && route.name !== 'player'})`. Enables D-pad nav for browse, off on player route.
+- **`src/tizenBridge.ts`**: `installTizenBridge(app)` + pure `wireTizenBridge(remote, player, router, getRoute)`. Maps `RemoteManager` `'action'`s to `usePlayerStore` + router: PLAY/PLAY_PAUSE→toggle, PAUSE→pause, STOP→`closePlayer()`, FAST_FORWARD/REWIND→`seekBy(±10/±30)`, BACK→`closePlayer()`+`back()` on player route else `back()`, HOME→`push('/app')`. Arrows/ENTER not bridged.
+- **`src/remote/RemoteManager.ts`**: KEPT (TS). Single source of TV-remote events; `keydown`/`keyup` on `document`; emits `keydown`/`keyup`/`action`; held-key repeat; `on()` returns unsubscribe. Default singleton.
+- **`src/remote/KeyMapping.ts`**: KEPT + retargeted. Arrows + ENTER removed from `isRepeatable`/`isImmediate`/`isHandled` so spatial-nav (arrows) + native focus (ENTER) own them. Samsung codes 10009 BACK, 415 PLAY, 413 STOP, 19 PAUSE, 417 FF, 412 REW, 403–406 colors.
+
+**Rule**: no media/library/auth UI lives here — it's all in `@phlix/ui`. Here you only touch boot config, the remote bridge, spatial-nav gating, or `app/config.xml`.
 
 ## Tizen runtime
 
-- No Web Audio API — use HTML5 `<video>` for audio.
-- No pointer/mouse events — `keydown`/`keyup` through `RemoteManager`.
-- `app/config.xml` declares privileges (`internet`, `tv.inputdevice`, `tv.window`, `tv.audio`, `network.get`, `application.launch`, `filesystem.read`) — copied into `dist/` by `CopyWebpackPlugin`.
-- Fixed `1920x1080` viewport (`app/index.html`, `app/css/style.css`).
+- No pointer/mouse — keyboard/D-pad only via `useSpatialNav` (browse) + `RemoteManager`→bridge (transport). No manual focus code in this repo.
+- Fixed `1920x1080` viewport (`index.html` meta).
+- HLS RAM tuning lives in `main.ts` `TIZEN_HLS_CONFIG` → `playerHlsConfig` (bounded buffers, cap-to-player-size, software AES).
+- `app/config.xml` = `.wgt` manifest: id `phlix.app.phlixtizen`, `required_version` `6.5`, privileges (`internet`, `tv.inputdevice`, `tv.window`, `tv.audio`, `network.get`, `application.launch`, `filesystem.read`), landscape. `scripts/package.js` copies it to the `package/` root.
+- Device→quality profile is now SERVER-side (server maps `X-Phlix-Device-Type: samsung-tizen`); the client no longer posts a device profile.
 
-## Code style (`.eslintrc.json`, CI-enforced)
+## Code style (`eslint.config.mjs`, flat, CI-enforced)
 
-- 4-space indent, single quotes, semicolons, `===`, braces always.
-- ESM only (`"type": "module"`).
-- `no-unused-vars` errors — prefix unused args with `_` (e.g. `loadDirect(url, _playbackInfo)`).
-- ESLint ignores `dist/`, `node_modules/`, `coverage/`, `*.test.js`.
+- `@eslint/js` + `typescript-eslint` + `eslint-plugin-vue` `flat/recommended`. TS + Vue SFCs.
+- ESM only (`"type": "module"`). `no-undef` off (tsc resolves types/globals).
+- `@typescript-eslint/no-unused-vars` error — prefix unused with `^_`. `no-explicit-any` warn (off in tests). `vue/multi-word-component-names` off.
+- Ignores `dist/`, `node_modules/`, `app/`, `package/`, `coverage/`, `.logs/`.
 
 ## Tests
 
-Jest + jsdom (config in `package.json`). Tests mirror source at `tests/unit/<layer>/<File>.test.js`. See `tests/unit/api/ApiClient.test.js`, `tests/unit/remote/KeyMapping.test.js`, `tests/unit/utils/Helpers.test.js`. Import the named class (not the singleton) for fresh `beforeEach` instances. `babel-jest` via `babel.config.cjs`. `app/js/main.js` excluded from coverage.
+Vitest + jsdom + `@vue/test-utils` (`vitest.config.ts`). `tests/unit/*.test.ts`, co-located by module name; setup `tests/test-setup.ts` (localStorage mock). Suites: `resolveConfig`, `deviceId`, `tizenBridge` (pure helper with fakes), `SpatialNavHost`, `main` (mocks `@phlix/ui`/`@phlix/contracts`/`vue`). Coverage v8 excludes `app/**`.
 
 ## Quirks
 
 - **`package-lock.json` gitignored** — CI uses `npm install`, not `npm ci`. Don't switch.
-- **Mixed module systems**: `webpack.config.js` is ESM, but `scripts/build.js` · `scripts/debug.js` · `scripts/package.js` use CommonJS `require()` and fail under `"type": "module"` if invoked directly. Run via npm scripts; if editing one, rename to `.cjs` or port to ESM.
-- **`tests/integration/`** now exists with `smoke.test.js` — `npm run test:integration` runs it.
-- **App id mismatch**: `app/config.xml` uses `phlix.app.phlixtizen`; `README.md` deploy example uses `org.phlix.phlixtv`. `config.xml` is authoritative.
-- CI: `.github/workflows/test.yml` and `.github/workflows/lint.yml` run on push.
+- **`base:'./'` is MANDATORY** in `vite.config.ts` — `.wgt` runs from `file://`, absolute `/assets` 404.
+- **`structuredClone` polyfill** (`src/polyfills.ts`) imported first in `main.ts`.
+- **`scripts/package.js` is ESM**; run via `npm run package` (assembles `package/` from `dist/` + `app/config.xml`).
+- **App id**: `app/config.xml` `phlix.app.phlixtizen` is authoritative.
+- CI: `.github/workflows/test.yml` (`npm test`) + `lint.yml` (`npm run lint` + `npm run build`) run on push.
 
-See `DEVELOPER.md` for `ApiClient` method tree, device-profile shape, and view/route/endpoint/remote-key extension patterns.
+See `DEVELOPER.md` for the boot/resolveConfig flow, adding an `extraRoute`, mapping a new remote key, and tuning `playerHlsConfig`.
 
 <!-- caliber:managed:pre-commit -->
 ## Before Committing

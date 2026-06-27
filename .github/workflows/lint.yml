@@ -45,9 +45,13 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Upload build artifacts
+      - name: Build sideload package (dist + config.xml → package/)
+        run: node scripts/package.js
+
+      - name: Upload sideload package
         uses: actions/upload-artifact@v7
         with:
-          name: dist
-          path: dist/
-          retention-days: 1
+          name: phlix-tizen-package
+          path: package/
+          if-no-files-found: error
+          retention-days: 7
