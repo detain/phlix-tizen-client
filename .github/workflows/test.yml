@@ -28,7 +28,7 @@ jobs:
         run: npm install
 
       - name: Run unit tests
-        run: npm run test:unit
+        run: npm run test
 
       - name: Upload test results
         if: always()
@@ -37,23 +37,3 @@ jobs:
           name: test-results-node-${{ matrix.node-version }}
           path: coverage/
           retention-days: 7
-
-  test-integration:
-    name: Run Integration Tests
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24.x
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run integration tests
-        run: npm run test:integration
