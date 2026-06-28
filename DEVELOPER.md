@@ -11,7 +11,7 @@ The Tizen client is a **thin Vue 3 consumer of `@phlix/ui`**. It does not contai
 
 It mirrors the Windows/Electron client's thin-consumer shape (`electronBridge` ↔ `tizenBridge`, `resolveConfig` ↔ `resolveConfig`). To change a screen, a feature, theming, or the player, edit **`phlix-ui`** — not this repo.
 
-Pinned dependencies: `@phlix/ui` `github:detain/phlix-ui#v0.53.0`, `@phlix/contracts` `#v0.1.1`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
+Pinned dependencies: `@phlix/ui` `github:detain/phlix-ui#v0.54.0`, `@phlix/contracts` `#v0.1.1`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
 
 ## Architecture Overview
 
@@ -99,10 +99,15 @@ resolveAppConfig({ serverUrl, envUrl }): { app: 'server' | 'hub'; apiBase: strin
 ```
 
 Server mode only — Tizen has no hub-config IPC like the Electron client. The
-precedence is persisted `serverUrl` → build-time `envUrl` → `http://localhost:8096`.
-The `app: 'hub'` member exists in the shape for forward-compatibility but is
-never returned today; the function shape deliberately mirrors the Windows
-`resolveConfig` so a hub branch can be added later without churn.
+precedence is persisted `serverUrl` → build-time `envUrl` → an **empty base**. An
+empty base is intentional: combined with `requireConnection: true` in `main.ts`,
+`@phlix/ui` shows its first-run Connect screen (enter your server address) rather
+than guessing `localhost:8096`; the chosen URL is persisted by the connection
+store and mirrored back to `localStorage['phlix.serverUrl']` via
+`onConnectionChange` so it re-seeds here next launch. The `app: 'hub'` member
+exists in the shape for forward-compatibility but is never returned today; the
+function shape deliberately mirrors the Windows `resolveConfig` so a hub branch
+can be added later without churn.
 
 ### Device id (`src/deviceId.ts`)
 
@@ -326,7 +331,7 @@ Set `localStorage['phlix.serverUrl']` (runtime) or `VITE_PHLIX_SERVER_URL`
 
 ### Build / typecheck failures referencing `@phlix/ui`
 
-`@phlix/ui` v0.53.0 must export `createPhlixApp`, `useSpatialNav`,
+`@phlix/ui` v0.54.0 must export `createPhlixApp`, `useSpatialNav`,
 `usePreferencesStore`, `usePlayerStore` and accept `playerHlsConfig` + `defaultTv`
 in its app config. If the pinned tag lacks one, `vue-tsc` / `vite build` will
 flag it — bump the pin or adjust the consumer.

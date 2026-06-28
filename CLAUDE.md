@@ -2,7 +2,7 @@
 
 Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phlix/ui`** — TypeScript → Vite (`@vitejs/plugin-vue`, target `chrome100`) → Tizen Chromium TV webview, packaged as a signed `.wgt`. The entire UI (browse/detail/player/settings/auth) is rendered by `@phlix/ui`'s `createPhlixApp()`; this repo is just the boot glue + the Tizen remote/spatial-nav bridge (mirrors the Windows/Electron client). HLS is provided by `@phlix/ui`'s player and tuned for TV RAM via `playerHlsConfig`.
 
-Pinned: `@phlix/ui` `github:detain/phlix-ui#v0.53.0`, `@phlix/contracts` `#v0.1.1`. Peer deps Vue 3 + Pinia + vue-router.
+Pinned: `@phlix/ui` `github:detain/phlix-ui#v0.54.0`, `@phlix/contracts` `#v0.1.1`. Peer deps Vue 3 + Pinia + vue-router.
 
 ## Commands
 
@@ -29,7 +29,7 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 
 `src/main.ts` `boot()` flow:
 1. `import './polyfills'` FIRST (installs a `structuredClone` fallback for older Tizen webviews — `@phlix/ui`'s SettingsForm needs it).
-2. Resolve the server URL: `localStorage['phlix.serverUrl']` → `import.meta.env.VITE_PHLIX_SERVER_URL` → `http://localhost:8096` (via `resolveAppConfig` in `src/resolveConfig.ts`, server-mode only — no hub IPC on Tizen).
+2. Resolve the server URL: `localStorage['phlix.serverUrl']` → `import.meta.env.VITE_PHLIX_SERVER_URL` → **empty** (via `resolveAppConfig` in `src/resolveConfig.ts`, server-mode only — no hub IPC on Tizen). An empty base + `requireConnection: true` makes `@phlix/ui` show its first-run Connect screen instead of guessing `localhost`; the chosen URL is mirrored back to `localStorage['phlix.serverUrl']` via `onConnectionChange`.
 3. Resolve a stable `deviceId` (`src/deviceId.ts`, persisted as `phlix.deviceId`).
 4. `buildPhlixHeaders({ deviceId, deviceName, deviceType: 'samsung-tizen' })` (from `@phlix/contracts`).
 5. `createPhlixApp({ app, apiBase, deviceHeaders, defaultTv: true, defaultTheme: 'nocturne', branding: { wordmark: 'Phlix' }, playerHlsConfig: TIZEN_HLS_CONFIG })` → `.mount('#phlix-app')`.
