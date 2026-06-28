@@ -15,8 +15,13 @@ const fakeApp = {
   config: { globalProperties: { $pinia: fakePinia, $router: fakeRouter } }
 };
 const createPhlixApp = vi.fn(() => fakeApp);
+// Stub the admin route builder + page main.ts pulls from @phlix/ui to assemble
+// its menu + extraRoutes; the builder returns a marker route so tests can assert it.
+const ADMIN_ROUTE = { path: '/app/admin/dashboard', name: 'admin-dashboard' };
 vi.mock('@phlix/ui', () => ({
   createPhlixApp: (...args: unknown[]) => createPhlixApp(...args),
+  buildAdminRoutes: () => [ADMIN_ROUTE],
+  LibraryScanPage: { template: '<div />' },
   usePlayerStore: vi.fn(() => ({})),
   useSpatialNav: vi.fn(),
   usePreferencesStore: vi.fn(() => ({ tv: true }))
@@ -125,5 +130,41 @@ describe('boot (Tizen renderer entry)', () => {
     expect(createPhlixApp).toHaveBeenLastCalledWith(
       expect.objectContaining({ apiBase: 'http://env-tv:8096' })
     );
+  });
+});
+
+describe('buildMenu', () => {
+  it('supplies Browse (libraryLinks) + Settings + admin-gated Admin', async () => {
+    const { buildMenu } = await import('@/main');
+    const menu = buildMenu();
+    expect(menu.map((m) => m.id)).toEqual(['browse', 'settings', 'admin']);
+    expect(menu.find((m) => m.id === 'browse')?.libraryLinks).toBe(true);
+    expect(menu.find((m) => m.id === 'admin')).toMatchObject({
+      to: '/app/admin/dashboard',
+      requiresAdmin: true
+    });
+  });
+});
+
+describe('buildExtraRoutes', () => {
+  it('registers the admin section + the library-scan route', async () => {
+    const { buildExtraRoutes } = await import('@/main');
+    const names = buildExtraRoutes().map((r) => r.name);
+    expect(names).toContain('admin-dashboard');
+    expect(names).toContain('library-scan');
+  });
+});
+
+describe('boot wires the nav menu + admin routes', () => {
+  it('passes menu (incl. admin) + extraRoutes to createPhlixApp', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
+    const mod = await import('@/main');
+    await mod.boot();
+    const cfg = createPhlixApp.mock.calls.at(-1)?.[0] as {
+      menu: Array<{ id: string }>;
+      extraRoutes: Array<{ name?: string }>;
+    };
+    expect(cfg.menu.some((m) => m.id === 'admin')).toBe(true);
+    expect(cfg.extraRoutes.some((r) => r.name === 'admin-dashboard')).toBe(true);
   });
 });
