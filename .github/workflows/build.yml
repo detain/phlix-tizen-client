@@ -25,7 +25,9 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24.x'
-          cache: 'npm'
+          # No `cache: npm` — package-lock.json is gitignored here (CI uses
+          # `npm install`, not `npm ci`), and the cache action errors without a
+          # lock file.
 
       - name: Install dependencies
         run: npm install
