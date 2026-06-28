@@ -1,0 +1,96 @@
+name: Build
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build widget package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.x'
+          # No `cache: npm` — package-lock.json is gitignored here (CI uses
+          # `npm install`, not `npm ci`), and the cache action errors without a
+          # lock file.
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build + assemble package/
+        run: npm run package
+
+      - name: Zip the widget (UNSIGNED .wgt)
+        # A .wgt is a zip of the widget root (config.xml + index.html + assets).
+        # This is UNSIGNED — Tizen Studio / the `tizen` CLI must re-sign it with
+        # author + distributor certs before a retail TV will install it. It is
+        # published as the build artifact for inspection / dev-signing.
+        run: |
+          cd package
+          zip -r -X ../phlix-tizen-unsigned.wgt .
+
+      - name: Upload widget artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: phlix-tizen-wgt
+          path: phlix-tizen-unsigned.wgt
+          if-no-files-found: error
+
+  release-latest:
+    name: Update "latest" prerelease
+    needs: build
+    # On every master push, overwrite a rolling "latest" GitHub Release carrying
+    # the RAW (unsigned) .wgt as a directly-downloadable asset (GitHub Actions
+    # artifacts are always served zipped — a Release is the only way to offer the
+    # bare widget). Skipped on PRs and tag pushes.
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download widget artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: phlix-tizen-wgt
+          path: artifacts
+
+      - name: Reset "latest" release + tag
+        run: gh release delete latest --yes --cleanup-tag || true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish "latest" prerelease
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: latest
+          name: Latest (master)
+          body: |
+            Rolling build of the latest `master` commit (${{ github.sha }}).
+            - **`phlix-tizen-unsigned.wgt`** — the Tizen widget package. It is
+              **unsigned**: sign it with your author + distributor certificates
+              via Tizen Studio or the `tizen` CLI before installing on a TV.
+          prerelease: true
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          files: artifacts/phlix-tizen-unsigned.wgt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
