@@ -1,6 +1,8 @@
 import './polyfills';
 import { createApp } from 'vue';
-import { createPhlixApp } from '@phlix/ui';
+import type { MenuItem } from '@phlix/ui';
+import type { RouteRecordRaw } from 'vue-router';
+import { createPhlixApp, buildAdminRoutes, LibraryScanPage } from '@phlix/ui';
 import { buildPhlixHeaders } from '@phlix/contracts';
 import '@phlix/ui/style.css';
 import '@phlix/ui/fonts.css';
@@ -8,6 +10,36 @@ import { resolveAppConfig } from './resolveConfig';
 import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import SpatialNavHost from './SpatialNavHost.vue';
+
+/**
+ * Top-bar nav, mirroring the server web-ui. Without a supplied `menu` the shell
+ * renders NO nav at all — including the admin-gated "Admin" entry — so this is
+ * what makes Browse/Settings and the admin section reachable on the TV. "Admin"
+ * is `requiresAdmin`, so the shell shows it only for an authenticated admin
+ * (`useAuthStore().isAdmin`); the admin API is gated server-side regardless.
+ * Tizen is server-mode only (see resolveConfig), so there is no hub branch.
+ */
+export function buildMenu(): MenuItem[] {
+  return [
+    // `libraryLinks` expands Browse into one nav link per library (fetched from
+    // /api/v1/libraries), matching the per-library Browse sections.
+    { id: 'browse', label: 'Browse', to: '/app', libraryLinks: true },
+    { id: 'settings', label: 'Settings', to: '/app/settings' },
+    { id: 'admin', label: 'Admin', to: '/app/admin/dashboard', requiresAdmin: true }
+  ];
+}
+
+/**
+ * Routes: the shared Vue admin section (`/app/admin/*`, reachable via the gated
+ * "Admin" nav entry) plus the library-scan page, mirroring the server web-ui.
+ * Routes carry the full `/app` prefix (the router's history base is '/').
+ */
+export function buildExtraRoutes(): RouteRecordRaw[] {
+  return [
+    ...buildAdminRoutes(),
+    { path: '/app/library/scan', name: 'library-scan', component: LibraryScanPage }
+  ];
+}
 
 // RAM-conscious HLS tuning for Samsung TV webviews (bounded buffers; cap level
 // to player size; software AES so DRM-free HLS still plays on weaker decoders).
@@ -45,6 +77,10 @@ export async function boot(): Promise<void> {
     defaultTv: true,
     defaultTheme: 'nocturne',
     branding: { wordmark: 'Phlix' },
+    // Top-bar nav (incl. the admin-gated "Admin" entry) + the admin section,
+    // mirroring the server web-ui. Without these the shell shows no nav at all.
+    menu: buildMenu(),
+    extraRoutes: buildExtraRoutes(),
     playerHlsConfig: TIZEN_HLS_CONFIG
   });
 
