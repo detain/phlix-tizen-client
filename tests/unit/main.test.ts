@@ -86,7 +86,9 @@ describe('boot (Tizen renderer entry)', () => {
         deviceHeaders: FAKE_HEADERS,
         defaultTv: true,
         defaultTheme: 'nocturne',
-        branding: { wordmark: 'Phlix' }
+        branding: { wordmark: 'Phlix' },
+        requireConnection: true,
+        onConnectionChange: expect.any(Function)
       })
     );
 
@@ -114,12 +116,12 @@ describe('boot (Tizen renderer entry)', () => {
     expect(secondMount).toHaveBeenCalledWith('#phlix-spatial-host');
   });
 
-  it('falls back to localhost when no server URL and no env URL', async () => {
+  it('uses an EMPTY base (→ Connect screen) when no server URL and no env URL', async () => {
     vi.stubEnv('VITE_PHLIX_SERVER_URL', '');
     const mod = await import('@/main');
     await mod.boot();
     expect(createPhlixApp).toHaveBeenLastCalledWith(
-      expect.objectContaining({ app: 'server', apiBase: 'http://localhost:8096' })
+      expect.objectContaining({ app: 'server', apiBase: '', requireConnection: true })
     );
   });
 
@@ -130,6 +132,19 @@ describe('boot (Tizen renderer entry)', () => {
     expect(createPhlixApp).toHaveBeenLastCalledWith(
       expect.objectContaining({ apiBase: 'http://env-tv:8096' })
     );
+  });
+
+  it('mirrors a Connect-screen choice back into localStorage (and clears it on null)', async () => {
+    vi.stubEnv('VITE_PHLIX_SERVER_URL', '');
+    const mod = await import('@/main');
+    await mod.boot();
+    const cfg = createPhlixApp.mock.calls.at(-1)?.[0] as {
+      onConnectionChange: (url: string | null) => void;
+    };
+    cfg.onConnectionChange('http://chosen-tv:8096');
+    expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBe('http://chosen-tv:8096');
+    cfg.onConnectionChange(null);
+    expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBeNull();
   });
 });
 

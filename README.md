@@ -4,7 +4,7 @@
 [![Lint](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml/badge.svg)](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml)
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
 ![Platform](https://img.shields.io/badge/platform-Samsung%20Tizen-1428A0?logo=samsung&logoColor=white)
-[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.53.0-f5a524)](https://github.com/detain/phlix-ui)
+[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.54.0-f5a524)](https://github.com/detain/phlix-ui)
 
 Samsung Smart TV client application for Phlix Media Server, built with Tizen SDK.
 
@@ -43,7 +43,7 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 ## Tech Stack
 
 - **Vue 3** + **Pinia** + **vue-router** (peer dependencies)
-- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.53.0` — the entire application UI via `createPhlixApp()`
+- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.54.0` — the entire application UI via `createPhlixApp()`
 - **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.1.1` — `buildPhlixHeaders` (device headers)
 - **Vite** + `@vitejs/plugin-vue` (build target `chrome100`, `base: './'`)
 - **Vitest** + jsdom + `@vue/test-utils` (tests)

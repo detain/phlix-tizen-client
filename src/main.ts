@@ -77,6 +77,16 @@ export async function boot(): Promise<void> {
     defaultTv: true,
     defaultTheme: 'nocturne',
     branding: { wordmark: 'Phlix' },
+    // The TV ships with no server baked in. When `apiBase` is empty (nothing
+    // persisted/seeded yet) @phlix/ui routes to its first-run Connect screen
+    // instead of showing a login form aimed at nothing. Mirror the chosen URL
+    // back into localStorage so resolveAppConfig re-seeds it on the next launch.
+    requireConnection: true,
+    onConnectionChange: (url) => {
+      if (!storage) return;
+      if (url) storage.setItem(SERVER_URL_KEY, url);
+      else storage.removeItem(SERVER_URL_KEY);
+    },
     // Top-bar nav (incl. the admin-gated "Admin" entry) + the admin section,
     // mirroring the server web-ui. Without these the shell shows no nav at all.
     menu: buildMenu(),
