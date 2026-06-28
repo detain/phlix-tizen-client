@@ -15,16 +15,21 @@ export interface ResolvedAppConfig {
   apiBase: string;
 }
 
-const DEFAULT_SERVER_URL = 'http://localhost:8096';
-
 /**
  * Decide which base URL the Tizen client talks to.
  *
  * Server mode only: prefer the persisted direct server URL, then the build-time
- * env URL, then localhost:8096. The `app: 'hub'` member is part of the shared
+ * env URL, then an EMPTY base. The `app: 'hub'` member is part of the shared
  * shape for forward-compatibility but is never returned today.
+ *
+ * An empty `apiBase` is intentional: the client no longer guesses
+ * `localhost:8096` (nothing is listening there on a TV). Instead `main.ts` passes
+ * `requireConnection: true`, so an empty base routes the user to the shared
+ * `@phlix/ui` first-run Connect screen to enter their server address — which is
+ * then persisted (and mirrored back to `localStorage['phlix.serverUrl']`) so it
+ * re-seeds here on the next launch.
  */
 export function resolveAppConfig(input: ResolveConfigInput): ResolvedAppConfig {
-  const apiBase = input.serverUrl || input.envUrl || DEFAULT_SERVER_URL;
+  const apiBase = input.serverUrl || input.envUrl || '';
   return { app: 'server', apiBase };
 }
