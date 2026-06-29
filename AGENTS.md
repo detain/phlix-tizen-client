@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phlix/ui`** — TypeScript → Vite (`@vitejs/plugin-vue`, target `chrome100`, `base:'./'`) → Tizen Chromium TV webview, packaged as a signed `.wgt`. All UI is rendered by `@phlix/ui`'s `createPhlixApp()`; this repo is boot glue + the Tizen remote/spatial-nav bridge (mirrors the Windows client). HLS comes from `@phlix/ui`'s player, RAM-tuned via `playerHlsConfig`. Pinned `@phlix/ui#v0.53.0`, `@phlix/contracts#v0.1.1`; peer deps Vue 3 + Pinia + vue-router.
+Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phlix/ui`** — TypeScript → Vite (`@vitejs/plugin-vue`, target `chrome100`, `base:'./'`) → Tizen Chromium TV webview, packaged as a signed `.wgt`. All UI is rendered by `@phlix/ui`'s `createPhlixApp()`; this repo is boot glue + the Tizen remote/spatial-nav bridge (mirrors the Windows client). HLS comes from `@phlix/ui`'s player, RAM-tuned via `playerHlsConfig`. Pinned `@phlix/ui#v0.54.0`, `@phlix/contracts#v0.1.1`; peer deps Vue 3 + Pinia + vue-router.
 
 ## Commands
 
@@ -25,7 +25,7 @@ No webpack, no Babel, no Jest.
 
 **Entry**: `index.html` (repo root = Vite root) → `/src/main.ts`, mounting `#phlix-app` + `#phlix-spatial-host`.
 
-`main.ts` `boot()`: import `./polyfills` first → resolve server URL (`localStorage['phlix.serverUrl']` → `VITE_PHLIX_SERVER_URL` → `localhost:8096`, via `resolveConfig.ts`) → `resolveDeviceId` (`deviceId.ts`) → `buildPhlixHeaders({deviceType:'samsung-tizen'})` → `createPhlixApp({app, apiBase, deviceHeaders, defaultTv:true, defaultTheme:'nocturne', branding:{wordmark:'Phlix'}, playerHlsConfig:TIZEN_HLS_CONFIG}).mount('#phlix-app')` → `installTizenBridge(app)` → mount a 2nd `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')` reusing the main app's pinia + router.
+`main.ts` `boot()`: import `./polyfills` first → resolve server URL (`localStorage['phlix.serverUrl']` → `VITE_PHLIX_SERVER_URL` → **empty**, via `resolveConfig.ts`; an empty base + `requireConnection: true` shows `@phlix/ui`'s first-run Connect screen instead of guessing `localhost`, and the chosen URL is mirrored back to `localStorage['phlix.serverUrl']` via `onConnectionChange`) → `resolveDeviceId` (`deviceId.ts`) → `buildPhlixHeaders({deviceType:'samsung-tizen'})` → `createPhlixApp({app, apiBase, deviceHeaders, defaultTv:true, defaultTheme:'nocturne', branding:{wordmark:'Phlix'}, playerHlsConfig:TIZEN_HLS_CONFIG}).mount('#phlix-app')` → `installTizenBridge(app)` → mount a 2nd `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')` reusing the main app's pinia + router.
 
 - **`src/main.ts`**: boot + `createPhlixApp` config + `TIZEN_HLS_CONFIG` + 2nd-app mount.
 - **`src/polyfills.ts`**: `structuredClone` fallback — imported FIRST (older Tizen lacks it; `@phlix/ui` needs it).
@@ -33,40 +33,23 @@ No webpack, no Babel, no Jest.
 - **`src/deviceId.ts`**: pure `resolveDeviceId(storage)`, persisted `phlix.deviceId`.
 - **`src/SpatialNavHost.vue`**: renderless; `useSpatialNav({enabled: () => Boolean(prefs.tv) && route.name !== 'player'})`. Enables D-pad nav for browse, off on player route.
 - **`src/tizenBridge.ts`**: `installTizenBridge(app)` + pure `wireTizenBridge(remote, player, router, getRoute)`. Maps `RemoteManager` `'action'`s to `usePlayerStore` + router: PLAY/PLAY_PAUSE→toggle, PAUSE→pause, STOP→`closePlayer()`, FAST_FORWARD/REWIND→`seekBy(±10/±30)`, BACK→`closePlayer()`+`back()` on player route else `back()`, HOME→`push('/app')`. Arrows/ENTER not bridged.
-- **`src/remote/RemoteManager.ts`**: KEPT (TS). Single source of TV-remote events; `keydown`/`keyup` on `document`; emits `keydown`/`keyup`/`action`; held-key repeat; `on()` returns unsubscribe. Default singleton.
-- **`src/remote/KeyMapping.ts`**: KEPT + retargeted. Arrows + ENTER removed from `isRepeatable`/`isImmediate`/`isHandled` so spatial-nav (arrows) + native focus (ENTER) own them. Samsung codes 10009 BACK, 415 PLAY, 413 STOP, 19 PAUSE, 417 FF, 412 REW, 403–406 colors.
+- **`src/remote/RemoteManager.ts`**: singleton source of TV-remote events; captures `keydown`/`keyup` on `document`, emits `'keydown'`/`'keyup'`/`'action'`, held-key repeat (FF/REW accel); `on()` returns an unsubscribe fn.
+- **`src/remote/KeyMapping.ts`**: Samsung key codes → actions (`10009` BACK, `415` PLAY, `413` STOP, `19` PAUSE, `417` FF, `412` REW, `403`–`406` color). Arrows/ENTER stay in `KEY_MAP` for logging but are removed from `isRepeatable`/`isImmediate`/`isHandled` — spatial-nav + native focus own them.
 
-**Rule**: no media/library/auth UI lives here — it's all in `@phlix/ui`. Here you only touch boot config, the remote bridge, spatial-nav gating, or `app/config.xml`.
+**Rule**: this repo writes no media/library/auth UI — that lives in `@phlix/ui`. Edit boot config (`main.ts`), the remote bridge (`tizenBridge.ts` / `remote/*`), spatial-nav gating (`SpatialNavHost.vue`), or the Tizen manifest (`app/config.xml`).
 
-## Tizen runtime
+## Tizen constraints
 
-- No pointer/mouse — keyboard/D-pad only via `useSpatialNav` (browse) + `RemoteManager`→bridge (transport). No manual focus code in this repo.
+- No pointer/mouse — D-pad (`useSpatialNav`) + transport keys (`RemoteManager` → `tizenBridge`) only.
 - Fixed `1920x1080` viewport (`index.html` meta).
-- HLS RAM tuning lives in `main.ts` `TIZEN_HLS_CONFIG` → `playerHlsConfig` (bounded buffers, cap-to-player-size, software AES).
-- `app/config.xml` = `.wgt` manifest: id `phlix.app.phlixtizen`, `required_version` `6.5`, privileges (`internet`, `tv.inputdevice`, `tv.window`, `tv.audio`, `network.get`, `application.launch`, `filesystem.read`), landscape. `scripts/package.js` copies it to the `package/` root.
-- Device→quality profile is now SERVER-side (server maps `X-Phlix-Device-Type: samsung-tizen`); the client no longer posts a device profile.
-
-## Code style (`eslint.config.mjs`, flat, CI-enforced)
-
-- `@eslint/js` + `typescript-eslint` + `eslint-plugin-vue` `flat/recommended`. TS + Vue SFCs.
-- ESM only (`"type": "module"`). `no-undef` off (tsc resolves types/globals).
-- `@typescript-eslint/no-unused-vars` error — prefix unused with `^_`. `no-explicit-any` warn (off in tests). `vue/multi-word-component-names` off.
-- Ignores `dist/`, `node_modules/`, `app/`, `package/`, `coverage/`, `.logs/`.
+- RAM-bounded HLS via `TIZEN_HLS_CONFIG` → `playerHlsConfig`. Tune HLS here, not in `phlix-ui`.
+- `base: './'` in `vite.config.ts` is MANDATORY — `.wgt` runs from `file://`, so absolute `/assets` 404.
+- `app/config.xml` is the `.wgt` manifest (app id `phlix.app.phlixtizen`, `required_version` `6.5`); `scripts/package.js` copies it to `package/`.
+- Device→quality is server-side: the client sends `X-Phlix-Device-Type: samsung-tizen`; the server maps it. Don't reintroduce a client device profile.
 
 ## Tests
 
-Vitest + jsdom + `@vue/test-utils` (`vitest.config.ts`). `tests/unit/*.test.ts`, co-located by module name; setup `tests/test-setup.ts` (localStorage mock). Suites: `resolveConfig`, `deviceId`, `tizenBridge` (pure helper with fakes), `SpatialNavHost`, `main` (mocks `@phlix/ui`/`@phlix/contracts`/`vue`). Coverage v8 excludes `app/**`.
-
-## Quirks
-
-- **`package-lock.json` gitignored** — CI uses `npm install`, not `npm ci`. Don't switch.
-- **`base:'./'` is MANDATORY** in `vite.config.ts` — `.wgt` runs from `file://`, absolute `/assets` 404.
-- **`structuredClone` polyfill** (`src/polyfills.ts`) imported first in `main.ts`.
-- **`scripts/package.js` is ESM**; run via `npm run package` (assembles `package/` from `dist/` + `app/config.xml`).
-- **App id**: `app/config.xml` `phlix.app.phlixtizen` is authoritative.
-- CI: `.github/workflows/test.yml` (`npm test`) + `lint.yml` (`npm run lint` + `npm run build`) run on push.
-
-See `DEVELOPER.md` for the boot/resolveConfig flow, adding an `extraRoute`, mapping a new remote key, and tuning `playerHlsConfig`.
+Vitest + jsdom + `@vue/test-utils` (`tests/unit/*.test.ts`, flat `src/` tree). Suites: `resolveConfig`, `deviceId`, `tizenBridge`, `SpatialNavHost`, `main`.
 
 <!-- caliber:managed:pre-commit -->
 ## Before Committing
@@ -81,7 +64,7 @@ grep -q "caliber" .git/hooks/pre-commit 2>/dev/null && echo "hook-active" || ech
 - If **hook-active**: the hook handles sync automatically — just commit normally. Tell the user: "Caliber will sync your agent configs automatically via the pre-commit hook."
 - If **no-hook**: run Caliber manually before committing:
   1. Tell the user: "Caliber: Syncing agent configs with your latest changes..."
-  2. Run: `caliber refresh && git add CLAUDE.md .claude/ .cursor/ .cursorrules .github/copilot-instructions.md .github/instructions/ AGENTS.md CALIBER_LEARNINGS.md .agents/ .opencode/ 2>/dev/null`
+  2. Run: `caliber refresh && git add CALIBER_LEARNINGS.md AGENTS.md .agents/ 2>/dev/null`
   3. After it completes, briefly tell the user what Caliber updated. Then proceed with the commit.
 
 **Valid `caliber refresh` options:** `--quiet` (suppress output) and `--dry-run` (preview without writing). Do not pass any other flags — options like `--auto-approve`, `--debug`, or `--force` do not exist and will cause errors.
@@ -111,6 +94,6 @@ Pin your choice (`/model` in Claude Code, or `CALIBER_MODEL` when using Caliber 
 ## Context Sync
 
 This project uses [Caliber](https://github.com/caliber-ai-org/ai-setup) to keep AI agent configs in sync across Claude Code, Cursor, Copilot, and Codex.
-Configs update automatically before each commit via `/home/my/.nvm/versions/node/v24.15.0/bin/caliber refresh`.
+Configs update automatically before each commit via `caliber refresh`.
 If the pre-commit hook is not set up, read `.agents/skills/setup-caliber/SKILL.md` and follow the setup instructions.
 <!-- /caliber:managed:sync -->
