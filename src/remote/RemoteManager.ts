@@ -27,6 +27,22 @@ export class RemoteManager {
   enabled = true;
   keyRepeatDelay = 500;
   keyRepeatInterval = 100;
+  /**
+   * Optional host predicate. When it returns true for a keydown, RemoteManager
+   * calls `event.stopImmediatePropagation()` so LATER `document` keydown
+   * listeners (notably @phlix/ui's own player Arrow seek/volume shortcuts and
+   * `useSpatialNav`) do NOT also react to that key. RemoteManager stays generic:
+   * it knows nothing about WHY a key is being suppressed — the tizenBridge sets
+   * this to stop the player hijacking the D-pad while the on-screen QualityMenu
+   * is being navigated.
+   *
+   * This works because RemoteManager's `document` listener is registered at
+   * module-eval time (before @phlix/ui mounts the player), so in the bubble
+   * phase it fires BEFORE those later listeners. The focused control's own
+   * target-phase keydown handler has already run by then, so navigation inside
+   * that control still works — only the redundant global handlers are stopped.
+   */
+  suppressPropagation: ((mappedKey: ActionName, event: KeyboardEvent) => boolean) | null = null;
   private activeKeyRepeat: ReturnType<typeof setTimeout> | ReturnType<typeof setInterval> | null =
     null;
   private listeners = new Map<RemoteEventName, Handler[]>();
@@ -80,6 +96,14 @@ export class RemoteManager {
     // through to spatial-nav / native focus).
     if (KeyMapping.isHandled(mappedKey)) {
       event.preventDefault();
+    }
+
+    // Host-driven suppression: stop later document/window keydown listeners
+    // (the player's own Arrow shortcuts / spatial-nav) from also firing. Runs
+    // last so our own subscribers + the focused control's target-phase handler
+    // are unaffected. Only stops the onward bubble; never preventDefaults here.
+    if (this.suppressPropagation?.(mappedKey, event)) {
+      event.stopImmediatePropagation();
     }
   }
 

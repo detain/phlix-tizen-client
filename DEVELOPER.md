@@ -11,7 +11,7 @@ The Tizen client is a **thin Vue 3 consumer of `@phlix/ui`**. It does not contai
 
 It mirrors the Windows/Electron client's thin-consumer shape (`electronBridge` ↔ `tizenBridge`, `resolveConfig` ↔ `resolveConfig`). To change a screen, a feature, theming, or the player, edit **`phlix-ui`** — not this repo.
 
-Pinned dependencies: `@phlix/ui` `github:detain/phlix-ui#v0.54.0`, `@phlix/contracts` `#v0.1.1`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
+Pinned dependencies: `@phlix/ui` `github:detain/phlix-ui#v0.74.0`, `@phlix/contracts` `#v0.2.0`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
 
 ## Architecture Overview
 
@@ -45,7 +45,7 @@ Pinned dependencies: `@phlix/ui` `github:detain/phlix-ui#v0.54.0`, `@phlix/contr
    │   tizenBridge.ts         │ ◄──────────────────── │  remote/RemoteManager│
    │  wireTizenBridge(...)    │                       │  (singleton)         │
    │  PLAY/PAUSE/STOP/FF/REW/ │                       │  remote/KeyMapping   │
-   │  BACK/HOME               │                       │  (Samsung key codes) │
+   │  BACK/HOME/YEL           │                       │  (Samsung key codes) │
    └────────────────────────┘                       └─────────────────────┘
 ```
 
@@ -131,12 +131,19 @@ A renderless component (its template is `<div style="display:none" />`). In
 ```ts
 const route = useRoute();
 const prefs = usePreferencesStore();
-useSpatialNav({ enabled: () => Boolean(prefs.tv) && route.name !== 'player' });
+useSpatialNav({
+  enabled: () => Boolean(prefs.tv) && route.name !== 'player' && !qualityMenuActive.value
+});
 ```
 
 `useSpatialNav` re-reads `enabled` on every keydown. Spatial nav is on for D-pad
 browsing when the TV layout is active, and DISABLED on the `player` route so
-`@phlix/ui`'s own Arrow seek/volume shortcuts win.
+`@phlix/ui`'s own Arrow seek/volume shortcuts win. The `!qualityMenuActive.value`
+conjunct (the shared flag from `tizenBridge.ts`) is an explicit invariant rather
+than a load-bearing gate today — quality mode can currently only be entered on
+the `player` route, where spatial-nav is already off — but it keeps the
+component correct even if that assumption ever changes, without depending on
+route-name comparisons to stay in sync across two files.
 
 > If `@phlix/ui` ever renames `usePreferencesStore().tv` or its player route name,
 > update both the getter here and the `getRoute()` comparison in `tizenBridge.ts`.
@@ -145,17 +152,25 @@ browsing when the TV layout is active, and DISABLED on the `player` route so
 
 Two exports:
 
-- **`wireTizenBridge(remote, player, router, getRoute)`** — pure wiring helper.
-  Subscribes to the remote's `'action'` events and maps them onto a player store
-  and a router. Dependencies are structurally typed (`BridgeRemote` /
-  `BridgePlayer` / `BridgeRouter` / `BridgeRoute`) so it can be exercised with
-  fakes and no real Vue app or DOM. Returns a cleanup function that unsubscribes
-  (it prefers the unsubscribe returned by `on()`, and falls back to `off()`).
-  No-op safe when `remote` is null/undefined.
+- **`wireTizenBridge(remote, player, router, getRoute, quality?)`** — pure wiring
+  helper. Subscribes to the remote's `'action'` events and maps them onto a
+  player store, a router, and (for `YELLOW`/`BACK`) the on-screen quality
+  picker. Dependencies are structurally typed (`BridgeRemote` / `BridgePlayer` /
+  `BridgeRouter` / `BridgeRoute` / `BridgeQualityMenu`) so it can be exercised
+  with fakes and no real Vue app or DOM. The `quality` param defaults to
+  `createDomQualityMenu()` (the real DOM-backed controller) but tests inject a
+  fake `BridgeQualityMenu`. Returns a cleanup function that unsubscribes (it
+  prefers the unsubscribe returned by `on()`, and falls back to `off()`). No-op
+  safe when `remote` is null/undefined.
 - **`installTizenBridge(app)`** — pulls `$pinia` / `$router` off
   `app.config.globalProperties`, resolves `usePlayerStore(pinia)`, sets
-  `getRoute = () => router.currentRoute.value`, and delegates to
-  `wireTizenBridge` with the `RemoteManager` singleton.
+  `getRoute = () => router.currentRoute.value`, wires
+  `remoteManager.suppressPropagation` for the quality-mode D-pad passthrough
+  (see below), registers a `router.afterEach` guard for quality-mode teardown,
+  and delegates to `wireTizenBridge` with the `RemoteManager` singleton. Its
+  returned cleanup unwires the action handler, removes the route guard, forces
+  quality mode off, and nulls `suppressPropagation` — so nothing from this
+  bridge can outlive it.
 
 Action map:
 
@@ -166,9 +181,83 @@ Action map:
 | `STOP`            | `player.closePlayer()`                                              |
 | `FAST_FORWARD`    | `player.seekBy(repeat ? 30 : 10)`                                   |
 | `REWIND`          | `player.seekBy(repeat ? -30 : -10)`                                 |
-| `BACK`            | on `route.name === 'player'`: `closePlayer()` + `router.back()`; else `router.back()` |
+| `BACK`            | if the quality picker is open: dismiss it (`quality.deactivate()`), player untouched; else on `route.name === 'player'`: `closePlayer()` + `router.back()`; else `router.back()` |
 | `HOME`            | `router.push('/app')`                                               |
-| arrows / ENTER / color keys / etc. | **not bridged** — spatial-nav + native focus own them  |
+| `YELLOW`          | on the player route only, and only when the picker actually has a menu to show (`quality.isAvailable()`): toggle quality-selection mode (`quality.activate()` / `deactivate()`) |
+| arrows / ENTER / other color keys / etc. | **not bridged directly** — spatial-nav + native focus own them, EXCEPT while quality mode is active (see below) |
+
+#### Quality-selection mode (`YELLOW`, the on-screen `QualityMenu`)
+
+`@phlix/ui`'s `Player.vue` renders a `QualityMenu` — a `Select` combobox
+(`.quality-menu .phlix-select__trigger`) — in the control bar whenever the
+active stream has ≥2 switchable hls.js ABR rungs. It is fully keyboard-operable
+once its trigger is focused (its own `keydown` handler owns Arrow-to-navigate /
+Enter-to-select / Escape-to-close), but on a TV two things stand in the way:
+`SpatialNavHost.vue` disables spatial-nav on the player route (so the D-pad
+can't focus the trigger), and even once focused, the player's own document-level
+Arrow seek/volume shortcuts fire in parallel with the Select's Arrow handling.
+This repo bridges the gap entirely on the client side (no `@phlix/ui` change):
+
+1. **`YELLOW` opens/toggles it.** `wireTizenBridge`'s `YELLOW` case, only on the
+   player route and only when `quality.isAvailable()` (the trigger exists —
+   i.e. a real multi-variant transcode), focuses and clicks open the trigger
+   via `createDomQualityMenu()`'s DOM-backed `activate()`. This drives the
+   sealed `@phlix/ui` Select purely through `focus()`/`click()`/`aria-expanded`
+   — no `@phlix/ui` source change needed.
+2. **`RemoteManager.suppressPropagation` stops the player's Arrow shortcuts
+   from double-firing.** While `qualityMenuActive` is true,
+   `installTizenBridge` wires `remoteManager.suppressPropagation` to return
+   `true` for `LEFT`/`RIGHT`/`UP`/`DOWN` (`QUALITY_NAV_KEYS`), which calls
+   `event.stopImmediatePropagation()` in the keydown BUBBLE phase on
+   `document`. This is needed because `@phlix/ui`'s player registers its own
+   Arrow seek/volume `document` keydown listener, and without suppression it
+   would fire on every Arrow press alongside the focused Select's own
+   TARGET-phase handling — a single D-pad press would both move the picker's
+   highlight AND seek/change volume underneath it. The ordering is
+   load-bearing: `RemoteManager`'s `document` listener is registered at
+   module-eval time (before `@phlix/ui` mounts the player), so in the bubble
+   phase it always runs — and can suppress — before the player's later
+   listener; the Select's own target-phase handler has already done its job by
+   then. ENTER is deliberately excluded from `QUALITY_NAV_KEYS` — the player
+   has no ENTER shortcut to fight, and the Select needs ENTER to confirm a
+   rung.
+3. **`BACK` dismisses the picker first** without tearing down the player
+   underneath (see the action map above).
+
+**Teardown — one choke point, two independent triggers.** All of the above
+hinges on `qualityMenuActive` never getting stuck `true` (a stuck flag would
+permanently suppress the player's Arrow shortcuts, and — via
+`SpatialNavHost.vue`'s gate — spatial-nav app-wide too). Rather than patching
+every individual way the on-screen menu can disappear, `tizenBridge.ts` routes
+every path through a single private `close()` inside `createDomQualityMenu()`,
+and only two independent mechanisms ever call it — because there are exactly
+two *orthogonal* classes of exit:
+
+- **Menu-level self-close** — the Select closes itself while the player and
+  its route are untouched (ENTER selects a rung, Escape, or an outside
+  click/blur). `activate()` attaches a `MutationObserver` on the trigger's
+  `aria-expanded` attribute (started AFTER the open-click, so the open
+  transition itself isn't misread as a close); whenever the Select flips it
+  back off `'true'`, the observer calls `close()`. This is the only reliable
+  way to notice a self-close because the sealed Select emits no event for it —
+  the bridge has to watch the DOM.
+- **Player/route-level teardown** — the player (and its `QualityMenu` trigger)
+  is torn out from under an *open* menu, e.g. `HOME`/`router.push('/app')` or
+  any other programmatic navigation away from `'player'`. There is no
+  `aria-expanded` mutation to observe here — the trigger element is simply
+  gone — so `installTizenBridge` registers a `router.afterEach` guard that
+  calls `quality.deactivate()` whenever navigation leaves the player route.
+
+Both mechanisms funnel into the same `close()` (idempotent — safe to call twice,
+and safe when the trigger no longer exists), so `qualityMenuActive` is always
+derived from reality rather than tracked as a separately-mutated boolean that
+can drift. **Do not "simplify" this to a single mechanism** — the two exit
+classes are genuinely independent (one is a DOM mutation with the route
+unchanged, the other is a route change with no DOM mutation to observe), and a
+version of this code that only handled one of them shipped a real bug: a
+normal ENTER-selected quality change (self-close, no route change) left
+`suppressPropagation` armed and the player's seek/volume arrows dead until a
+stray `BACK`/`YELLOW` press.
 
 ### Remote input (`src/remote/`)
 
@@ -331,21 +420,39 @@ Set `localStorage['phlix.serverUrl']` (runtime) or `VITE_PHLIX_SERVER_URL`
 
 ### Build / typecheck failures referencing `@phlix/ui`
 
-`@phlix/ui` v0.54.0 must export `createPhlixApp`, `useSpatialNav`,
-`usePreferencesStore`, `usePlayerStore` and accept `playerHlsConfig` + `defaultTv`
-in its app config. If the pinned tag lacks one, `vue-tsc` / `vite build` will
-flag it — bump the pin or adjust the consumer.
+`@phlix/ui` v0.74.0 must export `createPhlixApp`, `useSpatialNav`,
+`usePreferencesStore`, `usePlayerStore`, and `QualityMenu`'s trigger markup
+(`.quality-menu .phlix-select__trigger` with `aria-expanded`), and accept
+`playerHlsConfig` + `defaultTv` in its app config. If the pinned tag lacks one,
+`vue-tsc` / `vite build` will flag it — bump the pin or adjust the consumer.
 
 ### D-pad navigation does nothing / double-navigates
 
 Check `SpatialNavHost.vue`'s `enabled` predicate and that arrows are NOT in
-`KeyMapping`'s `isHandled` set (they must pass through to spatial-nav).
+`KeyMapping`'s `isHandled` set (they must pass through to spatial-nav). If
+navigation is frozen **everywhere** (not just on the player route), check
+whether `qualityMenuActive` (`tizenBridge.ts`) is stuck `true` — it should
+always clear itself via `close()` when the on-screen quality picker closes
+(self-close via the `aria-expanded` `MutationObserver`, or route-away via the
+`router.afterEach` guard); if you've changed either of those teardown paths,
+this is the most likely regression.
 
 ### Playback transport keys do nothing
 
 Verify `installTizenBridge` ran (after `mount`) and that the action is handled in
 `wireTizenBridge`'s `switch`. Confirm the route name comparison (`'player'`)
 matches the `@phlix/ui` player route.
+
+### Yellow (quality picker) does nothing / D-pad fights the player while it's open
+
+`YELLOW` only does anything on the player route AND when `quality.isAvailable()`
+is true (the `QualityMenu` trigger exists in the DOM — i.e. the active stream
+has ≥2 ABR rungs; direct-play and single-quality transcodes never render it).
+If the picker opens but Arrow presses also seek/change volume, check that
+`remoteManager.suppressPropagation` is actually wired (set in
+`installTizenBridge`) and that `RemoteManager`'s `document` listener is still
+registered before `@phlix/ui` mounts the player (module-eval time) — the
+bubble-phase ordering is what lets it suppress the player's later listener.
 
 ### Network / CORS issues
 
