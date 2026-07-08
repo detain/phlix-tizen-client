@@ -4,7 +4,7 @@
 [![Lint](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml/badge.svg)](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml)
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
 ![Platform](https://img.shields.io/badge/platform-Samsung%20Tizen-1428A0?logo=samsung&logoColor=white)
-[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.54.0-f5a524)](https://github.com/detain/phlix-ui)
+[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.74.0-f5a524)](https://github.com/detain/phlix-ui)
 
 Samsung Smart TV client application for Phlix Media Server, built with Tizen SDK.
 
@@ -43,8 +43,8 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 ## Tech Stack
 
 - **Vue 3** + **Pinia** + **vue-router** (peer dependencies)
-- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.54.0` — the entire application UI via `createPhlixApp()`
-- **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.1.1` — `buildPhlixHeaders` (device headers)
+- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.74.0` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
+- **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.2.0` — `buildPhlixHeaders` (device headers)
 - **Vite** + `@vitejs/plugin-vue` (build target `chrome100`, `base: './'`)
 - **Vitest** + jsdom + `@vue/test-utils` (tests)
 - **TypeScript** + `vue-tsc` (typecheck)
@@ -232,15 +232,18 @@ D-pad navigation is handled by `@phlix/ui`'s spatial navigation
 |--------|--------|
 | Arrow Up/Down/Left/Right | Spatial navigation between focusable items |
 | OK / Enter | Activate the focused item (native focus) |
-| Back | Leave the player (and go back), or navigate back |
+| Back | Dismiss the quality picker if it's open (see Yellow below); otherwise leave the player (and go back), or navigate back |
 | Home | Return to the home route (`/app`) |
 | Play / Pause | Toggle playback |
 | Stop | Close the player |
 | Fast Forward | Seek forward 10s (30s when held) |
 | Rewind | Seek backward 10s (30s when held) |
+| Yellow | On the player route, open/close the on-screen stream-quality picker (only when the active stream has ≥2 ABR rungs to choose from); while open, Left/Right/Up/Down/Enter drive the picker instead of seek/volume |
 
 On the player route, spatial navigation is disabled so the player's own Arrow
-seek/volume shortcuts take over.
+seek/volume shortcuts take over. While the quality picker is open, the Arrow
+keys are instead routed to the picker (the player's seek/volume shortcuts are
+briefly suppressed) so the D-pad can select a rung.
 
 ## Supported Codecs
 
@@ -279,7 +282,7 @@ phlix-tizen-client/
 │   ├── resolveConfig.ts     # pure resolveAppConfig({serverUrl, envUrl})
 │   ├── deviceId.ts          # pure resolveDeviceId(storage) → persisted phlix.deviceId
 │   ├── SpatialNavHost.vue   # renderless useSpatialNav gate (off on player route)
-│   ├── tizenBridge.ts       # RemoteManager 'action' → usePlayerStore + router
+│   ├── tizenBridge.ts       # RemoteManager 'action' → usePlayerStore + router; Yellow/Back drive the QualityMenu
 │   └── remote/
 │       ├── RemoteManager.ts # TV-remote event singleton (keydown/keyup/action)
 │       └── KeyMapping.ts     # Samsung key codes → actions (arrows/ENTER not handled)

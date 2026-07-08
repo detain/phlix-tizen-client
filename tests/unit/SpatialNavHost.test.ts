@@ -17,6 +17,7 @@ vi.mock('vue-router', () => ({
 }));
 
 import SpatialNavHost from '@/SpatialNavHost.vue';
+import { qualityMenuActive } from '@/tizenBridge';
 
 function getEnabled(): () => boolean {
   const opts = useSpatialNav.mock.calls[0][0] as { enabled: () => boolean };
@@ -28,6 +29,7 @@ describe('SpatialNavHost', () => {
     useSpatialNav.mockClear();
     routeRef.name = 'home';
     prefsRef.tv = true;
+    qualityMenuActive.value = false;
   });
 
   it('renders renderless (hidden) and registers spatial-nav', () => {
@@ -55,5 +57,15 @@ describe('SpatialNavHost', () => {
     routeRef.name = 'home';
     mount(SpatialNavHost);
     expect(getEnabled()()).toBe(false);
+  });
+
+  it('disables spatial-nav while quality-selection mode is active', () => {
+    prefsRef.tv = true;
+    routeRef.name = 'home';
+    mount(SpatialNavHost);
+    const enabled = getEnabled();
+    expect(enabled()).toBe(true);
+    qualityMenuActive.value = true;
+    expect(enabled()).toBe(false);
   });
 });

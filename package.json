@@ -29,8 +29,8 @@
   },
   "homepage": "https://github.com/detain/phlix-tizen-client",
   "dependencies": {
-    "@phlix/contracts": "github:detain/phlix-contracts#v0.1.1",
-    "@phlix/ui": "github:detain/phlix-ui#v0.55.0",
+    "@phlix/contracts": "github:detain/phlix-contracts#v0.2.0",
+    "@phlix/ui": "github:detain/phlix-ui#v0.74.0",
     "pinia": "^3.0.0",
     "vue": "^3.5.0",
     "vue-router": "^5.0.0"
