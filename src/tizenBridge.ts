@@ -1,3 +1,9 @@
+/**
+ * Tizen TV client entry point and boot glue.
+ *
+ * @copyright 2026 Joe Huss <detain@interserver.net>
+ */
+
 import { usePlayerStore } from '@phlix/ui';
 import { ref, type App as VueApp, type Ref } from 'vue';
 import remoteManager from './remote/RemoteManager';

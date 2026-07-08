@@ -6,6 +6,7 @@
  * the SINGLE source of TV-remote events (the analogue of Electron's media
  * events). Arrow keys are intentionally not handled here — @phlix/ui's
  * useSpatialNav owns D-pad navigation directly on `document`.
+ * @copyright 2026 Joe Huss <detain@interserver.net>
  */
 
 import KeyMapping, { type ActionName } from './KeyMapping';

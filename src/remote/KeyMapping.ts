@@ -8,6 +8,7 @@
  * owns D-pad navigation via its own `document` listener, and ENTER/click
  * is native focus activation. If RemoteManager also emitted/handled arrows
  * its key-repeat would fire phantom navigation actions on top of spatial-nav.
+ * @copyright 2026 Joe Huss <detain@interserver.net>
  */
 
 export type ActionName = string;

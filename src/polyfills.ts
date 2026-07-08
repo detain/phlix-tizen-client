@@ -1,3 +1,9 @@
+/**
+ * Tizen TV client entry point and boot glue.
+ *
+ * @copyright 2026 Joe Huss <detain@interserver.net>
+ */
+
 // Polyfills for older Samsung Tizen webviews (pre-Chrome 98).
 // MUST be imported first, before any @phlix/ui code runs — phlix-ui's
 // SettingsForm relies on structuredClone, which older Tizen Chromium lacks.
