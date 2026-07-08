@@ -1,3 +1,9 @@
+/**
+ * Tizen TV client entry point and boot glue.
+ *
+ * @copyright 2026 Joe Huss <detain@interserver.net>
+ */
+
 import './polyfills';
 import { createApp } from 'vue';
 import type { MenuItem } from '@phlix/ui';

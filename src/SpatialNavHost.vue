@@ -1,4 +1,10 @@
 <script setup lang="ts">
+/**
+ * Renderless host for spatial navigation.
+ *
+ * @copyright 2026 Joe Huss <detain@interserver.net>
+ */
+
 // Renderless host that opts @phlix/ui's spatial navigation in/out per route.
 // It is mounted as a SECOND tiny Vue app sharing the SAME pinia + router as
 // the main phlix-ui app (see main.ts), so `route` and `prefs` observe the

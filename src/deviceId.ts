@@ -1,3 +1,9 @@
+/**
+ * Tizen TV client entry point and boot glue.
+ *
+ * @copyright 2026 Joe Huss <detain@interserver.net>
+ */
+
 // Pure, unit-testable stable device-id resolution for the Tizen client.
 // Persists a generated id in localStorage so the server sees a stable device
 // across app launches (drives session/device tracking via X-Phlix-Device-ID).

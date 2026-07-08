@@ -1,3 +1,9 @@
+/**
+ * Tizen TV client entry point and boot glue.
+ *
+ * @copyright 2026 Joe Huss <detain@interserver.net>
+ */
+
 // Pure, unit-testable resolution of the phlix-ui app mode + apiBase for the
 // Samsung Tizen client. Tizen has no hub-config IPC like the Windows/Electron
 // client, so this is server-mode only for now — but the function shape mirrors
