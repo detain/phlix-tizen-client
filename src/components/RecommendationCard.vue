@@ -42,19 +42,40 @@ const emit = defineEmits<{
         :alt="`Poster for ${item.title}`"
         class="recommendation-card__poster"
         loading="lazy"
-      />
-      <div v-else class="recommendation-card__poster recommendation-card__poster--placeholder" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <rect x="2" y="4" width="20" height="16" rx="2" />
+      >
+      <div
+        v-else
+        class="recommendation-card__poster recommendation-card__poster--placeholder"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+          aria-hidden="true"
+        >
+          <rect
+            x="2"
+            y="4"
+            width="20"
+            height="16"
+            rx="2"
+          />
           <path d="M2 8h20M7 12l3-2 3 3 3-4 2 2" />
         </svg>
       </div>
     </div>
 
     <div class="recommendation-card__info">
-      <h3 class="recommendation-card__title">{{ item.title }}</h3>
+      <h3 class="recommendation-card__title">
+        {{ item.title }}
+      </h3>
       <div class="recommendation-card__meta">
-        <span v-if="item.year" class="recommendation-card__year">{{ item.year }}</span>
+        <span
+          v-if="item.year"
+          class="recommendation-card__year"
+        >{{ item.year }}</span>
         <span class="recommendation-card__score">{{ Math.round(item.score * 100) }}% match</span>
       </div>
       <span class="recommendation-card__reason">Because You Watched</span>

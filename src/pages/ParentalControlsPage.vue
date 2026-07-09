@@ -18,7 +18,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ApiClient } from '@phlix/ui';
 import { useApiBase } from '@phlix/ui';
-import { useAuthStore } from '@phlix/ui';
+import { useAuthStore, type AuthUser } from '@phlix/ui';
 import type {
   AccessSchedule,
   DayOfWeek,
@@ -30,7 +30,7 @@ const router = useRouter();
 const apiBase = useApiBase();
 const authStore = useAuthStore();
 
-const profileId = computed(() => (authStore.user as any)?.profileId ?? 0);
+const profileId = computed(() => (authStore.user as AuthUser)?.profileId ?? 0);
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -353,14 +353,28 @@ onMounted(loadAll);
         aria-label="Go back"
         @click="goBack"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
       </button>
-      <h1 class="parental-controls__title">Parental Controls</h1>
+      <h1 class="parental-controls__title">
+        Parental Controls
+      </h1>
     </header>
 
-    <nav class="parental-controls__tabs" role="tablist" aria-label="Settings sections">
+    <nav
+      class="parental-controls__tabs"
+      role="tablist"
+      aria-label="Settings sections"
+    >
       <button
         role="tab"
         :aria-selected="activeTab === 'schedules'"
@@ -388,9 +402,19 @@ onMounted(loadAll);
     </nav>
 
     <!-- ── Schedules ──────────────────────────────────────────────────────── -->
-    <section v-show="activeTab === 'schedules'" role="tabpanel" aria-labelledby="tab-schedules" class="parental-controls__section">
+    <section
+      v-show="activeTab === 'schedules'"
+      role="tabpanel"
+      aria-labelledby="tab-schedules"
+      class="parental-controls__section"
+    >
       <div class="section__header">
-        <h2 id="tab-schedules" class="section__title">Access Schedules</h2>
+        <h2
+          id="tab-schedules"
+          class="section__title"
+        >
+          Access Schedules
+        </h2>
         <button
           v-if="!editingSchedule"
           type="button"
@@ -401,67 +425,123 @@ onMounted(loadAll);
         </button>
       </div>
 
-      <div v-if="loadingSchedules" class="section__loading" role="status" aria-busy="true">
+      <div
+        v-if="loadingSchedules"
+        class="section__loading"
+        role="status"
+        aria-busy="true"
+      >
         <p>Loading schedules…</p>
       </div>
 
-      <div v-else-if="errorSchedules" class="section__error" role="alert">
+      <div
+        v-else-if="errorSchedules"
+        class="section__error"
+        role="alert"
+      >
         <p>{{ errorSchedules }}</p>
-        <button type="button" class="retry-btn" @click="loadSchedules">Retry</button>
+        <button
+          type="button"
+          class="retry-btn"
+          @click="loadSchedules"
+        >
+          Retry
+        </button>
       </div>
 
-      <div v-else-if="schedules.length === 0" class="section__empty">
+      <div
+        v-else-if="schedules.length === 0"
+        class="section__empty"
+      >
         <p>No access schedules configured.</p>
       </div>
 
-      <ul v-else class="schedule-list" role="list">
-        <li v-for="schedule in schedules" :key="schedule.id" class="schedule-item" :class="{ 'schedule-item--inactive': !schedule.isActive }">
+      <ul
+        v-else
+        class="schedule-list"
+        role="list"
+      >
+        <li
+          v-for="schedule in schedules"
+          :key="schedule.id"
+          class="schedule-item"
+          :class="{ 'schedule-item--inactive': !schedule.isActive }"
+        >
           <div class="schedule-item__info">
             <span class="schedule-item__name">{{ schedule.name }}</span>
             <span class="schedule-item__time">{{ formatTime(schedule.startTime) }} – {{ formatTime(schedule.endTime) }}</span>
             <span class="schedule-item__days">{{ formatDays(schedule.daysOfWeek) }}</span>
-            <span v-if="!schedule.isActive" class="schedule-item__badge">Inactive</span>
+            <span
+              v-if="!schedule.isActive"
+              class="schedule-item__badge"
+            >Inactive</span>
           </div>
           <div class="schedule-item__actions">
-            <button type="button" class="action-btn" @click="startEditSchedule(schedule)">Edit</button>
-            <button type="button" class="action-btn action-btn--danger" @click="deleteSchedule(schedule.id)">Delete</button>
+            <button
+              type="button"
+              class="action-btn"
+              @click="startEditSchedule(schedule)"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              class="action-btn action-btn--danger"
+              @click="deleteSchedule(schedule.id)"
+            >
+              Delete
+            </button>
           </div>
         </li>
       </ul>
 
       <!-- Schedule Form -->
-      <div v-if="editingSchedule !== null || scheduleForm.name !== '' || true" class="schedule-form">
-        <h3 class="form__title">{{ editingSchedule ? 'Edit Schedule' : 'New Schedule' }}</h3>
+      <div
+        v-if="editingSchedule !== null || scheduleForm.name !== '' || true"
+        class="schedule-form"
+      >
+        <h3 class="form__title">
+          {{ editingSchedule ? 'Edit Schedule' : 'New Schedule' }}
+        </h3>
 
         <div class="form__field">
-          <label class="form__label" for="schedule-name">Name</label>
+          <label
+            class="form__label"
+            for="schedule-name"
+          >Name</label>
           <input
             id="schedule-name"
             v-model="scheduleForm.name"
             type="text"
             class="form__input"
             placeholder="e.g., Homework Time"
-          />
+          >
         </div>
 
         <div class="form__row">
           <div class="form__field">
-            <label class="form__label" for="schedule-start">Start Time</label>
+            <label
+              class="form__label"
+              for="schedule-start"
+            >Start Time</label>
             <input
               id="schedule-start"
               v-model="scheduleForm.startTime"
               type="time"
               class="form__input"
-            />
+            >
           </div>
           <div class="form__field">
-            <label class="form__label" for="schedule-end">End Time</label>
+            <label
+              class="form__label"
+              for="schedule-end"
+            >End Time</label>
             <input
               id="schedule-end"
               v-model="scheduleForm.endTime"
               type="time"
               class="form__input"
-            />
+            >
           </div>
         </div>
 
@@ -481,17 +561,26 @@ onMounted(loadAll);
         </div>
 
         <div class="form__field form__field--row">
-          <label class="form__label" for="schedule-active">Active</label>
+          <label
+            class="form__label"
+            for="schedule-active"
+          >Active</label>
           <input
             id="schedule-active"
             v-model="scheduleForm.isActive"
             type="checkbox"
             class="form__checkbox"
-          />
+          >
         </div>
 
         <div class="form__actions">
-          <button type="button" class="cancel-btn" @click="cancelEditSchedule">Cancel</button>
+          <button
+            type="button"
+            class="cancel-btn"
+            @click="cancelEditSchedule"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="save-btn"
@@ -505,20 +594,47 @@ onMounted(loadAll);
     </section>
 
     <!-- ── Tags ─────────────────────────────────────────────────────────── -->
-    <section v-show="activeTab === 'tags'" role="tabpanel" aria-labelledby="tab-tags" class="parental-controls__section">
+    <section
+      v-show="activeTab === 'tags'"
+      role="tabpanel"
+      aria-labelledby="tab-tags"
+      class="parental-controls__section"
+    >
       <div class="section__header">
-        <h2 id="tab-tags" class="section__title">Blocked Tags</h2>
+        <h2
+          id="tab-tags"
+          class="section__title"
+        >
+          Blocked Tags
+        </h2>
       </div>
 
-      <p class="section__desc">Tags block content from appearing in search or recommendations.</p>
+      <p class="section__desc">
+        Tags block content from appearing in search or recommendations.
+      </p>
 
-      <div v-if="loadingTags" class="section__loading" role="status" aria-busy="true">
+      <div
+        v-if="loadingTags"
+        class="section__loading"
+        role="status"
+        aria-busy="true"
+      >
         <p>Loading tags…</p>
       </div>
 
-      <div v-else-if="errorTags" class="section__error" role="alert">
+      <div
+        v-else-if="errorTags"
+        class="section__error"
+        role="alert"
+      >
         <p>{{ errorTags }}</p>
-        <button type="button" class="retry-btn" @click="loadTags">Retry</button>
+        <button
+          type="button"
+          class="retry-btn"
+          @click="loadTags"
+        >
+          Retry
+        </button>
       </div>
 
       <div v-else>
@@ -529,7 +645,7 @@ onMounted(loadAll);
             class="tag-input"
             placeholder="Enter tag to block…"
             @keyup.enter="addTag"
-          />
+          >
           <button
             type="button"
             class="add-tag-btn"
@@ -540,8 +656,16 @@ onMounted(loadAll);
           </button>
         </div>
 
-        <ul v-if="blockedTags.length" class="tag-list" role="list">
-          <li v-for="tag in blockedTags" :key="tag.id" class="tag-item">
+        <ul
+          v-if="blockedTags.length"
+          class="tag-list"
+          role="list"
+        >
+          <li
+            v-for="tag in blockedTags"
+            :key="tag.id"
+            class="tag-item"
+          >
             <span class="tag-item__label">{{ tag.tag }}</span>
             <button
               type="button"
@@ -553,28 +677,64 @@ onMounted(loadAll);
             </button>
           </li>
         </ul>
-        <p v-else class="section__empty">No blocked tags configured.</p>
+        <p
+          v-else
+          class="section__empty"
+        >
+          No blocked tags configured.
+        </p>
       </div>
     </section>
 
     <!-- ── Stream Limits ────────────────────────────────────────────────── -->
-    <section v-show="activeTab === 'limits'" role="tabpanel" aria-labelledby="tab-limits" class="parental-controls__section">
+    <section
+      v-show="activeTab === 'limits'"
+      role="tabpanel"
+      aria-labelledby="tab-limits"
+      class="parental-controls__section"
+    >
       <div class="section__header">
-        <h2 id="tab-limits" class="section__title">Stream Limits</h2>
+        <h2
+          id="tab-limits"
+          class="section__title"
+        >
+          Stream Limits
+        </h2>
       </div>
 
-      <div v-if="loadingLimits" class="section__loading" role="status" aria-busy="true">
+      <div
+        v-if="loadingLimits"
+        class="section__loading"
+        role="status"
+        aria-busy="true"
+      >
         <p>Loading limits…</p>
       </div>
 
-      <div v-else-if="errorLimits" class="section__error" role="alert">
+      <div
+        v-else-if="errorLimits"
+        class="section__error"
+        role="alert"
+      >
         <p>{{ errorLimits }}</p>
-        <button type="button" class="retry-btn" @click="loadStreamLimit">Retry</button>
+        <button
+          type="button"
+          class="retry-btn"
+          @click="loadStreamLimit"
+        >
+          Retry
+        </button>
       </div>
 
-      <div v-else-if="editingLimit" class="limit-form">
+      <div
+        v-else-if="editingLimit"
+        class="limit-form"
+      >
         <div class="form__field">
-          <label class="form__label" for="limit-streams">Max Concurrent Streams</label>
+          <label
+            class="form__label"
+            for="limit-streams"
+          >Max Concurrent Streams</label>
           <input
             id="limit-streams"
             v-model.number="limitForm.maxConcurrentStreams"
@@ -582,22 +742,31 @@ onMounted(loadAll);
             min="1"
             max="10"
             class="form__input form__input--number"
-          />
+          >
         </div>
 
         <div class="form__field">
-          <label class="form__label" for="limit-bandwidth">Max Bandwidth (kbps, 0 = unlimited)</label>
+          <label
+            class="form__label"
+            for="limit-bandwidth"
+          >Max Bandwidth (kbps, 0 = unlimited)</label>
           <input
             id="limit-bandwidth"
             v-model.number="limitForm.maxTotalBandwidthKbps"
             type="number"
             min="0"
             class="form__input form__input--number"
-          />
+          >
         </div>
 
         <div class="form__actions">
-          <button type="button" class="cancel-btn" @click="cancelEditLimit">Cancel</button>
+          <button
+            type="button"
+            class="cancel-btn"
+            @click="cancelEditLimit"
+          >
+            Cancel
+          </button>
           <button
             type="button"
             class="save-btn"
@@ -609,20 +778,35 @@ onMounted(loadAll);
         </div>
       </div>
 
-      <div v-else class="limit-display">
+      <div
+        v-else
+        class="limit-display"
+      >
         <dl class="limit-list">
           <div class="limit-item">
-            <dt class="limit-item__label">Max Concurrent Streams</dt>
-            <dd class="limit-item__value">{{ streamLimit?.maxConcurrentStreams ?? '—' }}</dd>
+            <dt class="limit-item__label">
+              Max Concurrent Streams
+            </dt>
+            <dd class="limit-item__value">
+              {{ streamLimit?.maxConcurrentStreams ?? '—' }}
+            </dd>
           </div>
           <div class="limit-item">
-            <dt class="limit-item__label">Max Total Bandwidth</dt>
+            <dt class="limit-item__label">
+              Max Total Bandwidth
+            </dt>
             <dd class="limit-item__value">
               {{ streamLimit?.maxTotalBandwidthKbps ? `${streamLimit.maxTotalBandwidthKbps} kbps` : 'Unlimited' }}
             </dd>
           </div>
         </dl>
-        <button type="button" class="section__action" @click="startEditLimit">Edit Limits</button>
+        <button
+          type="button"
+          class="section__action"
+          @click="startEditLimit"
+        >
+          Edit Limits
+        </button>
       </div>
     </section>
   </div>

@@ -96,7 +96,9 @@ function handleClose() {
             <h2
               id="rating-modal-title"
               class="modal-title"
-            >Rate This Title</h2>
+            >
+              Rate This Title
+            </h2>
             <button
               type="button"
               class="close-btn"
@@ -137,7 +139,9 @@ function handleClose() {
           </div>
 
           <footer class="modal-footer">
-            <p class="hint">Press <kbd>Esc</kbd> to close</p>
+            <p class="hint">
+              Press <kbd>Esc</kbd> to close
+            </p>
           </footer>
         </div>
       </div>

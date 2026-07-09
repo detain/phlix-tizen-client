@@ -82,9 +82,15 @@ onMounted(load);
         </svg>
       </button>
       <h1 class="recommendations-screen__title">
-        <template v-if="loading">For You…</template>
-        <template v-else-if="items.length">{{ items.length }} Recommendations</template>
-        <template v-else>For You</template>
+        <template v-if="loading">
+          For You…
+        </template>
+        <template v-else-if="items.length">
+          {{ items.length }} Recommendations
+        </template>
+        <template v-else>
+          For You
+        </template>
       </h1>
     </header>
 
