@@ -16,6 +16,7 @@ import { resolveAppConfig } from './resolveConfig';
 import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import SpatialNavHost from './SpatialNavHost.vue';
+import ChaptersPage from './pages/ChaptersPage.vue';
 
 /**
  * Top-bar nav, mirroring the server web-ui. Without a supplied `menu` the shell
@@ -43,7 +44,8 @@ export function buildMenu(): MenuItem[] {
 export function buildExtraRoutes(): RouteRecordRaw[] {
   return [
     ...buildAdminRoutes(),
-    { path: '/app/library/scan', name: 'library-scan', component: LibraryScanPage }
+    { path: '/app/library/scan', name: 'library-scan', component: LibraryScanPage },
+    { path: '/app/chapters/:id', name: 'chapters', component: ChaptersPage },
   ];
 }
 
