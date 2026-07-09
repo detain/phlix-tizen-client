@@ -9,6 +9,7 @@
  * Route: /app/recommendations  (registered via buildExtraRoutes in main.ts)
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import { ref, onMounted } from 'vue';

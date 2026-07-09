@@ -9,6 +9,7 @@
  * Route: /app/chapters/:id  (registered via buildExtraRoutes in main.ts)
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import { ref, computed, onMounted, watch } from 'vue';

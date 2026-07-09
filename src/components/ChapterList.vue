@@ -8,6 +8,7 @@
  * in milliseconds — matching the signature used by the player store's seekTo().
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import { computed } from 'vue';

@@ -5,6 +5,8 @@
  *
  * Used on the media detail screen when the user clicks "Rate". The modal is
  * closed by the Escape key, clicking the backdrop, or the explicit close button.
+ * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 import { ref, onMounted, onUnmounted } from 'vue'
 import RatingBadge from './RatingBadge.vue'

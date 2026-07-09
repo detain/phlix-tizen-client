@@ -5,6 +5,7 @@
  * `GET /api/v1/music/albums/{id}`, and `GET /api/v1/music/tracks/{id}`.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import { defineStore } from 'pinia';

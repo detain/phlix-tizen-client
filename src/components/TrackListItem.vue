@@ -4,6 +4,7 @@
  * Shows track number, title, and duration. Clicking play emits a play event.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import type { MusicTrack } from '@phlix/contracts';
