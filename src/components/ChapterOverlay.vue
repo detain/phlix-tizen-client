@@ -181,7 +181,7 @@ function startPositionPolling(): void {
     if (!state) return;
 
     // Try to read position from player store - use unknown to access dynamic properties
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const storeAny = state as unknown as Record<string, unknown>;
     const pos = storeAny.position ?? storeAny.currentTime ?? storeAny.time ?? storeAny.current_position ?? 0;
     const dur = storeAny.duration ?? storeAny.totalDuration ?? storeAny.duration_seconds ?? 0;

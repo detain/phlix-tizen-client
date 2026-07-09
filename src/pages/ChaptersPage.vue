@@ -101,11 +101,15 @@ watch(mediaId, loadChapters);
         </svg>
       </button>
       <h1 class="chapters-page__title">
-        <template v-if="loading">Chapters…</template>
+        <template v-if="loading">
+          Chapters…
+        </template>
         <template v-else-if="chapters.length">
           {{ chapters.length }} {{ chapters.length === 1 ? 'Chapter' : 'Chapters' }}
         </template>
-        <template v-else>Chapters</template>
+        <template v-else>
+          Chapters
+        </template>
       </h1>
     </header>
 

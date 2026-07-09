@@ -101,7 +101,9 @@ watch(() => musicStore.currentView, loadInitialData);
           <path d="M19 12H5M12 19l-7-7 7-7" />
         </svg>
       </button>
-      <h1 class="music-page__title">{{ getPageTitle() }}</h1>
+      <h1 class="music-page__title">
+        {{ getPageTitle() }}
+      </h1>
     </header>
 
     <!-- Loading state -->
@@ -174,24 +176,45 @@ watch(() => musicStore.currentView, loadInitialData);
           :src="musicStore.currentAlbum.albumArtUrl"
           :alt="`Album art for ${musicStore.currentAlbum.title}`"
           class="music-page__album-art"
-        />
+        >
         <div
           v-else
           class="music-page__album-art music-page__album-art--placeholder"
           aria-hidden="true"
         >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="12" cy="12" r="10" />
-            <circle cx="12" cy="12" r="3" />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="10"
+            />
+            <circle
+              cx="12"
+              cy="12"
+              r="3"
+            />
             <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
           </svg>
         </div>
         <div class="music-page__album-info">
-          <h2 class="music-page__album-title">{{ musicStore.currentAlbum.title }}</h2>
-          <p v-if="musicStore.currentAlbum.artist" class="music-page__album-artist">
+          <h2 class="music-page__album-title">
+            {{ musicStore.currentAlbum.title }}
+          </h2>
+          <p
+            v-if="musicStore.currentAlbum.artist"
+            class="music-page__album-artist"
+          >
             {{ musicStore.currentAlbum.artist.name }}
           </p>
-          <p v-if="musicStore.currentAlbum.year" class="music-page__album-year">
+          <p
+            v-if="musicStore.currentAlbum.year"
+            class="music-page__album-year"
+          >
             {{ musicStore.currentAlbum.year }} · {{ musicStore.currentAlbum.totalTracks }} tracks
           </p>
         </div>
