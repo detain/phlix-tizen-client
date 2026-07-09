@@ -17,6 +17,7 @@ import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import SpatialNavHost from './SpatialNavHost.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
+import ParentalControlsPage from './pages/ParentalControlsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
 
 /**
@@ -34,6 +35,7 @@ export function buildMenu(): MenuItem[] {
     { id: 'browse', label: 'Browse', to: '/app', libraryLinks: true },
     { id: 'for-you', label: 'For You', to: '/app/recommendations' },
     { id: 'settings', label: 'Settings', to: '/app/settings' },
+    { id: 'parental-controls', label: 'Parental Controls', to: '/app/parental-controls' },
     { id: 'admin', label: 'Admin', to: '/app/admin/dashboard', requiresAdmin: true }
   ];
 }
@@ -49,6 +51,7 @@ export function buildExtraRoutes(): RouteRecordRaw[] {
     { path: '/app/library/scan', name: 'library-scan', component: LibraryScanPage },
     { path: '/app/chapters/:id', name: 'chapters', component: ChaptersPage },
     { path: '/app/recommendations', name: 'recommendations', component: RecommendationsScreen },
+    { path: '/app/parental-controls', name: 'parental-controls', component: ParentalControlsPage },
   ];
 }
 
