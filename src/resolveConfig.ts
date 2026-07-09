@@ -2,6 +2,7 @@
  * Tizen TV client entry point and boot glue.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 // Pure, unit-testable resolution of the phlix-ui app mode + apiBase for the

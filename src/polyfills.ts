@@ -2,6 +2,7 @@
  * Tizen TV client entry point and boot glue.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 // Polyfills for older Samsung Tizen webviews (pre-Chrome 98).

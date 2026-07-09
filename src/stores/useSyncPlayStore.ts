@@ -11,6 +11,7 @@
  *   - Real-time state synchronization
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import { defineStore } from 'pinia';
