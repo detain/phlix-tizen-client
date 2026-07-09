@@ -25,7 +25,7 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 
 ## Architecture
 
-**Entry**: `index.html` (repo root, the Vite root) loads `/src/main.ts`, which mounts into `#phlix-app` and `#phlix-spatial-host`.
+**Entry**: `index.html` (repo root, the Vite root) loads `/src/main.ts`, which mounts into `#phlix-app`, `#phlix-spatial-host`, and `#phlix-chapter-overlay`.
 
 `src/main.ts` `boot()` flow:
 1. `import './polyfills'` FIRST (installs a `structuredClone` fallback for older Tizen webviews — `@phlix/ui`'s SettingsForm needs it).
@@ -35,9 +35,11 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 5. `createPhlixApp({ app, apiBase, deviceHeaders, defaultTv: true, defaultTheme: 'nocturne', branding: { wordmark: 'Phlix' }, playerHlsConfig: TIZEN_HLS_CONFIG })` → `.mount('#phlix-app')`.
 6. `installTizenBridge(application)` wires the remote.
 7. Mount a SECOND tiny app `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')`, reusing the main app's pinia + router (read off `application.config.globalProperties.$pinia` / `$router`) so it observes the same prefs + route.
+8. Mount a THIRD tiny app `createApp(ChapterOverlay).use(pinia).use(router).mount('#phlix-chapter-overlay')`, reusing the same pinia + router so it observes the same route and renders chapter tick marks + labels on the player seekbar.
 
 **`src/` files** (all the code this repo owns):
-- **`main.ts`** — boot, `createPhlixApp` config, `TIZEN_HLS_CONFIG` (bounded buffers, `capLevelToPlayerSize`, `enableSoftwareAES`), 2nd-app SpatialNavHost mount.
+- **`main.ts`** — boot, `createPhlixApp` config, `TIZEN_HLS_CONFIG` (bounded buffers, `capLevelToPlayerSize`, `enableSoftwareAES`), 2nd-app SpatialNavHost mount, 3rd-app ChapterOverlay mount.
+- **`components/ChapterOverlay.vue`** — portal-rendered overlay (mounted as the 3rd app into `#phlix-chapter-overlay`); fetches chapters from `GET /api/v1/media/{id}/chapters` and renders gold tick marks + a chapter title label on the player seekbar.
 - **`polyfills.ts`** — `structuredClone` guard. MUST be imported before any `@phlix/ui` code.
 - **`resolveConfig.ts`** — pure `resolveAppConfig({serverUrl, envUrl})` → `{app:'server', apiBase}`. Unit-tested; shape kept extensible for a future `app:'hub'` branch.
 - **`deviceId.ts`** — pure `resolveDeviceId(storage)`; prefers `crypto.randomUUID`, deterministic fallback for ancient webviews.

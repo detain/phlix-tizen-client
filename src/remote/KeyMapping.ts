@@ -9,6 +9,7 @@
  * is native focus activation. If RemoteManager also emitted/handled arrows
  * its key-repeat would fire phantom navigation actions on top of spatial-nav.
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 export type ActionName = string;

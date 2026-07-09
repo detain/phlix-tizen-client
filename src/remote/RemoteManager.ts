@@ -7,6 +7,7 @@
  * events). Arrow keys are intentionally not handled here — @phlix/ui's
  * useSpatialNav owns D-pad navigation directly on `document`.
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import KeyMapping, { type ActionName } from './KeyMapping';
