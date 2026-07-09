@@ -18,6 +18,9 @@ import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import SpatialNavHost from './SpatialNavHost.vue';
 import ChapterOverlay from './components/ChapterOverlay.vue';
+import SleepTimerOverlay from './components/SleepTimerOverlay.vue';
+import SkipIntroOverlay from './components/SkipIntroOverlay.vue';
+import PiPController from './components/PiPController.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
 import ParentalControlsPage from './pages/ParentalControlsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
@@ -125,6 +128,18 @@ export async function boot(): Promise<void> {
   // router, so it observes the same route state and can display chapter
   // tick marks and labels on the player seekbar.
   createApp(ChapterOverlay).use(pinia).use(router).mount('#phlix-chapter-overlay');
+
+  // Mount the sleep timer overlay as a FOURTH app sharing the main app's pinia +
+  // router, so it observes the same route state and can display sleep timer controls.
+  createApp(SleepTimerOverlay).use(pinia).use(router).mount('#phlix-sleep-timer-overlay');
+
+  // Mount the skip intro/outro overlay as a FIFTH app sharing the main app's pinia +
+  // router, so it observes the same route state and can display skip markers.
+  createApp(SkipIntroOverlay).use(pinia).use(router).mount('#phlix-skip-intro-overlay');
+
+  // Mount the PiP controller overlay as a SIXTH app sharing the main app's pinia +
+  // router, so it observes the same route state and can toggle picture-in-picture.
+  createApp(PiPController).use(pinia).use(router).mount('#phlix-pip-overlay');
 }
 
 void boot();
