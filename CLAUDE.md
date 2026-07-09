@@ -40,6 +40,8 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 **`src/` files** (all the code this repo owns):
 - **`main.ts`** — boot, `createPhlixApp` config, `TIZEN_HLS_CONFIG` (bounded buffers, `capLevelToPlayerSize`, `enableSoftwareAES`), 2nd-app SpatialNavHost mount, 3rd-app ChapterOverlay mount.
 - **`components/ChapterOverlay.vue`** — portal-rendered overlay (mounted as the 3rd app into `#phlix-chapter-overlay`); fetches chapters from `GET /api/v1/media/{id}/chapters` and renders gold tick marks + a chapter title label on the player seekbar.
+- **`pages/MusicPage.vue`** + **`components/MusicAlbumCard.vue`** / **`components/MusicArtistCard.vue`** / **`components/TrackListItem.vue`** — local music-browsing UI, backed by the `src/stores/useMusicStore.ts` Pinia store.
+- **`stores/useSyncPlayStore.ts`** — SyncPlay real-time sync store (WebSocket-backed).
 - **`polyfills.ts`** — `structuredClone` guard. MUST be imported before any `@phlix/ui` code.
 - **`resolveConfig.ts`** — pure `resolveAppConfig({serverUrl, envUrl})` → `{app:'server', apiBase}`. Unit-tested; shape kept extensible for a future `app:'hub'` branch.
 - **`deviceId.ts`** — pure `resolveDeviceId(storage)`; prefers `crypto.randomUUID`, deterministic fallback for ancient webviews.
@@ -48,7 +50,7 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 - **`remote/RemoteManager.ts`** — KEPT + ported to TS. The single source of TV-remote events (analogue of Electron media events). Captures `keydown`/`keyup` on `document`, emits `'keydown'`/`'keyup'`/`'action'`, held-key repeat (FF/REW accel). `on()` returns an unsubscribe fn. Exposes a host-settable `suppressPropagation` hook (used by `tizenBridge.ts` for the quality-menu D-pad passthrough above) that `stopImmediatePropagation()`s a keydown so later `document` listeners (the player's Arrow shortcuts) don't also fire; RemoteManager itself stays quality-agnostic. Default singleton export.
 - **`remote/KeyMapping.ts`** — KEPT + ported + **retargeted**: KEY_MAP still lists arrows/ENTER (for logging), but they are removed from `isRepeatable`/`isImmediate`/`isHandled`, so RemoteManager neither `preventDefault`s nor emits actions for them — `useSpatialNav` owns the D-pad, native focus owns ENTER. Samsung codes: 10009 `BACK`, 415 `PLAY`, 413 `STOP`, 19 `PAUSE`, 417 `FAST_FORWARD`, 412 `REWIND`, color keys 403–406.
 
-**Rule**: this repo writes no media/library/auth UI — that all lives in `@phlix/ui`. To change a screen, edit `phlix-ui`. Here you only touch boot config (`main.ts`), the remote bridge (`tizenBridge.ts` / `remote/*`), spatial-nav gating (`SpatialNavHost.vue`), or the Tizen manifest (`app/config.xml`).
+**Rule**: media/library/auth/player screens live in `@phlix/ui` — to change one, edit `phlix-ui`. This repo's own UI is limited to boot config (`main.ts`), the remote bridge (`tizenBridge.ts` / `remote/*`), spatial-nav gating (`SpatialNavHost.vue`), the chapter/music overlays and pages under `src/pages/` + `src/components/` (backed by `src/stores/`), or the Tizen manifest (`app/config.xml`).
 
 @./DEVELOPER.md
 
@@ -85,7 +87,6 @@ Vitest + `jsdom` + `@vue/test-utils` (`vitest.config.ts`, `npm test`). Tests liv
 - **Tizen app id**: `app/config.xml` uses `phlix.app.phlixtizen`. `config.xml` is authoritative — the README CLI examples use it too.
 - `.github/workflows/test.yml` (runs `npm test`) and `.github/workflows/lint.yml` (`npm run lint` + `npm run build`) run on push — keep them green.
 
-<!-- caliber:managed:pre-commit -->
 ## Before Committing
 
 **IMPORTANT:** Before every git commit, you MUST ensure Caliber syncs agent configs with the latest code changes.
@@ -106,28 +107,18 @@ grep -q "caliber" .git/hooks/pre-commit 2>/dev/null && echo "hook-active" || ech
 **`caliber config`** takes no flags — it runs an interactive provider setup. Do not pass `--provider`, `--api-key`, or `--endpoint`.
 
 If `caliber` is not found, tell the user: "This project uses Caliber for agent config sync. Run /setup-caliber to get set up."
-<!-- /caliber:managed:pre-commit -->
-
-<!-- caliber:managed:learnings -->
 ## Session Learnings
 
 Read `CALIBER_LEARNINGS.md` for patterns and anti-patterns learned from previous sessions.
 These are auto-extracted from real tool usage — treat them as project-specific rules.
-<!-- /caliber:managed:learnings -->
-
-<!-- caliber:managed:model-config -->
 ## Model Configuration
 
 Recommended default: `claude-sonnet-4-6` with high effort (stronger reasoning; higher cost and latency than smaller models).
 Smaller/faster models trade quality for speed and cost — pick what fits the task.
 Pin your choice (`/model` in Claude Code, or `CALIBER_MODEL` when using Caliber with an API provider) so upstream default changes do not silently change behavior.
 
-<!-- /caliber:managed:model-config -->
-
-<!-- caliber:managed:sync -->
 ## Context Sync
 
 This project uses [Caliber](https://github.com/caliber-ai-org/ai-setup) to keep AI agent configs in sync across Claude Code, Cursor, Copilot, and Codex.
 Configs update automatically before each commit via `caliber refresh`.
 If the pre-commit hook is not set up, run `/setup-caliber` to configure everything automatically.
-<!-- /caliber:managed:sync -->
