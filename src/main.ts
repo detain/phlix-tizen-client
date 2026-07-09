@@ -17,6 +17,7 @@ import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import SpatialNavHost from './SpatialNavHost.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
+import RecommendationsScreen from './screens/RecommendationsScreen.vue';
 
 /**
  * Top-bar nav, mirroring the server web-ui. Without a supplied `menu` the shell
@@ -31,6 +32,7 @@ export function buildMenu(): MenuItem[] {
     // `libraryLinks` expands Browse into one nav link per library (fetched from
     // /api/v1/libraries), matching the per-library Browse sections.
     { id: 'browse', label: 'Browse', to: '/app', libraryLinks: true },
+    { id: 'for-you', label: 'For You', to: '/app/recommendations' },
     { id: 'settings', label: 'Settings', to: '/app/settings' },
     { id: 'admin', label: 'Admin', to: '/app/admin/dashboard', requiresAdmin: true }
   ];
@@ -46,6 +48,7 @@ export function buildExtraRoutes(): RouteRecordRaw[] {
     ...buildAdminRoutes(),
     { path: '/app/library/scan', name: 'library-scan', component: LibraryScanPage },
     { path: '/app/chapters/:id', name: 'chapters', component: ChaptersPage },
+    { path: '/app/recommendations', name: 'recommendations', component: RecommendationsScreen },
   ];
 }
 
