@@ -72,15 +72,15 @@ const totalCount = computed(() => props.chapters.length);
         class="chapter-list__item"
         role="option"
         :aria-selected="false"
-        :aria-label="`${chapterLabel(chapter, listIndex)}, ${formatTime(chapter.start_seconds)}`"
+        :aria-label="`${chapterLabel(chapter, listIndex)}, ${formatTime(chapter.startSeconds)}`"
         tabindex="0"
-        @click="onSeek(chapter.start_seconds * 1000)"
-        @keydown.enter="onSeek(chapter.start_seconds * 1000)"
-        @keydown.space.prevent="onSeek(chapter.start_seconds * 1000)"
+        @click="onSeek(chapter.startSeconds * 1000)"
+        @keydown.enter="onSeek(chapter.startSeconds * 1000)"
+        @keydown.space.prevent="onSeek(chapter.startSeconds * 1000)"
       >
         <span class="chapter-list__index">{{ listIndex + 1 }}</span>
         <span class="chapter-list__title">{{ chapterLabel(chapter, listIndex) }}</span>
-        <span class="chapter-list__time numeric">{{ formatTime(chapter.start_seconds) }}</span>
+        <span class="chapter-list__time numeric">{{ formatTime(chapter.startSeconds) }}</span>
       </li>
     </ul>
   </nav>
