@@ -34,11 +34,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Checkout phlix-contracts (for file:../phlix-contracts dependency)
-        uses: actions/checkout@v6
-        with:
-          repository: detain/phlix-contracts
-          path: ../phlix-contracts
+      - name: Checkout phlix-contracts
+        run: git clone --depth 1 https://github.com/detain/phlix-contracts.git ../phlix-contracts
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
