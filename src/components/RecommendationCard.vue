@@ -7,6 +7,7 @@
  * to the player for that media item.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import type { UserRecommendation } from '@phlix/contracts';

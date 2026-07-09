@@ -7,6 +7,8 @@
  * - Clicking a star level calls `PUT /api/v1/media/{id}/rating` via `ApiClient.setRating`
  * - Optimistic UI: the star updates immediately; reverts on error.
  * - TV D‑pad navigation via `@phlix/ui` `useSpatialNav` focus hooks.
+ * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import { ref, computed, onMounted } from 'vue'

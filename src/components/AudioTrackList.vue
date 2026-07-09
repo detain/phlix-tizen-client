@@ -9,6 +9,7 @@
  * Clicking/tapping a row calls `onSelect(track)` with the selected track.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import { computed } from 'vue';

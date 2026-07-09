@@ -5,6 +5,8 @@
  *
  * Styled for a dark TV UI (nocturne theme). Stars use CSS custom properties so
  * they inherit the correct amber/gold hue from the theme when available.
+ * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import { computed } from 'vue'

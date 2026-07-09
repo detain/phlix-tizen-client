@@ -4,6 +4,7 @@
  * Clicking navigates to the album's track listing.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import type { MusicAlbum } from '@phlix/contracts';

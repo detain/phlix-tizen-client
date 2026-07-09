@@ -3,6 +3,7 @@
  * Renderless host for spatial navigation.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 // Renderless host that opts @phlix/ui's spatial navigation in/out per route.

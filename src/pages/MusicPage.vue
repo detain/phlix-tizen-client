@@ -8,6 +8,7 @@
  * Route: /app/music  (registered via buildExtraRoutes in main.ts)
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import { onMounted, watch } from 'vue';

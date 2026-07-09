@@ -4,6 +4,7 @@
  * Clicking navigates to the artist's album list.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import type { MusicArtist } from '@phlix/contracts';

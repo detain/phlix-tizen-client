@@ -42,14 +42,6 @@ function findDocblockEnd(lines, start) {
   return -1;
 }
 
-// Find the line index (0-based) where a Vue script block ends
-function findVueScriptEnd(lines, start) {
-  for (let i = start; i < lines.length; i++) {
-    if (lines[i].includes('</script>')) return i;
-  }
-  return -1;
-}
-
 // Inject copyright into an existing TS/JS docblock /** ... */
 // Returns null if no top-level docblock OR copyright already present.
 // Only considers /** at the very start of the file (after optional shebang)
