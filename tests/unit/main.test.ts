@@ -46,7 +46,13 @@ const secondUse = vi.fn();
 const secondApp = { use: secondUse, mount: secondMount };
 secondUse.mockReturnValue(secondApp);
 vi.mock('vue', () => ({
-  createApp: vi.fn(() => secondApp)
+  createApp: vi.fn(() => secondApp),
+  defineComponent: vi.fn((...args: unknown[]) => ({ setup: () => {}, ...args[0] })),
+  computed: vi.fn((fn: unknown) => fn),
+  reactive: vi.fn((obj: unknown) => obj),
+  ref: vi.fn((val: unknown) => ({ value: val })),
+  isRef: vi.fn(() => false),
+  nextTick: vi.fn((fn: unknown) => Promise.resolve(fn())),
 }));
 
 describe('boot (Tizen renderer entry)', () => {
