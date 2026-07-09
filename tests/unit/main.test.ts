@@ -158,7 +158,7 @@ describe('buildMenu', () => {
   it('supplies Browse (libraryLinks) + For You + Settings + admin-gated Admin', async () => {
     const { buildMenu } = await import('@/main');
     const menu = buildMenu();
-    expect(menu.map((m) => m.id)).toEqual(['browse', 'for-you', 'settings', 'admin']);
+    expect(menu.map((m) => m.id)).toEqual(['browse', 'for-you', 'settings', 'parental-controls', 'admin']);
     expect(menu.find((m) => m.id === 'browse')?.libraryLinks).toBe(true);
     expect(menu.find((m) => m.id === 'for-you')).toMatchObject({
       to: '/app/recommendations',

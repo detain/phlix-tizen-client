@@ -23,9 +23,9 @@ No webpack, no Babel, no Jest.
 
 ## Architecture
 
-**Entry**: `index.html` (repo root = Vite root) → `/src/main.ts`, mounting `#phlix-app` + `#phlix-spatial-host`.
+**Entry**: `index.html` (repo root = Vite root) → `/src/main.ts`, mounting `#phlix-app` + `#phlix-spatial-host` + `#phlix-chapter-overlay`.
 
-`main.ts` `boot()`: import `./polyfills` first → resolve server URL (`localStorage['phlix.serverUrl']` → `VITE_PHLIX_SERVER_URL` → **empty**, via `resolveConfig.ts`; an empty base + `requireConnection: true` shows `@phlix/ui`'s first-run Connect screen instead of guessing `localhost`, and the chosen URL is mirrored back to `localStorage['phlix.serverUrl']` via `onConnectionChange`) → `resolveDeviceId` (`deviceId.ts`) → `buildPhlixHeaders({deviceType:'samsung-tizen'})` → `createPhlixApp({app, apiBase, deviceHeaders, defaultTv:true, defaultTheme:'nocturne', branding:{wordmark:'Phlix'}, playerHlsConfig:TIZEN_HLS_CONFIG}).mount('#phlix-app')` → `installTizenBridge(app)` → mount a 2nd `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')` reusing the main app's pinia + router.
+`main.ts` `boot()`: import `./polyfills` first → resolve server URL (`localStorage['phlix.serverUrl']` → `VITE_PHLIX_SERVER_URL` → **empty**, via `resolveConfig.ts`; an empty base + `requireConnection: true` shows `@phlix/ui`'s first-run Connect screen instead of guessing `localhost`, and the chosen URL is mirrored back to `localStorage['phlix.serverUrl']` via `onConnectionChange`) → `resolveDeviceId` (`deviceId.ts`) → `buildPhlixHeaders({deviceType:'samsung-tizen'})` → `createPhlixApp({app, apiBase, deviceHeaders, defaultTv:true, defaultTheme:'nocturne', branding:{wordmark:'Phlix'}, playerHlsConfig:TIZEN_HLS_CONFIG}).mount('#phlix-app')` → `installTizenBridge(app)` → mount a 2nd `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')` and a 3rd `createApp(ChapterOverlay).use(pinia).use(router).mount('#phlix-chapter-overlay')`, both reusing the main app's pinia + router.
 
 - **`src/main.ts`**: boot + `createPhlixApp` config + `TIZEN_HLS_CONFIG` + 2nd-app mount.
 - **`src/polyfills.ts`**: `structuredClone` fallback — imported FIRST (older Tizen lacks it; `@phlix/ui` needs it).

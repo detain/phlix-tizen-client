@@ -2,6 +2,7 @@
  * Tizen TV client entry point and boot glue.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
+ * @license   MIT
  */
 
 import './polyfills';
@@ -16,6 +17,7 @@ import { resolveAppConfig } from './resolveConfig';
 import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import SpatialNavHost from './SpatialNavHost.vue';
+import ChapterOverlay from './components/ChapterOverlay.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
 import ParentalControlsPage from './pages/ParentalControlsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
@@ -118,6 +120,11 @@ export async function boot(): Promise<void> {
   const pinia = application.config.globalProperties.$pinia;
   const router = application.config.globalProperties.$router;
   createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host');
+
+  // Mount the chapter overlay as a THIRD app sharing the main app's pinia +
+  // router, so it observes the same route state and can display chapter
+  // tick marks and labels on the player seekbar.
+  createApp(ChapterOverlay).use(pinia).use(router).mount('#phlix-chapter-overlay');
 }
 
 void boot();
