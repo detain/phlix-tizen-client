@@ -30,7 +30,8 @@
   "homepage": "https://github.com/detain/phlix-tizen-client",
   "dependencies": {
     "@phlix/contracts": "github:detain/phlix-contracts#v0.3.8",
-    "@phlix/ui": "github:detain/phlix-ui#v0.74.0",
+    "@phlix/syncplay": "github:detain/phlix-syncplay#v0.1.2",
+    "@phlix/ui": "github:detain/phlix-ui#v0.76.0",
     "pinia": "^3.0.0",
     "vue": "^3.5.0",
     "vue-router": "^5.0.0"
