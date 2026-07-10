@@ -22,6 +22,7 @@ import SleepTimerOverlay from './components/SleepTimerOverlay.vue';
 import SkipIntroOverlay from './components/SkipIntroOverlay.vue';
 import PiPController from './components/PiPController.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
+import AudioTracksPage from './pages/AudioTracksPage.vue';
 import ParentalControlsPage from './pages/ParentalControlsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
 
@@ -55,6 +56,7 @@ export function buildExtraRoutes(): RouteRecordRaw[] {
     ...buildAdminRoutes(),
     { path: '/app/library/scan', name: 'library-scan', component: LibraryScanPage },
     { path: '/app/chapters/:id', name: 'chapters', component: ChaptersPage },
+    { path: '/app/audio-tracks/:id', name: 'audio-tracks', component: AudioTracksPage },
     { path: '/app/recommendations', name: 'recommendations', component: RecommendationsScreen },
     { path: '/app/parental-controls', name: 'parental-controls', component: ParentalControlsPage },
   ];
