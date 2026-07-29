@@ -20,6 +20,11 @@
 **Rationale**: This store is hub-specific - for SPA to browse ONE paired media server through relay proxy with currentServerId/Name/Url persisted to localStorage. Tizen connects directly to a single server via localStorage['phlix.serverUrl'] in resolveConfig.ts, not through hub relay. Different architecture entirely.
 **Code Changes**: None (hub-specific functionality - no code needed)
 
+## Step 4.5 - useConnectionStore
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Tizen uses localStorage directly for server URL configuration via resolveConfig.ts: `localStorage['phlix.serverUrl']` -> `VITE_PHLIX_SERVER_URL`. The probeServer(), isPlainTextPublic(), and runtime server selection features are not needed in tizen's direct-to-server model.
+**Code Changes**: None (uses localStorage directly - no code needed)
+
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
