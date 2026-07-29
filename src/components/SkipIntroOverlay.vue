@@ -9,6 +9,15 @@
  * This is a portal-rendered overlay that positions itself over the player area.
  * Styled for a dark TV UI (nocturne theme) with D-pad navigation support.
  *
+ * TV-SPECIFIC: This component uses polling (250ms) to track player position
+ * for visibility, whereas phlix-ui's SkipControls uses reactive props. This is
+ * tech debt but necessary for the TV webview context. Consolidation requires
+ * migrating Tizen to phlix-ui's reactive pattern.
+ *
+ * @category TV-Specific Component
+ * @duplicate phlix-ui/src/components/player/SkipControls.vue - phlix-ui uses
+ *   reactive pattern, Tizen uses polling
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */

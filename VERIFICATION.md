@@ -50,6 +50,16 @@
 **Finding**: Tizen ChapterOverlay uses polling (250ms) for position tracking vs phlix-ui's reactive subscriptions. Conflates marker timeline + seekbar ticks. Consolidation requires phlix-ui MarkerTimeline to support chapters AND Tizen to migrate from polling to reactive.
 **Code Changes**: None (comment added)
 
+## Step 2.3.3 - SkipIntroOverlay.vue vs SkipControls.vue
+**Status**: TV-SPECIFIC (justified) - duplicate
+**Finding**: phlix-ui's SkipControls uses reactive pattern. Tizen's SkipIntroOverlay uses polling (tech debt). Consolidation requires migrating Tizen to reactive pattern.
+**Code Changes**: None (comment added)
+
+## Step 2.3.4 - SleepTimerOverlay.vue vs SleepTimer.vue
+**Status**: DUPLICATE (pending analysis)
+**Finding**: [Pending file analysis]
+**Code Changes**: None (pending analysis)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis
