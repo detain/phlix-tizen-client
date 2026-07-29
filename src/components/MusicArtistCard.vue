@@ -3,6 +3,15 @@
  *
  * Clicking navigates to the artist's album list.
  *
+ * TV-SPECIFIC: This component is kept locally because phlix-ui's MusicArtistCard
+ * lacks D-pad navigation support (useSpatialNav) and TV-specific accessibility
+ * (role="button", full ARIA labels). Once phlix-ui's version supports these,
+ * this local component should be removed and replaced with @phlix/ui's import.
+ *
+ * @category TV-Specific Component
+ * @duplicate phlix-ui/src/components/MusicArtistCard.vue - but phlix-ui version
+ *   lacks D-pad navigation and TV-specific aria-labels
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
