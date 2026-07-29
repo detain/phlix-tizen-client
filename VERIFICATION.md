@@ -20,6 +20,11 @@
 **Finding**: Both Tizen and phlix-ui use internal state machine patterns for view switching (artists → albums → tracks), so architectural patterns are similar. TV-specific justification is the BACK button navigation behavior: Tizen uses `router.back()` to exit to parent app at artists view, while phlix-ui stays within the music module. This TV UX behavior is intentional and justifies separate implementation.
 **Code Changes**: None (comment updated with corrected reasoning)
 
+## Step 2.1.5 - Music Store Duplication
+**Status**: NOT A DUPLICATE - No action needed
+**Finding**: useMusicStore (tizen) handles library browsing and navigation state. useMusicPlayer (phlix-ui) handles audio playback with gapless playback, crossfade, and queue management. These are complementary, not duplicates.
+**Code Changes**: None (documentation only)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis
