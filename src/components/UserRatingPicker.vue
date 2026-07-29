@@ -7,6 +7,15 @@
  * - Clicking a star level calls `PUT /api/v1/media/{id}/rating` via `ApiClient.setRating`
  * - Optimistic UI: the star updates immediately; reverts on error.
  * - TV D‑pad navigation via `@phlix/ui` `useSpatialNav` focus hooks.
+ *
+ * TV-SPECIFIC: This component is kept locally because phlix-ui's UserRatingPicker
+ * lacks half‑star precision and uses a different API pattern (v-model vs
+ * props+emit). This component provides half‑star support via starState().
+ *
+ * @category TV-Specific Component
+ * @duplicate phlix-ui/src/components/UserRatingPicker.vue - phlix-ui version
+ *   lacks half-star precision and has different API design (v-model vs props+emit)
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */

@@ -30,6 +30,11 @@
 **Finding**: phlix-ui's version lacks half-star precision (uses Math.round to whole stars). Tizen version provides visual half-star support via linearGradient SVGs. Consolidation possible if phlix-ui adds half-star support.
 **Code Changes**: None (comment added)
 
+## Step 2.2.2 - UserRatingPicker.vue
+**Status**: TV-SPECIFIC (justified)
+**Finding**: phlix-ui's version has better API (v-model, readonly prop, lock icon, spinner) but lacks half-star precision. Tizen version provides half-star support via starState(). Consolidation possible if phlix-ui adds half-star support.
+**Code Changes**: None (comment added)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis
