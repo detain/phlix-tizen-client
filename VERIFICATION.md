@@ -25,6 +25,11 @@
 **Rationale**: Tizen uses localStorage directly for server URL configuration via resolveConfig.ts: `localStorage['phlix.serverUrl']` -> `VITE_PHLIX_SERVER_URL`. The probeServer(), isPlainTextPublic(), and runtime server selection features are not needed in tizen's direct-to-server model.
 **Code Changes**: None (uses localStorage directly - no code needed)
 
+## Step 4.6 - useSettingsPrefsStore
+**Decision**: NOT TV-APPLICABLE (STORE DOES NOT EXIST)
+**Rationale**: This store does not exist in phlix-ui - the concept may have been merged into usePreferencesStore or never existed as a separate store. No action needed.
+**Code Changes**: None (store doesn't exist - no code needed)
+
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
