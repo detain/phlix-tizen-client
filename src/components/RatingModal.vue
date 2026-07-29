@@ -5,6 +5,13 @@
  *
  * Used on the media detail screen when the user clicks "Rate". The modal is
  * closed by the Escape key, clicking the backdrop, or the explicit close button.
+ *
+ * TV-SPECIFIC: No phlix-ui equivalent found. This modal component is specific
+ * to the TV app's media detail interaction pattern.
+ *
+ * @category TV-Specific Component
+ * @duplicate No phlix-ui equivalent - TV-specific modal component
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
