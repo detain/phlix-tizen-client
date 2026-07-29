@@ -13,4 +13,5 @@
 **Finding**: useMusicStore.ts uses raw `client.get()` not ApiClient music methods
 
 ## Step 1.6 - Node/npm Compatibility
-**Status**: Pending verification
+**Status**: Verified compatible
+**Finding**: Node v24.15.0 >= v22.12.0 required by tizen-client
