@@ -20,6 +20,7 @@ import SpatialNavHost from './SpatialNavHost.vue';
 import ChapterOverlay from './components/ChapterOverlay.vue';
 import SleepTimerOverlay from './components/SleepTimerOverlay.vue';
 import SkipIntroOverlay from './components/SkipIntroOverlay.vue';
+import UpNextOverlay from './components/UpNextOverlay.vue';
 import PiPController from './components/PiPController.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
 import AudioTracksPage from './pages/AudioTracksPage.vue';
@@ -142,6 +143,10 @@ export async function boot(): Promise<void> {
   // Mount the PiP controller overlay as a SIXTH app sharing the main app's pinia +
   // router, so it observes the same route state and can toggle picture-in-picture.
   createApp(PiPController).use(pinia).use(router).mount('#phlix-pip-overlay');
+
+  // Mount the up next overlay as a SEVENTH app sharing the main app's pinia +
+  // router, so it observes the same route state and can display up next card.
+  createApp(UpNextOverlay).use(pinia).use(router).mount('#phlix-up-next-overlay');
 }
 
 void boot();
