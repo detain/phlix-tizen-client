@@ -1,3 +1,12 @@
+# Category 4 - Missing/Unused Stores
+
+## Step 4.1 - useMediaStore
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Per AGENTS.md architecture - "this repo writes no media/library/auth UI — that lives in @phlix/ui". Tizen is a thin Vue 3 consumer of @phlix/ui - all media browsing is rendered by @phlix/ui's `createPhlixApp()`. The useMediaStore is an internal implementation detail of @phlix/ui's component tree.
+**Code Changes**: None (architectural decision - no code needed)
+
+---
+
 # Category 2 Verification - Duplicate Component Decisions
 
 ## Step 2.1.1 - MusicAlbumCard.vue
