@@ -45,6 +45,11 @@
 **Rationale**: This store manages theater mode state for in-window player (theaterActive ref, shell chrome removal via @theater toggle). TV uses full-screen player mode by default with no windowed player state to toggle and no persistent shell chrome to remove. The theater toggle coordination functionality has no implementation context on TV.
 **Code Changes**: None (full-screen player paradigm - no code needed)
 
+## Step 4.10 - useToastStore
+**Decision**: ALREADY SUFFICIENT (partial usage)
+**Rationale**: The store is actively functional in UserRatingPicker.vue with proper error handling (toast.error() on rating save failure with 4s auto-dismiss). Partial usage is sufficient for tizen's needs - the store provides all toast capability currently required. No gaps identified in tizen's toast usage.
+**Code Changes**: None (already integrated via @phlix/ui - no code needed)
+
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
