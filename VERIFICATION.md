@@ -15,6 +15,11 @@
 **Finding**: Tizen TrackListItem is a single row component with D-pad support, artist name display, and animated playing indicator. phlix-ui MusicTrackList is a container component with skeleton loading, empty state, and i18n but lacks artist display. Different architectures serving different platform needs. Merge possible if phlix-ui adds artist name and D-pad support to its row.
 **Code Changes**: None (documentation only)
 
+## Step 2.1.4 - MusicPage.vue vs MusicLibraryPage.vue
+**Status**: TV-SPECIFIC (justified) - corrected from MAJOR DUPLICATE
+**Finding**: Both Tizen and phlix-ui use internal state machine patterns for view switching (artists → albums → tracks), so architectural patterns are similar. TV-specific justification is the BACK button navigation behavior: Tizen uses `router.back()` to exit to parent app at artists view, while phlix-ui stays within the music module. This TV UX behavior is intentional and justifies separate implementation.
+**Code Changes**: None (comment updated with corrected reasoning)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis

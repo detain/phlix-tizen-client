@@ -5,7 +5,22 @@
  * Shows artist list by default. When an artist is selected, shows their albums.
  * When an album is selected, shows its track listing with play functionality.
  *
+ * TV-SPECIFIC: This component is kept locally despite phlix-ui having
+ * MusicLibraryPage.vue because:
+ *   1. Tizen's BACK button behavior uses `router.back()` to exit to parent app
+ *      when at the artists view, whereas phlix-ui stays within the music module.
+ *      This TV-specific UX (exiting the app on BACK at root) is intentional.
+ *   2. Uses useMusicStore for TV-optimized data fetching patterns
+ *   3. Minor UI/layout differences may exist for TV viewing distance
+ *
+ * Both Tizen and phlix-ui use internal state machine patterns for view
+ * switching (artists → albums → tracks), so architectural patterns are similar.
+ *
  * Route: /app/music  (registered via buildExtraRoutes in main.ts)
+ *
+ * @category TV-Specific Component
+ * @duplicate phlix-ui/src/pages/MusicLibraryPage.vue - but TV navigation
+ *   behavior (router.back() exit) justifies separate implementation
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
