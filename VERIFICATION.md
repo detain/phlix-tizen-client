@@ -5,6 +5,11 @@
 **Rationale**: Per AGENTS.md architecture - "this repo writes no media/library/auth UI — that lives in @phlix/ui". Tizen is a thin Vue 3 consumer of @phlix/ui - all media browsing is rendered by @phlix/ui's `createPhlixApp()`. The useMediaStore is an internal implementation detail of @phlix/ui's component tree.
 **Code Changes**: None (architectural decision - no code needed)
 
+## Step 4.2 - useUserItemDataStore
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: This store manages per-item user interaction state (favorites, ratings, likes, watched) with optimistic updates. All user item data interactions happen in @phlix/ui components rendered via `createPhlixApp()`. Tizen client is a thin consumer - these features are handled by @phlix/ui's component layer, not direct store access.
+**Code Changes**: None (architectural decision - no code needed)
+
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
