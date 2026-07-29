@@ -15,6 +15,11 @@
 **Rationale**: Library browsing is entirely in @phlix/ui via `createPhlixApp()`. Tizen connects to a single pre-configured server via localStorage and all library navigation happens through @phlix/ui components internally. No TV scenario requires tizen-client to enumerate libraries programmatically.
 **Code Changes**: None (architectural decision - no code needed)
 
+## Step 4.4 - useServerStore
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: This store is hub-specific - for SPA to browse ONE paired media server through relay proxy with currentServerId/Name/Url persisted to localStorage. Tizen connects directly to a single server via localStorage['phlix.serverUrl'] in resolveConfig.ts, not through hub relay. Different architecture entirely.
+**Code Changes**: None (hub-specific functionality - no code needed)
+
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
