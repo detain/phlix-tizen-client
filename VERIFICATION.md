@@ -30,6 +30,11 @@
 **Rationale**: This store does not exist in phlix-ui - the concept may have been merged into usePreferencesStore or never existed as a separate store. No action needed.
 **Code Changes**: None (store doesn't exist - no code needed)
 
+## Step 4.7 - useCommandStore
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: ⌘K command palette requires keyboard input for fuzzy search. Tizen TV uses D-pad remote - no keyboard. The command palette pattern is fundamentally incompatible with TV remote interface which uses directional navigation and transport keys only.
+**Code Changes**: None (requires keyboard - no code needed)
+
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
