@@ -40,6 +40,11 @@
 **Finding**: No phlix-ui equivalent found. This is a TV-specific modal component combining RatingBadge and UserRatingPicker.
 **Code Changes**: None (comment added)
 
+## Step 2.3.1 - ChapterList.vue
+**Status**: TV-SPECIFIC (justified)
+**Finding**: phlix-ui's ChapterList lacks D-pad spatial navigation support. Tizen version provides tabindex="0" management and keyboard handlers for spatial-nav, plus custom scrollbar styling. Consolidation possible if phlix-ui adds D-pad support.
+**Code Changes**: None (comment added)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis

@@ -7,6 +7,15 @@
  * Clicking/tapping a row calls `onSeek(startMs)` with the chapter's start time
  * in milliseconds — matching the signature used by the player store's seekTo().
  *
+ * TV-SPECIFIC: This component is kept locally because phlix-ui's ChapterList
+ * lacks D-pad spatial navigation support (no tabindex management for spatial-nav).
+ * This component provides proper D-pad keyboard support via tabindex="0" and
+ * keyboard handlers, plus custom scrollbar styling for TV webview.
+ *
+ * @category TV-Specific Component
+ * @duplicate phlix-ui/src/components/player/ChapterList.vue - phlix-ui version
+ *   lacks D-pad spatial navigation support
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
