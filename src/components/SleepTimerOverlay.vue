@@ -8,6 +8,14 @@
  * This is a portal-rendered overlay that positions itself over the player area.
  * Styled for a dark TV UI (nocturne theme) with D-pad navigation support.
  *
+ * TV-SPECIFIC: This component is kept locally because phlix-ui's SleepTimer
+ * lacks the 10min preset and custom input (1-180 min) that Tizen provides.
+ * phlix-ui has Off, 5, 15, 30, 45, 60, 90min presets but no custom input.
+ *
+ * @category TV-Specific Component
+ * @duplicate phlix-ui/src/components/player/SleepTimer.vue - phlix-ui lacks
+ *   10min preset and custom input capability
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
