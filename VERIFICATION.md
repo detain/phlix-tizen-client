@@ -60,6 +60,21 @@
 **Finding**: phlix-ui's SleepTimer lacks 10min preset and custom input (1-180 min). Tizen has 5, 10, 15, 30, 45, 60 min presets + custom input. Consolidation requires phlix-ui to add 10min preset and custom input support.
 **Code Changes**: None (comment added)
 
+## Step 2.3.5 - AudioTrackList.vue
+**Status**: TV-SPECIFIC (justified) - No action needed
+**Finding**: No phlix-ui equivalent for standalone audio track list. phlix-ui handles audio tracks within CaptionsMenu.vue. Tizen provides D-pad optimized list navigation for TV remote.
+**Code Changes**: None (comment added)
+
+## Step 2.3.6 - SubtitleTrackList.vue
+**Status**: TV-SPECIFIC (justified) - No action needed
+**Finding**: No phlix-ui equivalent for standalone subtitle track list. phlix-ui handles subtitles within CaptionsMenu.vue and CaptionOverlay.vue. Tizen provides D-pad optimized list navigation for TV remote.
+**Code Changes**: None (comment added)
+
+## Step 2.3.7 - PiPController.vue
+**Status**: TV-SPECIFIC (justified) - No action needed
+**Finding**: phlix-ui implements browser standard PiP in Player.vue. This component uses Samsung Tizen PiP API which differs from standard browser PiP. No phlix-ui equivalent.
+**Code Changes**: None (comment added)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis

@@ -8,6 +8,13 @@
  *
  * Clicking/tapping a row calls `onSelect(track)` with the selected track.
  *
+ * TV-SPECIFIC: No phlix-ui equivalent for standalone audio track list.
+ * phlix-ui handles audio tracks within CaptionsMenu.vue's audio section.
+ * This component provides D-pad optimized list navigation for TV remote.
+ *
+ * @category TV-Specific Component
+ * @duplicate No phlix-ui equivalent - TV-specific D-pad optimized component
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */

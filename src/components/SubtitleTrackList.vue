@@ -7,6 +7,13 @@
  *
  * Clicking/tapping a row calls `onSelect(track)` with the selected track.
  *
+ * TV-SPECIFIC: No phlix-ui equivalent for standalone subtitle track list.
+ * phlix-ui handles subtitles within CaptionsMenu.vue and CaptionOverlay.vue.
+ * This component provides D-pad optimized list navigation for TV remote.
+ *
+ * @category TV-Specific Component
+ * @duplicate No phlix-ui equivalent - TV-specific D-pad optimized component
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */

@@ -8,6 +8,13 @@
  * This is a portal-rendered overlay that positions itself over the player area.
  * Styled for a dark TV UI (nocturne theme) with D-pad navigation support.
  *
+ * TV-SPECIFIC: phlix-ui implements browser standard PiP in Player.vue directly.
+ * This component is specifically for Samsung Tizen PiP API integration which
+ * differs from standard browser PiP. No phlix-ui equivalent for TV-specific API.
+ *
+ * @category TV-Specific Component
+ * @duplicate No phlix-ui equivalent - Samsung Tizen PiP API integration
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
