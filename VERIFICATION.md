@@ -45,6 +45,11 @@
 **Finding**: phlix-ui's ChapterList lacks D-pad spatial navigation support. Tizen version provides tabindex="0" management and keyboard handlers for spatial-nav, plus custom scrollbar styling. Consolidation possible if phlix-ui adds D-pad support.
 **Code Changes**: None (comment added)
 
+## Step 2.3.2 - ChapterOverlay.vue vs MarkerTimeline.vue
+**Status**: TV-SPECIFIC (justified) - partial duplicate
+**Finding**: Tizen ChapterOverlay uses polling (250ms) for position tracking vs phlix-ui's reactive subscriptions. Conflates marker timeline + seekbar ticks. Consolidation requires phlix-ui MarkerTimeline to support chapters AND Tizen to migrate from polling to reactive.
+**Code Changes**: None (comment added)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis

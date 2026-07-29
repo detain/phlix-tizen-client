@@ -10,6 +10,17 @@
  * The seekbar tick positions are calculated as percentages of the player width,
  * so they scale correctly regardless of the actual seekbar pixel dimensions.
  *
+ * TV-SPECIFIC: This component conflates marker timeline rendering with seekbar
+ * tick positioning. phlix-ui's MarkerTimeline handles multi-type markers but
+ * uses reactive subscriptions rather than polling. Tizen uses polling (250ms)
+ * to track position, which is tech debt but necessary for the TV webview context.
+ * Consolidation requires phlix-ui's MarkerTimeline to support chapters AND
+ * Tizen to migrate from polling to reactive pattern.
+ *
+ * @category TV-Specific Component
+ * @duplicate phlix-ui/src/components/player/MarkerTimeline.vue - partial overlap
+ *   but different architecture (polling vs reactive)
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
