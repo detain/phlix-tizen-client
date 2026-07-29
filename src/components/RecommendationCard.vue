@@ -6,6 +6,12 @@
  * percentage, and a "Because You Watched" reason badge. Clicking navigates
  * to the player for that media item.
  *
+ * TV-SPECIFIC: No phlix-ui equivalent found for this "Because You Watched"
+ * recommendation card pattern. This is specific to the TV recommendation UI.
+ *
+ * @category TV-Specific Component
+ * @duplicate No phlix-ui equivalent - TV-specific recommendation card
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */

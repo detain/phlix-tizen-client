@@ -75,6 +75,16 @@
 **Finding**: phlix-ui implements browser standard PiP in Player.vue. This component uses Samsung Tizen PiP API which differs from standard browser PiP. No phlix-ui equivalent.
 **Code Changes**: None (comment added)
 
+## Step 2.4.1 - RecommendationCard.vue
+**Status**: TV-SPECIFIC (justified) - No action needed
+**Finding**: No phlix-ui equivalent found for "Because You Watched" recommendation card pattern. TV-specific recommendation UI component.
+**Code Changes**: None (comment added)
+
+## Step 2.4.2 - RecommendationsScreen.vue vs RecommendationsPage.vue
+**Status**: SIMILAR - Feature parity review needed
+**Finding**: Tizen has Play, watchlist, info. phlix-ui additionally has mark-watched, edit-metadata, explore-data. Feature parity gap identified. Review needed to align feature sets.
+**Code Changes**: None (documentation only)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis
