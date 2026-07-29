@@ -10,6 +10,11 @@
 **Finding**: Same as 2.1.1 - phlix-ui's version lacks full descriptive aria-label. Tizen version has aria-label summarizing artist info. phlix-ui has i18n via useMessages(), tizen version has hardcoded "album/albums" string (regression). Merge possible if phlix-ui adds full aria-label and tizen adopts i18n.
 **Code Changes**: None (comment updated for accuracy)
 
+## Step 2.1.3 - TrackListItem.vue vs MusicTrackList.vue
+**Status**: PARTIAL DUPLICATE - TV-SPECIFIC (justified)
+**Finding**: Tizen TrackListItem is a single row component with D-pad support, artist name display, and animated playing indicator. phlix-ui MusicTrackList is a container component with skeleton loading, empty state, and i18n but lacks artist display. Different architectures serving different platform needs. Merge possible if phlix-ui adds artist name and D-pad support to its row.
+**Code Changes**: None (documentation only)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis
