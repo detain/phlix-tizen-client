@@ -9,7 +9,8 @@
 **Finding**: @phlix/tokens v0.1.1 transitively included via @phlix/ui/style.css
 
 ## Step 1.5 - Music API Breaking Changes
-**Status**: Pending verification
+**Status**: Verified no impact
+**Finding**: useMusicStore.ts uses raw `client.get()` not ApiClient music methods
 
 ## Step 1.6 - Node/npm Compatibility
 **Status**: Pending verification
