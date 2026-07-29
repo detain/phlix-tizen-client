@@ -2,7 +2,12 @@
 
 ## Step 2.1.1 - MusicAlbumCard.vue
 **Status**: TV-SPECIFIC (justified)
-**Finding**: phlix-ui's version lacks full descriptive aria-label and i18n. Tizen version has aria-label summarizing album info. Merge possible if phlix-ui adds aria-label + i18n.
+**Finding**: phlix-ui's version lacks full descriptive aria-label. Tizen version has aria-label summarizing album info. Note: phlix-ui has i18n via useMessages(), tizen version has hardcoded "tracks" string (regression). Merge possible if phlix-ui adds full aria-label and tizen adopts i18n.
+**Code Changes**: None (comment updated for accuracy)
+
+## Step 2.1.2 - MusicArtistCard.vue
+**Status**: TV-SPECIFIC (justified)
+**Finding**: Same as 2.1.1 - phlix-ui's version lacks full descriptive aria-label. Tizen version has aria-label summarizing artist info. phlix-ui has i18n via useMessages(), tizen version has hardcoded "album/albums" string (regression). Merge possible if phlix-ui adds full aria-label and tizen adopts i18n.
 **Code Changes**: None (comment updated for accuracy)
 
 ---
