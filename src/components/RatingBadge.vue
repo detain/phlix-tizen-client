@@ -5,6 +5,15 @@
  *
  * Styled for a dark TV UI (nocturne theme). Stars use CSS custom properties so
  * they inherit the correct amber/gold hue from the theme when available.
+ *
+ * TV-SPECIFIC: This component is kept locally because phlix-ui's RatingBadge
+ * lacks half‑star precision (uses Math.round to whole stars). This component
+ * provides visual half‑star support via linearGradient SVGs.
+ *
+ * @category TV-Specific Component
+ * @duplicate phlix-ui/src/components/RatingBadge.vue - phlix-ui version lacks
+ *   half-star precision (rounds to whole stars)
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */

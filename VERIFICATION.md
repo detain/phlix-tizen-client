@@ -25,6 +25,11 @@
 **Finding**: useMusicStore (tizen) handles library browsing and navigation state. useMusicPlayer (phlix-ui) handles audio playback with gapless playback, crossfade, and queue management. These are complementary, not duplicates.
 **Code Changes**: None (documentation only)
 
+## Step 2.2.1 - RatingBadge.vue
+**Status**: TV-SPECIFIC (justified)
+**Finding**: phlix-ui's version lacks half-star precision (uses Math.round to whole stars). Tizen version provides visual half-star support via linearGradient SVGs. Consolidation possible if phlix-ui adds half-star support.
+**Code Changes**: None (comment added)
+
 ---
 
 # Category 1 Verification - Version & Dependency Analysis
