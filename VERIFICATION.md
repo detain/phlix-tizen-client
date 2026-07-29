@@ -40,6 +40,11 @@
 **Rationale**: Tizen has its own 645-line WebSocket implementation vs phlix-ui's 299-line version. Tizen's version has fully integrated WebSocket with auto-reconnect (5 attempts, exponential backoff), local SyncPlayApiClient class, and fetchPublicRooms(). This is intentionally reimplemented for TV-specific reliability requirements - phlix-ui outsources WebSocket to external module while tizen integrates it directly for cohesive state management.
 **Code Changes**: None (reimplementation already exists - justified)
 
+## Step 4.9 - usePlayerUiStore
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: This store manages theater mode state for in-window player (theaterActive ref, shell chrome removal via @theater toggle). TV uses full-screen player mode by default with no windowed player state to toggle and no persistent shell chrome to remove. The theater toggle coordination functionality has no implementation context on TV.
+**Code Changes**: None (full-screen player paradigm - no code needed)
+
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
