@@ -10,6 +10,11 @@
 **Rationale**: This store manages per-item user interaction state (favorites, ratings, likes, watched) with optimistic updates. All user item data interactions happen in @phlix/ui components rendered via `createPhlixApp()`. Tizen client is a thin consumer - these features are handled by @phlix/ui's component layer, not direct store access.
 **Code Changes**: None (architectural decision - no code needed)
 
+## Step 4.3 - useLibrariesStore
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Library browsing is entirely in @phlix/ui via `createPhlixApp()`. Tizen connects to a single pre-configured server via localStorage and all library navigation happens through @phlix/ui components internally. No TV scenario requires tizen-client to enumerate libraries programmatically.
+**Code Changes**: None (architectural decision - no code needed)
+
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
