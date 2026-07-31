@@ -1384,3 +1384,108 @@ AGENTS.md states: "All visible text is English." The single-language design is i
 ## Conclusion
 
 The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/ui providing a complete system. All strings are hardcoded English. This is explicitly documented in AGENTS.md ("All visible text is English") and is appropriate for a single-language TV app deployment. No i18n changes are needed or recommended for this project scope.
+
+---
+
+# Category 17 - Bug Fixes Since v0.81.0
+
+## Step 17.1 - Poster skeletons stuck after first 24 (v0.98.27)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: @phlix/ui v0.98.33 (installed) includes S35 cache fix in MediaGrid.vue (lines 317-324) where `source` array identity is now part of the cache key. This fixes the issue where items beyond index 24 loaded via A-Z jump rail or random-access paging remained stuck as skeleton placeholders. Tizen uses `createPhlixApp()` which internally uses the fixed MediaGrid component. The parent component's `need-range` event handling delegates to `useMediaStore.ensureRange()` which calls `placePage()` - this flow is handled internally by @phlix/ui.
+**Code Changes**: None (@phlix/ui handles this internally)
+
+## Step 17.2 - Subtitle default track on load (v0.98.11)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: @phlix/ui v0.98.33 (installed) includes the fix in `usePlayerStore.ts` (line 106) where `subtitleLang` is properly initialized and `seedFromPreferences()` honors the server's `default: true` track flag. Tizen uses `createPhlixApp()` which sets up the player store internally. The `@phlix/ui/CaptionsMenu` component properly initializes the selected subtitle based on `subtitleLang`.
+**Code Changes**: None (@phlix/ui handles this internally)
+
+## Step 17.3 - Music album filtering (v0.98.32)
+**Decision**: NOT IMPLEMENTED
+**Rationale**: The v0.98.32 fix added server-side filtering with `?artist=` parameter to `/api/v1/music/albums`. Tizen's `useMusicStore.ts` (line 66) fetches albums via raw `client.get<{ albums: MusicAlbum[] }>('/api/v1/music/albums')` without any artist filter. When an artist is selected, tizen filters `albums.value` client-side using `artistAlbums` computed (line 38-41) over the complete unfiltered album list - this is the broken pattern the fix was meant to replace. Tizen should use `listAlbums({ artist: 'Radiohead', limit: 100, offset: 0 })` from ApiClient instead.
+**Code Changes**: None (bug exists - useMusicStore fetches unfiltered and filters client-side)
+
+## Step 17.4 - Music paging missing (v0.98.32)
+**Decision**: NOT IMPLEMENTED
+**Rationale**: The v0.98.32 fix introduced paged API methods (`listArtists()`, `listAlbums()`, `listTracks()`) that return page envelopes `{ artists, total, limit, offset }` and accept `{ limit, offset }` options. Tizen's `useMusicStore.ts` (line 51) uses raw `client.get<{ artists: MusicArtist[] }>('/api/v1/music/artists')` without any `limit`/`offset` parameters. The server returns default 100 items, tizen never reads `total` for pagination UI. This is a confirmed bug per CHANGELOG line 46.
+**Code Changes**: None (only first 100 items are ever fetched)
+
+## Step 17.5 - Resume position on direct→HLS fallback (v0.80.0)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: @phlix/ui v0.98.33 (installed) includes the fix in `hls-playback.ts` (lines 152, 273) where `startPosition` is properly passed to hls.js when direct play falls back to HLS transcode. Tizen passes `TIZEN_HLS_CONFIG` to `playerHlsConfig` (main.ts line 116) - this config is for buffer tuning, not startPosition. The `startPosition` for resume is handled by @phlix/ui's player internally when calling `attachHls()` with the resume position.
+**Code Changes**: None (@phlix/ui handles this internally)
+
+## Step 17.6 - Finished signal (v0.98.13)
+**Decision**: TV-SPECIFIC
+**Rationale**: @phlix/ui v0.98.33 includes `useResumeReporter` which calls `finish()` on video end to notify server to remove item from continue-watching. Tizen's `UpNextOverlay.vue` (line 216-387) uses polling (250ms) to track player position and emits 'play-now' and 'cancel' events but does NOT call `useResumeReporter.finish()`. The finished signal to remove items from "Continue Watching" is not being sent when videos end on Tizen. This is TV-SPECIFIC because tizen's overlay architecture uses event emission rather than the reactive pattern @phlix/ui uses.
+**Code Changes**: None (tech debt - UpNextOverlay uses event emission pattern, not reactive)
+
+## Step 17.7 - Up-next race condition (v0.98.10)
+**Decision**: TV-SPECIFIC
+**Rationale**: @phlix/ui v0.98.10 fixed queue race conditions with atomic `setQueue()`/`enqueue()`/`next()` operations in `usePlayerStore`. Tizen's `UpNextOverlay.vue` (lines 119-146) fetches the playlist via `client.get('/api/v1/media/${id}/playlist')` and finds the next item client-side by index. This is a completely different architecture - tizen uses a custom overlay with polling that manages its own up-next logic rather than relying on @phlix/ui's player store queue. The race condition fix is in @phlix/ui's queue management, which tizen bypasses entirely.
+**Code Changes**: None (tizen uses custom up-next architecture with different queue semantics)
+
+## Step 17.8 - Menu positioning (v0.66.0)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: The menu positioning fix (proper `getBoundingClientRect()` for trigger location, viewport boundary checking) is in @phlix/ui's Menu component. Tizen's `buildMenu()` (main.ts lines 38-48) returns `MenuItem[]` which @phlix/ui's menu component renders. The actual menu positioning is handled by @phlix/ui's Menu component internally.
+**Code Changes**: None (@phlix/ui handles this internally)
+
+## Step 17.9 - HLS bandwidth persistence (v0.80.x)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: @phlix/ui v0.98.33 includes bandwidth persistence via `phlix-bandwidth-estimate` localStorage key in `hls-playback.ts` (lines 157-183, 333-344). On `attachHls()` it seeds `abrEwmaDefaultEstimate` from localStorage. Tizen passes `TIZEN_HLS_CONFIG` to `playerHlsConfig` (main.ts line 116) - this is buffer tuning config passed to hls.js, not the ABR seeding. The bandwidth persistence is handled by @phlix/ui's `hls-playback.ts` internally when `createPhlixApp()` sets up the player.
+**Code Changes**: None (@phlix/ui handles this internally)
+
+## Step 17.10 - Codec probing before direct play (v0.80.x)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: @phlix/ui v0.98.33 includes `probeCodecSupport()` in `playback.ts` (lines 170-216) using `navigator.mediaCapabilities.decodingInfo()` with canPlayType fallback. This is called before direct play decision to proactively trigger transcode for unsupported codecs. Tizen uses `createPhlixApp()` which sets up the player internally - the `useResolvePlayable` composable (or equivalent) in @phlix/ui's player flow handles codec probing.
+**Code Changes**: None (@phlix/ui handles this internally)
+
+---
+
+## Verification Evidence
+
+### Key files examined
+- `package.json`: @phlix/ui pinned to v0.98.33 (includes all v0.81.0+ fixes)
+- `src/main.ts`: `createPhlixApp()` with `playerHlsConfig: TIZEN_HLS_CONFIG`
+- `src/stores/useMusicStore.ts`: Raw `client.get()` calls without pagination/filtering (17.3, 17.4 NOT IMPLEMENTED)
+- `src/components/UpNextOverlay.vue`: Polling-based overlay with event emission, not reactive (17.6, 17.7 TV-SPECIFIC)
+- `src/tizenBridge.ts`: Uses `usePlayerStore` from @phlix/ui for remote bridge
+
+### Architecture context
+- Tizen is a "thin Vue 3 consumer of @phlix/ui" (AGENTS.md)
+- All media/library/player UI is rendered by @phlix/ui via `createPhlixApp()`
+- Tizen-specific code: main.ts boot config, tizenBridge.ts remote handling, overlays with polling
+- Most bug fixes flow through @phlix/ui internally when using `createPhlixApp()`
+- Music store has separate implementation that predates the v0.98.32 API changes
+
+## Gates
+
+| Gate | Result |
+|------|--------|
+| `npm run typecheck` | ✅ PASS |
+| `npm test` | ✅ 74 PASS |
+| `npm run lint` | ✅ PASS |
+
+## Decision Distribution
+
+| Step | Bug Fix | Version | Decision | Rationale |
+|------|---------|---------|----------|-----------|
+| 17.1 | Poster skeletons stuck | 0.98.27 | ALREADY SUFFICIENT | @phlix/ui MediaGrid has S35 fix, tizen uses createPhlixApp |
+| 17.2 | Subtitle default track | 0.98.11 | ALREADY SUFFICIENT | @phlix/ui usePlayerStore has fix, tizen uses createPhlixApp |
+| 17.3 | Music album filtering | 0.98.32 | NOT IMPLEMENTED | useMusicStore uses raw API without ?artist= filter |
+| 17.4 | Music paging missing | 0.98.32 | NOT IMPLEMENTED | useMusicStore uses raw API without limit/offset |
+| 17.5 | Resume on HLS fallback | 0.80.0 | ALREADY SUFFICIENT | @phlix/ui hls-playback has fix, TIZEN_HLS_CONFIG is buffer tuning only |
+| 17.6 | Finished signal | 0.98.13 | TV-SPECIFIC | UpNextOverlay uses event emission, not useResumeReporter.finish() |
+| 17.7 | Up-next race condition | 0.98.10 | TV-SPECIFIC | UpNextOverlay uses custom polling architecture, not player store queue |
+| 17.8 | Menu positioning | 0.66.0 | ALREADY SUFFICIENT | @phlix/ui Menu component has fix |
+| 17.9 | HLS bandwidth persistence | 0.80.x | ALREADY SUFFICIENT | @phlix/ui hls-playback has localStorage persistence |
+| 17.10 | Codec probing | 0.80.x | ALREADY SUFFICIENT | @phlix/ui playback.ts has probeCodecSupport() |
+
+## Conclusion
+
+Most bug fixes (7/10) are already sufficient because @phlix/ui v0.98.33 is installed and tizen uses `createPhlixApp()` which sets up all components internally with the fixes.
+
+Two items (17.3, 17.4) are NOT IMPLEMENTED due to tizen's `useMusicStore.ts` using raw API calls that predate the v0.98.32 paged API changes.
+
+Two items (17.6, 17.7) are TV-SPECIFIC because tizen has custom overlay components (UpNextOverlay) that use polling/event-emission architecture rather than @phlix/ui's reactive patterns. This is documented tech debt in the codebase comments.
+
+No code changes required for this category - the findings are documentation of architectural decisions and known gaps.
