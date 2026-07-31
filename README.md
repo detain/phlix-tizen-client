@@ -44,7 +44,7 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 
 - **Vue 3** + **Pinia** + **vue-router** (peer dependencies)
 - **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.74.0` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
-- **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.2.0` — `buildPhlixHeaders` (device headers)
+- **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.3.12` — `buildPhlixHeaders` (device headers)
 - **Vite** + `@vitejs/plugin-vue` (build target `chrome100`, `base: './'`)
 - **Vitest** + jsdom + `@vue/test-utils` (tests)
 - **TypeScript** + `vue-tsc` (typecheck)

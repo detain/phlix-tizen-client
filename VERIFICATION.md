@@ -170,3 +170,10 @@
 ## Step 1.6 - Node/npm Compatibility
 **Status**: Verified compatible
 **Finding**: Node v24.15.0 >= v22.12.0 required by tizen-client
+
+## Step 1.2 - Resolve version inconsistencies
+**Decision**: IMPLEMENTED_OK
+**Rationale**: package.json:32 correctly pins @phlix/contracts at v0.3.12. Four doc files (CLAUDE.md:5, DEVELOPER.md:14, AGENTS.md:3, README.md:47) previously claimed v0.2.0 — a stale version from before the actual package.json was updated. All four doc files now reference v0.3.12, matching the installed version.
+**Code Changes**: None — only doc file edits. No production code changed.
+**Evidence**: git diff shows +v0.3.12 on CLAUDE.md:5, DEVELOPER.md:14, AGENTS.md:3, README.md:47; node_modules/@phlix/contracts/package.json reports 0.3.12
+**Cross-refs**: Step 1.1 (the @phlix/ui v0.98.33 update that prompted this review)
