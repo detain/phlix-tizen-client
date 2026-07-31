@@ -889,3 +889,70 @@ Additionally, the `MusicTrack` interface in @phlix/contracts (Music.d.ts) does n
 - **TV-SPECIFIC**: 3 steps (8.2, 8.3, 8.7) — intentional TV implementations, 8.7 has a bug
 - **NOT TV-APPLICABLE**: 2 steps (8.4, 8.6) — features not relevant to TV UX
 - **Code changes needed**: 0 (all decisions are architectural/audit — 8.7 bug identified but not fixed per audit-only scope)
+
+---
+
+# Category 10 - HLS Configuration
+
+## Overview
+
+This category examines HLS (HTTP Live Streaming) configuration in the Tizen client. The central configuration is `TIZEN_HLS_CONFIG` in `main.ts:69-76`, which is passed to @phlix/ui's player via `createPhlixApp({ playerHlsConfig: TIZEN_HLS_CONFIG })` at line 116. HLS playback is handled by hls.js via @phlix/ui's player module.
+
+## Step 10.1 - Buffer Settings
+**Decision**: ALREADY SUFFICIENT
+**Finding**: `TIZEN_HLS_CONFIG` in main.ts:69-76 correctly sets all RAM-conscious buffer values:
+- `maxBufferLength: 60` (Tizen-specific, web default is 30)
+- `maxMaxBufferLength: 180` (Tizen-specific, web default is 60)
+- `maxBufferSize: 100 * 1000 * 1000` (100MB, Tizen-specific, web default is 60MB)
+- `backBufferLength: 90` (Tizen-specific, web default is 30)
+
+These values are explicitly set to override hls.js defaults and are passed through `playerHlsConfig` which shallow-merges over @phlix/ui's defaults at `hls-playback.ts:316`. The phlix-ui defaults at lines 283-284 only set `backBufferLength: 90` and `maxBufferLength: 60` but NOT `maxMaxBufferLength` or `maxBufferSize` — Tizen's explicit values correctly fill this gap.
+**Code Changes**: None (correctly implemented)
+**Evidence**: main.ts:69-76 TIZEN_HLS_CONFIG; hls-playback.ts:277-284 phlix-ui defaults; hls-playback.ts:316 shallow merge
+
+## Step 10.2 - Level Cap (capLevelToPlayerSize)
+**Decision**: ALREADY SUFFICIENT
+**Finding**: `capLevelToPlayerSize: true` is correctly set in `TIZEN_HLS_CONFIG` at main.ts:73. This is a RAM constraint setting unique to Tizen's limited memory environment. The web default is `false`. This setting ensures hls.js does not select a quality level higher than the player's actual rendered size, preventing unnecessary memory usage.
+**Code Changes**: None (correctly implemented)
+**Evidence**: main.ts:73; comment at line 66: "cap level to player size"
+
+## Step 10.3 - Software AES
+**Decision**: ALREADY SUFFICIENT
+**Finding**: `enableSoftwareAES: true` is correctly set in `TIZEN_HLS_CONFIG` at main.ts:74. The comment at line 67 explains: "software AES so DRM-free HLS still plays on weaker decoders." This is a Tizen-specific fallback for devices with weaker hardware decryption. The web default is `false` (hardware AES preferred).
+**Code Changes**: None (correctly implemented)
+**Evidence**: main.ts:74; comment at line 67
+
+## Step 10.4 - Sync with phlix-ui Updates
+**Decision**: ALREADY SUFFICIENT
+**Finding**: Tizen uses @phlix/ui v0.98.33 and passes `playerHlsConfig: TIZEN_HLS_CONFIG` to createPhlixApp(). The shallow merge at hls-playback.ts:316 means Tizen's explicit values always override phlix-ui defaults. Currently phlix-ui only sets `backBufferLength: 90` and `maxBufferLength: 60` as defaults — these match Tizen's values exactly, so no conflict exists. Future phlix-ui changes to `maxMaxBufferLength`, `maxBufferSize`, `capLevelToPlayerSize`, or `enableSoftwareAES` would still be overridden by Tizen's explicit values. The design is robust against phlix-ui version updates.
+**Code Changes**: None (shallow merge design is correct)
+**Evidence**: main.ts:116 playerHlsConfig pass-through; hls-playback.ts:316 `{ ...defaultConfig, ...opts.hlsConfig }`
+
+## Step 10.5 - Bandwidth Persistence
+**Decision**: ALREADY SUFFICIENT
+**Finding**: Bandwidth persistence is implemented in phlix-ui's `hls-playback.ts:157-190` using localStorage key `phlix-bandwidth-estimate` (BW_EST_KEY at line 158). Bandwidth is persisted every 30 seconds via `setInterval(_saveBandwidth, 30_000)` at line 337, and on destroy at line 344. On cold start, persisted bandwidth is loaded via `loadPersistedBandwidth()` and used to seed ABR: `abrEwmaDefaultEstimate: persistedBw` at line 287. Since Tizen uses @phlix/ui's player via `createPhlixApp()`, this mechanism works identically on Tizen. Tizen also uses localStorage for other data (`phlix.serverUrl` in main.ts, `phlix.deviceId` in deviceId.ts), confirming localStorage is available.
+**Code Changes**: None (inherited via createPhlixApp — works on Tizen)
+**Evidence**: hls-playback.ts:157-190 bandwidth persistence functions; line 287 abrEwmaDefaultEstimate
+
+## Step 10.6 - Codec Probing
+**Decision**: ALREADY SUFFICIENT
+**Finding**: Codec probing is implemented in phlix-ui via `playback.ts:170-296`. `canDecodeAudioCodec()` uses `MediaCapabilities.decodingInfo()` with fallback to `canPlayType()` at lines 232-259. `canDecodeHevcInMp4()` probes HEVC support via MediaCapabilities at lines 266-296. `needsTranscodeWithCapabilities()` combines extension-based check with runtime codec probing at lines 313-340. Tizen's Chromium webview (Tizen 6.5+) supports the MediaCapabilities API. Since Tizen uses @phlix/ui's player via `createPhlixApp()`, the same codec probing mechanism is used. The `evaluateTranscodeWithCapabilities()` is called when `props.playbackAudioTracks` changes in Player.vue:245-252.
+**Code Changes**: None (inherited via createPhlixApp — works on Tizen)
+**Evidence**: playback.ts:232-248 MediaCapabilities.decodingInfo() usage; Tizen 6.5+ Chromium webview supports MediaCapabilities
+
+---
+
+## Summary
+
+| Step | Feature | Decision | Notes |
+|------|---------|----------|-------|
+| 10.1 | Buffer Settings | ALREADY SUFFICIENT | TIZEN_HLS_CONFIG with RAM-conscious values override hls.js defaults |
+| 10.2 | Level Cap | ALREADY SUFFICIENT | capLevelToPlayerSize: true correctly set |
+| 10.3 | Software AES | ALREADY SUFFICIENT | enableSoftwareAES: true for weaker decoders |
+| 10.4 | Sync with phlix-ui | ALREADY SUFFICIENT | Shallow merge design robust against version updates |
+| 10.5 | Bandwidth Persistence | ALREADY SUFFICIENT | Implemented in phlix-ui, works via createPhlixApp on Tizen |
+| 10.6 | Codec Probing | ALREADY SUFFICIENT | MediaCapabilities.decodingInfo() used in phlix-ui, works on Tizen |
+
+**Decision Distribution**:
+- **ALREADY SUFFICIENT**: 6 steps (10.1-10.6) — all HLS config correctly implemented via TIZEN_HLS_CONFIG or inherited from phlix-ui
+- **Code changes needed**: 0 (all decisions are correct implementations — no code needed)
