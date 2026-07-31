@@ -1048,3 +1048,80 @@ These values are explicitly set to override hls.js defaults and are passed throu
 **Decision Distribution**:
 - **ALREADY SUFFICIENT**: 6 steps (10.1-10.6) — all HLS config correctly implemented via TIZEN_HLS_CONFIG or inherited from phlix-ui
 - **Code changes needed**: 0 (all decisions are correct implementations — no code needed)
+
+---
+
+# Category 11 - SyncPlay
+
+**Audit Date**: 2026-07-31
+**Repository**: `/home/sites/phlix/phlix-tizen-client`
+**Status**: COMPLETE
+
+## Summary
+
+Category 11 covers SyncPlay — a collaborative playback synchronization feature. The tizen-client has a **complete parallel implementation** of SyncPlay with 645 lines of custom WebSocket code. It does NOT use the `@phlix/syncplay` package despite it being declared in `package.json`.
+
+## Decision Table
+
+| Step | Decision | Rationale |
+|------|----------|-----------|
+| 11.1 | **TV-SPECIFIC** | tizen has its own 645-line SyncPlayApiClient + WebSocket implementation (lines 83-384). This is an intentional TV-specific reimplementation with custom WebSocket handling on the API port (not port 8097). The context confirms: "useSyncPlayStore is TV-SPECIFIC REIMPLEMENTATION — a 645-line WebSocket implementation exists in tizen" |
+| 11.2 | **TV-SPECIFIC** | tizen uses its own `SyncPlayApiClient` class instead of phlix-ui's `getSyncPlayApi()`. Each store action takes `apiBase` and `token` as parameters. This mirrors the custom approach in 11.1 — intentional TV-specific pattern. |
+| 11.3 | **NOT TV-APPLICABLE** | Per AGENTS.md: "this repo writes no media/library/auth UI — that lives in @phlix/ui". SyncPlay UI components (SyncPlayOverlay, SyncPlayModal, SyncPlayControls) are part of @phlix/ui, not this thin TV client repo. |
+| 11.4 | **TV-SPECIFIC** | tizen's `syncStatus` computed (lines 190-193) returns `'synced' \| 'outOfSync' \| 're-syncing'` based solely on session state — no drift computation. However, `usePlayerStore` (from @phlix/ui) handles playback rate sync for SyncPlay sessions. The lack of drift computation is by design for this TV-specific implementation. |
+| 11.5 | **TV-SPECIFIC REIMPLEMENTATION** | tizen connects WebSocket to `${apiBase.replace(/^http/, 'ws')}/api/v1/syncplay/${roomId}?token=${token}` — using the API port, NOT port 8097. Uses custom JSON message format (`WsMessage` type with 'command' \| 'member_joined' \| 'member_left' \| 'state_sync' \| 'error'). This is a deliberate protocol reimplementation for the TV client. |
+| 11.6 | **NOT USED** | `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.2"` is declared in `package.json` (line 33) but `grep -r "@phlix/syncplay" src/` returns **no matches** — the package is not imported or used anywhere in the codebase. |
+
+## Decision Distribution
+
+| Decision | Count |
+|----------|-------|
+| TV-SPECIFIC | 3 |
+| TV-SPECIFIC REIMPLEMENTATION | 1 |
+| NOT TV-APPLICABLE | 1 |
+| NOT USED | 1 |
+| **TOTAL** | **6** |
+
+## Key Findings
+
+### 1. Parallel WebSocket Implementation (11.1, 11.5)
+The tizen-client implements its own WebSocket class with:
+- Custom `SyncPlayApiClient` for REST calls (lines 83-160)
+- Custom `buildWsUrl()`, `connectWs()`, `handleWsMessage()`, `sendWsMessage()`, `scheduleReconnect()`, `disconnectWs()` (lines 196-383)
+- Custom message protocol: `'command' | 'member_joined' | 'member_left' | 'state_sync' | 'error'`
+- Exponential backoff reconnection (MAX_RECONNECT_ATTEMPTS=5, BASE_RECONNECT_DELAY=1000ms)
+- WebSocket on API port (not 8097)
+
+### 2. Unused @phlix/syncplay Dependency (11.6)
+The package is declared but never imported. A `grep -r "@phlix/syncplay" src/` finds no matches. This is an orphaned dependency that could be removed if the TV-specific approach is confirmed as correct.
+
+### 3. No Drift Computation (11.4)
+tizen's `syncStatus` computed property does not use drift computation. It simply checks if `currentSession.value.state === 'playing' || currentSession.value.state === 'paused'`. The context notes that `usePlayerStore` handles playback rate sync for SyncPlay sessions, so drift computation may not be needed at the store level.
+
+### 4. UI Components Not Applicable (11.3)
+The AGENTS.md explicitly states this repo "writes no media/library/auth UI — that lives in @phlix/ui". SyncPlay UI is rendered by @phlix/ui's components, not by this thin TV client.
+
+## Verification Evidence
+
+- **useSyncPlayStore.ts**: 645 lines, custom WebSocket implementation, NO @phlix/syncplay imports
+- **package.json**: `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.2"` declared but unused
+- **AGENTS.md**: Confirms thin TV consumer model
+- **usePlayerStore**: Not present in tizen-client (comes from @phlix/ui) — handles playback rate sync
+
+## Gates
+
+| Gate | Result |
+|------|--------|
+| `npm run typecheck` | ✅ PASS |
+| `npm test` | ✅ 74 PASS |
+| `npm run lint` | ✅ PASS |
+
+## Conclusion
+
+The tizen-client has a **complete, intentional TV-specific SyncPlay reimplementation** that:
+1. Uses custom WebSocket handling instead of @phlix/syncplay
+2. Connects to the API port instead of port 8097
+3. Uses a custom message protocol instead of @phlix/syncplay's protocol
+4. Has no drift computation (relies on usePlayerStore from @phlix/ui for playback sync)
+
+This is NOT a gap to fix — it is an architectural decision to have a TV-specific SyncPlay implementation that works within the Tizen TV constraints. The @phlix/syncplay dependency is unused and could be removed.
