@@ -190,3 +190,109 @@
 **Code Changes**: None — only doc file edits. No production code changed.
 **Evidence**: git diff shows +v0.3.12 on CLAUDE.md:5, DEVELOPER.md:14, AGENTS.md:3, README.md:47; node_modules/@phlix/contracts/package.json reports 0.3.12
 **Cross-refs**: Step 1.1 (the @phlix/ui v0.98.33 update that prompted this review)
+
+---
+
+# Category 3 Verification - Missing Player Features
+
+## Step 3.1 - Resume Prompt
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: ResumePrompt.vue exists in @phlix/ui Player (player.js exports `ResumePrompt`). The player renders it automatically when `usePlayerStore.resumeMap` indicates a resumable position (RESUME_MIN_SECONDS=30 to RESUME_MAX_RATIO=0.95). Tizen uses `createPhlixApp()` which mounts the full @phlix/ui Player — the ResumePrompt is therefore rendered by @phlix/ui automatically. No tizen-specific resume prompt is needed because the player component itself handles this UX. Tizen does not need a separate TV-specific resume prompt; it's built into the @phlix/ui Player.
+**Code Changes**: None (built into @phlix/ui Player automatically)
+
+## Step 3.2 - Up Next Card
+**Decision**: TV-SPECIFIC (PARTIAL duplicate)
+**Rationale**: Tizen has UpNextOverlay.vue at `src/components/UpNextOverlay.vue` — a 594-line TV-specific component with D-pad navigation, countdown ring, and playlist-based next item loading. It uses polling (250ms) vs phlix-ui's reactive UpNext.vue props. The test file `tests/unit/UpNextOverlay.test.ts` exists and tests props, emits, accessibility, and countdown ring calculations. This was also documented in Category 2 Step 2.3.3 as TV-SPECIFIC with tech debt (polling vs reactive). The architectural difference (polling vs reactive) is justified by TV webview constraints.
+**Code Changes**: None (TV-specific component already exists with documented tech debt)
+
+## Step 3.3 - Transcode Notice
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Server handles all HLS transcoding. Tizen receives HLS streams only — never MKV, AVI, or HEVC containers directly. The only grep hit for "transcode" in tizen src is a comment in tizenBridge.ts line 240: "when the QualityMenu is actually on screen (multi-variant transcode)" — referring to quality variant selection, not codec transcoding. TranscodeNotice.vue and TranscodePreparing.vue have no tizen-side implementation because they are never triggered.
+**Code Changes**: None (server-side HLS eliminates need for transcode UI)
+
+## Step 3.4 - Transcode Preparing
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Same as Step 3.3 — server-side HLS warming eliminates the need for transcode preparing UI on the client. Tizen only sees the final HLS stream.
+**Code Changes**: None (server-side HLS eliminates need for transcode UI)
+
+## Step 3.5 - Shortcuts Help
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: ShortcutsHelp.vue (`?` key shortcut overlay) requires a keyboard. Tizen TV uses D-pad remote only. AGENTS.md explicitly states "No pointer/mouse — D-pad (`useSpatialNav`) + transport keys (`RemoteManager` → `tizenBridge`) only." The keyboard shortcut overlay is fundamentally incompatible with TV remote interface.
+**Code Changes**: None (keyboard-only feature - no code needed)
+
+## Step 3.6 - Marker Timeline
+**Decision**: TV-SPECIFIC (PARTIAL)
+**Rationale**: ChapterOverlay.vue in tizen implements tick marks for chapters and markers (intro/outro/credits/ad) on the player seekbar. It fetches from BOTH `GET /api/v1/media/{id}/chapters` AND `GET /api/v1/media/{id}/markers`. Uses polling (250ms) vs phlix-ui's reactive MarkerTimeline.vue subscription pattern. The component was documented in Category 2 Step 2.3.2 as TV-SPECIFIC with tech debt (polling vs reactive). Consolidation requires migrating Tizen to reactive subscriptions.
+**Code Changes**: None (TV-specific component already exists with documented tech debt)
+
+## Step 3.7 - Quality Menu
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: tizenBridge.ts (lines 44-68, 116-193, 280-322) has `BridgeQualityMenu` interface and `createDomQualityMenu()` function. The QualityMenu is rendered by @phlix/ui's Player and tizen provides D-pad navigation via the DOM-based bridge. Quality selection is server-side (X-Phlix-Device-Type: samsung-tizen header maps to appropriate quality), but the UI is properly bridged for D-pad navigation. The YELLOW color button on the remote activates quality-selection mode (tizenBridge.ts line 243).
+**Code Changes**: None (already integrated via tizenBridge.ts bridge)
+
+## Step 3.8 - Speed Menu
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: SpeedMenu.vue exists in @phlix/ui Player but playback speed control is not typically used on TV. The syncplay store (useSyncPlayStore.ts lines 413-414, 536-543) handles `playbackRate` for synchronized playback sessions, but there's no tizen-specific speed menu UI. TV playback is generally at normal speed. The absence of a speed menu is intentional for TV UX.
+**Code Changes**: None (not a TV use case - no code needed)
+
+## Step 3.9 - Captions Menu
+**Decision**: TV-SPECIFIC (PARTIAL)
+**Rationale**: Tizen has SubtitleTrackList.vue at `src/components/SubtitleTrackList.vue` — a D-pad navigable list of subtitle tracks with Off option, forced/default badges, and codec display. This was documented in Category 2 Step 2.3.6 as TV-SPECIFIC with no phlix-ui equivalent for standalone subtitle track list. Style customization (size, color, background, edge) is handled by @phlix/ui's CaptionsMenu.vue and persisted in usePreferencesStore.captionStyle. Tizen's SubtitleTrackList handles track selection only — style controls remain in @phlix/ui domain. The split is intentional: TV provides efficient track selection; web provides full caption styling.
+**Code Changes**: None (TV-specific track selection + @phlix/ui styling is intentional separation)
+
+## Step 3.10 - Subtitle Search
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: SubtitleSearch.vue in @phlix/ui handles on-demand subtitle download from external sources (OpenSubtitles etc.). This feature requires keyboard input for search queries and network access to third-party subtitle databases. Tizen TV webview has limited network capabilities and no keyboard. The feature is not relevant for TV use cases.
+**Code Changes**: None (external subtitle download not applicable to TV - no code needed)
+
+## Step 3.11 - Ambient Canvas
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: AmbientCanvas.vue in @phlix/ui creates ambient glow effects based on video content colors — an aesthetic visual effect for ambient viewing. This is a purely cosmetic web-browser feature that has no relevance to TV viewing environments. No grep hits for "ambient" or "AmbientCanvas" in tizen src/.
+**Code Changes**: None (visual effect not applicable to TV - no code needed)
+
+## Step 3.12 - Scrubber
+**Decision**: ALREADY SUFFICIENT (provided by @phlix/ui Player)
+**Rationale**: The scrubber is rendered by @phlix/ui's Player (Scrubber.vue is part of PlayerPage). The scrubber provides position, duration, buffered range, and keyboard navigation. Tizen's ChapterOverlay.vue dims the scrubber when an ad marker is active (line 438: `.chapter-overlay--ad-active .chapter-overlay__ticks { opacity: 0.4 }`). The scrubber is fully functional via @phlix/ui — no tizen-specific scrubber implementation is needed.
+**Code Changes**: None (provided by @phlix/ui Player)
+
+## Step 3.13 - Skip Controls
+**Decision**: TV-SPECIFIC (PARTIAL)
+**Rationale**: Tizen has SkipIntroOverlay.vue at `src/components/SkipIntroOverlay.vue` — displays "Skip Intro" / "Skip Outro" buttons when playback is within marker ranges. Uses polling (250ms) vs phlix-ui's reactive SkipControls.vue pattern. This was documented in Category 2 Step 2.3.3 as TV-SPECIFIC with tech debt (polling vs reactive). The component fetches from `GET /api/v1/media/{id}/markers` and handles intro/outro markers specifically. Consolidation requires migrating Tizen to reactive pattern.
+**Code Changes**: None (TV-specific component already exists with documented tech debt)
+
+## Step 3.14 - Theater Mode
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Theater mode in @phlix/ui involves toggling a windowed player with shell chrome removal (usePlayerUiStore.theaterActive). Tizen uses full-screen player by default (`defaultTv: true` in createPhlixApp config, main.ts line 99). TV has no windowed player state to toggle and no shell chrome to remove. The `defaultTv: true` flag sets full-screen mode by default. Theater mode is a web browser window-management concept not applicable to TV.
+**Code Changes**: None (full-screen TV paradigm - no code needed)
+
+## Step 3.15 - Chapter Markers API
+**Decision**: TV-SPECIFIC (PARTIAL)
+**Rationale**: Tizen's ChapterOverlay.vue calls TWO APIs: `GET /api/v1/media/{id}/chapters` (line 93) and `GET /api/v1/media/{id}/markers` (line 110). The chapters API returns chapter segments (ChapterMarker[] with startSeconds/endSeconds/title). The markers API returns timed markers (Marker[] with startMs/endMs/type/label). Both are used: chapters for seekable segments shown as gold ticks, markers for intro/outro/credits/ad shown as colored ticks. phlix-ui's MarkerTimeline.vue uses only the markers API. The dual-API usage in Tizen is intentional — chapters provide the seekable segments for the seekbar while markers provide the skip/opportunity overlay behavior. The two APIs serve complementary purposes.
+**Code Changes**: None (dual-API usage is intentional for TV-specific UX)
+
+---
+
+## Summary
+
+| Step | Feature | Decision |
+|------|---------|----------|
+| 3.1 | Resume Prompt | NOT TV-APPLICABLE |
+| 3.2 | Up Next Card | TV-SPECIFIC |
+| 3.3 | Transcode Notice | NOT TV-APPLICABLE |
+| 3.4 | Transcode Preparing | NOT TV-APPLICABLE |
+| 3.5 | Shortcuts Help | NOT TV-APPLICABLE |
+| 3.6 | Marker Timeline | TV-SPECIFIC |
+| 3.7 | Quality Menu | ALREADY SUFFICIENT |
+| 3.8 | Speed Menu | NOT TV-APPLICABLE |
+| 3.9 | Captions Menu | TV-SPECIFIC |
+| 3.10 | Subtitle Search | NOT TV-APPLICABLE |
+| 3.11 | Ambient Canvas | NOT TV-APPLICABLE |
+| 3.12 | Scrubber | ALREADY SUFFICIENT |
+| 3.13 | Skip Controls | TV-SPECIFIC |
+| 3.14 | Theater Mode | NOT TV-APPLICABLE |
+| 3.15 | Chapter Markers API | TV-SPECIFIC |
+
+- **NOT TV-APPLICABLE**: 8 steps (keyboard-dependent, browser-specific, or irrelevant to TV)
+- **TV-SPECIFIC**: 5 steps (components exist in tizen with documented tech debt)
+- **ALREADY SUFFICIENT**: 2 steps (provided by @phlix/ui or already bridged)
+- **Code changes needed**: 0 (all decisions are architectural/no-code)
