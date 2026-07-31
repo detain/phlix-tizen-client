@@ -178,8 +178,11 @@
 **Cross-refs**: Step 1.1 (the @phlix/ui v0.98.33 update that triggered this CHANGELOG review)
 
 ## Step 1.6 - Node/npm Compatibility
-**Status**: Verified compatible
-**Finding**: Node v24.15.0 >= v22.12.0 required by tizen-client
+**Decision**: IMPLEMENTED_OK
+**Rationale**: package.json:58 specifies node >=22.12.0. Current system runs v24.15.0 which satisfies this. Tizen webview Chromium 100 constraints are verified not violated by the current Node version usage.
+**Code Changes**: None — analysis only.
+**Evidence**: package.json engines field (line 58: node >=22.12.0), node --version output (v24.15.0), deviceId.ts fallback pattern (lines 20-27: typeof guard + Date.now() fallback avoids crypto.randomUUID on ancient webviews)
+**Cross-refs**: None
 
 ## Step 1.2 - Resolve version inconsistencies
 **Decision**: IMPLEMENTED_OK
