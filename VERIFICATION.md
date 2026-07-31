@@ -1128,6 +1128,98 @@ This is NOT a gap to fix — it is an architectural decision to have a TV-specif
 
 ---
 
+# Category 14 - Styling / Design System
+
+**Audit Date**: 2026-07-31
+**Repository**: `/home/sites/phlix/phlix-tizen-client`
+
+## Overview
+
+This category examines the design system integration in the Tizen client. The design system consists of:
+- **@phlix/tokens**: Design tokens (colors, typography, spacing, radius, shadows, motion, density)
+- **@phlix/ui/style.css**: Bundled token set + global resets
+- **@phlix/ui/fonts.css**: Self-hosted fonts (Fraunces, Hanken Grotesk, JetBrains Mono)
+- **TV Mode CSS**: `[data-tv]` scoped styles for 10-foot UI
+- **Theme System**: Nocturne (dark), Daylight (warm light), Midnight (OLED true-black)
+
+All styling is consumed via `@phlix/ui/style.css` and `@phlix/ui/fonts.css` imports in `main.ts`. Tizen is a thin client — UI components use tokens via CSS custom properties; no direct token access from tizen source.
+
+## Step 14.1 - @phlix/tokens import
+**Decision**: ALREADY SUFFICIENT
+**Finding**: `main.ts:14` imports `@phlix/ui/style.css` which bundles `@phlix/tokens/style.css` at build time. The `@phlix/tokens` package is a devDependency of phlix-ui for build-time bundling. Verified:
+- `node_modules/@phlix/ui/dist/style.css` contains all CSS custom properties
+- `--accent: 375 occurrences`, `--bg: 14`, `--surface: 414`, `--text: 1505`, `--font-sans: 8`, `--font-display: 110`, `--space-*: 1680`, `--radius-*: 382`, `--shadow-*: 113`, `--dur-*: 283`, `--ease-*: 264`, `--control-h: 31`
+- The `@phlix/tokens` package is not directly imported by tizen — it's correctly bundled by phlix-ui
+**Code Changes**: None (correctly implemented)
+
+## Step 14.2 - Theme System
+**Decision**: ALREADY SUFFICIENT
+**Finding**: `main.ts:100` sets `defaultTheme: 'nocturne'` and `main.ts:99` sets `defaultTv: true` in `createPhlixApp()`. The full `useTheme()` composable is wired internally in `PhlixApp.vue` (internal to @phlix/ui). `createPhlixApp` calls `applyStoredThemeEarly(defaultTheme, defaultTv)` before mount to set initial `<html>` attributes synchronously, avoiding flash. Available themes (nocturne/daylight/midnight) are defined in `@phlix/tokens/src/themes.ts` and CSS variables in `@phlix/tokens/src/css/colors.css`. Density options (comfortable/compact) are also available via `[data-density]` attribute.
+**Code Changes**: None (correctly implemented)
+
+## Step 14.3 - TV Mode CSS
+**Decision**: ALREADY SUFFICIENT
+**Finding**: `defaultTv: true` (main.ts:99) sets `data-tv="true"` on `<html>`, activating `[data-tv]` scoped styles in `@phlix/tokens/src/css/tv.css`. These styles define 10-foot UI sizing (`--control-h: 3.25rem`, `--control-pad-x: 1.25rem`, `--control-gap: 0.75rem`, `--field-pad-y: 1rem`, `--stack-gap: 1.5rem`) and high-contrast focus rings for D-pad navigation (no pointer hover states). Verified 3 `[data-tv]` occurrences in `node_modules/@phlix/ui/dist/style.css`. TV mode CSS is part of the bundled `@phlix/ui/style.css` and works automatically via `defaultTv: true`.
+**Code Changes**: None (correctly implemented)
+
+## Step 14.4 - Self-hosted Fonts
+**Decision**: ALREADY SUFFICIENT
+**Finding**: `main.ts:15` imports `@phlix/ui/fonts.css`. The bundled `node_modules/@phlix/ui/dist/fonts/fonts.css` declares `@font-face` for:
+- Fraunces (variable, woff2, display serif) — `font-family: var(--font-display)`
+- Hanken Grotesk (variable, woff2, sans-serif) — `font-family: var(--font-sans)`
+- JetBrains Mono (variable, woff2, monospace) — `font-family: var(--font-mono)`
+
+All three fonts are verified declared in the bundled CSS. Metric-matched fallbacks (Arial, Times New Roman, Courier New) are included for zero-CLS swap.
+**Code Changes**: None (correctly implemented)
+
+## Step 14.5 - UI Primitives
+**Decision**: NOT TV-APPLICABLE
+**Finding**: `@phlix/ui/src/components/ui/index.ts` exports 30+ primitives (Button, Input, Select, Modal, Tabs, etc.). Per AGENTS.md: "this repo writes no media/library/auth UI — that lives in @phlix/ui". Tizen's job is to call `createPhlixApp()` with config and mount the result. All UI (including primitives) comes pre-rendered inside the `PhlixApp` shell from @phlix/ui. Tizen does NOT write its own UI components from scratch — it reuses the full phlix-ui surface. The `export * from './components/ui'` is an internal phlix-ui barrel export, not a tizen integration point.
+**Code Changes**: None (thin-client architecture — no code needed)
+
+## Step 14.6 - CSS Custom Properties
+**Decision**: ALREADY SUFFICIENT
+**Finding**: All CSS custom properties from `@phlix/tokens` are bundled into `@phlix/ui/style.css`. The complete token set is verified present:
+- **Colors**: `--bg`, `--surface`, `--surface-2/3`, `--text`, `--text-muted/subtle/faint`, `--border`, `--accent*`, `--error*`, `--success*`, `--warning*`, `--info*`, `--grain-opacity`, `--vignette`, `--ambient`
+- **Typography**: `--font-sans` (Hanken Grotesk), `--font-display` (Fraunces), `--font-mono` (JetBrains Mono), full `--text-*`, `--fw-*`, `--leading-*`, `--tracking-*` scale
+- **Spacing**: `--space-*` (1-16 scale)
+- **Radius**: `--radius-sm/md/lg/xl/full`
+- **Shadows**: `--shadow-*` (1-6 scale with glass variants)
+- **Motion**: `--dur-*` (fast/slower/etc), `--ease-*` (out/in/etc)
+- **Density**: `--control-h`, `--control-pad-x`, `--control-gap`, `--field-pad-y`, `--stack-gap` (TV-mode overridden to 10-foot sizing)
+
+Tizen imports `@phlix/ui/style.css` and thus inherits the full token set. TV mode (`[data-tv]`) density overrides apply automatically.
+**Code Changes**: None (full token set available via bundled style.css)
+
+## Step 14.7 - Dark/Light Theme
+**Decision**: TV-SPECIFIC (by design)
+**Finding**: Available themes (nocturne/daylight/midnight) are all implemented in CSS and the theme infrastructure. `main.ts:100` hardcodes `defaultTheme: 'nocturne'` with no user-accessible theme switcher. Three overlays (`ChapterOverlay`, `SleepTimerOverlay`, `SkipIntroOverlay`) are hardcoded to "dark TV UI (nocturne theme)" via comments but use CSS custom properties — they inherit any theme. `ThemeToggle` component exists in `PhlixApp.vue` (internal to @phlix/ui) but is not accessible via tizen's custom overlays.
+
+Hardcoding `nocturne` for a TV client is a **reasonable UX decision** — TV apps in dark living rooms/bedrooms overwhelmingly benefit from dark themes. However, if theme switching is desired in future, the infrastructure (`data-theme` attribute, CSS variables, `useTheme()` composable) already works — it just needs a theme selector UI accessible via D-pad navigation.
+**Code Changes**: None (deliberate UX constraint — not a gap)
+
+---
+
+## Summary
+
+| Step | Feature | Decision | Notes |
+|------|---------|----------|-------|
+| 14.1 | @phlix/tokens import | ALREADY SUFFICIENT | Bundled via @phlix/ui/style.css |
+| 14.2 | Theme System | ALREADY SUFFICIENT | Full useTheme via createPhlixApp/PhlixApp |
+| 14.3 | TV Mode CSS | ALREADY SUFFICIENT | defaultTv: true activates [data-tv] styles |
+| 14.4 | Self-hosted Fonts | ALREADY SUFFICIENT | @phlix/ui/fonts.css imported correctly |
+| 14.5 | UI Primitives | NOT TV-APPLICABLE | Thin-client; primitives internal to @phlix/ui |
+| 14.6 | CSS Custom Properties | ALREADY SUFFICIENT | Full token set via bundled style.css |
+| 14.7 | Dark/Light Theme | TV-SPECIFIC (by design) | nocturne hardcoded; all 3 themes available |
+
+**Decision Distribution**:
+- **ALREADY SUFFICIENT**: 5 steps (14.1, 14.2, 14.3, 14.4, 14.6) — all correctly implemented
+- **NOT TV-APPLICABLE**: 1 step (14.5) — thin-client architecture makes direct primitive access irrelevant
+- **TV-SPECIFIC (by design)**: 1 step (14.7) — hardcoded nocturne is deliberate TV UX choice
+- **Code changes needed**: 0 (all decisions are correct implementations — no code needed)
+
+---
+
 # Category 15 - Architecture Issues
 
 ## Step 15.1 - 6 Separate Vue Apps (HIGH)
@@ -1184,3 +1276,111 @@ This is NOT a gap to fix — it is an architectural decision to have a TV-specif
 ## Conclusion
 
 Category 15 identifies architectural patterns that are either TV-specific by design (6+ separate Vue apps, multiple mount points, DOM-based quality control via tizenBridge) or require @phlix/ui changes to resolve (typed player store getters, type exports). The tizen-client architecture is internally consistent for TV-specific requirements. Steps 15.3 and 15.4 are tech debt that should be addressed in @phlix/ui, not tizen-client.
+
+---
+
+# Category 13 - i18n / Localization
+
+**Audit Date**: 2026-07-31
+**Repository**: `/home/sites/phlix/phlix-tizen-client`
+**Status**: COMPLETE
+
+## Overview
+
+This category examines i18n (internationalization) / l10n (localization) infrastructure in the tizen-client. Key context from AGENTS.md: "All visible text is English" — the TV app is designed for single-language (English) deployment on Samsung Tizen TV. @phlix/ui has a complete i18n system via `useMessages()` composable with 532+ translation keys, but tizen-client does NOT use it — all strings are hardcoded English.
+
+## Decision Table
+
+| Step | Decision | Rationale |
+|------|----------|-----------|
+| 13.1 | **NOT USED** | `useMessages()` is NOT USED anywhere in tizen-client (0 references to useMessages, createTranslator, i18n, or messages in src/). @phlix/ui has complete i18n infrastructure but tizen is a single-language TV app. |
+| 13.2 | **NOT USED** | Music page has hardcoded "tracks" string (MusicPage.vue:233) instead of `t('music.tracks')`. All music UI strings are hardcoded English. |
+| 13.3 | **NOT TV-APPLICABLE** | Deprecated `music.of` key is not used anywhere in tizen. No pager implementation exists in tizen music browsing — it shows first 100 rows only. |
+| 13.4 | **NOT USED** | CONFIRMED extensive hardcoded English strings across multiple components (MusicPage, SkipIntroOverlay, SleepTimerOverlay, main.ts, stores). AGENTS.md explicitly states "All visible text is English" — this is by design, not a gap. |
+| 13.5 | **NOT TV-APPLICABLE** | No pager implementation in tizen. Music browsing shows first 100 rows with no pagination controls. Pager i18n keys (pageOf, prevPage, nextPage, firstPage, lastPage) are not used. |
+| 13.6 | **NOT USED** | Player overlay strings are hardcoded: "Skip Intro", "Skip Outro" in SkipIntroOverlay.vue; "5 min", "10 min", etc. in SleepTimerOverlay.vue; "Sleep Timer" title. |
+| 13.7 | **NOT USED** | Error messages are hardcoded in stores: useMusicStore.ts has 'Failed to load artists/albums/album/track'; useSyncPlayStore.ts has 'WebSocket error', 'Failed to parse WebSocket message', etc.; ChapterOverlay.vue has 'Failed to load chapters'. |
+
+## Decision Distribution
+
+| Decision | Count |
+|----------|-------|
+| NOT USED | 5 (13.1, 13.2, 13.4, 13.6, 13.7) |
+| NOT TV-APPLICABLE | 2 (13.3, 13.5) |
+| **TOTAL** | **7** |
+
+## Key Findings
+
+### 1. useMessages() is NOT USED (13.1)
+`grep -r "useMessages\|createTranslator\|i18n\|messages" src/ --type vue --type ts` returns **0 matches**. The @phlix/ui i18n composable exists at `node_modules/@phlix/ui/src/composables/useMessages.ts` but is never imported or called in tizen-client source.
+
+### 2. Hardcoded Strings — Confirmed Present (13.4)
+
+**MusicPage.vue** (src/pages/MusicPage.vue):
+- Line 47: `return 'Artists'` (getPageTitle)
+- Line 49: `return musicStore.artists.find(...).name ?? 'Albums'`
+- Line 51: `return musicStore.currentAlbum?.title ?? 'Tracks'`
+- Line 53: `return 'Music'`
+- Line 132: `<p>Loading music…</p>`
+- Line 147: `Retry` (button text)
+- Line 233: `{{ musicStore.currentAlbum.year }} · {{ musicStore.currentAlbum.totalTracks }} tracks`
+
+**SkipIntroOverlay.vue** (src/components/SkipIntroOverlay.vue):
+- Line 180: `aria-label="Skip intro"`
+- Line 204: `<span class="skip-intro-overlay__label">Skip Intro</span>`
+- Line 211: `aria-label="Skip outro"`
+
+**SleepTimerOverlay.vue** (src/components/SleepTimerOverlay.vue):
+- Lines 32-37: `{ label: '5 min', minutes: 5 }`, `{ label: '10 min', minutes: 10 }`, etc. (PRESETS array)
+- Line 143: `<h2 class="sleep-timer-overlay__title">Sleep Timer</h2>`
+- Line 175: `{{ preset.label }}` (renders '5 min', '10 min', etc.)
+- Line 204: `Timer active: {{ remainingTimeDisplay }} remaining`
+- Line 213: `Cancel Timer`
+
+**main.ts** (src/main.ts lines 42-46):
+```typescript
+{ id: 'browse', label: 'Browse', to: '/app', libraryLinks: true },
+{ id: 'for-you', label: 'For You', to: '/app/recommendations' },
+{ id: 'settings', label: 'Settings', to: '/app/settings' },
+{ id: 'parental-controls', label: 'Parental Controls', to: '/app/parental-controls' },
+{ id: 'admin', label: 'Admin', to: '/app/admin/dashboard', requiresAdmin: true }
+```
+
+### 3. Error Messages Are Hardcoded (13.7)
+
+**useMusicStore.ts** (src/stores/useMusicStore.ts):
+- Line 54: `error.value = e instanceof Error ? e.message : 'Failed to load artists'`
+- Line 69: `error.value = e instanceof Error ? e.message : 'Failed to load albums'`
+- Line 85: `error.value = e instanceof Error ? e.message : 'Failed to load album'`
+- Line 101: `error.value = e instanceof Error ? e.message : 'Failed to load track'`
+
+**useSyncPlayStore.ts** (src/stores/useSyncPlayStore.ts):
+- Line 262: `wsError.value = payload.message ?? 'WebSocket error'`
+- Line 297: `wsError.value = 'Failed to parse WebSocket message'`
+- Line 302: `wsError.value = 'WebSocket connection error'`
+- Line 318: `wsError.value = e instanceof Error ? e.message : 'Failed to connect WebSocket'`
+- Line 334: `wsError.value = 'Failed to reconnect after multiple attempts'`
+- Line 431: `error.value = 'Already in a room. Leave current room first.'`
+- Line 450: `error.value = e instanceof Error ? e.message : 'Failed to create room'`
+- Line 493: `error.value = e instanceof Error ? e.message : 'Failed to join room'`
+
+**ChapterOverlay.vue** (src/components/ChapterOverlay.vue):
+- Error message: `'Failed to load chapters'`
+
+### 4. No Pager in Tizen (13.3, 13.5)
+`grep -r "pageOf\|prevPage\|nextPage\|firstPage\|lastPage\|jumpToPage\|pagination" src/` returns no matches. Music browsing shows first 100 rows only — no pagination controls. The CHANGELOG v0.98.32 explicitly states "native clients are unaffected and still show the first 100 rows."
+
+### 5. AGENTS.md Documents Single-Language Design
+AGENTS.md states: "All visible text is English." The single-language design is intentional. TV apps deployed in a single market typically do not require runtime language switching.
+
+## Gates
+
+| Gate | Result |
+|------|--------|
+| `npm run typecheck` | ✅ PASS |
+| `npm test` | ✅ 74 PASS |
+| `npm run lint` | ✅ PASS |
+
+## Conclusion
+
+The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/ui providing a complete system. All strings are hardcoded English. This is explicitly documented in AGENTS.md ("All visible text is English") and is appropriate for a single-language TV app deployment. No i18n changes are needed or recommended for this project scope.
