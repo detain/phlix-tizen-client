@@ -163,9 +163,19 @@
 **Status**: Verified OK
 **Finding**: @phlix/tokens v0.1.1 transitively included via @phlix/ui/style.css
 
-## Step 1.5 - Music API Breaking Changes
-**Status**: Verified no impact
-**Finding**: useMusicStore.ts uses raw `client.get()` not ApiClient music methods
+## Step 1.5 - Music API Breaking Changes (v0.98.32)
+**Decision**: IMPLEMENTED_OK
+**Rationale**: useMusicStore.ts makes raw `client.get()` calls to `/api/v1/music/*` endpoints at lines 51, 66, 82, 98 — no use of `listArtists()`, `listAlbums()`, or `listTracks()`. The CHANGELOG v0.98.32 explicitly states "The native clients are unaffected and still show the first 100 rows." grep confirms 0 hits for these three methods in `src/`. The @phlix/ui ApiClient music-helper methods can change arbitrarily without impacting tizen-client.
+**Code Changes**: None — CHANGELOG analysis only.
+**Evidence**:
+- `useMusicStore.ts:51`: `client.get<{ artists: MusicArtist[] }>('/api/v1/music/artists')` — raw call, not `listArtists()`
+- `useMusicStore.ts:66`: `client.get<{ albums: MusicAlbum[] }>('/api/v1/music/albums')` — raw call, not `listAlbums()`
+- `useMusicStore.ts:82`: `client.get<{ tracks: MusicTrack[] }>('/api/v1/music/tracks/{id}')` — raw call, not `listTracks()`
+- `useMusicStore.ts:98`: `client.get<...>(`/api/v1/music/tracks/${id}/stream`) — raw call
+- CHANGELOG v0.98.32 line 46: "The native clients are unaffected and still show the first 100 rows."
+- `rg "listArtists|listAlbums|listTracks" src/` → 0 hits
+- Installed @phlix/ui version: 0.98.33
+**Cross-refs**: Step 1.1 (the @phlix/ui v0.98.33 update that triggered this CHANGELOG review)
 
 ## Step 1.6 - Node/npm Compatibility
 **Status**: Verified compatible
