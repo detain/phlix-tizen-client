@@ -1125,3 +1125,62 @@ The tizen-client has a **complete, intentional TV-specific SyncPlay reimplementa
 4. Has no drift computation (relies on usePlayerStore from @phlix/ui for playback sync)
 
 This is NOT a gap to fix — it is an architectural decision to have a TV-specific SyncPlay implementation that works within the Tizen TV constraints. The @phlix/syncplay dependency is unused and could be removed.
+
+---
+
+# Category 15 - Architecture Issues
+
+## Step 15.1 - 6 Separate Vue Apps (HIGH)
+**Decision**: TV-SPECIFIC
+**Rationale**: main.ts:119-149 mounts 7 separate Vue apps (main + 6 overlays) sharing pinia/router via `globalProperties`. This architecture enables independent overlay lifecycle management with shared state. The overlays (ChapterOverlay, SleepTimerOverlay, SkipIntroOverlay, PiPController, UpNextOverlay, SpatialNavHost) are intentionally separate apps for TV-specific z-index layering and visibility control. Consolidation via Vue Teleport would require significant refactoring with no user-facing benefit on TV hardware.
+**Code Changes**: None (architectural decision - no code needed)
+
+## Step 15.2 - DOM-based Quality Control (MEDIUM)
+**Decision**: TV-SPECIFIC REIMPLEMENTATION
+**Rationale**: tizenBridge.ts:86-169 uses querySelector/focus/click/MutationObserver pattern to control @phlix/ui's QualityMenu. This is a deliberate reimplementation to avoid modifying sealed @phlix/ui. The `createDomQualityMenu()` function documents the architectural constraint: the Select's own combobox keydown handler owns Arrow/Enter/Escape navigation. Tech debt to be addressed when @phlix/ui exposes a proper `useQualityMenu()` composable API.
+**Code Changes**: None (justified reimplementation - tracked as tech debt)
+
+## Step 15.3 - Dynamic Store Property Access (HIGH)
+**Decision**: NOT IMPLEMENTED
+**Rationale**: ChapterOverlay.vue:305-306 and SkipIntroOverlay.vue:131-132 use fallback chains `storeAny.position ?? storeAny.currentTime ?? storeAny.time ?? storeAny.current_position`. AudioTracksPage.vue:39-40, 56-57, 83-102 similarly uses `as unknown as Record<string, unknown>` casts. This bypasses TypeScript type checking and Vue reactivity. Fix requires @phlix/ui to expose typed player store getters (currentPosition, duration, audioTrackId, etc.) and a declared TypeScript interface for the store API.
+**Code Changes**: None (fix requires @phlix/ui changes, not tizen-client)
+
+## Step 15.4 - Missing Type Exports (MEDIUM)
+**Decision**: NOT IMPLEMENTED
+**Rationale**: @phlix/ui's PlayerStore is not fully typed/exported, forcing tizen-client code to use `as unknown as BridgePlayer` (tizenBridge.ts:272, 278) and `as unknown as Record<string, unknown>` (AudioTracksPage.vue:39, 56, 83). The bridge defines its own `BridgePlayer` interface as a workaround. Fix requires @phlix/ui to export a complete `PlayerStore` TypeScript interface with all public API methods/properties.
+**Code Changes**: None (fix requires @phlix/ui type exports, not tizen-client)
+
+## Step 15.5 - Event Bus vs Pinia (LOW)
+**Decision**: INTERNAL
+**Rationale**: The RemoteManager custom event system (on/emit/onAction pattern) is a TV-specific singleton for remote control events - fundamentally different from Vue component events or Pinia state. tizenBridge.ts:199-250 wires remote 'action' events to player store methods (play/pause/seekBy) - not Pinia actions. This is intentional: TV hardware events flow through RemoteManager → tizenBridge → player store methods. The pattern is internally consistent within tizen-client. No unification needed as these are different concerns (hardware events vs application state).
+**Code Changes**: None (internal architecture - no external impact)
+
+## Step 15.6 - Multiple Mount Points (MEDIUM)
+**Decision**: TV-SPECIFIC (same architectural decision as 15.1)
+**Rationale**: index.html has 7 mount points (`#phlix-app`, `#phlix-spatial-host`, `#phlix-chapter-overlay`, `#phlix-sleep-timer-overlay`, `#phlix-skip-intro-overlay`, `#phlix-pip-overlay`, `#phlix-up-next-overlay`). This is the same architectural decision as Step 15.1 - separate apps for independent overlay visibility control and z-index layering. Single mount with Teleport would complicate overlay lifecycle management with no TV user-facing benefit.
+**Code Changes**: None (architectural decision - no code needed)
+
+---
+
+## Summary Table
+
+| Step | Severity | Decision | Key Finding |
+|------|----------|----------|-------------|
+| 15.1 | HIGH | TV-SPECIFIC | 7 separate Vue apps sharing pinia/router - intentional for TV overlay lifecycle |
+| 15.2 | MEDIUM | TV-SPECIFIC REIMPLEMENTATION | DOM quality control - tech debt pending @phlix/ui composable API |
+| 15.3 | HIGH | NOT IMPLEMENTED | Dynamic property fallback chains - fix requires @phlix/ui typed getters |
+| 15.4 | MEDIUM | NOT IMPLEMENTED | Missing type exports - fix requires @phlix/ui PlayerStore interface |
+| 15.5 | LOW | INTERNAL | RemoteManager event system is TV-specific internal architecture |
+| 15.6 | MEDIUM | TV-SPECIFIC | Same as 15.1 - separate mount points for TV overlay control |
+
+## Gates
+
+| Gate | Result |
+|------|--------|
+| `npm run typecheck` | ✅ PASS |
+| `npm test` | ✅ 74 PASS |
+| `npm run lint` | ✅ PASS |
+
+## Conclusion
+
+Category 15 identifies architectural patterns that are either TV-specific by design (6+ separate Vue apps, multiple mount points, DOM-based quality control via tizenBridge) or require @phlix/ui changes to resolve (typed player store getters, type exports). The tizen-client architecture is internally consistent for TV-specific requirements. Steps 15.3 and 15.4 are tech debt that should be addressed in @phlix/ui, not tizen-client.
