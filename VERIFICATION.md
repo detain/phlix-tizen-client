@@ -423,3 +423,145 @@
 - **PARTIAL**: 1 step (partially integrated, investigation needed)
 - **HIGH priority NOT USED**: 2 steps (useResumeSync, useResumeReporter - cross-device resume)
 - **Code changes needed**: 0 for all decisions (HIGH priority items would need implementation for cross-device resume)
+
+---
+
+# Category 6 - Missing Pages (phlix-ui has 30+, tizen has 4 local + 1 imported)
+
+## Overview
+
+The tizen client has **4 local pages** (MusicPage, ParentalControlsPage, ChaptersPage, AudioTracksPage) and imports additional pages from @phlix/ui via `createPhlixApp()`. This creates a feature gap compared to phlix-ui's 30+ dedicated pages. Decisions below distinguish between **TV-SPECIFIC** (intentional local reimplementation), **NOT TV-APPLICABLE** (keyboard/mouse features irrelevant to TV), **NOT USED** (exists in bundle but not routed), and **ALREADY SUFFICIENT** (provided via @phlix/ui or menu system).
+
+## Step 6.1 - Music: Album Detail
+**Decision**: TV-SPECIFIC (PARTIAL)
+**Finding**: MusicPage.vue handles album detail inline via `currentView === 'tracks'` state. Album header shows 120x120 art (vs 200x200 in phlix-ui), title, artist name, year, track count. Gap: no total album duration, no Play All button, no crossfade/gapless playback (useMusicPlayer not available), no shimmer loading skeleton (just "Loading music..." text). The `emit('play', track)` delegates to parent app for actual playback.
+**Code Changes**: None (TV-specific gaps are intentional trade-offs for thin-client model)
+
+## Step 6.2 - Music: Artist Detail
+**Decision**: TV-SPECIFIC (PARTIAL)
+**Finding**: MusicPage.vue shows artist's albums inline via `currentView === 'albums'`. Uses MusicAlbumCard component with dynamic title showing artist name. Gap: no artist image (phlix-ui shows 200x200 with placeholder SVG), no track count from artist.trackCount, no album paging (shows all albums for selected artist), no page-error banner handling.
+**Code Changes**: None (TV-specific gaps are intentional trade-offs)
+
+## Step 6.3 - Music: Artists List
+**Decision**: TV-SPECIFIC (PARTIAL)
+**Finding**: MusicPage.vue shows artists via `currentView === 'artists'` using MusicArtistCard component. Gap: no offset paging (shows all artists at once - problematic for 2,197 artist DB), no total count display, no shimmer loading skeleton (just "Loading music..." text), full error state instead of preserving rows/pager on failure.
+**Code Changes**: None (TV-specific gaps are intentional trade-offs)
+
+## Step 6.4 - Music: Tracks List
+**Decision**: TV-SPECIFIC (PARTIAL)
+**Finding**: MusicPage.vue shows tracks inline via `currentView === 'tracks'` using TrackListItem component with per-track play. Gap: no dedicated MusicTracksPage for full library (only album-level), no client-side search, no transport bar (prev/pause/play/next, seek slider, progress time), simplified list item vs full table with Artist/Album columns.
+**Code Changes**: None (TV-specific gaps are intentional trade-offs)
+
+## Step 6.5 - Music: Player
+**Decision**: NOT TV-APPLICABLE
+**Finding**: No dedicated music player page. Playback delegates to parent app via `emit('play', track)` — the actual audio playback happens in @phlix/ui's player context outside the TV app. No queue management, no shuffle/repeat/volume/seek controls. This is by design: TV is primarily a video platform; audio playback is a thin-client delegation.
+**Code Changes**: None (audio playback outside TV scope - no code needed)
+
+## Step 6.6 - Books
+**Decision**: NOT TV-APPLICABLE
+**Finding**: No book-related pages exist in tizen. BooksPage, BookDetailPage, BookReaderPage (epub reader) have no tizen equivalents. Reading books on a TV is not a typical use case. The platform is video-centric.
+**Code Changes**: None (not a TV use case - no code needed)
+
+## Step 6.7 - Audiobooks
+**Decision**: NOT TV-APPLICABLE
+**Finding**: No audiobook pages in tizen. AudiobookDetailPage, AudiobookPlayerPage (with chapter navigation) have no tizen equivalents. Audio content on TV is lower priority than video. The thin-client model delegates audio playback.
+**Code Changes**: None (not a TV use case - no code needed)
+
+## Step 6.8 - Photos
+**Decision**: NOT TV-APPLICABLE
+**Finding**: No photo pages in tizen (PhotoAlbumsPage, PhotoAlbumPage, PhotoViewPage, PhotoSlideshowPage). Photo slideshows could theoretically work on TV but viewing individual photos is less relevant for the TV platform.
+**Code Changes**: None (not a TV use case - no code needed)
+
+## Step 6.9 - Explore
+**Decision**: NOT TV-APPLICABLE
+**Finding**: No explore/discovery page in tizen. ExplorePage (discovery interface for content recommendations) is primarily a web/mobile pattern. TV users typically browse by library rather than needing discovery features.
+**Code Changes**: None (not a TV use case - no code needed)
+
+## Step 6.10 - Security Settings
+**Decision**: PARTIAL
+**Finding**: ParentalControlsPage exists at `/app/parental-controls` (registered in buildExtraRoutes, accessible via menu). Provides PIN-protected parental controls with three tabs: Access Schedules, Tag Blocking, Stream Limits. Gap vs phlix-ui SecuritySettingsPage: no session management, no device management, no password change, no 2FA. These are minor enhancements for admin-level users.
+**Code Changes**: None (PARTIAL is sufficient for TV parental control needs)
+
+## Step 6.11 - My Servers
+**Decision**: NOT TV-APPLICABLE
+**Finding**: No multi-server support pages in tizen. MyServersPage, ServerDetailPage have no tizen equivalents. Tizen is primarily a single-server thin client (server URL stored in localStorage via resolveConfig.ts). Multi-server management is a hub/web feature.
+**Code Changes**: None (thin-client architecture - no code needed)
+
+## Step 6.12 - Federation
+**Decision**: NOT TV-APPLICABLE
+**Finding**: No federation pages in tizen (FederationPage, FederationSharesPage, ManageSharesPage, SharedWithMePage). Federation is primarily a server-to-server feature, less relevant for a TV client that connects directly to a single server.
+**Code Changes**: None (server-to-server feature - no code needed)
+
+## Step 6.13 - Invite Links
+**Decision**: NOT TV-APPLICABLE
+**Finding**: No invite functionality in tizen (InviteLinksPage, AcceptInvitePage). User registration/invitation is typically handled via web admin interface, not a TV client.
+**Code Changes**: None (admin/web feature - no code needed)
+
+## Step 6.14 - Watch History
+**Decision**: NOT USED
+**Finding**: HistoryPage exists in bundle at `package/assets/HistoryPage-HhFjB0Kf-BuRzP3EG.js` but is NOT registered in tizen's routing (not in buildExtraRoutes, not in @phlix/ui standard routes). History is tracked in `usePlayerStore.resumeMap` but exposed only via inline "continue watching" rather than a dedicated history page. Users cannot browse full history or clear it.
+**Code Changes**: None (would need routing integration if desired)
+
+## Step 6.15 - Season Detail
+**Decision**: NOT USED
+**Finding**: SeasonPage exists in bundle at `package/assets/SeasonPage-BTGDnR70-B9lMQ1Ct.js` but NOT explicitly routed in tizen. MediaDetailPage handles series information and episodes are shown within series detail, potentially flat without dedicated season grouping. No `route /app/tv/:seriesId/season/:seasonNumber` is registered.
+**Code Changes**: None (would need explicit routing integration)
+
+## Step 6.16 - Series Detail
+**Decision**: ALREADY SUFFICIENT
+**Finding**: MediaDetailPage at `package/assets/MediaDetailPage-DGDAIlPN-KE30A5Q1.js` handles series display. Series info and episodes are shown within MediaDetail. Season tab navigation (SeriesSeasons component at `package/assets/useSeriesSeasons-BYY54zt4-Dky-fmf3.js`) provides season grouping via collapsible `<details>` elements. The series/season browsing is functional via @phlix/ui's standard routing.
+**Code Changes**: None (provided via @phlix/ui MediaDetailPage)
+
+## Step 6.17 - Requests
+**Decision**: NOT TV-APPLICABLE
+**Finding**: No RequestsPage in tizen. User content requests and approval workflow are handled via admin web interface. TV users do not need request submission functionality.
+**Code Changes**: None (admin feature - no code needed)
+
+## Step 6.18 - Browse/Home
+**Decision**: ALREADY SUFFICIENT
+**Finding**: BrowsePage exists in bundle at `package/assets/BrowsePage-DPV6hUCE-yuvguuoR.js`. The menu's `libraryLinks: true` (main.ts line 42) expands "Browse" into per-library nav links automatically. The BrowsePage is the home screen (`to: '/app'`) and renders "Continue Watching" rail + configurable home rows per library + "See all" links to LibraryPage. This is the primary entry point for the TV app.
+**Code Changes**: None (properly integrated via menu system + @phlix/ui BrowsePage)
+
+## Step 6.19 - Library
+**Decision**: ALREADY SUFFICIENT
+**Finding**: LibraryPage exists in bundle at `package/assets/LibraryPage-gSBcP7fI-BTFqGapg.js`. Accessed via "See all" links from BrowsePage home rows. Provides full filterable grid for a library with sorting and filtering. The Browse → Library navigation chain is complete and functional via @phlix/ui routing.
+**Code Changes**: None (properly integrated via BrowsePage navigation)
+
+## Step 6.20 - Search
+**Decision**: ALREADY SUFFICIENT
+**Finding**: No dedicated SearchPage route in tizen, but search functionality exists via CommandPalette (`package/assets/CommandPalette-DgXPiuHU-mRtH7fzD.js`). The CommandPalette provides library search with recent items, grouped results, and keyboard shortcut trigger. The palette is opened via menu action or keyboard shortcut and navigates to browse with search query. While the phlix-ui SearchPage at `/app/search` is not explicitly routed, the CommandPalette search covers the same use case for TV.
+**Code Changes**: None (CommandPalette provides search functionality)
+
+---
+
+## Summary
+
+| Step | Feature | Decision | Notes |
+|------|---------|----------|-------|
+| 6.1 | Music - Album Detail | TV-SPECIFIC (PARTIAL) | Inline in MusicPage, 120x120 art, no Play All/crossfade |
+| 6.2 | Music - Artist Detail | TV-SPECIFIC (PARTIAL) | No artist image, no paging, no track count |
+| 6.3 | Music - Artists List | TV-SPECIFIC (PARTIAL) | No paging, all artists loaded at once |
+| 6.4 | Music - Tracks List | TV-SPECIFIC (PARTIAL) | Album-level only, no search/transport bar |
+| 6.5 | Music - Player | NOT TV-APPLICABLE | Delegates to parent app audio playback |
+| 6.6 | Books | NOT TV-APPLICABLE | Not a TV use case |
+| 6.7 | Audiobooks | NOT TV-APPLICABLE | Not a TV use case |
+| 6.8 | Photos | NOT TV-APPLICABLE | Not a TV use case |
+| 6.9 | Explore | NOT TV-APPLICABLE | Not a TV use case |
+| 6.10 | Security Settings | PARTIAL | ParentalControlsPage with 3 tabs, missing session/device management |
+| 6.11 | My Servers | NOT TV-APPLICABLE | Thin client single-server model |
+| 6.12 | Federation | NOT TV-APPLICABLE | Server-to-server feature |
+| 6.13 | Invite Links | NOT TV-APPLICABLE | Admin/web feature |
+| 6.14 | Watch History | NOT USED | Bundle has HistoryPage but not routed |
+| 6.15 | Season Detail | NOT USED | Bundle has SeasonPage but not routed |
+| 6.16 | Series Detail | ALREADY SUFFICIENT | MediaDetailPage via @phlix/ui |
+| 6.17 | Requests | NOT TV-APPLICABLE | Admin feature |
+| 6.18 | Browse/Home | ALREADY SUFFICIENT | libraryLinks menu + BrowsePage |
+| 6.19 | Library | ALREADY SUFFICIENT | "See all" → LibraryPage via @phlix/ui |
+| 6.20 | Search | ALREADY SUFFICIENT | CommandPalette provides search |
+
+**Decision Distribution**:
+- **TV-SPECIFIC (PARTIAL)**: 5 steps (6.1-6.4 music pages + 6.10 security) - intentional trade-offs for thin-client
+- **NOT TV-APPLICABLE**: 9 steps (6.5-6.9, 6.11-6.13, 6.17) - features irrelevant to TV UX
+- **NOT USED**: 2 steps (6.14-6.15) - pages exist in bundle but not routed
+- **ALREADY SUFFICIENT**: 4 steps (6.16, 6.18-6.20) - provided via @phlix/ui or menu system
+- **Code changes needed**: 0 (all decisions are architectural/no-code)
