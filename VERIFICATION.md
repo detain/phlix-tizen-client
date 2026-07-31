@@ -892,6 +892,98 @@ Additionally, the `MusicTrack` interface in @phlix/contracts (Music.d.ts) does n
 
 ---
 
+# Category 12 - API Clients
+
+## Overview
+
+phlix-ui provides 20+ API client modules. The tizen client directly uses only 2 (ApiClient and contracts), while re-implementing some functionality that already exists in phlix-ui or not using available APIs at all.
+
+## Step 12.1 - Recommendations API
+**Decision**: TV-SPECIFIC (PARTIAL GAP)
+**Finding**: tizen's RecommendationsScreen.vue (lines 33-49) makes a manual `client.get('/api/v1/me/recommendations', { limit: '20' })` call instead of using `fetchRecommendations()` from @phlix/ui. It has a duplicated local `RecommendationApiResponse` interface and handles error inline. The `fetchRecommendations()` function (phlix-ui/src/api/recommendations.ts:62-76) provides proper error handling, `AbortSignal` support, and converts `UserRecommendation[]` to `MediaItem[]` via `recommendationToMediaItem()`. The tizen implementation uses raw `UserRecommendation[]` directly instead of converting to `MediaItem[]`.
+
+The gap is: (1) duplicated interface, (2) manual error handling instead of centralized, (3) no AbortSignal support, (4) raw `UserRecommendation[]` instead of `MediaItem[]`.
+
+This is a medium-priority gap — consolidation would require importing `fetchRecommendations()` and handling the returned `MediaItem[]` in the component.
+**Code Changes**: None (audit-only — gap identified but not fixed per scope)
+
+## Step 12.2 - SyncPlay API
+**Decision**: TV-SPECIFIC (SIGNIFICANT GAP)
+**Finding**: tizen's useSyncPlayStore.ts (lines 83-160) contains a local `SyncPlayApiClient` class that re-implements the same functionality as `getSyncPlayApi()` from @phlix/ui. Key differences:
+1. **API paths**: tizen uses `/api/v1/syncplay/rooms` vs phlix-ui's `/api/v1/syncplay/groups`
+2. **WebSocket**: tizen uses custom WebSocket implementation vs phlix-ui's `@phlix/syncplay` protocol
+3. **Pattern**: tizen instantiates per-call `new SyncPlayApiClient(apiBase, token)` vs phlix-ui's singleton `getSyncPlayApi(apiBase)`
+
+The tizen implementation has ~80 lines of duplicated API client code plus custom WebSocket handling with exponential backoff. This is a high-priority gap due to significant code duplication and API path divergence.
+**Code Changes**: None (audit-only — gap identified but not fixed per scope)
+
+## Step 12.3 - Libraries API
+**Decision**: ALREADY SUFFICIENT (INDIRECTLY USED)
+**Finding**: tizen uses `libraryLinks: true` in menu configuration (main.ts line 42). The comment states: "libraryLinks expands Browse into one nav link per library (fetched from /api/v1/libraries)". The `libraryLinks` feature is handled internally by @phlix/ui — the tizen client delegates library fetching to @phlix/ui's implementation. This is working as intended.
+**Code Changes**: None (delegated to @phlix/ui — works correctly)
+
+## Step 12.4 - Invite Links API
+**Decision**: NOT USED
+**Finding**: `invite-links.ts` exists in phlix-ui but no tizen source file imports or uses it. Invite link functionality (generating/managing server invite links) is typically a web admin UI task, not a TV media consumption feature.
+**Code Changes**: None (not a TV use case)
+
+## Step 12.5 - Most Watched API
+**Decision**: NOT USED
+**Finding**: `mostWatched.ts` exists in phlix-ui (added v0.98.24) but no tizen source file imports or uses it. "Most Watched" analytics are a server-wide dashboard metric, not a TV media consumption feature.
+**Code Changes**: None (analytics feature not relevant to TV)
+
+## Step 12.6 - Next Up API
+**Decision**: NOT USED
+**Finding**: `nextUp.ts` exists in phlix-ui (added v0.98.28) but no tizen source file imports or uses it. The "Next Up" continue-watching functionality is handled by @phlix/ui's Player automatically. The tizen UpNextOverlay.vue (components/UpNextOverlay.vue) fetches playlist data directly via `/api/v1/media/{id}/playlist` to find the next item.
+**Code Changes**: None (already handled differently)
+
+## Step 12.7 - Photos API
+**Decision**: NOT USED
+**Finding**: `photos.ts` exists in phlix-ui but no tizen source file imports or uses it. Photo gallery/slideshow features are not a typical TV use case.
+**Code Changes**: None (not a TV use case)
+
+## Step 12.8 - Claim Server API
+**Decision**: NOT USED
+**Finding**: `claimServer.ts` exists in phlix-ui but no tizen source file imports or uses it. Server claiming/setup is a first-run web UI task, not a pre-configured TV app feature.
+**Code Changes**: None (server setup done via web UI)
+
+## Step 12.9 - Avatar API
+**Decision**: NOT USED
+**Finding**: `avatar.test.ts` exists (test only) but no implementation file or tizen usage found. Avatar management is likely handled via user profile settings in @phlix/ui.
+**Code Changes**: None (handled via @phlix/ui profile)
+
+## Steps 12.10-12.30 - Admin APIs (21 total)
+**Decision**: NOT TV-APPLICABLE
+**Finding**: All 21 admin API clients (logs, dashboard, users, libraries, plugins, settings, webhooks, services, integrations, backup, cast, dlnaServer, remoteAccess, liveTv, collections, history, syncPlay, hubDashboard, metadata-sources, metrics, duplicates) exist in phlix-ui/src/api/admin/ but are not used by tizen. Admin functionality is accessed via @phlix/ui's admin UI routes (`buildAdminRoutes()` from main.ts line 57). Server administration from TV is not a designed product use case — TV is a media consumption thin client.
+**Code Changes**: None (admin features accessed via @phlix/ui admin UI, not direct API)
+
+---
+
+## Summary
+
+| Step | API | Decision | Notes |
+|------|-----|----------|-------|
+| 12.1 | Recommendations | TV-SPECIFIC (PARTIAL GAP) | Manual fetch vs `fetchRecommendations()` |
+| 12.2 | SyncPlay | TV-SPECIFIC (SIGNIFICANT GAP) | Local SyncPlayApiClient vs `getSyncPlayApi()`, different API paths |
+| 12.3 | Libraries | ALREADY SUFFICIENT | Delegated to @phlix/ui via `libraryLinks: true` |
+| 12.4 | Invite Links | NOT USED | Admin/web feature, not TV use case |
+| 12.5 | Most Watched | NOT USED | Analytics feature, not TV use case |
+| 12.6 | Next Up | NOT USED | UpNextOverlay uses direct API |
+| 12.7 | Photos | NOT USED | Not a TV use case |
+| 12.8 | Claim Server | NOT USED | Server setup via web UI |
+| 12.9 | Avatar | NOT USED | Handled via @phlix/ui profile |
+| 12.10-12.30 | Admin APIs (21) | NOT TV-APPLICABLE | Admin features via @phlix/ui admin UI |
+
+**Decision Distribution**:
+- **TV-SPECIFIC (PARTIAL GAP)**: 1 step (12.1) — Recommendations API could use `fetchRecommendations()`
+- **TV-SPECIFIC (SIGNIFICANT GAP)**: 1 step (12.2) — SyncPlay reimplementation with API path divergence
+- **ALREADY SUFFICIENT**: 1 step (12.3) — Libraries delegated to @phlix/ui
+- **NOT USED**: 6 steps (12.4-12.9) — Features not needed on TV
+- **NOT TV-APPLICABLE**: 21 steps (12.10-12.30) — Admin features not applicable to TV client
+- **Code changes needed**: 0 (all decisions are architectural/audit)
+
+---
+
 # Category 10 - HLS Configuration
 
 ## Overview
