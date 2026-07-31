@@ -79,8 +79,8 @@ export const useMusicStore = defineStore('phlix-music', () => {
     currentAlbum.value = null;
     try {
       const client = getClient();
-      const data = await client.get<MusicAlbum>(`/api/v1/music/albums/${id}`);
-      currentAlbum.value = data;
+      const data = await client.get<{ album: MusicAlbum }>(`/api/v1/music/albums/${id}`);
+      currentAlbum.value = data.album;
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load album';
       currentAlbum.value = null;
@@ -95,8 +95,8 @@ export const useMusicStore = defineStore('phlix-music', () => {
     currentTrack.value = null;
     try {
       const client = getClient();
-      const data = await client.get<MusicTrack>(`/api/v1/music/tracks/${id}`);
-      currentTrack.value = data;
+      const data = await client.get<{ track: MusicTrack }>(`/api/v1/music/tracks/${id}`);
+      currentTrack.value = data.track;
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load track';
       currentTrack.value = null;
