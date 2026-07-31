@@ -296,3 +296,130 @@
 - **TV-SPECIFIC**: 5 steps (components exist in tizen with documented tech debt)
 - **ALREADY SUFFICIENT**: 2 steps (provided by @phlix/ui or already bridged)
 - **Code changes needed**: 0 (all decisions are architectural/no-code)
+
+---
+
+# Category 5 Verification - Missing/Unused Composables
+
+## Step 5.1 - useOnline
+**Decision**: NOT USED
+**Rationale**: `useOnline()` monitors `navigator.onLine` for connectivity error states. Tizen TV network is typically stable - no grep hits for `navigator.onLine` in src/. The `onlineMembers` in useSyncPlayStore.ts refers to SyncPlay member presence, not network connectivity. No offline error banners are implemented in tizen. Medium priority: could be useful for error states but TV stability makes it low urgency.
+**Code Changes**: None
+
+## Step 5.2 - usePrefetch
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: `usePrefetch()` uses `pointerenter`/`focus` events to warm lazy route chunks before navigation. D-pad has no hover/focus events - it uses directional navigation and select. This composable is fundamentally incompatible with TV remote interface.
+**Code Changes**: None (D-pad has no hover events - no code needed)
+
+## Step 5.3 - usePreconnect
+**Decision**: NOT USED
+**Rationale**: `usePreconnect()` injects `<link rel="preconnect">` and `<link rel="dns-prefetch">` for cross-origin asset hosts (CDN/posters). No preconnect or dns-prefetch links are injected in tizen (grep returns 0 hits). Could speed up poster loading on TV but is an optimization rather than critical functionality. If TV accesses posters from a CDN, usePreconnect with `imageOrigin` config could help.
+**Code Changes**: None
+
+## Step 5.4 - useResumeSync
+**Decision**: NOT USED (HIGH priority)
+**Rationale**: `useResumeSync` is the cross-device resume READ path - fetches server-side resume positions from `GET /api/v1/users/me/continue-watching` and merges them into `usePlayerStore.mergeServerResume()`. The @phlix/ui PlayerPage does call syncResume on mount, but tizen does NOT explicitly integrate useResumeSync. This means cross-device resume (web→TV) would NOT work - the TV wouldn't fetch server resume positions when the player loads. Tizen has LOCAL resume via usePlayerStore's localStorage-backed resumeMap, but no server sync. HIGH priority: critical for "continue where you left off" across devices.
+**Code Changes**: None (would need implementation for cross-device resume)
+
+## Step 5.5 - useResumeReporter
+**Decision**: NOT USED (HIGH priority)
+**Rationale**: `useResumeReporter` is the cross-device resume WRITE path - reports playback position to server via `POST /api/v1/sessions` and `POST /api/v1/sessions/{id}/progress`. Tizen does NOT report playback position to server. This means TV→web resume would not work - positions watched on TV don't sync back to server for other devices. Often paired with useResumeSync - if 5.4 needs implementation, 5.5 likely does too.
+**Code Changes**: None (would need implementation for cross-device resume)
+
+## Step 5.6 - useCommandPaletteHotkey
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Keyboard-centric (⌘K/Ctrl+K) command palette. Tizen TV uses D-pad remote only - no keyboard. The command palette pattern is fundamentally incompatible with TV remote interface which uses directional navigation and transport keys only.
+**Code Changes**: None (requires keyboard - no code needed)
+
+## Step 5.7 - useTheme
+**Decision**: PARTIAL
+**Rationale**: Tizen sets `defaultTheme: 'nocturne'` in createPhlixApp config (main.ts line 100), but `useTheme()` is NOT explicitly called in tizen source. The useTheme() composable reactively reflects preferences store onto `<html>` (data-theme, data-density, data-reduced-motion, --accent* variables). Without useTheme(), theme changes from the preferences store would NOT be reactively applied to the DOM. However, `createPhlixApp` internally calls `applyStoredThemeEarly()` which sets initial theme before mount. For full reactive theme support (if users can change theme in settings), useTheme() should be called. Investigation shows prefs.tv is used in SpatialNavHost for D-pad gating, but full theme reactivity may be handled internally by createPhlixApp.
+**Code Changes**: None (createPhlixApp handles theme initialization internally)
+
+## Step 5.8 - usePageTitle
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: `usePageTitle()` sets `document.title` for browser tab bar. Tizen TV has no tab bar - no visible effect. TV displays are fixed 1920x1080 with no browser chrome. document.title is irrelevant for TV UX.
+**Code Changes**: None (no tab bar on TV - no code needed)
+
+## Step 5.9 - useMessages
+**Decision**: NOT USED
+**Rationale**: `useMessages()` provides i18n infrastructure via `t('group.key', params?)` function. All user-facing strings in tizen are hardcoded English (no grep hits for `useMessages` or i18n in src/). Tizen does not have any i18n/l10n infrastructure. Adding i18n would be a significant effort for minimal benefit on a single-language TV app.
+**Code Changes**: None (all strings hardcoded English - no i18n needed)
+
+## Step 5.10 - useMusicPlayer
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: `useMusicPlayer` handles audio playback with gapless playback, crossfade, and queue management for music. No music UI exists in tizen - not part of TV app scope which focuses on video playback. The phlix-ui MusicPlayerPage and music playback features are not relevant to the TV video player use case.
+**Code Changes**: None (music not in TV scope - no code needed)
+
+## Step 5.11 - useTrickplay
+**Decision**: NOT USED
+**Rationale**: `useTrickplay` provides sprite preview thumbnails during scrubbing (fetches from `GET /api/v1/media/{id}/trickplay`). Requires server-side sprite generation. No trickplay or thumbnail sprite support in tizen player (grep returns 0 hits). Would enhance TV player UX but requires server-side sprite generation which may not be implemented. Low priority enhancement.
+**Code Changes**: None (requires server-side sprite generation)
+
+## Step 5.12 - useItemInspector
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: `useItemInspector` is a debugging tool that provides detailed item metadata inspection for development. Not needed by end users on TV. Debugging tools are not applicable to production TV app UX.
+**Code Changes**: None (debugging tool - no code needed)
+
+## Step 5.13 - useSeriesSeasons
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: Already works via @phlix/ui components. SeasonPage and MediaDetailPage in @phlix/ui use useSeriesSeasons internally to resolve series/season data. Tizen uses createPhlixApp which mounts these components - the composable works automatically behind the scenes.
+**Code Changes**: None (works transparently via @phlix/ui)
+
+## Step 5.14 - useMediaItemCache
+**Decision**: INTERNAL
+**Rationale**: Transparent stale-while-revalidate cache behind @phlix/ui components (60s TTL). Used internally by media-detail and player pages for instant navigation with background refresh. Works transparently - no direct usage in tizen source.
+**Code Changes**: None (internal cache - no code needed)
+
+## Step 5.15 - useResolvePlayable
+**Decision**: INTERNAL
+**Rationale**: Resolves what to play for series/season (idempotent media item → playable item). If tizen uses @phlix/ui's standard play handling via createPhlixApp, it works automatically behind the scenes. The composable is used internally by @phlix/ui player components.
+**Code Changes**: None (internal resolution - no code needed)
+
+## Step 5.16 - useHlsTranscode
+**Decision**: INTERNAL
+**Rationale**: Core playback pipeline for transcoded content. Tizen's `TIZEN_HLS_CONFIG` is passed through createPhlixApp via `playerHlsConfig` (main.ts lines 69-76, 116). Works transparently - the HLS config is passed to @phlix/ui's player which handles transcoding.
+**Code Changes**: None (passed through createPhlixApp config - no code needed)
+
+## Step 5.17 - useHeaderHideOnScroll
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Web scroll-based pattern that hides header on scroll down, shows on scroll up. TVs use focus-based spatial navigation, not page scrolling. The entire concept of scroll-based header hiding is incompatible with TV D-pad navigation where focus moves between elements.
+**Code Changes**: None (no scrolling on TV - no code needed)
+
+## Step 5.18 - Spatial Nav Utilities
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: `useSpatialNav` is actively used in SpatialNavHost.vue (line 6: `useSpatialNav({enabled: () => Boolean(prefs.tv) && route.name !== 'player'})`). The low-level utilities (bestCandidate, rectCenter) are internal to useSpatialNav implementation. Spatial navigation is properly integrated for D-pad navigation on TV.
+**Code Changes**: None (already integrated via SpatialNavHost.vue)
+
+---
+
+## Summary
+
+| Step | Feature | Decision | Priority |
+|------|---------|----------|----------|
+| 5.1 | useOnline | NOT USED | Medium |
+| 5.2 | usePrefetch | NOT TV-APPLICABLE | - |
+| 5.3 | usePreconnect | NOT USED | Medium |
+| 5.4 | useResumeSync | NOT USED | HIGH |
+| 5.5 | useResumeReporter | NOT USED | HIGH |
+| 5.6 | useCommandPaletteHotkey | NOT TV-APPLICABLE | - |
+| 5.7 | useTheme | PARTIAL | Medium |
+| 5.8 | usePageTitle | NOT TV-APPLICABLE | - |
+| 5.9 | useMessages | NOT USED | None |
+| 5.10 | useMusicPlayer | NOT TV-APPLICABLE | - |
+| 5.11 | useTrickplay | NOT USED | Medium |
+| 5.12 | useItemInspector | NOT TV-APPLICABLE | - |
+| 5.13 | useSeriesSeasons | ALREADY SUFFICIENT | - |
+| 5.14 | useMediaItemCache | INTERNAL | - |
+| 5.15 | useResolvePlayable | INTERNAL | - |
+| 5.16 | useHlsTranscode | INTERNAL | - |
+| 5.17 | useHeaderHideOnScroll | NOT TV-APPLICABLE | - |
+| 5.18 | Spatial Nav Utilities | ALREADY SUFFICIENT | - |
+
+- **NOT TV-APPLICABLE**: 6 steps (keyboard/mouse/scroll-dependent features)
+- **NOT USED**: 5 steps (available but not integrated)
+- **INTERNAL**: 3 steps (work transparently via @phlix/ui)
+- **ALREADY SUFFICIENT**: 2 steps (properly integrated)
+- **PARTIAL**: 1 step (partially integrated, investigation needed)
+- **HIGH priority NOT USED**: 2 steps (useResumeSync, useResumeReporter - cross-device resume)
+- **Code changes needed**: 0 for all decisions (HIGH priority items would need implementation for cross-device resume)
