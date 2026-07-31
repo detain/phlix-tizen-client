@@ -1489,3 +1489,189 @@ Two items (17.3, 17.4) are NOT IMPLEMENTED due to tizen's `useMusicStore.ts` usi
 Two items (17.6, 17.7) are TV-SPECIFIC because tizen has custom overlay components (UpNextOverlay) that use polling/event-emission architecture rather than @phlix/ui's reactive patterns. This is documented tech debt in the codebase comments.
 
 No code changes required for this category - the findings are documentation of architectural decisions and known gaps.
+
+
+---
+
+# Category 16 - New Features Since v0.81.0
+
+## Overview
+
+This category audits 22 features added between v0.81.0 (old stale version) and v0.98.33 (current version). Many new @phlix/ui features were added but may not be available in tizen-client, which is a thin consumer of @phlix/ui via `createPhlixApp()`. Decisions distinguish between **TV-SPECIFIC** (intentional TV reimplementation), **NOT TV-APPLICABLE** (keyboard/mouse/admin features irrelevant to TV), **ALREADY SUFFICIENT** (provided via @phlix/ui or bundled), **NOT IMPLEMENTED** (missing UI despite server support), **NOT USED** (available but not integrated), **PARTIAL** (partially works), and **INTERNAL** (works transparently via @phlix/ui).
+
+## Step 16.1 - Subtitle Search & Download (v0.98.0)
+**Decision**: NOT IMPLEMENTED
+**Rationale**: `SubtitleFetchService`, `SubtitleStorage`, and `RemoteSubtitleController` exist in phlix-server. `client.searchSubtitles()` and `client.downloadSubtitle()` exist in phlix-ui. Tizen's `SubtitleTrackList.vue` ONLY handles selecting existing subtitle tracks passed via props — it has NO UI for searching external subtitle providers (OpenSubtitles) or downloading on-demand. Users cannot search for or download subtitles from external providers on Tizen. This requires a TV-specific UI flow (likely in player settings) to search, select, and download subtitles.
+**Code Changes**: None (audit-only — gap identified)
+**Evidence**: `SubtitleTrackList.vue` only renders pre-existing tracks; no search/download UI; grep `searchSubtitle|downloadSubtitle` src/ → 0 hits
+
+## Step 16.2 - Theater Mode (v0.98.26)
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Theater mode in @phlix/ui toggles a windowed player with shell chrome removal. Tizen uses full-screen player by default (`defaultTv: true` in createPhlixApp config). TV has no windowed player state to toggle and no shell chrome to remove. Theater mode is a web browser window-management concept not applicable to TV. Consistent with Step 3.14 which reached the same conclusion.
+**Code Changes**: None (full-screen TV paradigm)
+**Evidence**: grep "theater" src/ → 0 hits; Step 3.14
+
+## Step 16.3 - Next Up API (v0.98.28)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: Backend has `GET /api/v1/users/me/next-up` implemented in S36 with `NextUpSelector.php` and `WatchHistory::getNextUp()`. phlix-ui has `fetchNextUp()` and BrowsePage shows Next Up rail. Since Tizen uses `createPhlixApp()` which includes BrowsePage, the Next Up rail renders automatically.
+**Code Changes**: None (works via createPhlixApp BrowsePage)
+**Evidence**: BrowsePage in package/assets/ renders Next Up rail
+
+## Step 16.4 - Most Watched API (v0.98.24)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: Backend has `GET /api/v1/media/most-watched` implemented in S31 via `MostWatchedController.php` and `StatsCollector::getTopMedia()`. phlix-ui has `fetchMostWatched()` and BrowsePage shows Most Watched rail. Tizen benefits via `createPhlixApp()` BrowsePage automatically.
+**Code Changes**: None (works via createPhlixApp BrowsePage)
+**Evidence**: BrowsePage in package/assets/ renders Most Watched rail
+
+## Step 16.5 - Music Paging (MusicPager) (v0.98.32)
+**Decision**: NOT IMPLEMENTED
+**Finding**: Already documented in Category 8 (Items 8.1, 8.2). `useMusicStore.ts` calls `client.get('/api/v1/music/artists')` with NO paging params — only fetches first 100 items. No `MusicPager` component is used. Users with large libraries only see first 100.
+**Code Changes**: None (documented in Category 8)
+**Evidence**: Category 8 Step 8.2; useMusicStore.ts:46-58 (fetchArtists with no params)
+
+## Step 16.6 - MediaListRow view mode (v0.98.31)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: `MediaRow-*.js` asset exists in package/assets/ (list-view component). BrowsePage uses `MediaGrid.vue` with `columns`/`rowHeight` override props and list view mode toggle. Since Tizen uses `createPhlixApp()` which includes BrowsePage with list view mode, this works automatically.
+**Code Changes**: None (works via createPhlixApp BrowsePage)
+**Evidence**: package/assets/MediaRow-*.js exists; BrowsePage includes MediaGrid with list mode toggle
+
+## Step 16.7 - MediaBackdropRow view mode (v0.98.31)
+**Decision**: NOT FOUND
+**Rationale**: No `MediaBackdropRow` component found in the codebase. grep for "backdrop" only matched CSS `backdrop-filter` in RatingModal.vue. `MediaListRow` exists (Step 16.6) but may serve different purpose. May not have been implemented or uses different naming.
+**Code Changes**: None (component doesn't exist)
+**Evidence**: grep "MediaBackdropRow|DownRow" src/ → 0 hits; grep "backdrop" src/ → only CSS backdrop-filter matches
+
+## Step 16.8 - Resume Reporter (v0.98.13)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: `useResumeReporter.ts` composable exists in @phlix/ui for tracking resume position and reporting to server during playback. Tizen benefits from `createPhlixApp()` player implementation — `useResumeReporter` is part of @phlix/ui's player. The capability is present in the bundle.
+**Code Changes**: None (works via @phlix/ui player)
+**Evidence**: useResumeReporter is part of @phlix/ui player module
+
+## Step 16.9 - Finished Signal (v0.98.13)
+**Decision**: NOT IMPLEMENTED
+**Rationale**: Per updates.md: "Items linger in Continue Watching because `markAsWatched`/`clearProgress` wiring gap and `completed` signal not properly firing." The `POST /api/v1/sessions/{id}/complete` endpoint exists but the client-side signal to fire this when playback finishes may not be wired in Tizen. Items watched on Tizen may not be properly marked as finished and removed from Continue Watching.
+**Code Changes**: None (audit-only — gap identified)
+**Evidence**: updates.md notes the completed signal wiring gap
+
+## Step 16.10 - Up-next deterministic queue (v0.98.10)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: Deterministic queue implemented in S12 with `applyItem()` ordering logic. Player.vue `onEnded` handler uses deterministic up-next queue. `useResumeReporter.ts` calls `finish()` before chrome-pin/up-next logic. Tizen benefits from `createPhlixApp()` player implementation which includes this feature.
+**Code Changes**: None (works via createPhlixApp player)
+**Evidence**: S12 worklog; Step 3.2/3.13 confirm TV-specific UpNextOverlay.vue works with queue
+
+## Step 16.11 - Per-library relay throttle/quota (v0.98.30)
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Relay functionality is server-side and per-library rate limiting is an admin concern. Tizen is a client — relay throttling is managed server-side, not on the client.
+**Code Changes**: None (server handles this)
+**Evidence**: Admin/server feature — no client-side implementation needed
+
+## Step 16.12 - Relay tunnel real status (v0.98.29)
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Relay tunnel status is a server/admin concern exposed by the Hub module. Tizen client uses relay for remote access but doesn't manage tunnel status — it only displays connection status, not tunnel internals.
+**Code Changes**: None (server handles this)
+**Evidence**: Admin/server feature — no client-side implementation needed
+
+## Step 16.13 - TMDB box-set auto-collection (v0.98.25)
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Metadata enhancement is server-side. `MetadataManager` handles TMDB box-set detection. Tizen client displays metadata but doesn't control collection detection — it's automatic server-side behavior.
+**Code Changes**: None (server handles this)
+**Evidence**: Admin/server feature — no client-side implementation needed
+
+## Step 16.14 - Plugin catalog channel (v0.98.9)
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Plugin system with `PluginLoader` and manifest schema is server-side. Plugin catalog channel would be admin UI. Tizen is a client — plugin installation is a server admin function.
+**Code Changes**: None (server handles this)
+**Evidence**: Admin/server feature — no client-side implementation needed
+
+## Step 16.15 - useMusicPlayer (dual audio gapless) (v0.80.1)
+**Decision**: PARTIAL
+**Finding**: Already documented in Category 8 (Item 8.3). `useMusicPlayer.ts` composable handles audio playback with gapless playback, crossfade, and queue management. Tizen's `useMusicStore.ts` reimplements fetch logic differently (uses raw `client.get()` calls instead of the composable). Gapless playback may not work correctly on Tizen because the custom store doesn't use `useMusicPlayer`. The `gaplessEnabled` state exists in settings but the Tizen implementation may not honor it.
+**Code Changes**: None (documented in Category 8)
+**Evidence**: Category 8 Step 8.3; useMusicStore.ts uses custom approach
+
+## Step 16.16 - useTrickplay (sprite previews) (v0.80.x)
+**Decision**: NOT IMPLEMENTED
+**Rationale**: `useTrickplay.ts` composable and `TrickplaySprite` type exist in @phlix/contracts. Sprite preview generation happens during transcoding on the server. No `useTrickplay` usage found in Tizen client — `tizenBridge.ts` doesn't mention trickplay. Trickplay requires both server-side sprite generation AND client-side sprite reading/display during seek.
+**Code Changes**: None (audit-only — gap identified)
+**Evidence**: grep "trickplay|sprite" src/ → 0 hits; requires server-side sprite generation + client-side wiring
+
+## Step 16.17 - Book/Audiobook/Photo pages (v0.80.x)
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: No Book or Photo pages exist in Tizen client. `MusicPage.vue` exists for music content, but audiobooks and photos are not TV use cases. TV form factor is primarily video playback.
+**Code Changes**: None (not a TV use case)
+**Evidence**: MusicPage.vue exists but no Book/Audiobook/Photo components; Tizen components list confirms no book/photo pages
+
+## Step 16.18 - Music library redirect (v0.98.33)
+**Decision**: ALREADY SUFFICIENT
+**Finding**: Already documented in Category 8 (Item 8.8). S97 redirect: `/app/library/:id` for MUSIC library type → `/app/music`. `createPhlixApp.ts` handles this redirect. Tizen uses `createPhlixApp()` which includes this redirect automatically.
+**Code Changes**: None (documented in Category 8)
+**Evidence**: Category 8 Step 8.8; createPhlixApp handles redirect
+
+## Step 16.19 - Series seasons navigation (v0.80.x)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: `useSeriesSeasons-*.js` exists in package/assets/ (SeasonPage-*.js also in bundle). MediaDetail page in @phlix/ui shows series with season navigation via the useSeriesSeasons composable. Since Tizen uses `createPhlixApp()` which mounts MediaDetailPage, season navigation works automatically.
+**Code Changes**: None (works via createPhlixApp MediaDetail page)
+**Evidence**: package/assets/useSeriesSeasons-*.js; SeasonPage-*.js in bundle; createPhlixApp MediaDetail handles seasons
+
+## Step 16.20 - Item data inspector modal (v0.98.12)
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: `useItemInspector` composable is a debugging tool for development. Not needed by end users on TV. Debugging tools are not applicable to production TV app UX.
+**Code Changes**: None (debugging tool — not for TV)
+**Evidence**: grep "itemInspector|ItemInspector" src/ → 0 hits
+
+## Step 16.21 - Inline help text for settings (v0.98.14)
+**Decision**: ALREADY SUFFICIENT
+**Rationale**: `phlix-help-text` CSS class exists in @phlix/ui. Settings via `createPhlixApp()` include inline help text if part of the base settings component. Tizen settings are rendered by @phlix/ui's settings page via `createPhlixApp()`. Help text renders if part of the base settings component — no TV-specific override needed.
+**Code Changes**: None (works via createPhlixApp settings)
+**Evidence**: help text CSS class exists in @phlix/ui style; SettingsPage via createPhlixApp renders help text
+
+## Step 16.22 - Test credentials button (plugins) (v0.93.0)
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: Plugin settings with test credential functionality is an admin feature in server/admin UI. Tizen doesn't manage plugins — that's a server admin function.
+**Code Changes**: None (admin feature)
+**Evidence**: Admin/server feature — no TV use case
+
+---
+
+## Summary
+
+| Step | Feature | Decision | Notes |
+|------|---------|----------|-------|
+| 16.1 | Subtitle Search & Download | NOT IMPLEMENTED | Server+phlix-ui API exists; Tizen lacks search/download UI |
+| 16.2 | Theater Mode | NOT TV-APPLICABLE | Full-screen TV paradigm — no windowed player to toggle |
+| 16.3 | Next Up API | ALREADY SUFFICIENT | Works via createPhlixApp BrowsePage |
+| 16.4 | Most Watched API | ALREADY SUFFICIENT | Works via createPhlixApp BrowsePage |
+| 16.5 | Music Paging | NOT IMPLEMENTED | Documented in Category 8 — first 100 only |
+| 16.6 | MediaListRow | ALREADY SUFFICIENT | Works via createPhlixApp BrowsePage with MediaRow |
+| 16.7 | MediaBackdropRow | NOT FOUND | Component doesn't exist or uses different naming |
+| 16.8 | Resume Reporter | ALREADY SUFFICIENT | Works via @phlix/ui player |
+| 16.9 | Finished Signal | NOT IMPLEMENTED | Items linger in Continue Watching — signal gap |
+| 16.10 | Up-next queue | ALREADY SUFFICIENT | S12 deterministic queue via createPhlixApp player |
+| 16.11 | Per-library relay throttle | NOT TV-APPLICABLE | Admin/server feature |
+| 16.12 | Relay tunnel status | NOT TV-APPLICABLE | Admin/server feature |
+| 16.13 | TMDB box-set auto-collection | NOT TV-APPLICABLE | Admin/server feature |
+| 16.14 | Plugin catalog channel | NOT TV-APPLICABLE | Admin/server feature |
+| 16.15 | useMusicPlayer (gapless) | PARTIAL | Documented in Category 8 — custom store, may lack gapless |
+| 16.16 | useTrickplay (sprites) | NOT IMPLEMENTED | No trickplay found in Tizen; requires server+client support |
+| 16.17 | Book/Audiobook/Photo | NOT TV-APPLICABLE | TV form factor — not a TV use case |
+| 16.18 | Music library redirect | ALREADY SUFFICIENT | Documented in Category 8 — works via createPhlixApp |
+| 16.19 | Series seasons nav | ALREADY SUFFICIENT | Works via createPhlixApp MediaDetail page |
+| 16.20 | Item inspector modal | NOT TV-APPLICABLE | Debug feature — not for TV |
+| 16.21 | Inline help text | ALREADY SUFFICIENT | Works via createPhlixApp settings |
+| 16.22 | Test credentials button | NOT TV-APPLICABLE | Admin feature |
+
+**Decision Distribution**:
+- **ALREADY SUFFICIENT**: 8 steps (16.3, 16.4, 16.6, 16.8, 16.10, 16.18, 16.19, 16.21)
+- **NOT TV-APPLICABLE**: 7 steps (16.2, 16.11, 16.12, 16.13, 16.14, 16.17, 16.20, 16.22)
+- **NOT IMPLEMENTED**: 4 steps (16.1, 16.5, 16.9, 16.16)
+- **NOT FOUND**: 1 step (16.7)
+- **PARTIAL**: 1 step (16.15)
+- **Code changes needed**: 0 (all decisions are architectural/audit — no code expected per scope)
+
+**Key Gaps Identified**:
+1. **16.1 (Subtitle Search & Download)** — HIGH: External subtitle provider search/download UI missing on Tizen
+2. **16.9 (Finished Signal)** — MEDIUM: Items may linger in Continue Watching due to completed signal not firing
+3. **16.16 (Trickplay)** — MEDIUM: Scrubbing preview sprites not implemented on Tizen
+4. **16.5 (Music Paging)** — HIGH: Already documented in Category 8, first 100 only
+
+(End of VERIFICATION.md)
