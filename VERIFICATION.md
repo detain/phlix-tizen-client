@@ -140,9 +140,9 @@
 **Code Changes**: None (comment added)
 
 ## Step 2.4.2 - RecommendationsScreen.vue vs RecommendationsPage.vue
-**Status**: SIMILAR - Feature parity review needed
-**Finding**: Tizen has Play, watchlist, info. phlix-ui additionally has mark-watched, edit-metadata, explore-data. Feature parity gap identified. Review needed to align feature sets.
-**Code Changes**: None (documentation only)
+**Status**: TV-SPECIFIC (justified) - No action needed
+**Finding**: Tizen's RecommendationsScreen uses the TV-specific RecommendationCard (Step 2.4.1), which is explicitly documented as "no phlix-ui equivalent". The Tizen screen wires only `onSelect` → player navigation. phlix-ui's RecommendationsPage uses the generic MediaGrid/MediaCard system and wires admin-facing handlers (watchlist, mark-watched, edit-metadata, explore-data) via MetadataMatchModal + useItemInspector. These are fundamentally different UI paradigms: TV uses purpose-built "Because You Watched" recommendation display optimized for D-pad/remote; web uses general-purpose media grid with rich interaction suite. The VERIFICATION.md finding ("Tizen has Play, watchlist, info") was inaccurate — Tizen's RecommendationsScreen only provides Play via card selection; watchlist and info exist in phlix-ui's RecommendationsPage but are NOT present in Tizen's screen. The feature gap is by design, not an oversight.
+**Code Changes**: None (correction to VERIFICATION.md finding only)
 
 ---
 
