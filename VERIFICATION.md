@@ -50,6 +50,11 @@
 **Rationale**: The store is actively functional in UserRatingPicker.vue with proper error handling (toast.error() on rating save failure with 4s auto-dismiss). Partial usage is sufficient for tizen's needs - the store provides all toast capability currently required. No gaps identified in tizen's toast usage.
 **Code Changes**: None (already integrated via @phlix/ui - no code needed)
 
+## Step 4.11 - usePreferencesStore
+**Decision**: ALREADY SUFFICIENT (partial usage)
+**Rationale**: The store is actively functional in SpatialNavHost.vue for `prefs.tv` to gate spatial navigation enablement (D-pad nav for browse, off on player route). Partial usage is sufficient for tizen's needs - the full preferences UI for theme, density, playback settings is not exposed in tizen (those would be in @phlix/ui settings UI). No gaps identified in tizen's preferences usage.
+**Code Changes**: None (already integrated via @phlix/ui - no code needed)
+
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
@@ -142,6 +147,13 @@
 ---
 
 # Category 1 Verification - Version & Dependency Analysis
+
+## Step 1.1 - Update @phlix/ui
+**Decision**: IMPLEMENTED_OK
+**Rationale**: `npm ci` materialized @phlix/ui v0.98.33 into node_modules with no lock-file diff. The package.json pin `github:detain/phlix-ui#v0.98.33` was already correct before and after. useMusicStore.ts uses raw `client.get()` not the page-envelope helpers, so ApiClient.listArtists/listAlbums/listTracks breaking changes do not apply. Key exports (createPhlixApp, buildAdminRoutes, LibraryScanPage, ApiClient, useSpatialNav, usePreferencesStore, usePlayerStore, @phlix/ui/style.css) all verified present at v0.98.33.
+**Code Changes**: None — package.json pin and lock file were already aligned; no source changes needed.
+**Evidence**: `node_modules/@phlix/ui/package.json` version 0.98.33 (was 0.81.0); `diff /tmp/package-lock.json.before package-lock.json` showed no diff; src/stores/useMusicStore.ts:17 uses `client.get('/api/v1/music/...')` (not ApiClient methods); key exports verified via `ls node_modules/@phlix/ui/dist/` and `@phlix/ui/package.json` exports field.
+**Cross-refs**: none (step 1.2 covers @phlix/contracts version inconsistencies in CLAUDE.md/DEVELOPER.md — out of this step's scope)
 
 ## Step 1.3 - @phlix/* Dependencies
 **Status**: Verified aligned
