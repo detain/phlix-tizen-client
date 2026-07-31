@@ -565,3 +565,327 @@ The tizen client has **4 local pages** (MusicPage, ParentalControlsPage, Chapter
 - **NOT USED**: 2 steps (6.14-6.15) - pages exist in bundle but not routed
 - **ALREADY SUFFICIENT**: 4 steps (6.16, 6.18-6.20) - provided via @phlix/ui or menu system
 - **Code changes needed**: 0 (all decisions are architectural/no-code)
+
+---
+
+# Category 7 - Admin Features
+
+## Executive Summary
+
+All 23 admin feature steps are **NOT TV-APPLICABLE**. Admin features (user management, server settings, log viewing, backup, plugins, etc.) are server administration functions. TV is a thin client for media consumption, not a server administration interface. Admin pages exist in @phlix/ui (not in tizen-client) and are technically accessible via direct URL or admin menu, but:
+1. Server administration from TV is not a designed product use case
+2. The v-focusable D-pad navigation issue is internal to @phlix/ui
+3. Tizen-client is a thin media consumption client per AGENTS.md
+
+## Step 7.1 - Admin Pages Access (buildAdminRoutes)
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: buildAdminRoutes() is correctly imported and used in tizen-client (main.ts line 12, 57). Admin routes ARE accessible at /app/admin/* with 20 pages in the default set. However, admin features are server management features, not TV media consumption features. The v-focusable D-pad navigation issue is internal to @phlix/ui. Server administration should be done through the web interface on a computer.
+**Code Changes**: None (architectural decision - no code needed)
+
+## Step 7.2 - Admin Dashboard
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: DashboardPage.vue exists in @phlix/ui with date range filters, now-playing, top users, storage metrics. This is server administration/dashboard functionality, not TV media consumption. TV is not a platform for viewing server analytics.
+**Code Changes**: None (server analytics - no TV use case)
+
+## Step 7.3 - Admin Users
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: UsersPage.vue exists in @phlix/ui with user creation, editing, profile management. User management is a server administration task done through the web UI, not a TV function.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.4 - Admin Libraries
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: LibrariesPage.vue exists in @phlix/ui with library configuration. Library setup and configuration is a server administration task, not a TV media consumption task.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.5 - Admin Settings
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: SettingsPage.vue exists in @phlix/ui with server settings, transcoding, logging, etc. Server settings configuration is done through the web interface, not on TV.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.6 - Admin Plugins
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: PluginsPage.vue exists in @phlix/ui with plugin management. Plugin management is a server administration task requiring detailed interaction not suitable for TV remote.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.7 - Admin Logs
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: LogsPage.vue exists in @phlix/ui with server log viewing. Log analysis is a server administration/debugging task, not a TV function.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.8 - Admin Backup
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: BackupPage.vue exists in @phlix/ui with backup/restore functionality. Server backup management is a critical admin task done through the web interface with proper safeguards.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.9 - Admin Cast Devices
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: CastDevicesPage.vue exists in @phlix/ui with DLNA/Device management. Device configuration is a server administration task, not TV media consumption.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.10 - Admin Collections
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: CollectionsPage.vue exists in @phlix/ui with collection management. Collection curation is typically done through web UI or server interface.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.11 - Admin DLNA
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: DlnaServerPage.vue exists in @phlix/ui with DLNA server settings. DLNA configuration is a server networking task, not TV media consumption.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.12 - Admin Duplicates
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: DuplicatesPage.vue exists in @phlix/ui with duplicate file management. Duplicate detection and resolution is a server library maintenance task.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.13 - Admin History
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: HistoryPage.vue exists in @phlix/ui with server history. Server-side history management is a library administration task, not a TV viewing feature.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.14 - Admin Hub
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: HubDashboardPage.vue exists in @phlix/ui (part of hubAdminPages, not default). Hub functionality is for the hub app, not the TV client. Tizen is server-mode only per AGENTS.md.
+**Code Changes**: None (hub-specific feature - no TV use case)
+
+## Step 7.15 - Admin Integrations
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: IntegrationsPage.vue exists in @phlix/ui with third-party integrations. Integration configuration is a server administration task.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.16 - Admin Live TV
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: LiveTvPage.vue exists in @phlix/ui with Live TV/DVR settings. TV tuner and DVR configuration is a server administration task requiring detailed setup.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.17 - Admin Metrics
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: MetricsPage.vue exists in @phlix/ui with server metrics/traffic data. Server analytics viewing is an admin task, not a TV media consumption task.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.18 - Admin Remote Access
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: RemoteAccessPage.vue exists in @phlix/ui with remote access/VPN settings. Remote access configuration is a critical server security task done through web UI.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.19 - Admin Services
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: ServicesPage.vue exists in @phlix/ui with server services management. Service configuration and monitoring is a server administration task.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.20 - Admin SyncPlay
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: SyncPlayPage.vue exists in @phlix/ui with SyncPlay settings. SyncPlay is a client feature used during playback, not an admin configuration needed on TV.
+**Code Changes**: None (client feature - no TV admin use case)
+
+## Step 7.21 - Admin Webhooks
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: WebhooksPage.vue exists in @phlix/ui with webhook configuration. Webhook management is a server integration/administration task.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.22 - Admin Audit Logs
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: AuditLogsPage.vue exists in @phlix/ui (part of hubAdminPages, not default). Audit log review is a security/compliance administration task.
+**Code Changes**: None (admin feature - no TV use case)
+
+## Step 7.23 - Admin API Clients
+**Decision**: NOT TV-APPLICABLE
+**Rationale**: 19 admin API clients exist in @phlix-ui/src/api/admin/ (dashboard, users, libraries, plugins, settings, webhooks, services, integrations, backup, cast, dlnaServer, remoteAccess, liveTv, collections, history, syncPlay, hubDashboard, metadata-sources, transcoding). These are used internally by admin pages in @phlix/ui, not directly by tizen-client. Admin API access is server administration, not TV media consumption.
+**Code Changes**: None (admin API infrastructure - no TV use case)
+
+## Summary Table
+
+| Step | Feature | Decision | Rationale |
+|------|---------|----------|-----------|
+| 7.1 | Admin Pages Access | NOT TV-APPLICABLE | Server admin, not TV use case |
+| 7.2 | Admin Dashboard | NOT TV-APPLICABLE | Server analytics, not TV use case |
+| 7.3 | Admin Users | NOT TV-APPLICABLE | User management, not TV use case |
+| 7.4 | Admin Libraries | NOT TV-APPLICABLE | Library config, not TV use case |
+| 7.5 | Admin Settings | NOT TV-APPLICABLE | Server settings, not TV use case |
+| 7.6 | Admin Plugins | NOT TV-APPLICABLE | Plugin mgmt, not TV use case |
+| 7.7 | Admin Logs | NOT TV-APPLICABLE | Log viewing, not TV use case |
+| 7.8 | Admin Backup | NOT TV-APPLICABLE | Backup mgmt, not TV use case |
+| 7.9 | Admin Cast Devices | NOT TV-APPLICABLE | Device config, not TV use case |
+| 7.10 | Admin Collections | NOT TV-APPLICABLE | Collection mgmt, not TV use case |
+| 7.11 | Admin DLNA | NOT TV-APPLICABLE | DLNA config, not TV use case |
+| 7.12 | Admin Duplicates | NOT TV-APPLICABLE | Duplicate mgmt, not TV use case |
+| 7.13 | Admin History | NOT TV-APPLICABLE | History mgmt, not TV use case |
+| 7.14 | Admin Hub | NOT TV-APPLICABLE | Hub-specific, not TV use case |
+| 7.15 | Admin Integrations | NOT TV-APPLICABLE | Integration config, not TV use case |
+| 7.16 | Admin Live TV | NOT TV-APPLICABLE | DVR config, not TV use case |
+| 7.17 | Admin Metrics | NOT TV-APPLICABLE | Server metrics, not TV use case |
+| 7.18 | Admin Remote Access | NOT TV-APPLICABLE | Remote access config, not TV use case |
+| 7.19 | Admin Services | NOT TV-APPLICABLE | Service mgmt, not TV use case |
+| 7.20 | Admin SyncPlay | NOT TV-APPLICABLE | SyncPlay settings, not TV admin use case |
+| 7.21 | Admin Webhooks | NOT TV-APPLICABLE | Webhook config, not TV use case |
+| 7.22 | Admin Audit Logs | NOT TV-APPLICABLE | Audit logs, not TV use case |
+| 7.23 | Admin API Clients | NOT TV-APPLICABLE | Admin APIs, not TV use case |
+
+**Decision Distribution**:
+- **NOT TV-APPLICABLE**: 23 steps (7.1-7.23) - all admin features are server management, not TV media consumption
+- **Code changes needed**: 0 (all decisions are architectural/product decision - no code needed)
+
+**Notes**:
+- All admin pages exist in @phlix/ui, not in tizen-client (per AGENTS.md: "this repo writes no media/library/auth UI")
+- Admin routes are correctly set up in tizen-client via buildAdminRoutes() from @phlix/ui
+- The admin menu entry exists with requiresAdmin: true
+- v-focusable D-pad navigation issue is internal to @phlix/ui components
+- TV is designed for media consumption, not server administration
+
+---
+
+# Category 9 - Player Store Integration Issues
+
+## Step 9.1 - Polling Instead of Reactivity (HIGH)
+**Decision**: TV-SPECIFIC
+**Finding**: ChapterOverlay.vue:295-316, SkipIntroOverlay.vue:126-141, and UpNextOverlay.vue:166-181 all use setInterval at 250ms to poll player position from playerStore. This is explicitly documented in each component's header as "tech debt but necessary for the TV webview context." The cat_9.md notes Tizen WebView may have unreliable timeupdate event firing - the polling approach is a deliberate TV-specific workaround. The alternative requestVideoFrameCallback is not used. Core player store updateProgress() is called via Player.vue's onTimeUpdate in @phlix/ui - the issue is that overlays poll separately rather than using reactive subscriptions.
+**Code Changes**: None (documented TV-specific tech debt)
+
+## Step 9.2 - Missing Resume System (HIGH)
+**Decision**: TV-SPECIFIC
+**Finding**: tizenBridge.ts:278 casts usePlayerStore to BridgePlayer with only { playing, play, pause, closePlayer, seekBy }. Resume functions (resumePositionFor, clearResume, mergeServerResume) exist in usePlayerStore.ts:210-248 but are not exposed through BridgePlayer interface. However, overlay components (ChapterOverlay:220, SkipIntroOverlay:108) call playerStore.seekTo() directly, bypassing the thin tizen bridge entirely. The LRU eviction logic at usePlayerStore.ts:137-157 exists but Tizen never triggers it - however this is bounded automatically. The tizen bridge is intentionally minimal; resume system works through direct playerStore access.
+**Code Changes**: None (intentional minimal bridge design; overlay components work directly with usePlayerStore)
+
+## Step 9.3 - Missing Queue/Up-Next (MEDIUM)
+**Decision**: NOT TV-APPLICABLE
+**Finding**: UpNextOverlay.vue:119-146 fetches playlist via `/api/v1/media/{id}/playlist` API directly and finds the next item client-side. This is a TV-specific implementation that doesn't use playerStore.setQueue()/next(). The cat_9.md notes PlayerPage.vue:213-268 shows proper queue management with player.setQueue() and player.next() - but these are in @phlix/ui's PlayerPage, not in tizen. Tizen's UpNextOverlay works differently (API-based) and achieves the same UX.
+**Code Changes**: None (UpNextOverlay uses different but equivalent approach)
+
+## Step 9.4 - Missing Media Session (MEDIUM)
+**Decision**: NOT TV-APPLICABLE
+**Finding**: Tizen WebView (Chromium-based) may not support navigator.mediaSession API. The Tizen bridge does not call setMediaSessionMetadata(), setMediaPositionState(), or bindMediaSession() (usePlayerStore.ts:392-443). RemoteManager.ts handles TV remote integration directly via keydown/keyup document listeners mapped to player store actions. The cat_9.md notes "Tizen's native remote handling via RemoteManager may make Media Session less critical" - this is the case. OS-level transport controls (lock screen, notification) are not a TV use case; the TV remote is handled natively.
+**Code Changes**: None (RemoteManager replaces Media Session functionality on Tizen)
+
+## Step 9.5 - Missing Preferences Seeding (MEDIUM)
+**Decision**: TV-SPECIFIC (PARTIAL)
+**Finding**: seedFromPreferences() exists at usePlayerStore.ts:446-450 but is NOT called in tizen main.ts after createPhlixApp. However, player store initializes defaultVolume, defaultQuality, defaultSubtitleLang from preferences at store creation (usePlayerStore.ts:102-106). Tizen only uses prefs.tv in SpatialNavHost.vue for D-pad navigation gating - no other preference-driven state. The seedFromPreferences gap only matters if user changes preferences at runtime; on Tizen settings UI is limited. This is partial but not blocking.
+**Code Changes**: None (preferences initialized at store creation; runtime preference changes not a TV priority)
+
+## Step 9.6 - lastCommand Bus (LOW)
+**Decision**: ALREADY SUFFICIENT
+**Finding**: tizenBridge.ts:216,219 calls player.seekBy() which writes to lastCommand ref internally (usePlayerStore.ts:289-294). Player.vue:1239-1246 watches lastCommand and applies seek to video element. The Tizen bridge bypasses the command bus interface (BridgePlayer only has seekBy, not lastCommand), but the seekBy() function itself writes to lastCommand before seeking, so command tracking still works. The command bus pattern is for UI-level external commands (keyboard shortcuts, etc.) - Tizen's remote commands go through RemoteManager → tizenBridge → player.seekBy() which properly feeds the command bus.
+**Code Changes**: None (works correctly despite interface bypass)
+
+## Step 9.7 - Quality/Subtitle Setters (MEDIUM)
+**Decision**: TV-SPECIFIC
+**Finding**: createDomQualityMenu at tizenBridge.ts:116-170 uses DOM manipulation (focus, click on .quality-menu .phlix-select__trigger) to drive @phlix/ui's QualityMenu Select component. This is explicitly designed to avoid modifying @phlix/ui's sealed player while still enabling D-pad navigation of quality selection. The DOM approach opens the Select's listbox and lets the Select's own combobox keydown handler own Arrow/Enter/Escape navigation. QualityMenu reactively reads player.quality from the store, so DOM-based selection properly updates player state. setSubtitle() is not called - subtitle selection is handled by SubtitleTrackList.vue using direct API calls.
+**Code Changes**: None (intentional DOM-based quality menu, works correctly with @phlix/ui reactive state)
+
+## Step 9.8 - Player Store Type Safety (MEDIUM)
+**Decision**: INTERNAL
+**Finding**: AudioTracksPage.vue:39,56,83 casts playerStore via `const storeAny = playerStore as unknown as Record<string, unknown>` to access audioTrackId, audioTracks, setAudioTrack, switchAudioTrack, setAudioTrackId, and hls from the player store. These properties do not exist on the exported usePlayerStore type definition. The cast to Record<string, unknown> is a code smell - it's used to bypass TypeScript checking to access dynamic properties. This is an internal tizen-client issue, not an integration problem with @phlix/ui. The audio track switching logic tries multiple method names as fallbacks, suggesting uncertainty about the actual API.
+**Code Changes**: None (type safety issue in tizen-client code, not a TV integration gap)
+
+## Step 9.9 - streamUrl / hlsMasterUrl (LOW)
+**Decision**: NOT TV-APPLICABLE
+**Finding**: usePlayerStore.ts:95,108 has streamUrl and hlsMasterUrl refs for cross-route mini-player continuation. PlayerPage.vue:476 calls player.showMiniPlayer() when current && streamUrl exist. Tizen does not implement mini-player UI (no MiniPlayer.vue component, no #phlix-mini-player mount point). These refs are not used by tizen. The mini-player pattern is for web clients to continue playback while navigating away from the player route - on TV there's no route navigation during playback and no picture-in-picture API.
+**Code Changes**: None (mini-player is a web browser feature, not applicable to TV)
+
+## Step 9.10 - miniPlayer show/hide (LOW)
+**Decision**: NOT TV-APPLICABLE
+**Finding**: usePlayerStore.ts:375-379 has showMiniPlayer() and hideMiniPlayer() functions that toggle player.miniPlayer ref. PlayerPage.vue:340 calls hideMiniPlayer() on route enter; PlayerPage.vue:476 calls showMiniPlayer() when playing with streamUrl. Tizen does not implement mini-player UI and does not call these functions. The mini-player is a web browser feature for background playback during navigation - TV has no equivalent use case since playback is always full-screen and there's no navigation during playback on TV.
+**Code Changes**: None (mini-player is a web browser feature, not applicable to TV)
+
+---
+
+## Summary
+
+| Step | Feature | Decision | Notes |
+|------|---------|----------|-------|
+| 9.1 | Polling Instead of Reactivity | TV-SPECIFIC | 250ms setInterval polling in overlays - documented tech debt |
+| 9.2 | Missing Resume System | TV-SPECIFIC | BridgePlayer intentionally minimal; overlays use playerStore directly |
+| 9.3 | Missing Queue/Up-Next | NOT TV-APPLICABLE | UpNextOverlay fetches via API directly |
+| 9.4 | Missing Media Session | NOT TV-APPLICABLE | RemoteManager handles TV remote; no navigator.mediaSession |
+| 9.5 | Missing Preferences Seeding | TV-SPECIFIC (PARTIAL) | seedFromPreferences not called but prefs initialized at store creation |
+| 9.6 | lastCommand Bus | ALREADY SUFFICIENT | player.seekBy() writes to lastCommand internally; works correctly |
+| 9.7 | Quality/Subtitle Setters | TV-SPECIFIC | DOM-based quality menu intentionally drives @phlix/ui Select |
+| 9.8 | Player Store Type Safety | INTERNAL | Type casting issue in AudioTracksPage.vue, not TV integration gap |
+| 9.9 | streamUrl / hlsMasterUrl | NOT TV-APPLICABLE | No mini-player on TV |
+| 9.10 | miniPlayer show/hide | NOT TV-APPLICABLE | No mini-player on TV |
+
+**Decision Distribution**:
+- **TV-SPECIFIC**: 4 steps (9.1, 9.2, 9.5 partial, 9.7) - intentional TV-specific implementations
+- **NOT TV-APPLICABLE**: 4 steps (9.3, 9.4, 9.9, 9.10) - features not relevant to TV UX
+- **ALREADY SUFFICIENT**: 1 step (9.6) - works correctly despite interface bypass
+- **INTERNAL**: 1 step (9.8) - type safety issue in tizen-client code, not integration gap
+- **Code changes needed**: 0 (all decisions are architectural/no-code)
+
+---
+
+# Category 8 - Music API & Data
+
+## Overview
+
+This category examines Music API endpoints, data structures, and whether they match what tizen expects. Key context: Category 1.5 already verified the Music API breaking changes (listArtists/listAlbums/listTracks page envelope) are **VERIFIED UNAFFECTED** because `useMusicStore.ts` uses raw `client.get('/api/v1/music/artists')` etc., never calling the helper methods. MusicPage.vue exists with currentView state machine for artists/albums/tracks.
+
+## Step 8.1 - Music API Breaking Change (listArtists/listAlbums/listTracks signatures)
+**Decision**: ALREADY SUFFICIENT
+**Finding**: Already verified in Step 1.5. `useMusicStore.ts` lines 51, 66 use raw `client.get<{ artists: MusicArtist[] }>('/api/v1/music/artists')` and `client.get<{ albums: MusicAlbum[] }>('/api/v1/music/albums')` — NOT calling `listArtists()`, `listAlbums()`, or `listTracks()` helper methods that changed in v0.98.32. The CHANGELOG v0.98.32 explicitly states "The native clients are unaffected and still show the first 100 rows." grep confirms 0 hits for these three methods in `src/`. The tizen client bypasses the breaking change by using raw GET calls.
+**Code Changes**: None — already verified unaffected
+**Evidence**: Step 1.5 VERIFICATION.md covers this exhaustively; `rg "listArtists|listAlbums|listTracks" src/` → 0 hits
+
+## Step 8.2 - Music Paging (MusicPager added in v0.98.32 — tizen shows only first 100)
+**Decision**: TV-SPECIFIC
+**Finding**: `useMusicStore.ts` `fetchArtists()` and `fetchAlbums()` make single unparameterized requests with no limit/offset. No `MusicPager` component is used. MusicPage.vue shows all artists in a CSS grid with no pagination controls. The CHANGELOG notes this is the intended behavior for "native clients" — they show the first 100 rows. This is a known limitation, not a bug. TV users with large libraries (e.g., 2,197 artists) will only see the first 100.
+**Code Changes**: None — intentional first-100 limitation per CHANGELOG
+**Evidence**: `useMusicStore.ts:46-58` (fetchArtists with no params), `useMusicStore.ts:61-73` (fetchAlbums with no params); CHANGELOG v0.98.32 line 46
+
+## Step 8.3 - Music Store Duplication (tizen's useMusicStore.ts reimplements phlix-ui functionality)
+**Decision**: TV-SPECIFIC
+**Finding**: `useMusicStore.ts` (167 lines) is a custom Pinia store with `fetchArtists`, `fetchAlbums`, `fetchAlbum`, `fetchTrack`, `selectArtist`, `selectAlbum` actions managing artists/albums/tracks UI state. This reimplements what phlix-ui handles via `useMusicPlayer` composable + `MusicPager.vue` + `MusicArtistsPage`/`MusicArtistPage`/`MusicAlbumPage`/`MusicTracksPage` components. The TV-specific justification is: (1) BACK button uses `router.back()` to exit to parent app at artists view (vs phlix-ui staying within music module), (2) D-pad spatial navigation integration, (3) TV-optimized layout. This was also documented in Category 2 Step 2.1.4 as TV-SPECIFIC with justified duplication.
+**Code Changes**: None — reimplementation justified by TV navigation requirements
+**Cross-refs**: Step 2.1.4 (MusicPage.vue vs MusicLibraryPage.vue - TV-SPECIFIC)
+
+## Step 8.4 - listFavorites / addFavorite / removeFavorite
+**Decision**: NOT TV-APPLICABLE
+**Finding**: `useMusicStore.ts` has NO favorites methods. `client.addFavorite()`, `client.removeFavorite()`, `client.listFavorites()` exist in @phlix/ui (client.ts:773-850) but are not called anywhere in tizen source. The MusicPage.vue has no favorites UI. The API exists for phlix-ui web clients to manage favorites, but TV music browsing is a thin-client model focused on library navigation, not personal library curation. Favorites management is not relevant to TV UX.
+**Code Changes**: None (not a TV use case - no code needed)
+**Evidence**: `rg "favorite|Favorite" src/stores/useMusicStore.ts` → 0 hits; MusicPage.vue has no favorites UI
+
+## Step 8.5 - setRating / setLikeLevel
+**Decision**: ALREADY SUFFICIENT
+**Finding**: `UserRatingPicker.vue` (line 79) correctly calls `await auth.client.setRating(props.mediaId, finalRating)` via the ApiClient. The component provides half-star precision (via `starState()` function at line 64-68), D-pad navigation, optimistic UI with error toast on failure. This is a TV-SPECIFIC reimplementation of phlix-ui's UserRatingPicker which lacks half-star support. The `setRating` API integration is correct and functional.
+**Code Changes**: None (already correctly integrated)
+**Evidence**: `UserRatingPicker.vue:79` - `await auth.client.setRating(props.mediaId, finalRating)`
+
+## Step 8.6 - markWatched / markUnwatched
+**Decision**: NOT TV-APPLICABLE
+**Finding**: `useMusicStore.ts` has NO watched state methods. `client.markWatched()` and `client.markUnwatched()` exist in @phlix/ui (client.ts:791-810) but are not called anywhere in tizen source. TV music browsing is a non-progressive experience — users don't mark tracks as watched. The watched state API is for video content with resume/progress tracking, not relevant to music playback on TV.
+**Code Changes**: None (not a TV use case - no code needed)
+**Evidence**: `rg "markWatched|markUnwatched" src/stores/useMusicStore.ts` → 0 hits
+
+## Step 8.7 - Music track streaming (tizen calls GET /api/v1/music/tracks/:id for stream URL)
+**Decision**: TV-SPECIFIC (BUG)
+**Finding**: `useMusicStore.ts:92-105` has `fetchTrack(id: number)` which calls `client.get<MusicTrack>(`/api/v1/music/tracks/${id}`)` and assigns the result directly to `currentTrack.value = data`. However, the `GET /api/v1/music/tracks/{id}` API returns a `{ track }` envelope (not a direct `MusicTrack` object) — see ApiClient.d.ts line 580: "Fetch one track by id (`GET /api/v1/music/tracks/{id}` → `{ track }`)". The code assigns the envelope object instead of unwrapping `data.track`. This is a confirmed bug: `currentTrack.value` would be `{ track: MusicTrack }` instead of `MusicTrack`, causing properties like `stream_url` (server-minted signed URL, available in the envelope but not on the raw track) to be inaccessible at the expected path.
+
+Additionally, the `MusicTrack` interface in @phlix/contracts (Music.d.ts) does not define a `stream_url` field — it only has `id, mediaItemId, albumId, artistId, title, trackNumber, discNumber, durationSecs, artist, album`. The signed `stream_url` is added by the API response transformation and is only accessible via the envelope.
+
+**Note**: TypeScript type annotations don't catch this because `client.get<T>()` returns `Promise<T>` with no runtime validation — the generic type parameter is just a compile-time annotation. `vue-tsc --noEmit` passes despite the type-runtime mismatch.
+**Code Changes**: None (audit-only — bug identification without code changes)
+**Evidence**: ApiClient.d.ts line 580: `GET /api/v1/music/tracks/{id} → { track }`; `Music.d.ts` MusicTrack interface lacks `stream_url`; `useMusicStore.ts:98` assigns directly without unwrapping
+
+## Step 8.8 - Music library redirect (v0.98.33 added /app/library/{id} → /app/music)
+**Decision**: ALREADY SUFFICIENT
+**Finding**: `buildExtraRoutes()` in main.ts does NOT define `/app/library/:id` — tizen relies on `createPhlixApp()`'s built-in routing which includes the S97 music library redirect (`/app/library/:id` for MUSIC library type → `/app/music`). The redirect works through `createPhlixApp()` base routing, not tizen-specific code. Tizen also doesn't define explicit `/app/music/*` routes — it relies on @phlix/ui's music routing. Since tizen calls `createPhlixApp()` with standard configuration (main.ts line 95-117), the redirect is automatically active.
+**Code Changes**: None (works through createPhlixApp base routing)
+**Evidence**: `buildExtraRoutes()` only defines `/app/library/scan`, `/app/chapters/:id`, `/app/audio-tracks/:id`, `/app/recommendations`, `/app/parental-controls` — music routing delegated to @phlix/ui
+
+---
+
+## Summary
+
+| Step | Feature | Decision | Notes |
+|------|---------|----------|-------|
+| 8.1 | Music API Breaking Change | ALREADY SUFFICIENT | Verified in Step 1.5 — raw `client.get()` bypasses helper methods |
+| 8.2 | Music Paging | TV-SPECIFIC | First 100 rows only — intentional per CHANGELOG |
+| 8.3 | Music Store Duplication | TV-SPECIFIC | TV navigation (router.back() exit), D-pad nav justify reimplementation |
+| 8.4 | listFavorites / addFavorite / removeFavorite | NOT TV-APPLICABLE | Not a TV use case — no favorites UI in MusicPage |
+| 8.5 | setRating / setLikeLevel | ALREADY SUFFICIENT | UserRatingPicker.vue correctly calls auth.client.setRating |
+| 8.6 | markWatched / markUnwatched | NOT TV-APPLICABLE | TV music browsing doesn't use watched state |
+| 8.7 | Music track streaming | TV-SPECIFIC (BUG) | API returns `{ track }` envelope but code assigns directly without unwrapping |
+| 8.8 | Music library redirect | ALREADY SUFFICIENT | Works through createPhlixApp base routing |
+
+**Decision Distribution**:
+- **ALREADY SUFFICIENT**: 3 steps (8.1, 8.5, 8.8) — verified unaffected or correctly integrated
+- **TV-SPECIFIC**: 3 steps (8.2, 8.3, 8.7) — intentional TV implementations, 8.7 has a bug
+- **NOT TV-APPLICABLE**: 2 steps (8.4, 8.6) — features not relevant to TV UX
+- **Code changes needed**: 0 (all decisions are architectural/audit — 8.7 bug identified but not fixed per audit-only scope)
