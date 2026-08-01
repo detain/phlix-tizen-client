@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for package/assets/ServicesPage-kigRm58f-CGzUku7J.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">package/assets</a> ServicesPage-kigRm58f-CGzUku7J.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{s as J,d as O,i as Q,C as W,D as X,U as Z,u as ee,f as ae,h as s,n as d,q as e,z as k,j as u,l as r,G as i,x as f,k as L,H as y,F as z,e as P,B as v,I as A}from"./index-CPwP3lZX.js";import{u as U}from"./Badge-ArWL5-WE-CmUZcmph.js";import{n as te}from"./useToastStore-BDoKlU6N-IaMOaej9.js";import{l as q}from"./Skeleton-DkSoWF3C-4flBTLYh.js";import{g as V}from"./EmptyState-B2QnGIQT-DBMgx8fv.js";var ne=class{client;constructor(t){this.client=t}async getTraktStatus(){let t=await this.client.get("/api/v1/admin/services/trakt/status"),h={connected:t.connected===!0,username:typeof t.username=="string"?t.username:null};return typeof t.configured=="boolean"&amp;&amp;(h.configured=t.configured),h}async disconnectTrakt(){let t=await this.client.post("/api/v1/admin/services/trakt/disconnect");return{message:typeof t.message=="string"?t.message:""}}navigateToTraktAuthorize(){typeof window&lt;"u"&amp;&amp;(window.location.href="/api/v1/oauth/trakt")}async getLastfmStatus(){let t=await this.client.get("/api/v1/admin/services/lastfm/status");return{connected:t.connected===!0,username:typeof t.username=="string"?t.username:null,api_key_set:t.api_key_set===!0}}async disconnectLastfm(){let t=await this.client.post("/api/v1/admin/services/lastfm/disconnect");return{message:typeof t.message=="string"?t.message:""}}navigateToLastfmConnect(){typeof window&lt;"u"&amp;&amp;(window.location.href="/api/v1/oauth/lastfm")}},se={class:"admin-services","aria-labelledby":"services-heading"},ie={class:"admin-services__section","aria-labelledby":"trakt-heading"},le={class:"admin-services__section-head"},ce={class:"admin-services__card"},re={key:0,class:"admin-services__loading","aria-hidden":"true"},oe={key:0,class:"admin-services__dl"},de={key:1,class:"admin-services__hint"},ue={class:"admin-services__actions"},ve={class:"admin-services__section","aria-labelledby":"lastfm-heading"},fe={class:"admin-services__section-head"},me={class:"admin-services__card"},_e={key:0,class:"admin-services__loading","aria-hidden":"true"},ke={key:0,class:"admin-services__dl"},ye={key:1,class:"admin-services__hint"},pe={class:"admin-services__actions"},be=J(O({__name:"ServicesPage",props:{client:{}},setup(t){let h=t,I=Q("apiBase",""),$=P(()=&gt;typeof I=="string"?I:I?.value??""),m=new ne(h.client??new W({baseUrl:$.value,tokenStore:new X})),o=te(),S=Z(),E=ee(),c=v(null),N=v(!0),T=v(null),p=v(!1),R=P(()=&gt;c.value?.configured===!1);async function w(){N.value=!0,T.value=null;try{c.value=await m.getTraktStatus()}catch(n){T.value=A(n,"Failed to load Trakt status."),o.error(T.value)}finally{N.value=!1}}function K(){m.navigateToTraktAuthorize()}async function M(){if(!p.value){p.value=!0;try{await m.disconnectTrakt(),o.success("Trakt disconnected."),await w()}catch(n){o.error(A(n,"Failed to disconnect Trakt."))}finally{p.value=!1}}}let l=v(null),D=v(!0),C=v(null),g=v(!1),F=P(()=&gt;l.value?.api_key_set===!1);async function b(){D.value=!0,C.value=null;try{l.value=await m.getLastfmStatus()}catch(n){C.value=A(n,"Failed to load Last.fm status."),o.error(C.value)}finally{D.value=!1}}function j(){m.navigateToLastfmConnect()}async function G(){if(!g.value){g.value=!0;try{await m.disconnectLastfm(),o.success("Last.fm disconnected."),await b()}catch(n){o.error(A(n,"Failed to disconnect Last.fm."))}finally{g.value=!1}}}function H(n){let a=S?.query?.[n],_=Array.isArray(a)?a[0]:a;return typeof _=="string"?_:void 0}function Y(n){if(!S||!E)return;let a={...S.query};delete a[n],E.replace({query:a})}async function B(n,a){let _=H(n);if(_===void 0)return;let x=n==="lastfm"?"Last.fm":"Trakt";_==="connected"?o.success(`${x} connected.`):_==="not_configured"?o.error(n==="lastfm"?"Add a Last.fm API key first.":"Add Trakt client ID and secret first."):o.error(`${x} connection failed, please try again.`),Y(n),await a()}return ae(()=&gt;{w(),b(),B("lastfm",b),B("trakt",w)}),(n,a)=&gt;(s(),d("section",se,[a[11]||=e("header",{class:"admin-services__head"},[e("h1",{id:"services-heading",class:"admin-services__title"},"Services")],-1),e("section",ie,[e("div",le,[a[0]||=e("h2",{id:"trakt-heading",class:"admin-services__section-title"},"Trakt.tv",-1),c.value===null?k("",!0):(s(),u(U,{key:0,tone:c.value.connected?"success":"neutral",label:c.value.connected?"Connected":"Not connected"},{default:r(()=&gt;[i(f(c.value.connected?"Connected":"Not connected"),1)]),_:1},8,["tone","label"]))]),e("div",ce,[N.value?(s(),d("div",re,[L(q,{variant:"text",lines:2})])):c.value===null?(s(),u(V,{key:1,icon:"alert",title:"Couldn't load Trakt",description:T.value??void 0},{actions:r(()=&gt;[L(y,{variant:"solid",size:"sm","left-icon":"rewind",onClick:w},{default:r(()=&gt;[...a[1]||=[i("Retry",-1)]]),_:1})]),_:1},8,["description"])):(s(),d(z,{key:2},[c.value.connected&amp;&amp;c.value.username!==null?(s(),d("dl",oe,[a[2]||=e("dt",null,"Username",-1),e("dd",null,f(c.value.username),1)])):k("",!0),!c.value.connected&amp;&amp;R.value?(s(),d("p",de,[...a[3]||=[i(" Trakt isn't configured yet. Register an application at ",-1),e("a",{href:"https://trakt.tv/oauth/applications",target:"_blank",rel:"noopener noreferrer"},"trakt.tv/oauth/applications",-1),i(" (set its redirect URI to this server's ",-1),e("code",null,"/api/v1/oauth/trakt/callback",-1),i("), then add the client ID and secret in Settings or via the ",-1),e("code",null,"TRAKT_CLIENT_ID",-1),i(" / ",-1),e("code",null,"TRAKT_CLIENT_SECRET",-1),i(" environment variables. ",-1)]])):k("",!0),e("div",ue,[c.value.connected?(s(),u(y,{key:1,variant:"outline",loading:p.value,onClick:M},{default:r(()=&gt;[i(f(p.value?"Disconnecting":"Disconnect"),1)]),_:1},8,["loading"])):(s(),u(y,{key:0,variant:"solid",disabled:R.value,title:R.value?"Add Trakt client ID and secret first":void 0,onClick:K},{default:r(()=&gt;[...a[4]||=[i(" Connect to Trakt ",-1)]]),_:1},8,["disabled","title"]))])],64))])]),e("section",ve,[e("div",fe,[a[5]||=e("h2",{id:"lastfm-heading",class:"admin-services__section-title"},"Last.fm",-1),l.value===null?k("",!0):(s(),u(U,{key:0,tone:l.value.connected?"success":"neutral",label:l.value.connected?"Connected":"Not connected"},{default:r(()=&gt;[i(f(l.value.connected?"Connected":"Not connected"),1)]),_:1},8,["tone","label"]))]),e("div",me,[D.value?(s(),d("div",_e,[L(q,{variant:"text",lines:2})])):l.value===null?(s(),u(V,{key:1,icon:"alert",title:"Couldn't load Last.fm",description:C.value??void 0},{actions:r(()=&gt;[L(y,{variant:"solid",size:"sm","left-icon":"rewind",onClick:b},{default:r(()=&gt;[...a[6]||=[i("Retry",-1)]]),_:1})]),_:1},8,["description"])):(s(),d(z,{key:2},[l.value.connected&amp;&amp;l.value.username!==null?(s(),d("dl",ke,[a[7]||=e("dt",null,"Username",-1),e("dd",null,f(l.value.username),1),a[8]||=e("dt",null,"API key",-1),e("dd",null,f(l.value.api_key_set?"Set":"Not set"),1)])):k("",!0),!l.value.connected&amp;&amp;F.value?(s(),d("p",ye,[...a[9]||=[i(" Last.fm isn't configured yet. Register an API account at ",-1),e("a",{href:"https://www.last.fm/api/account/create",target:"_blank",rel:"noopener noreferrer"},"last.fm/api/account/create",-1),i(", then add the Last.fm API key and secret in Settings or via the ",-1),e("code",null,"LASTFM_API_KEY",-1),i(" / ",-1),e("code",null,"LASTFM_API_SECRET",-1),i(" environment variables. ",-1)]])):k("",!0),e("div",pe,[l.value.connected?(s(),u(y,{key:1,variant:"outline",loading:g.value,onClick:G},{default:r(()=&gt;[i(f(g.value?"Disconnecting":"Disconnect"),1)]),_:1},8,["loading"])):(s(),u(y,{key:0,variant:"solid",disabled:F.value,title:F.value?"Add a Last.fm API key first":void 0,onClick:j},{default:r(()=&gt;[...a[10]||=[i(" Connect Last.fm ",-1)]]),_:1},8,["disabled","title"]))])],64))])])]))}}),[["__scopeId","data-v-c85fc3fe"]]);export{be as default};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-08-01T19:24:14.344Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

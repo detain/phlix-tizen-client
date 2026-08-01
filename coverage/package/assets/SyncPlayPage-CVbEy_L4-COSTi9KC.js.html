@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for package/assets/SyncPlayPage-CVbEy_L4-COSTi9KC.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">package/assets</a> SyncPlayPage-CVbEy_L4-COSTi9KC.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{s as T,d as W,i as E,C as K,D as O,f as Q,h as u,n as f,q as e,k as o,l as s,G as r,H as c,j as M,F as X,v as Y,x as w,z as Z,p as F,L as b,M as C,e as ee,B as i,I as N}from"./index-CPwP3lZX.js";import{u as D}from"./Badge-ArWL5-WE-CmUZcmph.js";import{D as J}from"./Modal-BJKZOPpV-DoTJCNN6.js";import{n as ae}from"./useToastStore-BDoKlU6N-IaMOaej9.js";import{l as le}from"./Skeleton-DkSoWF3C-4flBTLYh.js";import{g as A}from"./EmptyState-B2QnGIQT-DBMgx8fv.js";var ne=class{client;constructor(t){this.client=t}async listGroups(){let{groups:t}=await this.client.get("/api/v1/syncplay/groups");return Array.isArray(t)?t:[]}createGroup(t){return this.client.post("/api/v1/syncplay/groups",t)}getGroup(t){return this.client.get(`/api/v1/syncplay/groups/${encodeURIComponent(t)}`)}joinGroup(t,k){return this.client.post(`/api/v1/syncplay/groups/${encodeURIComponent(t)}/join`,k??{})}leaveGroup(t){return this.client.post(`/api/v1/syncplay/groups/${encodeURIComponent(t)}/leave`,{})}},se={class:"admin-syncplay","aria-labelledby":"syncplay-heading"},te={class:"admin-syncplay__head"},oe={key:0,class:"admin-syncplay__skel"},ie={key:3,class:"admin-syncplay__table","aria-label":"SyncPlay groups"},re={class:"admin-syncplay__name"},ue={class:"admin-syncplay__media"},ce={class:"admin-syncplay__field"},pe={class:"admin-syncplay__field"},de={class:"admin-syncplay__field"},ye={class:"admin-syncplay__field"},be=T(W({__name:"SyncPlayPage",props:{client:{}},setup(t){let k=t,G=E("apiBase",""),L=ee(()=&gt;typeof G=="string"?G:G?.value??""),V=new ne(k.client??new K({baseUrl:L.value,tokenStore:new O})),p=ae(),P=i([]),z=i(!0),d=i(null);async function U(){z.value=!0,d.value=null;try{P.value=await V.listGroups()}catch(n){d.value=N(n,"Failed to load groups."),p.error(d.value)}finally{z.value=!1}}let g=i(!1),y=i(""),m=i(""),S=i(!1);function j(){y.value="",m.value="",g.value=!0}function I(){g.value=!1}async function q(){if(!y.value.trim()){p.error("Group name is required.");return}S.value=!0;try{let n={name:y.value.trim()};m.value.trim()&amp;&amp;(n.password=m.value.trim()),await V.createGroup(n),p.success("Group created."),I(),await U()}catch(n){p.error(N(n,"Failed to create group."))}finally{S.value=!1}}let h=i(!1),v=i(""),_=i(""),$=i(!1);function R(n){v.value=n??"",_.value="",h.value=!0}function x(){h.value=!1}async function B(){if(!v.value.trim()){p.error("Group ID is required.");return}$.value=!0;try{let n={};_.value.trim()&amp;&amp;(n.password=_.value.trim()),await V.joinGroup(v.value.trim(),n),p.success("Joined group."),x()}catch(n){p.error(N(n,"Failed to join group."))}finally{$.value=!1}}function H(n){return`${n} member${n===1?"":"s"}`}return Q(U),(n,a)=&gt;(u(),f("section",se,[e("header",te,[a[7]||=e("div",{class:"admin-syncplay__heading-group"},[e("h1",{id:"syncplay-heading",class:"admin-syncplay__title"},"SyncPlay"),e("p",{class:"admin-syncplay__subtitle"}," Watch together with synchronized playback for multiple viewers. ")],-1),o(c,{variant:"solid",size:"sm","left-icon":"plus",onClick:j},{default:s(()=&gt;[...a[6]||=[r(" Create group ",-1)]]),_:1})]),z.value?(u(),f("div",oe,[o(le,{variant:"text",lines:5})])):d.value?(u(),M(A,{key:1,icon:"alert",title:"Couldn't load groups",description:d.value},{actions:s(()=&gt;[o(c,{variant:"solid",size:"sm","left-icon":"rewind",onClick:U},{default:s(()=&gt;[...a[8]||=[r("Retry",-1)]]),_:1})]),_:1},8,["description"])):P.value.length===0?(u(),M(A,{key:2,icon:"tv",title:"No groups yet",description:"Create one to start watching together."},{actions:s(()=&gt;[o(c,{variant:"solid",size:"sm","left-icon":"plus",onClick:j},{default:s(()=&gt;[...a[9]||=[r(" Create group ",-1)]]),_:1})]),_:1})):(u(),f("table",ie,[a[12]||=e("thead",null,[e("tr",null,[e("th",{scope:"col"},"Name"),e("th",{scope:"col"},"Members"),e("th",{scope:"col"},"Status"),e("th",{scope:"col"},"Media"),e("th",{scope:"col",class:"admin-syncplay__actions-col"},"Actions")])],-1),e("tbody",null,[(u(!0),f(X,null,Y(P.value,l=&gt;(u(),f("tr",{key:l.id},[e("td",null,[e("span",re,w(l.name),1),l.has_password?(u(),M(D,{key:0,tone:"warning"},{default:s(()=&gt;[...a[10]||=[r("Password",-1)]]),_:1})):Z("",!0)]),e("td",null,w(H(l.member_count)),1),e("td",null,[o(D,{tone:l.is_playing?"accent":"neutral"},{default:s(()=&gt;[r(w(l.is_playing?"Playing":"Idle"),1)]),_:2},1032,["tone"])]),e("td",ue,w(l.current_media??"—"),1),e("td",null,[o(c,{variant:"ghost",size:"sm","aria-label":`Join ${l.name}`,onClick:me=&gt;R(l.id)},{default:s(()=&gt;[...a[11]||=[r(" Join ",-1)]]),_:1},8,["aria-label","onClick"])])]))),128))])])),o(J,{modelValue:g.value,"onUpdate:modelValue":a[2]||=l=&gt;g.value=l,title:"Create SyncPlay group",onClose:I},{footer:s(()=&gt;[o(c,{variant:"ghost",size:"sm",onClick:I},{default:s(()=&gt;[...a[15]||=[r("Cancel",-1)]]),_:1}),o(c,{variant:"solid",size:"sm",loading:S.value,onClick:q},{default:s(()=&gt;[...a[16]||=[r(" Create group ",-1)]]),_:1},8,["loading"])]),default:s(()=&gt;[e("form",{class:"admin-syncplay__form",onSubmit:F(q,["prevent"])},[e("label",ce,[a[13]||=e("span",{class:"admin-syncplay__label"},"Group name",-1),b(e("input",{"onUpdate:modelValue":a[0]||=l=&gt;y.value=l,type:"text",class:"admin-syncplay__input",autocomplete:"off",placeholder:"Movie Night",required:""},null,512),[[C,y.value]])]),e("label",pe,[a[14]||=e("span",{class:"admin-syncplay__label"},"Password (optional)",-1),b(e("input",{"onUpdate:modelValue":a[1]||=l=&gt;m.value=l,type:"password",class:"admin-syncplay__input",autocomplete:"new-password",placeholder:"Leave empty for an open group"},null,512),[[C,m.value]])])],32)]),_:1},8,["modelValue"]),o(J,{modelValue:h.value,"onUpdate:modelValue":a[5]||=l=&gt;h.value=l,title:"Join SyncPlay group",onClose:x},{footer:s(()=&gt;[o(c,{variant:"ghost",size:"sm",onClick:x},{default:s(()=&gt;[...a[19]||=[r("Cancel",-1)]]),_:1}),o(c,{variant:"solid",size:"sm",loading:$.value,onClick:B},{default:s(()=&gt;[...a[20]||=[r(" Join group ",-1)]]),_:1},8,["loading"])]),default:s(()=&gt;[e("form",{class:"admin-syncplay__form",onSubmit:F(B,["prevent"])},[e("label",de,[a[17]||=e("span",{class:"admin-syncplay__label"},"Group ID",-1),b(e("input",{"onUpdate:modelValue":a[3]||=l=&gt;v.value=l,type:"text",class:"admin-syncplay__input",autocomplete:"off",placeholder:"sp_abc123def456",required:""},null,512),[[C,v.value]])]),e("label",ye,[a[18]||=e("span",{class:"admin-syncplay__label"},"Password (if required)",-1),b(e("input",{"onUpdate:modelValue":a[4]||=l=&gt;_.value=l,type:"password",class:"admin-syncplay__input",autocomplete:"new-password",placeholder:"Leave empty if no password"},null,512),[[C,_.value]])])],32)]),_:1},8,["modelValue"])]))}}),[["__scopeId","data-v-7d3dc7b7"]]);export{be as default};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-08-01T19:24:14.344Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

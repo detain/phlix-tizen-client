@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for package/assets/SignupPage-CGsL3I3--LO567Ysw.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">package/assets</a> SignupPage-CGsL3I3--LO567Ysw.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{s as C,d as S,a3 as z,u as D,o as E,i as G,a6 as H,h as m,j as T,l as d,m as a,n as _,k as l,r as W,q as p,x as i,z as P,p as J,ag as g,H as K,G as $,F as O,a4 as F,ah as Q,e as q,B as t,a as X,ai as Y,a0 as Z}from"./index-CPwP3lZX.js";import{n as ee}from"./useToastStore-BDoKlU6N-IaMOaej9.js";var ae={key:0,class:"signup__banner",role:"alert"},le={class:"signup__divider"},te={class:"signup__oauth"},ue=C(S({__name:"SignupForm",emits:["success"],setup(x,{emit:h}){let c=h,u=z(),I=ee(),L=D(),{t:e}=E(),b=G("phlixConfig",null),M=q(()=&gt;b?.home??b?.routerBase??"/app"),N=q(()=&gt;`${b?.routerBase??"/app"}/login`),R=/^[^\s@]+@[^\s@]+\.[^\s@]+$/,s=t(""),n=t(""),o=t(""),f=t(""),w=t(null),V=t(null),y=t(null),k=t(null);function U(){return w.value=s.value.trim()?R.test(s.value.trim())?null:e("auth.emailInvalid"):e("auth.emailRequired"),V.value=n.value.trim()?n.value.trim().length&lt;3?e("auth.usernameMinLength"):null:e("auth.usernameRequired"),y.value=o.value?o.value.length&lt;8?e("auth.passwordMinLength"):null:e("auth.passwordChoose"),k.value=f.value===o.value?null:e("auth.passwordMismatch"),!w.value&amp;&amp;!V.value&amp;&amp;!y.value&amp;&amp;!k.value}async function A(){U()&amp;&amp;(await u.signup(s.value.trim(),n.value.trim(),o.value)?(c("success"),L.push(M.value)):I.error(u.error??e("auth.signupFailed")))}return(B,v)=&gt;{let j=H("RouterLink");return m(),T(Q,{eyebrow:a(e)("auth.signupEyebrow"),title:a(e)("auth.signupTitle"),subtitle:a(e)("auth.signupSubtitle")},{footer:d(()=&gt;[$(i(a(e)("auth.signupFooterPrompt"))+" ",1),l(j,{to:N.value,class:"signup__link"},{default:d(()=&gt;[$(i(a(e)("auth.signInLink")),1)]),_:1},8,["to"])]),default:d(()=&gt;[a(u).error?(m(),_("p",ae,[l(W,{name:"alert",class:"signup__banner-icon"}),p("span",null,i(a(u).error),1)])):P("",!0),p("form",{class:"signup__form",novalidate:"",onSubmit:J(A,["prevent"])},[l(g,{modelValue:s.value,"onUpdate:modelValue":v[0]||=r=&gt;s.value=r,label:a(e)("auth.email"),type:"email",autocomplete:"email",inputmode:"email",placeholder:a(e)("auth.emailPlaceholder"),error:w.value,required:""},null,8,["modelValue","label","placeholder","error"]),l(g,{modelValue:n.value,"onUpdate:modelValue":v[1]||=r=&gt;n.value=r,label:a(e)("auth.username"),type:"text",autocomplete:"username",placeholder:a(e)("auth.usernamePlaceholder"),error:V.value,minlength:3,required:""},null,8,["modelValue","label","placeholder","error"]),l(g,{modelValue:o.value,"onUpdate:modelValue":v[2]||=r=&gt;o.value=r,label:a(e)("auth.password"),type:"password",autocomplete:"new-password",placeholder:a(e)("auth.passwordSignupPlaceholder"),error:y.value,minlength:8,required:""},null,8,["modelValue","label","placeholder","error"]),l(g,{modelValue:f.value,"onUpdate:modelValue":v[3]||=r=&gt;f.value=r,label:a(e)("auth.confirmPassword"),type:"password",autocomplete:"new-password",placeholder:a(e)("auth.confirmPasswordPlaceholder"),error:k.value,required:""},null,8,["modelValue","label","placeholder","error"]),l(K,{type:"submit",variant:"solid",size:"lg",block:"",loading:a(u).loading},{default:d(()=&gt;[$(i(a(u).loading?a(e)("auth.creatingAccount"):a(e)("auth.createAccount")),1)]),_:1},8,["loading"]),B.$slots.oauth?(m(),_(O,{key:0},[p("div",le,i(a(e)("auth.orContinueWith")),1),p("div",te,[F(B.$slots,"oauth",{},void 0,!0)])],64)):P("",!0)],32)]),_:3},8,["eyebrow","title","subtitle"])}}}),[["__scopeId","data-v-e4b9693e"]]),re={class:"auth-page"},oe={key:0,class:"auth-page__glow","aria-hidden":"true"},se={class:"auth-page__center"},de=C(S({__name:"SignupPage",setup(x){let h=X();return(c,u)=&gt;(m(),_("div",re,[l(Y,{enabled:a(h).atmosphere,grain:!0,vignette:!0},null,8,["enabled"]),a(h).atmosphere?(m(),_("div",oe)):P("",!0),p("div",se,[l(ue,null,Z({_:2},[c.$slots.oauth?{name:"oauth",fn:d(()=&gt;[F(c.$slots,"oauth",{},void 0,!0)]),key:"0"}:void 0]),1024)])]))}}),[["__scopeId","data-v-b98af69c"]]);export{de as default};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-08-01T19:24:14.344Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for package/assets/SettingsPage-KpnqPaLJ-DCsqImjf.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">package/assets</a> SettingsPage-KpnqPaLJ-DCsqImjf.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{s as oe,d as de,i as ue,C as ce,D as pe,f as me,h as i,n,q as r,k as b,j as m,l as u,H as F,G as o,p as ve,F as x,v as fe,z as v,x as f,E as ge,m as Q,e as M,B as p,Y as N,I as _e,Z as W}from"./index-CPwP3lZX.js";import{u as C}from"./Badge-ArWL5-WE-CmUZcmph.js";import{f as be}from"./Switch-CFZhdkXR-xXHCAh8b.js";import{n as ye}from"./useToastStore-BDoKlU6N-IaMOaej9.js";import{l as ke}from"./Skeleton-DkSoWF3C-4flBTLYh.js";import{g as he}from"./EmptyState-B2QnGIQT-DBMgx8fv.js";import{S as we}from"./Tabs-x8dUKZN5-Dd3RXet0.js";var Se=class{client;constructor(l){this.client=l}async get(){let{data:l}=await this.client.get("/api/v1/admin/settings");return{settings:P(l?.settings)?l.settings:{},overridden:Array.isArray(l?.overridden)?l.overridden:[],types:P(l?.types)?l.types:{}}}async save(l){let{data:g}=await this.client.put("/api/v1/admin/settings",{settings:l});return{settings:P(g?.settings)?g.settings:{},overridden:Array.isArray(g?.overridden)?g.overridden:[]}}};function P(l){return typeof l=="object"&amp;&amp;!!l&amp;&amp;!Array.isArray(l)}var Ie={class:"admin-settings","aria-labelledby":"settings-heading"},Te={key:0,class:"admin-settings__skel"},xe={class:"admin-settings__panel"},Ce={key:0,class:"admin-settings__empty",role:"status"},$e={key:0,class:"admin-settings__row"},Ae=["for"],De=["id","value","min","max","step","placeholder","onInput"],Ue=["for"],Ve=["for"],je={class:"admin-settings__row"},Re=["id","type","value","onInput"],Oe=["for"],Be=["id","value","onInput"],Ee={key:5,class:"admin-settings__error",role:"alert"},Fe={key:6,class:"admin-settings__help"},Me={class:"admin-settings__actions"},Ge=oe(de({__name:"SettingsPage",props:{client:{}},setup(l){let g=l,D=ue("apiBase",""),X=M(()=&gt;typeof D=="string"?D:D?.value??""),z=new Se(g.client??new ce({baseUrl:X.value,tokenStore:new pe})),y=ye(),ee=[{id:"access",label:"Access"},{id:"transcoding",label:"Transcoding"},{id:"metadata",label:"Metadata"},{id:"markers",label:"Markers"},{id:"subtitles",label:"Subtitles"},{id:"discovery",label:"Discovery"},{id:"trickplay",label:"Trickplay"},{id:"newsletter",label:"Newsletter"},{id:"port-forward",label:"Port Forward"},{id:"scrobblers",label:"Scrobblers"}].map(t=&gt;({value:t.id,label:t.label})),te={access:["auth.signup_mode"],transcoding:["hwaccel.enabled","hwaccel.prefer_hardware","hwaccel.probe_timeout"],metadata:["tmdb.api_key"],markers:["marker_detection.similarity_threshold","marker_detection.intro_max_duration"],subtitles:["subtitles.enabled","subtitles.default_language","subtitles.burn_in_by_default"],discovery:["discovery.discovery_port"],trickplay:["trickplay.enabled","trickplay.interval_seconds"],newsletter:["newsletter.enabled","newsletter.send_hour"],"port-forward":["port-forward.port_forwarding.upnp_enabled"],scrobblers:["trakt.client_id","trakt.client_secret","trakt.redirect_uri"]},ae={"hwaccel.probe_timeout":{min:0},"marker_detection.similarity_threshold":{min:0,max:1},"marker_detection.intro_max_duration":{min:0},"discovery.discovery_port":{min:1,max:65535},"trickplay.interval_seconds":{min:1},"newsletter.send_hour":{min:0,max:23}},ie=new Set(["tmdb.api_key","trakt.client_secret"]),q={"auth.signup_mode":[{value:"open",label:"Open — anyone can sign up"},{value:"approval",label:"Require admin approval"},{value:"disabled",label:"Disabled — no new signups"}],"subtitles.default_language":[{value:"en",label:"English"},{value:"es",label:"Spanish"},{value:"fr",label:"French"},{value:"de",label:"German"},{value:"it",label:"Italian"},{value:"ja",label:"Japanese"}]},L={"auth.signup_mode":"Signup mode","tmdb.api_key":"TMDB API Key","trakt.client_id":"Trakt Client ID","trakt.client_secret":"Trakt Client Secret","trakt.redirect_uri":"Trakt Redirect URI"},H={"auth.signup_mode":'Controls who can create an account. "Open" lets anyone register and sign in immediately. "Require admin approval" creates accounts in a pending state — review them in the Users page approval queue before they can sign in. "Disabled" turns off new signups entirely.',"tmdb.api_key":"Your TMDB (The Movie Database) API key — get one free at themoviedb.org → Settings → API (v3 auth). Used to fetch movie &amp; TV metadata, posters, and external IDs.","trakt.client_id":"Register an application at trakt.tv/oauth/applications to get a client ID and secret. Saving here overrides the TRAKT_CLIENT_ID environment variable.","trakt.client_secret":"The client secret paired with your Trakt client ID. Overrides the TRAKT_CLIENT_SECRET environment variable.","trakt.redirect_uri":"Must exactly match the redirect URI registered in your Trakt app — this server's /api/v1/oauth/trakt/callback URL."};function c(t){return L[t]?L[t]:(t.split(".").pop()??t).replace(/_/g," ").replace(/\b[a-z]/g,a=&gt;a.toUpperCase())}function k(t){return V.value.includes(t)}let U=p({}),V=p([]),j=p({}),R=p("access"),O=p(!0),h=p(null),B=p(!1),w=p({}),_=N({}),d=N({}),S=N({}),le=M(()=&gt;Object.values(S).some(Boolean)),K=M(()=&gt;te[R.value]??[]);function G(t){for(let a of Object.keys(d))delete d[a];for(let[a,e]of Object.entries(t))d[a]=String(e??"")}function Y(){for(let t of Object.keys(S))delete S[t]}async function J(){O.value=!0,h.value=null;try{let t=await z.get();U.value=t.settings,V.value=t.overridden,j.value=t.types,G(t.settings),Y(),w.value={}}catch(t){h.value=_e(t,"Failed to load settings."),y.error(h.value)}finally{O.value=!1}}function $(t){return j.value[t]??"string"}function ne(t){return q[t]!==void 0}function se(t){return q[t]??[]}function A(t){return ae[t]??{}}function I(t,a){d[t]=a,S[t]=a!==String(U.value[t]??"")}function re(t){_[t]=!_[t]}async function Z(){B.value=!0,w.value={};try{let t={};for(let[e,s]of Object.entries(S)){if(!s)continue;let E=j.value[e],T=d[e]??"";E==="bool"?t[e]=T==="true"||T==="1":E==="int"?t[e]=parseInt(T,10):E==="float"?t[e]=parseFloat(T):t[e]=T}let a=await z.save(t);y.success("Settings saved."),U.value=a.settings,V.value=a.overridden,Y(),G(a.settings)}catch(t){if(t instanceof W&amp;&amp;t.status===400){let a=t.body;a?.errors&amp;&amp;Object.keys(a.errors).length&gt;0?(w.value=a.errors,y.error("Please fix the validation errors.")):y.error(t.message)}else y.error(t instanceof W?t.message:"Failed to save settings.")}finally{B.value=!1}}return me(J),(t,a)=&gt;(i(),n("section",Ie,[a[8]||=r("header",{class:"admin-settings__head"},[r("h1",{id:"settings-heading",class:"admin-settings__title"},"Settings")],-1),O.value?(i(),n("div",Te,[b(ke,{variant:"text",lines:6})])):h.value?(i(),m(he,{key:1,icon:"alert",title:"Couldn't load settings",description:h.value},{actions:u(()=&gt;[b(F,{variant:"solid",size:"sm","left-icon":"rewind",onClick:J},{default:u(()=&gt;[...a[1]||=[o("Retry",-1)]]),_:1})]),_:1},8,["description"])):(i(),m(we,{key:2,modelValue:R.value,"onUpdate:modelValue":a[0]||=e=&gt;R.value=e,tabs:Q(ee),label:"Settings groups"},{default:u(()=&gt;[r("div",xe,[K.value.length===0?(i(),n("p",Ce," No settings in this group. ")):(i(),n("form",{key:1,class:"admin-settings__form",onSubmit:ve(Z,["prevent"])},[(i(!0),n(x,null,fe(K.value,e=&gt;(i(),n("div",{key:e,class:"admin-settings__field"},[$(e)==="bool"?(i(),n("div",$e,[b(be,{"model-value":d[e]==="true"||d[e]==="1",label:c(e),"onUpdate:modelValue":s=&gt;I(e,s?"true":"false")},null,8,["model-value","label","onUpdate:modelValue"]),k(e)?(i(),m(C,{key:0,tone:"accent"},{default:u(()=&gt;[...a[2]||=[o("custom",-1)]]),_:1})):v("",!0)])):$(e)==="int"||$(e)==="float"?(i(),n(x,{key:1},[r("label",{class:"admin-settings__label",for:`field-${e}`},[o(f(c(e))+" ",1),k(e)?(i(),m(C,{key:0,tone:"accent"},{default:u(()=&gt;[...a[3]||=[o("custom",-1)]]),_:1})):v("",!0)],8,Ae),r("input",{id:`field-${e}`,class:"admin-settings__input",type:"number",value:d[e],min:A(e).min,max:A(e).max,step:$(e)==="float"?"any":void 0,placeholder:A(e).min===void 0?void 0:`min: ${A(e).min}`,onInput:s=&gt;I(e,s.target.value)},null,40,De)],64)):ne(e)?(i(),n(x,{key:2},[r("label",{class:"admin-settings__label",for:`field-${e}`},[o(f(c(e))+" ",1),k(e)?(i(),m(C,{key:0,tone:"accent"},{default:u(()=&gt;[...a[4]||=[o("custom",-1)]]),_:1})):v("",!0)],8,Ue),b(ge,{"model-value":d[e]??"",options:se(e),label:c(e),"onUpdate:modelValue":s=&gt;I(e,String(s))},null,8,["model-value","options","label","onUpdate:modelValue"])],64)):Q(ie).has(e)?(i(),n(x,{key:3},[r("label",{class:"admin-settings__label",for:`field-${e}`},[o(f(c(e))+" ",1),k(e)?(i(),m(C,{key:0,tone:"accent"},{default:u(()=&gt;[...a[5]||=[o("custom",-1)]]),_:1})):v("",!0)],8,Ve),r("div",je,[r("input",{id:`field-${e}`,class:"admin-settings__input",type:_[e]?"text":"password",autocomplete:"off",value:d[e],onInput:s=&gt;I(e,s.target.value)},null,40,Re),b(F,{variant:"ghost",size:"sm","left-icon":_[e]?"eye-off":"eye","aria-label":_[e]?`Hide ${c(e)}`:`Show ${c(e)}`,onClick:s=&gt;re(e)},{default:u(()=&gt;[o(f(_[e]?"Hide":"Show"),1)]),_:2},1032,["left-icon","aria-label","onClick"])])],64)):(i(),n(x,{key:4},[r("label",{class:"admin-settings__label",for:`field-${e}`},[o(f(c(e))+" ",1),k(e)?(i(),m(C,{key:0,tone:"accent"},{default:u(()=&gt;[...a[6]||=[o("custom",-1)]]),_:1})):v("",!0)],8,Oe),r("input",{id:`field-${e}`,class:"admin-settings__input",type:"text",autocomplete:"off",value:d[e],onInput:s=&gt;I(e,s.target.value)},null,40,Be)],64)),w.value[e]?(i(),n("span",Ee,f(w.value[e]),1)):v("",!0),H[e]?(i(),n("p",Fe,f(H[e]),1)):v("",!0)]))),128)),r("div",Me,[b(F,{type:"button",variant:"solid",size:"sm",disabled:!le.value,loading:B.value,onClick:Z},{default:u(()=&gt;[...a[7]||=[o(" Save settings ",-1)]]),_:1},8,["disabled","loading"])])],32))])]),_:1},8,["modelValue","tabs"]))]))}}),[["__scopeId","data-v-215448d6"]]);export{Ge as default};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-08-01T19:24:14.344Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

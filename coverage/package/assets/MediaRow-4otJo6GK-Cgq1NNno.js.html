@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for package/assets/MediaRow-4otJo6GK-Cgq1NNno.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">package/assets</a> MediaRow-4otJo6GK-Cgq1NNno.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{s as g,d as b,z as p,h as a,n as t,q as r,x as c,a4 as y,F as _,v as h,k as d,j as x,l as B,e as v}from"./index-CPwP3lZX.js";import{l as f}from"./Skeleton-DkSoWF3C-4flBTLYh.js";import{m as C}from"./MetadataMatchModal-DNu-dAPM-Bqe6Ac61.js";import{g as T}from"./EmptyState-B2QnGIQT-DBMgx8fv.js";var E=["aria-label"],M={class:"media-row__head"},N={class:"media-row__title"},S={key:0,class:"media-row__count numeric"},L={class:"media-row__action"},V={key:0,class:"media-row__error",role:"alert"},W={key:1,class:"media-row__rail",role:"status","aria-busy":"true","aria-label":"Loading"},D={class:"media-row__skel-poster"},F=["aria-label"],q=g(b({__name:"MediaRow",props:{title:{},items:{},loading:{type:Boolean,default:!1},error:{default:null},count:{default:null},skeletonCount:{default:6},emptyText:{},hideWhenEmpty:{type:Boolean,default:!1},cardTo:{},canMatch:{type:Boolean,default:!1}},emits:["play","watchlist","info","match","retry"],setup(e,{emit:w}){let n=e,i=w,m=v(()=&gt;!n.loading&amp;&amp;!n.error&amp;&amp;n.items.length===0),k=v(()=&gt;n.hideWhenEmpty&amp;&amp;m.value);return(u,s)=&gt;k.value?p("",!0):(a(),t("section",{key:0,class:"media-row","aria-label":e.title},[r("div",M,[r("h2",N,c(e.title),1),e.count==null?p("",!0):(a(),t("span",S,c(e.count.toLocaleString()),1)),r("div",L,[y(u.$slots,"action",{},void 0)])]),e.error?(a(),t("div",V,[r("span",null,c(e.error),1),r("button",{type:"button",class:"media-row__retry",onClick:s[0]||=o=&gt;i("retry")},"Retry")])):e.loading&amp;&amp;e.items.length===0?(a(),t("div",W,[(a(!0),t(_,null,h(e.skeletonCount,o=&gt;(a(),t("div",{key:o,class:"media-row__cell","aria-hidden":"true"},[r("div",D,[d(f,{variant:"rect",radius:"var(--radius-lg)",height:"100%"})]),d(f,{variant:"text",width:"80%"})]))),128))])):m.value?(a(),x(T,{key:2,title:e.title,description:e.emptyText??"Nothing here yet."},{default:B(()=&gt;[y(u.$slots,"empty",{},void 0,!0)]),_:3},8,["title","description"])):(a(),t("ul",{key:3,class:"media-row__rail","aria-label":e.title},[(a(!0),t(_,null,h(e.items,o=&gt;(a(),t("li",{key:o.id,class:"media-row__cell"},[d(C,{item:o,to:e.cardTo?e.cardTo(o):void 0,"can-match":e.canMatch,onPlay:s[1]||=l=&gt;i("play",l),onWatchlist:s[2]||=l=&gt;i("watchlist",l),onInfo:s[3]||=l=&gt;i("info",l),onMatch:s[4]||=l=&gt;i("match",l)},null,8,["item","to","can-match"])]))),128))],8,F))],8,E))}}),[["__scopeId","data-v-0574ce31"]]);export{q as E};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-08-01T19:24:14.344Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

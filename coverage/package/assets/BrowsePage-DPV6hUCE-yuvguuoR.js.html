@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for package/assets/BrowsePage-DPV6hUCE-yuvguuoR.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">package/assets</a> BrowsePage-DPV6hUCE-yuvguuoR.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{s as U,d as z,w as H,f as D,g as J,h as i,n as C,k as E,a0 as K,l as L,q as G,B as m,C as Q,i as X,a1 as Z,a2 as ee,a3 as ae,u as te,a4 as le,j as A,m as h,z as P,F as N,v as W,H as oe,G as ne,e as B,Y as ie}from"./index-CPwP3lZX.js";import{n as T}from"./useToastStore-BDoKlU6N-IaMOaej9.js";import{L as re,P as se}from"./MetadataMatchModal-DNu-dAPM-Bqe6Ac61.js";import{g as F}from"./EmptyState-B2QnGIQT-DBMgx8fv.js";import{E as Y}from"./MediaRow-4otJo6GK-Cgq1NNno.js";import{r as ue,o as de}from"./useApiBase-DhSHB6Qp-B0wtFAUS.js";import"./Modal-BJKZOPpV-DoTJCNN6.js";import"./Skeleton-DkSoWF3C-4flBTLYh.js";var O=U(z({__name:"HomeRow",props:{row:{},apiBase:{},limit:{default:18},showSeeAll:{type:Boolean,default:!0},canMatch:{type:Boolean,default:!1},appliedItem:{default:null}},emits:["items-loaded","play","watchlist","info","match","see-all"],setup(g,{emit:y}){let p=g,f=y,n=T(),u=m([]),I=m(null),d=m(!1),c=m(null),_=m(!1),w=m(null),r=null,v=null,k=!1;function R(a){return typeof a=="object"&amp;&amp;!!a&amp;&amp;a.name==="AbortError"}async function b(){if(!d.value){d.value=!0,c.value=null,v=typeof AbortController&lt;"u"?new AbortController:null;try{let a=new Q({baseUrl:p.apiBase}),o=ue(p.apiBase,{...p.row.query,limit:p.limit,offset:0}),t=await a.get(o,void 0,v?.signal);if(k)return;u.value=t.items??[],I.value=typeof t.total=="number"?t.total:u.value.length,_.value=!0,f("items-loaded",u.value)}catch(a){if(k||R(a))return;c.value=a instanceof Error?a.message:"Failed to load",n.error(`Couldn't load "${p.row.title}"`)}finally{k||(d.value=!1)}}}function M(){if(typeof IntersectionObserver&gt;"u"||!w.value){b();return}r=new IntersectionObserver(a=&gt;{a.some(o=&gt;o.isIntersecting)&amp;&amp;(r?.disconnect(),r=null,b())},{rootMargin:"300px"}),r.observe(w.value)}function x(a){let o=u.value.findIndex(t=&gt;t.id===a.id);o!==-1&amp;&amp;(u.value=u.value.map((t,$)=&gt;$===o?a:t))}return H(()=&gt;p.appliedItem,a=&gt;{a&amp;&amp;x(a)}),D(M),J(()=&gt;{k=!0,v?.abort(),v=null,r?.disconnect(),r=null}),(a,o)=&gt;(i(),C("div",{ref_key:"rootEl",ref:w},[E(Y,{title:g.row.title,items:u.value,loading:d.value||!_.value&amp;&amp;!c.value,error:c.value,count:I.value,"can-match":g.canMatch,"hide-when-empty":"",onRetry:b,onPlay:o[1]||=t=&gt;f("play",t),onWatchlist:o[2]||=t=&gt;f("watchlist",t),onInfo:o[3]||=t=&gt;f("info",t),onMatch:o[4]||=t=&gt;f("match",t)},K({_:2},[g.showSeeAll?{name:"action",fn:L(()=&gt;[G("button",{type:"button",class:"home-row__seeall",onClick:o[0]||=t=&gt;f("see-all",g.row)},"See all")]),key:"0"}:void 0]),1032,["title","items","loading","error","count","can-match"])],512))}}),[["__scopeId","data-v-807fce69"]]),ce={class:"browse-page"},me={class:"browse-toolbar"},pe={key:1,class:"browse-loading"},ke=U(z({__name:"BrowsePage",setup(g){let y=de(),p=X("phlixConfig",null),f=B(()=&gt;p?.homeRows??[]),n=Z(),u=ee(),I=T(),d=ae(),c=te(),_=m(null),w=m(!1),r=m(null);function v(e){_.value=e,w.value=!0}function k(e){b.set(e.id,e),r.value={...e},I.success(`Updated metadata for "${e.name}"`)}let R=B(()=&gt;n.items.map(e=&gt;({id:`library-${e.id}`,title:e.name,query:{libraryId:e.id,topLevel:!0}}))),b=ie(new Map);function M(e){e.forEach(l=&gt;b.set(l.id,l))}let x=B(()=&gt;{let e=u.resumeMap;return Object.keys(e).map(l=&gt;b.get(l)).filter(l=&gt;!!l).sort((l,s)=&gt;(e[s.id]??0)-(e[l.id]??0)).slice(0,12)});function a(){n.load(y.value,!0)}D(()=&gt;{n.load(y.value)}),H(y,a);let o=B(()=&gt;n.loaded&amp;&amp;n.items.length===0&amp;&amp;!n.error),t=B(()=&gt;n.loading&amp;&amp;n.items.length===0&amp;&amp;!n.error);function $(e,l){c?.push({name:e,params:{id:l}}).catch(()=&gt;{})}function S(e){if(e.type==="series"&amp;&amp;c?.hasRoute("media")){$("media",e.id);return}$("player",e.id)}function V(e){I.success(`Added "${e.name}" to your list`)}function j(e){c?.hasRoute("media")?$("media",e.id):I.info(`Details for "${e.name}" are coming soon`)}function q(e){let l=e.query?.libraryId;l&amp;&amp;c?.push({name:"library",params:{id:l}}).catch(()=&gt;{})}return(e,l)=&gt;(i(),C("div",ce,[G("div",me,[le(e.$slots,"toolbar-extra",{},void 0)]),x.value.length?(i(),A(Y,{key:0,title:"Continue Watching",items:x.value,"can-match":h(d).isAdmin,"hide-when-empty":"",onPlay:S,onWatchlist:V,onInfo:j,onMatch:v},null,8,["items","can-match"])):P("",!0),(i(!0),C(N,null,W(f.value,s=&gt;(i(),A(O,{key:s.id,row:s,"api-base":h(y),"show-see-all":!!s.query?.libraryId,"can-match":h(d).isAdmin,"applied-item":r.value,onItemsLoaded:M,onSeeAll:q,onPlay:S,onWatchlist:V,onInfo:j,onMatch:v},null,8,["row","api-base","show-see-all","can-match","applied-item"]))),128)),(i(!0),C(N,null,W(R.value,s=&gt;(i(),A(O,{key:s.id,row:s,"api-base":h(y),"can-match":h(d).isAdmin,"applied-item":r.value,onItemsLoaded:M,onSeeAll:q,onPlay:S,onWatchlist:V,onInfo:j,onMatch:v},null,8,["row","api-base","can-match","applied-item"]))),128)),t.value?(i(),C("div",pe,[E(re,{label:"Loading libraries"})])):P("",!0),h(n).error?(i(),A(F,{key:2,icon:"alert",title:"Couldn't load your libraries",description:h(n).error},{actions:L(()=&gt;[E(oe,{variant:"solid",size:"sm","left-icon":"rewind",onClick:a},{default:L(()=&gt;[...l[1]||=[ne("Retry",-1)]]),_:1})]),_:1},8,["description"])):o.value?(i(),A(F,{key:3,icon:"film",title:"No libraries yet",description:"Once a library is added it shows up here as its own section."})):P("",!0),h(d).isAdmin?(i(),A(se,{key:4,modelValue:w.value,"onUpdate:modelValue":l[0]||=s=&gt;w.value=s,item:_.value,onApplied:k},null,8,["modelValue","item"])):P("",!0)]))}}),[["__scopeId","data-v-a58561d2"]]);export{ke as default};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-08-01T19:24:14.344Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

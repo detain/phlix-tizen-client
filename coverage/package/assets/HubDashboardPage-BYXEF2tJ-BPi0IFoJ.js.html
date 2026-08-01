@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for package/assets/HubDashboardPage-BYXEF2tJ-BPi0IFoJ.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">package/assets</a> HubDashboardPage-BYXEF2tJ-BPi0IFoJ.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{s as E,d as G,i as O,C as T,D as J,f as K,h as s,n as r,q as l,k as m,j as b,l as o,H as $,G as f,F as x,v as M,x as u,z as V,e as N,B as c,I as j}from"./index-CPwP3lZX.js";import{u as z}from"./Badge-ArWL5-WE-CmUZcmph.js";import{n as Q}from"./useToastStore-BDoKlU6N-IaMOaej9.js";import{l as H}from"./Skeleton-DkSoWF3C-4flBTLYh.js";import{g as S}from"./EmptyState-B2QnGIQT-DBMgx8fv.js";function _(e,a=""){return typeof e=="string"?e:e==null?a:typeof e=="number"||typeof e=="boolean"?String(e):a}function d(e,a=0){return typeof e=="number"&amp;&amp;Number.isFinite(e)?e:typeof e=="string"&amp;&amp;e.trim()!==""&amp;&amp;Number.isFinite(Number(e))?Number(e):a}function W(e){return Array.isArray(e)?e:[]}function I(e){return typeof e=="object"&amp;&amp;!!e&amp;&amp;!Array.isArray(e)}function X(e){let a=I(e)?e:{};return{total:d(a.total),online:d(a.online),offline:d(a.offline)}}function Y(e){return{id:_(e.id),action:_(e.action??e.event_type),actor:_(e.actor??e.actor_name??e.username??e.user_name,"system"),target:_(e.target??e.target_label??e.resource),created_at:_(e.created_at??e.occurred_at)}}var Z=class{client;constructor(e){this.client=e}async getSummary(){let{data:e}=await this.client.get("/api/v1/admin/dashboard/summary"),a=I(e)?e:{};return{servers:X(a.servers),activeRelaySessions:d(a.activeRelaySessions??a.active_relay_sessions),pendingRequests:d(a.pendingRequests??a.pending_requests),userCount:d(a.userCount??a.user_count)}}async getRecentActivity(e){let a=e===void 0?void 0:{limit:String(e)},{data:v}=await this.client.get("/api/v1/admin/dashboard/activity",a);return W(v).map(Y)}},ee={class:"hub-dash","aria-labelledby":"hub-dash-heading"},ae={key:0,class:"hub-dash__metrics-skel"},te={key:2,class:"hub-dash__metrics"},se={class:"hub-dash__metric-label"},ie={class:"hub-dash__metric-value"},re={class:"hub-dash__card","aria-labelledby":"hub-act-heading"},le={key:0,class:"hub-dash__skel"},ne={key:3,class:"hub-dash__activity-list",role:"list"},ue={class:"hub-dash__activity-actor"},oe=["title"],ce=["datetime","title"],de=20,be=E(G({__name:"HubDashboardPage",props:{client:{}},setup(e){let a=e,v=O("apiBase",""),L=N(()=&gt;typeof v=="string"?v:v?.value??""),A=new Z(a.client??new T({baseUrl:L.value,tokenStore:new J})),F=Q(),g=c(null),p=c([]),k=c(!0),R=c(!0),h=c(null),y=c(null),P=N(()=&gt;{let i=g.value;return[{key:"servers",label:"Servers",value:i?.servers.total??0},{key:"online",label:"Online",value:i?.servers.online??0},{key:"sessions",label:"Active Relays",value:i?.activeRelaySessions??0},{key:"requests",label:"Pending Requests",value:i?.pendingRequests??0},{key:"users",label:"Users",value:i?.userCount??0}]}),q=N(()=&gt;g.value?.servers.offline??0);function U(i){let n=new Date(i).getTime();if(!Number.isFinite(n))return"";let t=Math.floor((Date.now()-n)/1e3);if(t&lt;60)return`${t}s ago`;let w=Math.floor(t/60);if(w&lt;60)return`${w}m ago`;let C=Math.floor(w/60);return C&lt;24?`${C}h ago`:`${Math.floor(C/24)}d ago`}async function B(){k.value=!0,h.value=null;try{g.value=await A.getSummary()}catch(i){h.value=j(i,"Failed to load hub summary."),F.error(h.value)}finally{k.value=!1}}async function D(){R.value=!0,y.value=null;try{p.value=await A.getRecentActivity(de)}catch(i){y.value=j(i,"Failed to load recent activity."),F.error(y.value)}finally{R.value=!1}}return K(()=&gt;{B(),D()}),(i,n)=&gt;(s(),r("section",ee,[n[3]||=l("header",{class:"hub-dash__head"},[l("h1",{id:"hub-dash-heading",class:"hub-dash__title"},"Dashboard")],-1),k.value?(s(),r("div",ae,[m(H,{variant:"text",lines:2})])):h.value?(s(),b(S,{key:1,icon:"alert",title:"Couldn't load hub summary",description:h.value},{actions:o(()=&gt;[m($,{variant:"solid",size:"sm","left-icon":"rewind",onClick:B},{default:o(()=&gt;[...n[0]||=[f("Retry",-1)]]),_:1})]),_:1},8,["description"])):(s(),r("div",te,[(s(!0),r(x,null,M(P.value,t=&gt;(s(),r("div",{key:t.key,class:"hub-dash__metric"},[l("span",se,u(t.label),1),l("span",ie,u(t.value.toLocaleString()),1),t.key==="servers"&amp;&amp;q.value&gt;0?(s(),b(z,{key:0,tone:"warning"},{default:o(()=&gt;[f(u(q.value)+" offline ",1)]),_:1})):V("",!0)]))),128))])),l("section",re,[n[2]||=l("header",{class:"hub-dash__card-head"},[l("h2",{id:"hub-act-heading",class:"hub-dash__card-title"},"Recent Activity")],-1),R.value?(s(),r("div",le,[m(H,{variant:"text",lines:5})])):y.value?(s(),b(S,{key:1,icon:"alert",title:"Couldn't load activity",description:y.value},{actions:o(()=&gt;[m($,{variant:"solid",size:"sm","left-icon":"rewind",onClick:D},{default:o(()=&gt;[...n[1]||=[f("Retry",-1)]]),_:1})]),_:1},8,["description"])):p.value.length===0?(s(),b(S,{key:2,icon:"list",title:"No recent activity"})):(s(),r("ul",ne,[(s(!0),r(x,null,M(p.value,t=&gt;(s(),r("li",{key:t.id,class:"hub-dash__activity-item"},[m(z,{tone:"neutral"},{default:o(()=&gt;[f(u(t.action),1)]),_:2},1024),l("span",ue,u(t.actor),1),t.target?(s(),r("span",{key:0,class:"hub-dash__activity-target",title:t.target},u(t.target),9,oe)):V("",!0),l("time",{class:"hub-dash__activity-time",datetime:t.created_at,title:t.created_at},u(U(t.created_at)),9,ce)]))),128))]))])]))}}),[["__scopeId","data-v-eb236d4d"]]);export{be as default};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-08-01T19:24:14.344Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

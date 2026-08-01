@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for package/assets/HistoryPage-HhFjB0Kf-BuRzP3EG.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">package/assets</a> HistoryPage-HhFjB0Kf-BuRzP3EG.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{s as O,d as P,i as K,C as Q,D as X,f as Y,h as i,n as l,q as r,j as $,l as s,G as c,H as h,z as v,k as n,F as B,v as Z,r as ee,x as f,J as ae,e as D,B as p,I as x}from"./index-CPwP3lZX.js";import{u as te}from"./Badge-ArWL5-WE-CmUZcmph.js";import{D as ie}from"./Modal-BJKZOPpV-DoTJCNN6.js";import{n as re}from"./useToastStore-BDoKlU6N-IaMOaej9.js";import{l as le}from"./Skeleton-DkSoWF3C-4flBTLYh.js";import{g as N}from"./EmptyState-B2QnGIQT-DBMgx8fv.js";var se=class{client;constructor(o){this.client=o}async getRecentlyWatched(){let{items:o}=await this.client.get("/api/v1/users/me/recently-watched");return Array.isArray(o)?o:[]}async removeFromHistory(o){return this.client.delete(`/api/v1/users/me/history/${encodeURIComponent(o)}`)}async clearHistory(){return this.client.delete("/api/v1/users/me/history")}},oe={class:"admin-history","aria-labelledby":"history-heading"},ne={class:"admin-history__head"},ce={key:0,class:"admin-history__skel"},ue={class:"admin-history__list","aria-label":"Watch history"},de={class:"admin-history__thumb"},me=["src","alt"],he={key:1,class:"admin-history__placeholder","aria-hidden":"true"},ye={class:"admin-history__info"},_e={class:"admin-history__title-row"},ve={class:"admin-history__item-title"},fe={key:0,class:"admin-history__time"},pe={key:1,class:"admin-history__progress"},ge=["aria-valuenow"],we={class:"admin-history__progress-label"},ke={class:"admin-history__actions"},Ce={key:0,class:"admin-history__more",role:"note"},Ae=O(P({__name:"HistoryPage",props:{client:{}},emits:["continue"],setup(o,{emit:T}){let I=o,j=T,z=K("apiBase",""),S=D(()=&gt;typeof z=="string"?z:z?.value??""),F=new se(I.client??new Q({baseUrl:S.value,tokenStore:new X})),y=re(),u=p([]),H=p(!0),_=p(null),d=p(!1),g=p(!1);async function w(){H.value=!0,_.value=null;try{u.value=await F.getRecentlyWatched()}catch(e){_.value=x(e,"Failed to load watch history."),y.error(_.value)}finally{H.value=!1}}async function U(e){try{await F.removeFromHistory(e),y.success("Removed from watch history."),await w()}catch(t){y.error(x(t,"Failed to remove item."))}}async function L(){g.value=!0;try{await F.clearHistory(),y.success("Watch history cleared."),d.value=!1,await w()}catch(e){y.error(x(e,"Failed to clear history."))}finally{g.value=!1}}function q(e){j("continue",e)}function E(e){let t=new Date(e),a=Math.floor((new Date().getTime()-t.getTime())/1e3);if(a&lt;60)return"just now";let m=Math.floor(a/60);if(m&lt;60)return`${m} minute${m===1?"":"s"} ago`;let C=Math.floor(m/60);if(C&lt;24)return`${C} hour${C===1?"":"s"} ago`;let b=Math.floor(C/24);if(b&lt;30)return`${b} day${b===1?"":"s"} ago`;let W=Math.floor(b/30);return`${W} month${W===1?"":"s"} ago`}function k(e){return e.title??e.name??e.media_item_id??e.id}function G(e){return e.media_type??e.type??"media"}function A(e){return e.thumbnail_url??e.poster_url}function M(e){let t=e.progress_percent;return t!==void 0&amp;&amp;t&gt;0&amp;&amp;t&lt;100}function J(e){return Math.round(e.progress_percent??0)}function R(e){return e.media_item_id??e.id}let V=D(()=&gt;Array.isArray(u.value)&amp;&amp;u.value.length&gt;0);return Y(w),(e,t)=&gt;(i(),l("section",oe,[r("header",ne,[t[5]||=r("h1",{id:"history-heading",class:"admin-history__title"},"Watch History",-1),V.value?(i(),$(h,{key:0,variant:"outline",size:"sm","left-icon":"x",onClick:t[0]||=a=&gt;d.value=!0},{default:s(()=&gt;[...t[4]||=[c(" Clear All ",-1)]]),_:1})):v("",!0)]),H.value?(i(),l("div",ce,[n(le,{variant:"text",lines:6})])):_.value?(i(),$(N,{key:1,icon:"alert",title:"Couldn't load watch history",description:_.value},{actions:s(()=&gt;[n(h,{variant:"solid",size:"sm","left-icon":"rewind",onClick:w},{default:s(()=&gt;[...t[6]||=[c("Retry",-1)]]),_:1})]),_:1},8,["description"])):V.value?(i(),l(B,{key:3},[r("ul",ue,[(i(!0),l(B,null,Z(u.value,a=&gt;(i(),l("li",{key:a.id,class:"admin-history__item"},[r("div",de,[A(a)?(i(),l("img",{key:0,src:A(a),alt:`Thumbnail for ${k(a)}`,class:"admin-history__img"},null,8,me)):(i(),l("span",he,[n(ee,{name:"film"})]))]),r("div",ye,[r("div",_e,[r("span",ve,f(k(a)),1),n(te,{tone:"neutral"},{default:s(()=&gt;[c(f(G(a)),1)]),_:2},1024)]),a.last_watched_at?(i(),l("p",fe," Watched "+f(E(a.last_watched_at)),1)):v("",!0),M(a)?(i(),l("div",pe,[r("div",{class:"admin-history__progress-track",role:"progressbar","aria-valuenow":a.progress_percent,"aria-valuemin":0,"aria-valuemax":100},[r("div",{class:"admin-history__progress-fill",style:ae({width:`${a.progress_percent}%`})},null,4)],8,ge),r("span",we,f(J(a))+"%",1)])):v("",!0)]),r("div",ke,[M(a)?(i(),$(h,{key:0,variant:"solid",size:"sm","left-icon":"play","aria-label":`Continue watching ${k(a)}`,onClick:m=&gt;q(R(a))},{default:s(()=&gt;[...t[7]||=[c(" Continue ",-1)]]),_:1},8,["aria-label","onClick"])):v("",!0),n(h,{variant:"ghost",size:"sm","left-icon":"x","aria-label":`Remove ${k(a)} from history`,onClick:m=&gt;U(R(a))},{default:s(()=&gt;[...t[8]||=[c(" Remove ",-1)]]),_:1},8,["aria-label","onClick"])])]))),128))]),u.value.length&gt;=50?(i(),l("p",Ce," Showing "+f(u.value.length)+" items. Older items are not shown. ",1)):v("",!0)],64)):(i(),$(N,{key:2,icon:"film",title:"No watch history yet",description:"Items you watch will appear here."})),n(ie,{modelValue:d.value,"onUpdate:modelValue":t[2]||=a=&gt;d.value=a,title:"Clear Watch History",size:"sm",onClose:t[3]||=a=&gt;d.value=!1},{footer:s(()=&gt;[n(h,{variant:"ghost",size:"sm",disabled:g.value,onClick:t[1]||=a=&gt;d.value=!1},{default:s(()=&gt;[...t[9]||=[c(" Cancel ",-1)]]),_:1},8,["disabled"]),n(h,{variant:"solid",size:"sm",loading:g.value,onClick:L},{default:s(()=&gt;[...t[10]||=[c(" Clear All ",-1)]]),_:1},8,["loading"])]),default:s(()=&gt;[t[11]||=r("p",null,"Clear all items from your watch history? This cannot be undone.",-1)]),_:1},8,["modelValue"])]))}}),[["__scopeId","data-v-d58c1d0d"]]);export{Ae as default};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-08-01T19:24:14.344Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

@@ -1,0 +1,88 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for package/assets/CastDevicesPage-BG6v993m-BKk7o6C_.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">package/assets</a> CastDevicesPage-BG6v993m-BKk7o6C_.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/1</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a></td><td class="line-coverage quiet"><span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js"><span class="cstat-no" title="statement not covered" >import{s as ve,d as me,i as pe,C as _e,D as ye,f as fe,h as r,n as p,q as s,F as Y,v as O,y as q,k as y,r as H,G as k,x as b,j as K,l as w,H as I,V as be,z as W,e as h,B as d,I as g,W as D}from"./index-CPwP3lZX.js";import{u as he}from"./Badge-ArWL5-WE-CmUZcmph.js";import{n as Pe}from"./useToastStore-BDoKlU6N-IaMOaej9.js";import{l as J}from"./Skeleton-DkSoWF3C-4flBTLYh.js";import{g as Q}from"./EmptyState-B2QnGIQT-DBMgx8fv.js";function C(e){return typeof e=="string"?e:""}function x(e){return typeof e=="number"&amp;&amp;Number.isFinite(e)?e:0}function ge(e,n){let f=typeof e.media_status=="object"&amp;&amp;e.media_status!==null?e.media_status:{},S=C(e.transport_state??e.state)||(e.active===!0?"PLAYING":"STOPPED");return{device_id:C(e.device_id)||n,media_title:C(e.media_title??f.media_title??f.title),media_item_id:typeof e.media_item_id=="string"?e.media_item_id:null,transport_state:S,volume_level:x(e.volume_level??f.volume_level),muted:e.muted===!0,position_seconds:x(e.position_seconds??f.position_seconds??f.current_time),duration_seconds:x(e.duration_seconds??f.duration_seconds??f.duration)}}function ke(e,n){return{device_id:C(e.device_id)||n,media_title:C(e.media_title),media_item_id:typeof e.media_item_id=="string"?e.media_item_id:null,transport_state:C(e.transport_state??e.state)||(e.active===!0?"PLAYING":"STOPPED"),volume_level:x(e.volume_level),muted:e.muted===!0}}var we=class{client;constructor(e){this.client=e}async listCastDevices(){let e=await this.client.get("/api/v1/cast/devices"),n=e.devices??e.data;return Array.isArray(n)?n:[]}async getCastStatus(e){return ge(await this.client.get(`/api/v1/cast/devices/${encodeURIComponent(e)}/status`),e)}async castPlay(e){return{success:!0,...await this.client.post(`/api/v1/cast/devices/${encodeURIComponent(e)}/play`)}}async castPause(e){return{success:!0,...await this.client.post(`/api/v1/cast/devices/${encodeURIComponent(e)}/pause`)}}async castStop(e){return{success:!0,...await this.client.post(`/api/v1/cast/devices/${encodeURIComponent(e)}/stop`)}}async castSeek(e,n){return{success:!0,...await this.client.post(`/api/v1/cast/devices/${encodeURIComponent(e)}/seek`,{position_ms:Math.round(n*1e3)})}}async listAirPlayDevices(){let e=await this.client.get("/api/v1/airplay/devices"),n=e.devices??e.data;return Array.isArray(n)?n:[]}async getAirPlayStatus(e){return ke(await this.client.get(`/api/v1/airplay/devices/${encodeURIComponent(e)}/status`),e)}async airPlayPlay(e){return{success:!0,...await this.client.post(`/api/v1/airplay/devices/${encodeURIComponent(e)}/resume`)}}async airPlayPause(e){return{success:!0,...await this.client.post(`/api/v1/airplay/devices/${encodeURIComponent(e)}/pause`)}}async airPlayStop(e){return{success:!0,...await this.client.post(`/api/v1/airplay/devices/${encodeURIComponent(e)}/stop`)}}},Ce={class:"admin-cast","aria-labelledby":"cast-heading"},Se=["id","aria-selected","aria-controls","tabindex","onClick"],$e=["id","aria-labelledby"],Ae={class:"admin-cast__subtitle"},Ie={key:0,class:"admin-cast__grid","aria-busy":"true"},De={key:3,class:"admin-cast__grid",role:"list"},xe=["aria-pressed","aria-label","onClick"],Ne={class:"device-card__icon","aria-hidden":"true"},Re={class:"device-card__info"},Ue=["title"],Fe=["title"],Le={key:4,class:"admin-cast__session","aria-labelledby":"transport-heading"},ze={key:0,class:"admin-cast__player","aria-live":"polite"},Be={key:1,class:"admin-cast__player"},Ee={key:2,class:"admin-cast__player"},Me={class:"admin-cast__nowplaying"},Te={class:"admin-cast__media"},Ge={class:"admin-cast__note"},Ve={class:"admin-cast__muted"},je={key:0,class:"admin-cast__seek",role:"group","aria-label":"Seek"},Ye={class:"admin-cast__time"},Oe={class:"admin-cast__time"},qe={class:"admin-cast__buttons"},Xe=ve(me({__name:"CastDevicesPage",props:{client:{}},setup(e){let n=[{id:"chromecast",label:"Chromecast",icon:"cast"},{id:"airplay",label:"AirPlay",icon:"tv"}],f=e,S=pe("apiBase",""),X=h(()=&gt;typeof S=="string"?S:S?.value??""),v=new we(f.client??new _e({baseUrl:X.value,tokenStore:new ye})),m=Pe();function N(t){if(t===null)return"--:--";let i=Math.floor(t),a=Math.floor(i/3600),o=Math.floor(i%3600/60),P=i%60;return a&gt;0?`${a}:${String(o).padStart(2,"0")}:${String(P).padStart(2,"0")}`:`${o}:${String(P).padStart(2,"0")}`}let c=d("chromecast"),B=d(null),E=d([]),M=d([]),R=d(!0),U=d(!0),$=d(null),A=d(null),_=d(null),l=d(null),F=d(!1),u=d(!1),L=h(()=&gt;c.value==="chromecast"?E.value:M.value),Z=h(()=&gt;c.value==="chromecast"?R.value:U.value),T=h(()=&gt;c.value==="chromecast"?$.value:A.value),z=h(()=&gt;n.find(t=&gt;t.id===c.value)?.label??""),ee=h(()=&gt;n.find(t=&gt;t.id===c.value)?.icon??"cast"),ae=h(()=&gt;c.value==="chromecast"),te=h(()=&gt;L.value.find(t=&gt;t.device_id===_.value)?.name??"");async function G(){R.value=!0,$.value=null;try{E.value=await v.listCastDevices()}catch(t){$.value=g(t,"Failed to load Chromecast devices."),m.error($.value)}finally{R.value=!1}}async function V(){U.value=!0,A.value=null;try{M.value=await v.listAirPlayDevices()}catch(t){A.value=g(t,"Failed to load AirPlay devices."),m.error(A.value)}finally{U.value=!1}}function ie(){c.value==="chromecast"?G():V()}async function le(t,i){F.value=!0,l.value=null;try{if(t==="chromecast"){let a=await v.getCastStatus(i);l.value={isPlaying:a.transport_state==="PLAYING",position:a.position_seconds,duration:a.duration_seconds,mediaTitle:a.media_title,deviceId:a.device_id}}else{let a=await v.getAirPlayStatus(i);l.value={isPlaying:a.transport_state==="PLAYING",position:null,duration:null,mediaTitle:a.media_title,deviceId:a.device_id}}}catch(a){m.error(g(a,"Failed to load playback state."))}finally{F.value=!1}}function se(t){_.value=t,le(c.value,t)}function j(t){t!==c.value&amp;&amp;(c.value=t,_.value=null,l.value=null)}function ce(t){B.value?.querySelectorAll('[role="tab"]')[t]?.focus()}function ne(t){let i=n.map(P=&gt;({value:P.id,label:P.label})),a=n.findIndex(P=&gt;P.id===c.value),o=-1;switch(t.key){case"ArrowRight":case"ArrowDown":o=D(i,a,1);break;case"ArrowLeft":case"ArrowUp":o=D(i,a,-1);break;case"Home":o=D(i,-1,1);break;case"End":o=D(i,0,-1);break;default:return}o&gt;=0&amp;&amp;(t.preventDefault(),j(n[o].id),ce(o))}async function re(){let t=_.value;if(t){u.value=!0;try{let i=c.value==="chromecast"?await v.castPlay(t):await v.airPlayPlay(t);if(!i.success){m.error(i.message||"Play failed.");return}l.value&amp;&amp;={...l.value,isPlaying:!0}}catch(i){m.error(g(i,"Play failed."))}finally{u.value=!1}}}async function ue(){let t=_.value;if(t){u.value=!0;try{let i=c.value==="chromecast"?await v.castPause(t):await v.airPlayPause(t);if(!i.success){m.error(i.message||"Pause failed.");return}l.value&amp;&amp;={...l.value,isPlaying:!1}}catch(i){m.error(g(i,"Pause failed."))}finally{u.value=!1}}}async function oe(){let t=_.value;if(t){u.value=!0;try{let i=c.value==="chromecast"?await v.castStop(t):await v.airPlayStop(t);if(!i.success){m.error(i.message||"Stop failed.");return}l.value&amp;&amp;={...l.value,isPlaying:!1,position:null}}catch(i){m.error(g(i,"Stop failed."))}finally{u.value=!1}}}async function de(t){let i=_.value;if(!(!i||c.value!=="chromecast")){u.value=!0;try{let a=await v.castSeek(i,t);if(!a.success){m.error(a.message||"Seek failed.");return}l.value&amp;&amp;={...l.value,position:t}}catch(a){m.error(g(a,"Seek failed."))}finally{u.value=!1}}}return fe(()=&gt;{G(),V()}),(t,i)=&gt;(r(),p("section",Ce,[i[7]||=s("header",{class:"admin-cast__head"},[s("h1",{id:"cast-heading",class:"admin-cast__title"},"Cast Devices")],-1),s("div",{ref_key:"tablistEl",ref:B,class:"admin-cast__tabs",role:"tablist","aria-label":"Device type",onKeydown:ne},[(r(),p(Y,null,O(n,a=&gt;s("button",{id:`cast-tab-${a.id}`,key:a.id,type:"button",role:"tab","aria-selected":c.value===a.id,"aria-controls":`panel-${a.id}`,tabindex:c.value===a.id?0:-1,class:q(["admin-cast__tab",{"admin-cast__tab--active":c.value===a.id}]),onClick:o=&gt;j(a.id)},[y(H,{name:a.icon,class:"admin-cast__tab-icon"},null,8,["name"]),k(" "+b(a.label),1)],10,Se)),64))],544),s("div",{id:`panel-${c.value}`,role:"tabpanel","aria-labelledby":`cast-tab-${c.value}`,class:"admin-cast__panel"},[s("h2",Ae,b(z.value)+" Devices",1),Z.value?(r(),p("div",Ie,[y(J,{variant:"rect",height:"64px"}),y(J,{variant:"rect",height:"64px"})])):T.value?(r(),K(Q,{key:1,icon:"alert",title:`Couldn't load ${z.value} devices`,description:T.value},{actions:w(()=&gt;[y(I,{variant:"solid",size:"sm","left-icon":"rewind",onClick:ie},{default:w(()=&gt;[...i[0]||=[k("Retry",-1)]]),_:1})]),_:1},8,["title","description"])):L.value.length===0?(r(),K(Q,{key:2,icon:"cast",title:`No ${z.value} devices discovered`,description:"Devices appear here once they are discovered on your network."},null,8,["title"])):(r(),p("ul",De,[(r(!0),p(Y,null,O(L.value,a=&gt;(r(),p("li",{key:a.device_id},[s("button",{type:"button",class:q(["device-card",{"device-card--selected":_.value===a.device_id}]),"aria-pressed":_.value===a.device_id,"aria-label":`Select ${a.name}`,onClick:o=&gt;se(a.device_id)},[s("span",Ne,[y(H,{name:ee.value},null,8,["name"])]),s("span",Re,[s("span",{class:"device-card__name",title:a.name},b(a.name),9,Ue),s("span",{class:"device-card__model",title:`${a.model} - ${a.host}`},b(a.model),9,Fe)])],10,xe)]))),128))])),_.value?(r(),p("section",Le,[i[6]||=s("h2",{id:"transport-heading",class:"admin-cast__subtitle"},"Playback Controls",-1),F.value?(r(),p("div",ze,[...i[1]||=[s("p",{role:"status",class:"admin-cast__muted"},"Loading playback state.",-1)]])):l.value?(r(),p("div",Ee,[s("div",Me,[s("p",Te,b(l.value.mediaTitle||"No media"),1),s("p",Ge,[y(he,{tone:l.value.isPlaying?"success":"neutral"},{default:w(()=&gt;[k(b(l.value.isPlaying?"Playing":"Paused"),1)]),_:1},8,["tone"]),s("span",Ve,"on "+b(te.value),1)])]),ae.value&amp;&amp;l.value.duration!==null?(r(),p("div",je,[s("span",Ye,b(N(l.value.position)),1),y(be,{"model-value":l.value.position??0,min:0,max:l.value.duration??100,step:1,disabled:u.value,label:"Seek position","format-value":N,class:"admin-cast__slider",onChange:de},null,8,["model-value","max","disabled"]),s("span",Oe,b(N(l.value.duration)),1)])):W("",!0),s("div",qe,[y(I,{variant:"solid",size:"sm","left-icon":"play",disabled:l.value.isPlaying||u.value,onClick:re},{default:w(()=&gt;[...i[3]||=[k(" Play ",-1)]]),_:1},8,["disabled"]),y(I,{variant:"outline",size:"sm","left-icon":"pause",disabled:!l.value.isPlaying||u.value,onClick:ue},{default:w(()=&gt;[...i[4]||=[k(" Pause ",-1)]]),_:1},8,["disabled"]),y(I,{variant:"outline",size:"sm","left-icon":"x",disabled:u.value,onClick:oe},{default:w(()=&gt;[...i[5]||=[k(" Stop ",-1)]]),_:1},8,["disabled"])])])):(r(),p("div",Be,[...i[2]||=[s("p",{class:"admin-cast__muted"},"Select a device to view playback controls.",-1)]]))])):W("",!0)],8,$e)]))}}),[["__scopeId","data-v-2b791676"]]);export{Xe as default};<span class="fstat-no" title="function not covered" ><span class="branch-0 cbranch-no" title="branch not covered" ></span></span></span>
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-08-01T19:24:14.344Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    
