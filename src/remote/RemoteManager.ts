@@ -23,7 +23,7 @@ export interface KeyEvent {
 }
 
 type RemoteEventName = 'action' | 'keydown' | 'keyup';
-type Handler = (data: ActionEvent | KeyEvent) => void;
+type Handler = (_data: ActionEvent | KeyEvent) => void;
 
 export class RemoteManager {
   enabled = true;
@@ -44,16 +44,16 @@ export class RemoteManager {
    * target-phase keydown handler has already run by then, so navigation inside
    * that control still works — only the redundant global handlers are stopped.
    */
-  suppressPropagation: ((mappedKey: ActionName, event: KeyboardEvent) => boolean) | null = null;
+  suppressPropagation: ((mappedKey: ActionName, _event: KeyboardEvent) => boolean) | null = null;
   private activeKeyRepeat: ReturnType<typeof setTimeout> | ReturnType<typeof setInterval> | null =
     null;
   private listeners = new Map<RemoteEventName, Handler[]>();
-  private readonly boundKeyDown: (event: KeyboardEvent) => void;
-  private readonly boundKeyUp: (event: KeyboardEvent) => void;
+  private readonly boundKeyDown: (_event: KeyboardEvent) => void;
+  private readonly boundKeyUp: (_event: KeyboardEvent) => void;
 
   constructor() {
-    this.boundKeyDown = (e: KeyboardEvent) => this.onKeyDown(e);
-    this.boundKeyUp = (e: KeyboardEvent) => this.onKeyUp(e);
+    this.boundKeyDown = (e: KeyboardEvent) => { this.onKeyDown(e); };
+    this.boundKeyUp = (e: KeyboardEvent) => { this.onKeyUp(e); };
     this.init();
   }
 
@@ -148,7 +148,7 @@ export class RemoteManager {
   }
 
   /** Register an action handler (convenience wrapper). */
-  onAction(callback: (data: ActionEvent) => void): void {
+  onAction(callback: (_data: ActionEvent) => void): void {
     this.on('action', callback as Handler);
   }
 
@@ -157,7 +157,10 @@ export class RemoteManager {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
-    this.listeners.get(event)!.push(callback);
+    const callbacks = this.listeners.get(event);
+    if (callbacks) {
+      callbacks.push(callback);
+    }
     return () => this.off(event, callback);
   }
 

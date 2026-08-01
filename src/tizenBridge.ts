@@ -18,8 +18,8 @@ import type { ActionName } from './remote/KeyMapping';
 
 export interface BridgeRemote {
   /** Subscribe to an event; ideally returns an unsubscribe function. */
-  on(event: string, callback: (data: ActionEvent) => void): (() => void) | void;
-  off?(event: string, callback: (data: ActionEvent) => void): void;
+  on(_event: string, callback: (data: ActionEvent) => void): (() => void) | void;
+  off?: (_event: string, callback: (data: ActionEvent) => void) => void;
 }
 
 export interface BridgePlayer {
@@ -28,11 +28,11 @@ export interface BridgePlayer {
   pause: () => void;
   closePlayer: () => void;
   /** Relative seek in seconds (phlix-ui player command bus). */
-  seekBy: (delta: number) => void;
+  seekBy: (_delta: number) => void;
 }
 
 export interface BridgeRouter {
-  push: (to: string) => unknown;
+  push: (_to: string) => unknown;
   back: () => void;
 }
 
@@ -193,7 +193,7 @@ export function wireTizenBridge(
   quality: BridgeQualityMenu = createDomQualityMenu()
 ): () => void {
   if (!remote) {
-    return () => {};
+    return () => { return; };
   }
 
   const handler = (action: ActionEvent): void => {
@@ -273,7 +273,7 @@ export function installTizenBridge(app: VueApp): () => void {
     push: (to: string) => unknown;
     back: () => void;
     currentRoute: { value: BridgeRoute };
-    afterEach?: (guard: (to: BridgeRoute) => void) => () => void;
+    afterEach?: (_guard: (to: BridgeRoute) => void) => () => void;
   };
   const player = usePlayerStore(pinia) as unknown as BridgePlayer;
   const getRoute = (): BridgeRoute => router.currentRoute.value;

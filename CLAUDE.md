@@ -25,7 +25,7 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 
 ## Architecture
 
-**Entry**: `index.html` (repo root, the Vite root) loads `/src/main.ts`, which mounts into `#phlix-app`, `#phlix-spatial-host`, and `#phlix-chapter-overlay`.
+**Entry**: `index.html` (repo root, the Vite root) loads `/src/main.ts`, which mounts into `#phlix-app`, `#phlix-spatial-host`, `#phlix-chapter-overlay`, `#phlix-sleep-timer-overlay`, `#phlix-skip-intro-overlay`, `#phlix-pip-overlay`, and `#phlix-up-next-overlay`.
 
 `src/main.ts` `boot()` flow:
 1. `import './polyfills'` FIRST (installs a `structuredClone` fallback for older Tizen webviews — `@phlix/ui`'s SettingsForm needs it).
@@ -35,12 +35,14 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 5. `createPhlixApp({ app, apiBase, deviceHeaders, defaultTv: true, defaultTheme: 'nocturne', branding: { wordmark: 'Phlix' }, playerHlsConfig: TIZEN_HLS_CONFIG })` → `.mount('#phlix-app')`.
 6. `installTizenBridge(application)` wires the remote.
 7. Mount a SECOND tiny app `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')`, reusing the main app's pinia + router (read off `application.config.globalProperties.$pinia` / `$router`) so it observes the same prefs + route.
-8. Mount a THIRD tiny app `createApp(ChapterOverlay).use(pinia).use(router).mount('#phlix-chapter-overlay')`, reusing the same pinia + router so it observes the same route and renders chapter tick marks + labels on the player seekbar.
+8. Mount FIVE more tiny apps the same way, each reusing that same pinia + router so they observe the same route: `ChapterOverlay` → `#phlix-chapter-overlay` (3rd), `SleepTimerOverlay` → `#phlix-sleep-timer-overlay` (4th), `SkipIntroOverlay` → `#phlix-skip-intro-overlay` (5th), `PiPController` → `#phlix-pip-overlay` (6th), `UpNextOverlay` → `#phlix-up-next-overlay` (7th).
 
 **`src/` files** (all the code this repo owns):
-- **`main.ts`** — boot, `createPhlixApp` config, `TIZEN_HLS_CONFIG` (bounded buffers, `capLevelToPlayerSize`, `enableSoftwareAES`), 2nd-app SpatialNavHost mount, 3rd-app ChapterOverlay mount.
-- **`components/ChapterOverlay.vue`** — portal-rendered overlay (mounted as the 3rd app into `#phlix-chapter-overlay`); fetches chapters from `GET /api/v1/media/{id}/chapters` and renders gold tick marks + a chapter title label on the player seekbar.
-- **`pages/MusicPage.vue`** + **`components/MusicAlbumCard.vue`** / **`components/MusicArtistCard.vue`** / **`components/TrackListItem.vue`** — local music-browsing UI, backed by the `src/stores/useMusicStore.ts` Pinia store.
+- **`main.ts`** — boot, `createPhlixApp` config, `TIZEN_HLS_CONFIG` (bounded buffers, `capLevelToPlayerSize`, `enableSoftwareAES`), 2nd-app SpatialNavHost mount, 3rd–7th-app overlay mounts (`ChapterOverlay`, `SleepTimerOverlay`, `SkipIntroOverlay`, `PiPController`, `UpNextOverlay`).
+- **`components/ChapterOverlay.vue`** — portal-rendered overlay (mounted as the 3rd app into `#phlix-chapter-overlay`); fetches chapters from `GET /api/v1/media/{id}/chapters` and markers from `GET /api/v1/media/{id}/markers`, then renders gold chapter tick marks, colored intro/outro/credits/ad ticks, a chapter title label, and an "Ad" badge on the player seekbar. Position is tracked by 250 ms polling.
+- **`components/SleepTimerOverlay.vue`** / **`components/SkipIntroOverlay.vue`** / **`components/PiPController.vue`** / **`components/UpNextOverlay.vue`** — the 4th–7th mounted overlay apps: sleep-timer presets (5/10/15/30/45/60 min + a custom 1–180 min input) that pause playback on expiry, `GET /api/v1/media/{id}/markers`-driven Skip Intro/Skip Outro buttons, a Samsung Tizen picture-in-picture toggle gated on `document.pictureInPictureEnabled`, and the end-of-video "Up next" card (countdown ring + Play now/Cancel) fed by `GET /api/v1/media/{id}/playlist`.
+- **`components/AudioTrackList.vue`** / **`components/SubtitleTrackList.vue`** / **`components/ChapterList.vue`** / **`components/RecommendationCard.vue`** / **`components/RatingBadge.vue`** / **`components/RatingModal.vue`** / **`components/UserRatingPicker.vue`** — D-pad-optimised TV lists/cards consumed by `pages/ChaptersPage.vue`, `pages/AudioTracksPage.vue`, and `screens/RecommendationsScreen.vue`. Every locally-kept component carries a `@category TV-Specific Component` (plus `@duplicate`) docblock recording why it is not `@phlix/ui`'s version — keep that note current when editing one.
+- **`pages/MusicPage.vue`** + **`components/MusicAlbumCard.vue`** / **`components/MusicArtistCard.vue`** / **`components/TrackListItem.vue`** — local music-browsing UI, backed by the `src/stores/useMusicStore.ts` Pinia store. The music API wraps single resources in envelopes — `GET /api/v1/music/albums/{id}` returns `{ album }` and `GET /api/v1/music/tracks/{id}` returns `{ track }`, so the store unwraps before assigning.
 - **`stores/useSyncPlayStore.ts`** — SyncPlay real-time sync store (WebSocket-backed).
 - **`polyfills.ts`** — `structuredClone` guard. MUST be imported before any `@phlix/ui` code.
 - **`resolveConfig.ts`** — pure `resolveAppConfig({serverUrl, envUrl})` → `{app:'server', apiBase}`. Unit-tested; shape kept extensible for a future `app:'hub'` branch.
@@ -50,7 +52,7 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 - **`remote/RemoteManager.ts`** — KEPT + ported to TS. The single source of TV-remote events (analogue of Electron media events). Captures `keydown`/`keyup` on `document`, emits `'keydown'`/`'keyup'`/`'action'`, held-key repeat (FF/REW accel). `on()` returns an unsubscribe fn. Exposes a host-settable `suppressPropagation` hook (used by `tizenBridge.ts` for the quality-menu D-pad passthrough above) that `stopImmediatePropagation()`s a keydown so later `document` listeners (the player's Arrow shortcuts) don't also fire; RemoteManager itself stays quality-agnostic. Default singleton export.
 - **`remote/KeyMapping.ts`** — KEPT + ported + **retargeted**: KEY_MAP still lists arrows/ENTER (for logging), but they are removed from `isRepeatable`/`isImmediate`/`isHandled`, so RemoteManager neither `preventDefault`s nor emits actions for them — `useSpatialNav` owns the D-pad, native focus owns ENTER. Samsung codes: 10009 `BACK`, 415 `PLAY`, 413 `STOP`, 19 `PAUSE`, 417 `FAST_FORWARD`, 412 `REWIND`, color keys 403–406.
 
-**Rule**: media/library/auth/player screens live in `@phlix/ui` — to change one, edit `phlix-ui`. This repo's own UI is limited to boot config (`main.ts`), the remote bridge (`tizenBridge.ts` / `remote/*`), spatial-nav gating (`SpatialNavHost.vue`), the chapter/music overlays and pages under `src/pages/` + `src/components/` (backed by `src/stores/`), or the Tizen manifest (`app/config.xml`).
+**Rule**: media/library/auth/player screens live in `@phlix/ui` — to change one, edit `phlix-ui`. This repo's own UI is limited to boot config (`main.ts`), the remote bridge (`tizenBridge.ts` / `remote/*`), spatial-nav gating (`SpatialNavHost.vue`), the player overlays / music / rating / track components and pages under `src/components/` + `src/pages/` + `src/screens/` (backed by `src/stores/`), or the Tizen manifest (`app/config.xml`).
 
 @./DEVELOPER.md
 
@@ -75,7 +77,11 @@ Flat ESLint (`eslint.config.mjs`, `eslint .`, CI-enforced): `@eslint/js` recomme
 
 ## Tests
 
-Vitest + `jsdom` + `@vue/test-utils` (`vitest.config.ts`, `npm test`). Tests live in `tests/unit/*.test.ts` and are co-located by module name (the `src/` tree is flat). Setup `tests/test-setup.ts` provides an in-memory localStorage mock. Coverage (v8) excludes `app/**`, `tests/`, `dist/`, configs. Current suites: `resolveConfig`, `deviceId`, `tizenBridge` (pure `wireTizenBridge` exercised with fakes), `SpatialNavHost`, `main` (mocks `@phlix/ui`/`@phlix/contracts`/`vue` and asserts the boot wiring).
+Vitest + `jsdom` + `@vue/test-utils` (`vitest.config.ts`, `npm test`). Tests live in `tests/unit/*.test.ts` and are co-located by module name (the `src/` tree is flat). Setup `tests/test-setup.ts` provides an in-memory localStorage mock. Coverage (v8) excludes `app/**`, `tests/`, `dist/`, configs. Current suites: `resolveConfig`, `deviceId`, `tizenBridge` (pure `wireTizenBridge` exercised with fakes), `SpatialNavHost`, `RemoteManager`, `UpNextOverlay` (mounts the SFC with `@phlix/ui`'s `ApiClient`/`useApiBase`/`usePlayerStore` and `vue-router` stubbed via `vi.hoisted` + `vi.mock`), `main` (mocks `@phlix/ui`/`@phlix/contracts`/`vue` and asserts the boot wiring).
+
+```bash
+npx vitest run tests/unit/UpNextOverlay.test.ts   # the overlay SFC suite
+```
 
 ## Quirks
 
@@ -85,6 +91,7 @@ Vitest + `jsdom` + `@vue/test-utils` (`vitest.config.ts`, `npm test`). Tests liv
 - **Server-side device→profile mapping** replaces the old client-posted device profile (see Tizen runtime constraints). Don't reintroduce a client profile.
 - **`scripts/package.js` is ESM** (the repo is `"type": "module"`); run it via `npm run package`. It assembles `package/` from vite `dist/` + `app/config.xml`.
 - **Tizen app id**: `app/config.xml` uses `phlix.app.phlixtizen`. `config.xml` is authoritative — the README CLI examples use it too.
+- **Each overlay needs a host `<div>`** — adding an 8th mounted app means adding its container to `index.html` as well as the `createApp(...).mount(...)` call in `main.ts`.
 - `.github/workflows/test.yml` (runs `npm test`) and `.github/workflows/lint.yml` (`npm run lint` + `npm run build`) run on push — keep them green.
 
 ## Before Committing

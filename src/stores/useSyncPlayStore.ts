@@ -83,14 +83,14 @@ interface WsErrorPayload {
 class SyncPlayApiClient {
   constructor(
     private readonly apiBase: string,
-    private readonly token: string,
+    private readonly _token: string,
   ) {}
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.apiBase}${path}`;
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${this.token}`,
+      Authorization: `Bearer ${this._token}`,
       ...(options.headers as Record<string, string>),
     };
 
@@ -224,11 +224,13 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
         const payload = data.payload as unknown as WsMemberEventPayload;
         if (payload.user) {
           // Add user to members if not already present
-          const existingIndex = members.value.findIndex((m) => m.id === payload.user.id);
+          const userId = payload.user.id;
+          const existingIndex = members.value.findIndex((m) => m.id === userId);
           if (existingIndex === -1) {
             members.value.push(payload.user);
           } else {
-            members.value[existingIndex] = { ...payload.user, isOnline: true };
+            const existing = members.value[existingIndex];
+            members.value[existingIndex] = { ...existing, isOnline: true };
           }
         }
         break;
@@ -240,7 +242,8 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
           // Mark user as offline rather than removing
           const existingIndex = members.value.findIndex((m) => m.id === payload.user.id);
           if (existingIndex !== -1) {
-            members.value[existingIndex] = { ...members.value[existingIndex], isOnline: false };
+            const existing = members.value[existingIndex];
+            members.value[existingIndex] = { ...existing, isOnline: false };
           }
         }
         break;
@@ -259,7 +262,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
 
       case 'error': {
         const payload = data.payload as unknown as WsErrorPayload;
-        wsError.value = payload.message ?? 'WebSocket error';
+        wsError.value = payload.message || 'WebSocket error';
         break;
       }
     }

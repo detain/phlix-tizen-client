@@ -78,6 +78,7 @@ const TIZEN_HLS_CONFIG = {
 const SERVER_URL_KEY = 'phlix.serverUrl';
 
 export async function boot(): Promise<void> {
+  await Promise.resolve();
   const storage = globalThis.localStorage;
 
   const serverUrl = storage ? storage.getItem(SERVER_URL_KEY) : null;

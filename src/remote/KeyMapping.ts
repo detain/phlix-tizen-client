@@ -157,7 +157,10 @@ const KeyMapping = {
 
   /** Human-readable display name for an action. */
   getDisplayName(action: ActionName): string {
-    return DISPLAY_NAMES[action] || action;
+    if (action in DISPLAY_NAMES) {
+      return DISPLAY_NAMES[action];
+    }
+    return action;
   }
 };
 

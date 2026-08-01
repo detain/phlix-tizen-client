@@ -37,6 +37,6 @@ export interface ResolvedAppConfig {
  * re-seeds here on the next launch.
  */
 export function resolveAppConfig(input: ResolveConfigInput): ResolvedAppConfig {
-  const apiBase = input.serverUrl || input.envUrl || '';
+  const apiBase = input.serverUrl ?? input.envUrl ?? '';
   return { app: 'server', apiBase };
 }

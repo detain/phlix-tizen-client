@@ -4,7 +4,7 @@
 [![Lint](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml/badge.svg)](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml)
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
 ![Platform](https://img.shields.io/badge/platform-Samsung%20Tizen-1428A0?logo=samsung&logoColor=white)
-[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.74.0-f5a524)](https://github.com/detain/phlix-ui)
+[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.98.33-f5a524)](https://github.com/detain/phlix-ui)
 
 Samsung Smart TV client application for Phlix Media Server, built with Tizen SDK.
 
@@ -36,6 +36,7 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 - **Subtitle & Audio Tracks**: Multiple subtitle and audio track selection
 - **Search**: Search across your media library
 - **Favorites & Watch History**: Mark favorites and track watched items
+- **Player Overlays**: TV-specific chapter/marker ticks, Skip Intro & Skip Outro, sleep timer, picture-in-picture, and an end-of-video "Up next" card
 - **Theming**: Ships the `nocturne` theme by default
 
 > Provided by `@phlix/ui`. To add or change a feature/screen, edit `phlix-ui`.
@@ -43,7 +44,7 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 ## Tech Stack
 
 - **Vue 3** + **Pinia** + **vue-router** (peer dependencies)
-- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.74.0` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
+- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.98.33` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
 - **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.3.12` — `buildPhlixHeaders` (device headers)
 - **Vite** + `@vitejs/plugin-vue` (build target `chrome100`, `base: './'`)
 - **Vitest** + jsdom + `@vue/test-utils` (tests)
@@ -175,6 +176,7 @@ npm run test:watch
 
 ```bash
 npx vitest run tests/unit/tizenBridge.test.ts
+npx vitest run tests/unit/UpNextOverlay.test.ts
 npx vitest run -t "BACK"
 ```
 
@@ -275,14 +277,18 @@ briefly suppressed) so the D-pad can select a rung.
 
 ```
 phlix-tizen-client/
-├── index.html               # Vite entry (repo root); mounts #phlix-app + #phlix-spatial-host
+├── index.html               # Vite entry (repo root); mounts #phlix-app, #phlix-spatial-host + 5 overlay hosts
 ├── src/
-│   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host; TIZEN_HLS_CONFIG
+│   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host + 5 overlay apps; TIZEN_HLS_CONFIG
 │   ├── polyfills.ts         # structuredClone fallback (imported first)
 │   ├── resolveConfig.ts     # pure resolveAppConfig({serverUrl, envUrl})
 │   ├── deviceId.ts          # pure resolveDeviceId(storage) → persisted phlix.deviceId
 │   ├── SpatialNavHost.vue   # renderless useSpatialNav gate (off on player route)
 │   ├── tizenBridge.ts       # RemoteManager 'action' → usePlayerStore + router; Yellow/Back drive the QualityMenu
+│   ├── components/          # TV overlays (ChapterOverlay, SleepTimerOverlay, SkipIntroOverlay, PiPController, UpNextOverlay) + D-pad lists/cards
+│   ├── pages/               # ChaptersPage, AudioTracksPage, MusicPage, ParentalControlsPage
+│   ├── screens/             # RecommendationsScreen
+│   ├── stores/              # useMusicStore, useSyncPlayStore (Pinia)
 │   └── remote/
 │       ├── RemoteManager.ts # TV-remote event singleton (keydown/keyup/action)
 │       └── KeyMapping.ts     # Samsung key codes → actions (arrows/ENTER not handled)
@@ -297,6 +303,8 @@ phlix-tizen-client/
 │       ├── deviceId.test.ts
 │       ├── tizenBridge.test.ts
 │       ├── SpatialNavHost.test.ts
+│       ├── RemoteManager.test.ts
+│       ├── UpNextOverlay.test.ts
 │       └── main.test.ts
 ├── docs/
 │   └── signing.md           # certificate + .wgt signing guide
@@ -308,6 +316,7 @@ phlix-tizen-client/
 ├── eslint.config.mjs        # flat config
 ├── tsconfig.json
 ├── package.json
+├── LICENSE                  # MIT
 └── README.md
 ```
 
@@ -326,6 +335,11 @@ phlix-tizen-client/
 2. Quality/transcode decisions are made server-side from the `X-Phlix-Device-Type: samsung-tizen` header
 3. Check server logs for codec/transcode warnings
 
+### Overlay Missing (chapters, skip intro, sleep timer, PiP, up next)
+
+1. Each overlay is its own mounted app — confirm its host `<div>` exists in `index.html` and the matching `createApp(...).mount(...)` call is present in `src/main.ts`
+2. Marker/chapter/playlist overlays need their endpoints (`GET /api/v1/media/{id}/chapters`, `/markers`, `/playlist`) to return data for the current media id
+
 ### Remote Not Working
 
 1. D-pad navigation comes from `@phlix/ui`'s spatial navigation — verify the TV layout is active and you are not on the player route
@@ -334,9 +348,9 @@ phlix-tizen-client/
 
 ## License
 
-MIT License
+MIT License — see [`LICENSE`](LICENSE).
 
-Copyright (c) 2024 Phlix
+Copyright (c) 2026 Phlix contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
