@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // The polyfills module must be imported first before any @phlix/ui code
 // Since structuredClone exists in Node.js 22+ / jsdom, the fallback branch
@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 describe('polyfills', () => {
   describe('structuredClone fallback (when native is absent)', () => {
-    let originalStructuredClone: Function | undefined;
+    let originalStructuredClone: (<T>(_value: T) => T) | undefined;
 
     beforeEach(() => {
       // Save original
