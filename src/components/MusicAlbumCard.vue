@@ -19,7 +19,7 @@
  * @license   MIT
  */
 
-import type { MusicAlbum } from '@phlix/contracts';
+import type { MusicAlbum } from '../stores/useMusicStore';
 
 interface Props {
   /** The album to display. */
@@ -30,7 +30,7 @@ defineProps<Props>();
 
 const emit = defineEmits<{
   /** Fired when the user selects this album. */
-  (e: 'select', id: number): void;
+  (e: 'select', id: string): void;
 }>();
 </script>
 
@@ -77,7 +77,7 @@ const emit = defineEmits<{
         v-if="album.artist"
         class="music-album-card__artist"
       >
-        {{ album.artist.name }}
+        {{ album.artist }}
       </span>
     </div>
   </article>

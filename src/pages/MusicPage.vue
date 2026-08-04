@@ -29,7 +29,7 @@
 import { onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMusicStore } from '../stores/useMusicStore';
-import type { MusicTrack } from '@phlix/contracts';
+import type { MusicTrack } from '../stores/useMusicStore';
 import MusicArtistCard from '../components/MusicArtistCard.vue';
 import MusicAlbumCard from '../components/MusicAlbumCard.vue';
 import TrackListItem from '../components/TrackListItem.vue';
@@ -46,7 +46,8 @@ function getPageTitle(): string {
     case 'artists':
       return 'Artists';
     case 'albums':
-      return musicStore.artists.find((a) => a.id === musicStore.selectedArtistId)?.name ?? 'Albums';
+      // The artist's identity IS its display name (the server has no artist PK).
+      return musicStore.selectedArtistId ?? 'Albums';
     case 'tracks':
       return musicStore.currentAlbum?.title ?? 'Tracks';
     default:
@@ -54,15 +55,15 @@ function getPageTitle(): string {
   }
 }
 
-function onArtistSelect(id: number): void {
+function onArtistSelect(id: string): void {
   musicStore.selectArtist(id);
 }
 
-function onAlbumSelect(id: number): void {
+function onAlbumSelect(id: string): void {
   musicStore.selectAlbum(id);
 }
 
-function onTrackPlay(id: number): void {
+function onTrackPlay(id: string): void {
   // Fetch track data for playback — thin client delegates actual playback to @phlix/ui
   void musicStore.fetchTrack(id).then(() => {
     if (musicStore.currentTrack) {
@@ -82,12 +83,34 @@ function goBack(): void {
   }
 }
 
+/**
+ * Loads the artist list once.
+ *
+ * Albums are NOT pre-loaded: `selectArtist()` fetches them filtered to the
+ * chosen artist SERVER-SIDE (`?artist=`), which is both correct (a client-side
+ * filter over page 1 leaves most artists with an empty album list) and ~140×
+ * cheaper than the unfiltered album query.
+ */
 function loadInitialData(): void {
-  if (musicStore.artists.length === 0) {
+  if (musicStore.currentView === 'artists' && musicStore.artists.length === 0) {
     void musicStore.fetchArtists();
   }
-  if (musicStore.albums.length === 0) {
-    void musicStore.fetchAlbums();
+}
+
+/**
+ * Pulls the next page as the D-pad ARRIVES at the trailing "Load more" tile.
+ *
+ * On a TV there is no pointer and no scrollbar, so focus is the only signal
+ * that the user has reached the end of the grid. Firing on `focusin` (rather
+ * than on click alone) means simply continuing to press Down/Right past the
+ * last card keeps the library flowing; the button still activates on
+ * Enter/click for an explicit request, and the store no-ops re-entrant calls.
+ */
+function onLoadMoreFocus(): void {
+  if (musicStore.currentView === 'artists') {
+    void musicStore.loadMoreArtists();
+  } else if (musicStore.currentView === 'albums') {
+    void musicStore.loadMoreAlbums();
   }
 }
 
@@ -153,7 +176,7 @@ watch(() => musicStore.currentView, loadInitialData);
       v-else-if="musicStore.currentView === 'artists'"
       class="music-page__grid"
       role="list"
-      :aria-label="`${musicStore.artists.length} artists`"
+      :aria-label="`${musicStore.artistsTotal} artists`"
     >
       <MusicArtistCard
         v-for="artist in musicStore.artists"
@@ -162,6 +185,21 @@ watch(() => musicStore.currentView, loadInitialData);
         role="listitem"
         @select="onArtistSelect"
       />
+      <button
+        v-if="musicStore.hasMoreArtists"
+        type="button"
+        class="music-page__load-more"
+        role="listitem"
+        :disabled="musicStore.loadingMore"
+        :aria-label="`Load more artists — showing ${musicStore.artists.length} of ${musicStore.artistsTotal}`"
+        @focusin="onLoadMoreFocus"
+        @click="onLoadMoreFocus"
+      >
+        <span class="music-page__load-more-count">
+          {{ musicStore.artists.length }} / {{ musicStore.artistsTotal }}
+        </span>
+        <span>{{ musicStore.loadingMore ? 'Loading…' : 'Load more' }}</span>
+      </button>
     </div>
 
     <!-- Albums view -->
@@ -169,7 +207,7 @@ watch(() => musicStore.currentView, loadInitialData);
       v-else-if="musicStore.currentView === 'albums'"
       class="music-page__grid"
       role="list"
-      :aria-label="`${musicStore.artistAlbums.length} albums`"
+      :aria-label="`${musicStore.albumsTotal} albums`"
     >
       <MusicAlbumCard
         v-for="album in musicStore.artistAlbums"
@@ -178,6 +216,21 @@ watch(() => musicStore.currentView, loadInitialData);
         role="listitem"
         @select="onAlbumSelect"
       />
+      <button
+        v-if="musicStore.hasMoreAlbums"
+        type="button"
+        class="music-page__load-more"
+        role="listitem"
+        :disabled="musicStore.loadingMore"
+        :aria-label="`Load more albums — showing ${musicStore.albums.length} of ${musicStore.albumsTotal}`"
+        @focusin="onLoadMoreFocus"
+        @click="onLoadMoreFocus"
+      >
+        <span class="music-page__load-more-count">
+          {{ musicStore.albums.length }} / {{ musicStore.albumsTotal }}
+        </span>
+        <span>{{ musicStore.loadingMore ? 'Loading…' : 'Load more' }}</span>
+      </button>
     </div>
 
     <!-- Tracks view -->
@@ -224,7 +277,7 @@ watch(() => musicStore.currentView, loadInitialData);
             v-if="musicStore.currentAlbum.artist"
             class="music-page__album-artist"
           >
-            {{ musicStore.currentAlbum.artist.name }}
+            {{ musicStore.currentAlbum.artist }}
           </p>
           <p
             v-if="musicStore.currentAlbum.year"
@@ -366,6 +419,40 @@ watch(() => musicStore.currentView, loadInitialData);
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: var(--space-4, 1rem);
   }
+}
+
+/* ── Load more (D-pad reachable: a real focusable button, no hover affordance) ── */
+.music-page__load-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2, 0.5rem);
+  min-height: 180px;
+  border: 2px dashed var(--border-strong, #52525b);
+  border-radius: var(--radius-lg, 0.5rem);
+  background: var(--surface-2, #1f1f23);
+  color: var(--text, #e4e4e7);
+  font-size: var(--text-lg, 1.125rem);
+  cursor: pointer;
+}
+
+.music-page__load-more-count {
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-muted, #a1a1aa);
+}
+
+.music-page__load-more:focus-visible,
+.music-page__load-more:focus {
+  outline: none;
+  border-style: solid;
+  border-color: var(--accent, #f59e0b);
+  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+}
+
+.music-page__load-more[disabled] {
+  cursor: default;
+  opacity: 0.7;
 }
 
 /* ── Album / Tracks view ── */

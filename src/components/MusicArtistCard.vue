@@ -19,7 +19,7 @@
  * @license   MIT
  */
 
-import type { MusicArtist } from '@phlix/contracts';
+import type { MusicArtist } from '../stores/useMusicStore';
 
 interface Props {
   /** The artist to display. */
@@ -30,7 +30,7 @@ defineProps<Props>();
 
 const emit = defineEmits<{
   /** Fired when the user selects this artist. */
-  (e: 'select', id: number): void;
+  (e: 'select', id: string): void;
 }>();
 </script>
 
