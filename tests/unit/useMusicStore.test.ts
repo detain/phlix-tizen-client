@@ -370,6 +370,63 @@ describe('useMusicStore — navigation and errors', () => {
     expect(store.selectedArtistId).toBeNull();
   });
 
+  // ── goBack(): the tracks branch ──────────────────────────────────────────
+  // On a D-pad UI goBack IS the Back button, and tracks → albums is the most
+  // travelled path in this store. The three cases below pin the tracks arm, the
+  // `else if` chain, and the `selectedArtistId !== null` guard respectively —
+  // each is independently deletable without the others noticing.
+
+  it('goBack from tracks returns to albums and clears BOTH album selections', () => {
+    const store = useMusicStore();
+    store.currentView = 'tracks';
+    store.selectedArtistId = 'Artist 7';
+    store.selectedAlbumId = 'Album 1';
+    // @ts-expect-error — assigning a minimal album shape directly for the test
+    store.currentAlbum = { id: 'Album 1', title: 'Album 1', tracks: [] };
+
+    store.goBack();
+
+    expect(store.currentView).toBe('albums');
+    expect(store.currentAlbum).toBeNull();
+    expect(store.selectedAlbumId).toBeNull();
+    // The artist must SURVIVE — we are returning to that artist's album list.
+    expect(store.selectedArtistId).toBe('Artist 7');
+  });
+
+  it('goBack from the artists view changes nothing (guards the else-if chain)', () => {
+    const store = useMusicStore();
+    store.currentView = 'artists';
+    // Deliberately NON-null: with both fields already null a bare `else` would
+    // be unobservable here (it would "reset" them to the values they already
+    // hold), so this test could not detect the else-if chain losing its
+    // condition. Non-null state is what makes the no-op assertion load-bearing.
+    store.selectedArtistId = 'Artist 7';
+    store.selectedAlbumId = 'Album 1';
+
+    store.goBack();
+
+    expect(store.currentView).toBe('artists');
+    expect(store.selectedArtistId).toBe('Artist 7');
+    expect(store.selectedAlbumId).toBe('Album 1');
+  });
+
+  it('goBack from tracks with NO selected artist changes nothing (pins the guard)', () => {
+    const store = useMusicStore();
+    store.currentView = 'tracks';
+    store.selectedArtistId = null;
+    store.selectedAlbumId = 'Album 1';
+    // @ts-expect-error — assigning a minimal album shape directly for the test
+    store.currentAlbum = { id: 'Album 1', title: 'Album 1', tracks: [] };
+
+    store.goBack();
+
+    // `currentView === 'tracks'` fails the guard AND fails the `albums`
+    // else-if, so every field must be untouched.
+    expect(store.currentView).toBe('tracks');
+    expect(store.selectedAlbumId).toBe('Album 1');
+    expect(store.currentAlbum).not.toBeNull();
+  });
+
   it('setView switches the view', () => {
     const store = useMusicStore();
     store.setView('albums');
