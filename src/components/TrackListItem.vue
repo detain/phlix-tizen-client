@@ -7,7 +7,7 @@
  * @license   MIT
  */
 
-import type { MusicTrack } from '@phlix/contracts';
+import type { MusicTrack } from '../stores/useMusicStore';
 
 interface Props {
   /** The track to display. */
@@ -22,7 +22,7 @@ withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   /** Fired when the user clicks the play button. */
-  (e: 'play', id: number): void;
+  (e: 'play', id: string): void;
 }>();
 
 function formatDuration(seconds: number): string {
@@ -56,7 +56,6 @@ function formatDuration(seconds: number): string {
 
     <div class="track-list-item__info">
       <span class="track-list-item__title">{{ track.title }}</span>
-      <span v-if="track.artist" class="track-list-item__artist">{{ track.artist.name }}</span>
     </div>
 
     <span class="track-list-item__duration">{{ formatDuration(track.durationSecs) }}</span>
