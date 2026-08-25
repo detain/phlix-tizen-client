@@ -18,8 +18,9 @@
  *     the session, and members ride inside the group state.
  *   - Playback transport is the WebSocket on `:8097` (`syncplay_*` frames).
  *   - All field names are snake_case; positions/durations are MILLISECONDS
- *     (SPEC.md:91). The store keeps its internal session positions in seconds
- *     and converts seconds → ms at the send boundaries (S293 pattern).
+ *     (SPEC.md:91). The store applies wire positions verbatim on receive and
+ *     on state adoption (S293: receive side untouched); only the `sendCommand`
+ *     position input is SECONDS, converted to ms at the send boundary.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
@@ -38,7 +39,14 @@ import { SyncPlayClient, serializeMessage } from '@phlix/syncplay';
 
 // ---- Types -----------------------------------------------------------------
 
-/** Input for creating a new SyncPlay group. */
+/**
+ * Input for creating a new SyncPlay group.
+ *
+ * Forwarded verbatim to POST /api/v1/syncplay/groups; the server reads only
+ * `name` (plus `password`/`memberId`/`memberName` when supplied). `description`
+ * and `isPublic` have NO server counterpart (S285) — kept because they are part
+ * of the form model, but discarded on arrival.
+ */
 interface CreateRoomInput {
   name: string;
   description?: string;
@@ -430,8 +438,14 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     try {
       const client = new SyncPlayClient({
         send: (message) => {
-          if (wsConnection.value && wsConnection.value.readyState === WebSocket.OPEN) {
+          if (!wsConnection.value || wsConnection.value.readyState !== WebSocket.OPEN) return;
+          try {
             wsConnection.value.send(serializeMessage(message));
+          } catch (e) {
+            // Fail loud: a dying socket must not throw into SyncPlayClient
+            // callers (joinGroup during onopen, sendCommand dispatch).
+            wsError.value = 'Failed to send WebSocket message';
+            console.error('[SyncPlay] Failed to send WebSocket message:', e);
           }
         },
         now: () => Date.now(),
@@ -453,6 +467,10 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
         wsConnected.value = true;
         wsReconnecting.value = false;
         wsError.value = null;
+        // A successful (re)connect clears the backoff budget (S283 lesson from
+        // @phlix/ui) — a server that recovered on rung three must not carry its
+        // used rungs into the next outage.
+        reconnectAttempts = 0;
         // (Re)join the group over the socket once connected.
         client.joinGroup(roomId);
       };
