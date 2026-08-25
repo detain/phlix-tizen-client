@@ -5,6 +5,21 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — SyncPlay migration to @phlix/contracts v0.4.3 + @phlix/ui v0.99.0
+
+- **`@phlix/ui` bumped to `v0.99.0`, `@phlix/contracts` to `v0.4.3`** (from
+  `v0.98.33` / `v0.3.12`) as part of the tag cascade.
+- **`useSyncPlayStore` migrated to the v0.4.3/v0.99.0 SyncPlay API**:
+  `SyncPlayRoom` → `SyncPlayGroup` and camelCase → snake_case field renames
+  (`currentSession` → `current_media_id`, `issuedBy` → `issued_by`);
+  the REST client now uses the five `/api/v1/syncplay/groups` routes
+  (list/create/get/join/leave — there is no `/rooms`, `/members` or command
+  route); `joinRoom` returns `{room, session}`; playback commands are sent as
+  `@phlix/syncplay` WebSocket frames (the REST `sendCommand` was removed in
+  v0.99.0); positions are converted seconds → milliseconds at the send
+  boundary per phlix-syncplay SPEC.md:91, and listing rows keep their
+  `current_media` value instead of dropping it to `null`.
+
 ### Added — in-player quality selection via the remote (G1)
 
 - **`@phlix/ui` bumped to `v0.74.0`, `@phlix/contracts` to `v0.2.0`** (from
