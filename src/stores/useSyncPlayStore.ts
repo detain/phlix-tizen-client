@@ -75,6 +75,8 @@ interface RawSyncPlayGroup {
   host_id?: string | null;
   has_password?: boolean;
   current_media_id?: string | null;
+  /** Listing rows spell it `current_media` (contracts `SyncPlayGroupListItem`). */
+  current_media?: string | null;
   current_media_duration?: number | null;
   playback_position?: number;
   /** `playing` | `paused` | `buffering` | `stopped` (GroupState::STATE_*). */
@@ -210,11 +212,13 @@ function normalizeGroup(raw: RawSyncPlayGroup | undefined): SyncPlayGroup {
     name: g.group_name ?? g.name ?? '',
     member_count: num(g.member_count, normalizeMembers(g).length),
     has_password: g.has_password === true,
-    current_media: g.current_media_id ?? null,
+    // Listing rows spell it `current_media`, full state `current_media_id`
+    // (contracts `SyncPlayGroupListItem` vs `SyncPlayGroup`) — accept either.
+    current_media: g.current_media ?? g.current_media_id ?? null,
     is_playing: g.is_playing === true || g.playback_state === 'playing',
     members: normalizeGroupMembers(g),
     host_id: g.host_id ?? '',
-    current_media_id: g.current_media_id ?? null,
+    current_media_id: g.current_media_id ?? g.current_media ?? null,
     current_media_duration: g.current_media_duration ?? null,
     playback_position: num(g.playback_position),
     playback_state: g.playback_state ?? 'stopped',
