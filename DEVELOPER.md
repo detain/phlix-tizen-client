@@ -11,7 +11,7 @@ The Tizen client is a **thin Vue 3 consumer of `@phlix/ui`**. It does not contai
 
 It mirrors the Windows/Electron client's thin-consumer shape (`electronBridge` ↔ `tizenBridge`, `resolveConfig` ↔ `resolveConfig`). To change a screen, a feature, theming, or the player, edit **`phlix-ui`** — not this repo.
 
-Pinned dependencies: `@phlix/ui` `github:detain/phlix-ui#v0.98.33`, `@phlix/contracts` `#v0.3.12`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
+Pinned dependencies: `@phlix/ui` `github:detain/phlix-ui#v0.99.0`, `@phlix/contracts` `#v0.4.3`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
 
 ## Architecture Overview
 

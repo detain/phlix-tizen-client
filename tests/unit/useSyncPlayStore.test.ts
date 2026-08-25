@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
+import { SyncPlayClient } from '@phlix/syncplay';
 import { useSyncPlayStore } from '@/stores/useSyncPlayStore';
 
 // Mock fetch globally
@@ -237,11 +238,11 @@ describe('useSyncPlayStore', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        text: async () => JSON.stringify({ room: { id: 'room-1', name: 'Test' } })
+        text: async () => JSON.stringify({ success: true, group: { group_id: 'room-1', group_name: 'Test' } })
       });
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        text: async () => JSON.stringify({ session: { id: 'session-1', activeUsers: [] } })
+        text: async () => JSON.stringify({ success: true, group: { group_id: 'room-1', group_name: 'Test' } })
       });
 
       await store.createAndJoinRoom('https://api.example.com', 'token', {
@@ -268,7 +269,7 @@ describe('useSyncPlayStore', () => {
 
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        text: async () => ''
+        text: async () => JSON.stringify({ success: true, message: 'Left the group' })
       });
 
       await store.leaveRoom('https://api.example.com', 'token');
@@ -287,23 +288,66 @@ describe('useSyncPlayStore', () => {
       ).resolves.toBeUndefined();
     });
 
-    it('includes issuedBy and issuedAt in command', async () => {
+    it('does nothing when the WebSocket client is not connected', async () => {
       const store = useSyncPlayStore();
       // @ts-expect-error - setting directly for test
       store.currentSession = { id: 'session-1', createdBy: 'user-123' };
-
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        text: async () => ''
-      });
+      const sendPlaySpy = vi.spyOn(SyncPlayClient.prototype, 'sendPlay');
 
       await store.sendCommand('https://api.example.com', 'token', 'play', { position: 100 });
 
-      expect(mockFetch).toHaveBeenCalled();
-      const fetchCall = mockFetch.mock.calls[0];
-      const body = JSON.parse(fetchCall[1].body);
-      expect(body.issuedBy).toBe('user-123');
-      expect(body.issuedAt).toBeDefined();
+      expect(sendPlaySpy).not.toHaveBeenCalled();
+    });
+
+    it('dispatches play through the WebSocket client, converting seconds to ms at the send boundary', async () => {
+      const store = useSyncPlayStore();
+      store.connectWs('https://api.example.com', 'room-1', 'token');
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', createdBy: 'user-123' };
+      const sendPlaySpy = vi.spyOn(SyncPlayClient.prototype, 'sendPlay');
+
+      await store.sendCommand('https://api.example.com', 'token', 'play', { position: 337 });
+
+      expect(sendPlaySpy).toHaveBeenCalledTimes(1);
+      expect(sendPlaySpy).toHaveBeenCalledWith(337_000);
+      // The REST command route does not exist in v0.99.0 — playback transport is the WebSocket only.
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('dispatches pause with the position converted to ms', async () => {
+      const store = useSyncPlayStore();
+      store.connectWs('https://api.example.com', 'room-1', 'token');
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', createdBy: 'user-123' };
+      const sendPauseSpy = vi.spyOn(SyncPlayClient.prototype, 'sendPause');
+
+      await store.sendCommand('https://api.example.com', 'token', 'pause', { position: 337 });
+
+      expect(sendPauseSpy).toHaveBeenCalledWith(337_000);
+    });
+
+    it('dispatches seek as from-position -> to-position in ms', async () => {
+      const store = useSyncPlayStore();
+      store.connectWs('https://api.example.com', 'room-1', 'token');
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', createdBy: 'user-123' };
+      const sendSeekSpy = vi.spyOn(SyncPlayClient.prototype, 'sendSeek');
+
+      await store.sendCommand('https://api.example.com', 'token', 'seek', { position: 337 });
+
+      expect(sendSeekSpy).toHaveBeenCalledWith(0, 337_000);
+    });
+
+    it('dispatches sync through reportPosition with the position in ms', async () => {
+      const store = useSyncPlayStore();
+      store.connectWs('https://api.example.com', 'room-1', 'token');
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', createdBy: 'user-123' };
+      const reportPositionSpy = vi.spyOn(SyncPlayClient.prototype, 'reportPosition');
+
+      await store.sendCommand('https://api.example.com', 'token', 'sync', { position: 337, rate: 1.5 });
+
+      expect(reportPositionSpy).toHaveBeenCalledWith(337_000, true);
     });
   });
 
@@ -327,12 +371,23 @@ describe('useSyncPlayStore', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         text: async () => JSON.stringify({
-          rooms: [{ id: 'room-1', name: 'Room 1' }, { id: 'room-2', name: 'Room 2' }]
+          groups: [
+            { id: 'room-1', name: 'Room 1', member_count: 2, has_password: false, current_media: 'media-1', is_playing: true },
+            { id: 'room-2', name: 'Room 2', member_count: 0, has_password: true, current_media: null, is_playing: false }
+          ]
         })
       });
 
       const rooms = await store.fetchPublicRooms('https://api.example.com', 'token');
       expect(rooms).toHaveLength(2);
+      expect(rooms[0]).toMatchObject({
+        id: 'room-1',
+        name: 'Room 1',
+        member_count: 2,
+        has_password: false,
+        current_media: 'media-1',
+        is_playing: true,
+      });
     });
 
     it('handles missing rooms array in response', async () => {
