@@ -7,15 +7,19 @@
 
 import './polyfills';
 import { createApp } from 'vue';
-import type { MenuItem } from '@phlix/ui';
+import type { Pinia } from 'pinia';
+import type { MenuItem, MediaItem } from '@phlix/ui';
 import type { RouteRecordRaw } from 'vue-router';
-import { createPhlixApp, buildAdminRoutes, LibraryScanPage } from '@phlix/ui';
+import { createPhlixApp, buildAdminRoutes, LibraryScanPage, ApiClient, LocalStorageTokenStore, usePlayerStore } from '@phlix/ui';
 import { buildPhlixHeaders } from '@phlix/contracts';
 import '@phlix/ui/style.css';
 import '@phlix/ui/fonts.css';
 import { resolveAppConfig } from './resolveConfig';
 import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
+import { resolveHubRelayConfig, openHubRelayConnection } from './api/hubRelay';
+import { useSyncPlayStore } from './stores/useSyncPlayStore';
+import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
 import SpatialNavHost from './SpatialNavHost.vue';
 import ChapterOverlay from './components/ChapterOverlay.vue';
 import SleepTimerOverlay from './components/SleepTimerOverlay.vue';
@@ -76,6 +80,68 @@ const TIZEN_HLS_CONFIG = {
 };
 
 const SERVER_URL_KEY = 'phlix.serverUrl';
+const HUB_URL_KEY = 'phlix.hubUrl';
+const HUB_SERVER_ID_KEY = 'phlix.hubServerId';
+const HUB_ACCESS_TOKEN_KEY = 'phlix.hubAccessToken';
+
+/**
+ * S298 — wire the hub-relay `pending_command` consumer at boot.
+ *
+ * "Alexa, play X" lands on the hub's SyncPlay relay (`ws://<hub>:8804`), which
+ * matches an authenticated (hub user, server) socket — NOT a SyncPlay room.
+ * The consumer socket therefore opens WHENEVER the app is open with a hub
+ * context, independently of any watch-together session (the old store socket
+ * only opened inside an explicit room join). The hub context — hub URL, the
+ * hub's server UUID, and the hub access JWT — is resolved from the persisted /
+ * build-time slots the app already uses for its server URL; without one
+ * nothing opens (the honest "no open app" state, mirroring the roku client's
+ * direct-mode behavior).
+ *
+ * The store is the consumer surface: `applyPendingPlayMedia` adopts each
+ * delivered frame into `pendingPlayMedia` (+ the `currentMediaId` carry) and
+ * `wirePendingPlayMediaDispatcher` is the load-a-new-title path that resolves
+ * the bare media id through the app's real ApiClient and drives the shared
+ * @phlix/ui player.
+ */
+function wireHubRelayConsumer(
+  pinia: Pinia,
+  apiBase: string,
+  storage: Storage | null,
+  deviceHeaders: Record<string, string>,
+): void {
+  const hubRelay = resolveHubRelayConfig({
+    serverUrl: apiBase,
+    hubUrl: storage ? storage.getItem(HUB_URL_KEY) : null,
+    serverId: storage ? storage.getItem(HUB_SERVER_ID_KEY) : null,
+    envHubUrl: import.meta.env.VITE_PHLIX_HUB_URL ?? null,
+    envHubServerId: import.meta.env.VITE_PHLIX_HUB_SERVER_ID ?? null,
+    accessTokenProvider: () => (storage ? storage.getItem(HUB_ACCESS_TOKEN_KEY) : null),
+  });
+  if (!hubRelay) return;
+
+  const syncPlay = useSyncPlayStore(pinia);
+  openHubRelayConnection({
+    ...hubRelay,
+    onPendingCommand: (command) => syncPlay.applyPendingPlayMedia(command),
+  });
+
+  const client = new ApiClient({
+    baseUrl: apiBase,
+    tokenStore: new LocalStorageTokenStore(),
+    headers: deviceHeaders,
+  });
+  wirePendingPlayMediaDispatcher(syncPlay, {
+    player: usePlayerStore(pinia),
+    resolveMedia: async ({ mediaId }) => {
+      try {
+        const response = await client.get<{ item: MediaItem }>(`/api/v1/media/${encodeURIComponent(mediaId)}`);
+        return response.item ?? null;
+      } catch {
+        return null; // unresolved — the command stays in the store slot
+      }
+    },
+  });
+}
 
 export async function boot(): Promise<void> {
   await Promise.resolve();
@@ -121,11 +187,17 @@ export async function boot(): Promise<void> {
 
   installTizenBridge(application);
 
+  // The main app's pinia/router, shared with the overlay apps below.
+  const pinia = application.config.globalProperties.$pinia;
+  const router = application.config.globalProperties.$router;
+
+  // S298 — the hub-relay pending_command consumer, open whenever the app is
+  // open (never room-join-only). No-op when no hub context is configured.
+  wireHubRelayConsumer(pinia, apiBase, storage, deviceHeaders);
+
   // Mount the spatial-nav host as a SECOND app sharing the main app's pinia +
   // router, so it observes the same preferences + route state. createPhlixApp
   // exposes the active pinia/router on globalProperties.
-  const pinia = application.config.globalProperties.$pinia;
-  const router = application.config.globalProperties.$router;
   createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host');
 
   // Mount the chapter overlay as a THIRD app sharing the main app's pinia +
