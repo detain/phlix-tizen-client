@@ -173,6 +173,76 @@ describe('useSyncPlayStore', () => {
     });
   });
 
+  describe('hub-relay pending_command consumer (S298)', () => {
+    const pendingFrame = {
+      type: 'pending_command' as const,
+      command: 'play_media' as const,
+      serverId: 'srv-abc123',
+      mediaId: 'media-9',
+      title: 'Inception',
+      issuedAt: 1_700_000_000,
+      source: 'alexa',
+    };
+
+    it('starts with a null pendingPlayMedia slot', () => {
+      const store = useSyncPlayStore();
+      expect(store.pendingPlayMedia).toBeNull();
+    });
+
+    it('applyPendingPlayMedia adopts the frame into the pending slot', () => {
+      const store = useSyncPlayStore();
+      store.applyPendingPlayMedia(pendingFrame);
+      expect(store.pendingPlayMedia).toEqual(pendingFrame);
+    });
+
+    it('applyPendingPlayMedia carries currentMediaId into the live session (the paired caller)', () => {
+      const store = useSyncPlayStore();
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing', currentMediaId: 'old-media' };
+      store.applyPendingPlayMedia(pendingFrame);
+      expect(store.currentSession?.currentMediaId).toBe('media-9');
+      // The rest of the session survives the carry.
+      expect(store.currentSession?.id).toBe('session-1');
+      expect(store.currentSession?.state).toBe('playing');
+    });
+
+    it('applyPendingPlayMedia with no session still holds the pending slot', () => {
+      const store = useSyncPlayStore();
+      store.applyPendingPlayMedia(pendingFrame);
+      expect(store.pendingPlayMedia).toEqual(pendingFrame);
+      expect(store.currentSession).toBeNull();
+    });
+
+    it('consumePendingPlayMedia clears the pending slot', () => {
+      const store = useSyncPlayStore();
+      store.applyPendingPlayMedia(pendingFrame);
+      store.consumePendingPlayMedia();
+      expect(store.pendingPlayMedia).toBeNull();
+    });
+
+    it('groupToSession maps the wire current_media_id into the session', async () => {
+      const store = useSyncPlayStore();
+      // refreshState needs a live session to know which group to refresh.
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing', currentMediaId: null };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: async () =>
+          JSON.stringify({
+            group: {
+              group_id: 'session-1',
+              group_name: 'Room',
+              playback_state: 'playing',
+              current_media_id: 'media-7',
+              members: {},
+            },
+          }),
+      });
+      await store.refreshState('https://api.example.com', 'token');
+      expect(store.currentSession?.currentMediaId).toBe('media-7');
+    });
+  });
+
   describe('handleWsMessage (internal function via onRemoteCommand)', () => {
     it('onRemoteCommand handles play command', () => {
       const store = useSyncPlayStore();

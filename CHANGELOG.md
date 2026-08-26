@@ -5,6 +5,35 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — hub-relay `pending_command` consumer (S298, tizen half)
+
+- **New `src/api/hubRelay.ts`** — the Tizen consumer for the hub's SyncPlay
+  relay (`ws(s)://<hub>:8804/syncplay/{server_id}`), the ONLY surface that can
+  receive "Alexa, play X" (S93's `pending_command` / `play_media` frame).
+  The token travels in the `Sec-WebSocket-Protocol: bearer, <token>`
+  subprotocol (the only carrier a Tizen webview WebSocket can present; S237
+  refuses query-string tokens by design) and the relay echoes it back (S355).
+  Relay tokens are minted from the hub's S2a endpoint
+  (`POST /api/v1/me/servers/{server_id}/relay-token`) by a cached,
+  single-flighted provider that re-mints on expiry and re-asks on a bounded
+  5-rung reconnect ladder while a mint is in flight.
+- **Open-whenever lifecycle** — the consumer socket opens at boot whenever a
+  hub context resolves (hub URL, hub server UUID, hub access token — persisted
+  `phlix.hubUrl` / `phlix.hubServerId` / `phlix.hubAccessToken` slots or the
+  `VITE_PHLIX_HUB_URL` / `VITE_PHLIX_HUB_SERVER_ID` build env), independent of
+  any SyncPlay room join. Without a hub session nothing opens — the honest
+  "no open app" state, mirroring the roku client's direct mode.
+- **`useSyncPlayStore` S298 surface** — `pendingPlayMedia` slot +
+  `applyPendingPlayMedia` / `consumePendingPlayMedia`; the wire's
+  `current_media_id` is carried into the local session (`currentMediaId`, the
+  paired caller writes it on every adopted command).
+- **New `src/syncplayDispatch.ts`** — the load-a-new-title dispatch point:
+  watches the store's pending slot, resolves the bare media id through the
+  app's `ApiClient` (`GET /api/v1/media/{id}`), loads it via the shared
+  `@phlix/ui` player (`setCurrent` + `play`), consumes the slot, and drops
+  stale resolutions when a newer command replaced the one in flight.
+  Unresolved commands stay in the store slot (the refusal path keeps working).
+
 ### Changed — SyncPlay migration to @phlix/contracts v0.4.3 + @phlix/ui v0.99.0
 
 - **`@phlix/ui` bumped to `v0.99.0`, `@phlix/contracts` to `v0.4.3`** (from

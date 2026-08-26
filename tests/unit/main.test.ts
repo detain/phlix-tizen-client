@@ -24,7 +24,9 @@ vi.mock('@phlix/ui', () => ({
   LibraryScanPage: { template: '<div />' },
   usePlayerStore: vi.fn(() => ({})),
   useSpatialNav: vi.fn(),
-  usePreferencesStore: vi.fn(() => ({ tv: true }))
+  usePreferencesStore: vi.fn(() => ({ tv: true })),
+  ApiClient: vi.fn(() => ({ get: vi.fn() })),
+  LocalStorageTokenStore: vi.fn(() => ({}))
 }));
 
 const FAKE_HEADERS = { 'X-Phlix-Device-ID': 'dev', 'X-Phlix-Device-Type': 'samsung-tizen' };
@@ -36,6 +38,29 @@ vi.mock('@phlix/contracts', () => ({
 const installTizenBridge = vi.fn(() => () => {});
 vi.mock('@/tizenBridge', () => ({
   installTizenBridge: (...args: unknown[]) => installTizenBridge(...args)
+}));
+
+// S298 — the hub-relay consumer boot wiring: resolve → open → dispatch.
+const resolveHubRelayConfigMock = vi.fn();
+const openHubRelayConnectionMock = vi.fn();
+vi.mock('@/api/hubRelay', () => ({
+  resolveHubRelayConfig: (...args: unknown[]) => resolveHubRelayConfigMock(...args),
+  openHubRelayConnection: (...args: unknown[]) => openHubRelayConnectionMock(...args)
+}));
+
+const wirePendingPlayMediaDispatcherMock = vi.fn(() => () => {});
+vi.mock('@/syncplayDispatch', () => ({
+  wirePendingPlayMediaDispatcher: (...args: unknown[]) => wirePendingPlayMediaDispatcherMock(...args)
+}));
+
+const applyPendingPlayMediaMock = vi.fn();
+const fakeSyncPlayStore = {
+  applyPendingPlayMedia: applyPendingPlayMediaMock,
+  consumePendingPlayMedia: vi.fn(),
+  pendingPlayMedia: null
+};
+vi.mock('@/stores/useSyncPlayStore', () => ({
+  useSyncPlayStore: () => fakeSyncPlayStore
 }));
 
 vi.mock('@/SpatialNavHost.vue', () => ({ default: { name: 'SpatialNavHost' } }));
@@ -64,6 +89,10 @@ describe('boot (Tizen renderer entry)', () => {
     installTizenBridge.mockClear().mockReturnValue(() => {});
     secondMount.mockClear();
     secondUse.mockClear().mockReturnValue(secondApp);
+    resolveHubRelayConfigMock.mockClear().mockReturnValue(null);
+    openHubRelayConnectionMock.mockClear();
+    wirePendingPlayMediaDispatcherMock.mockClear().mockReturnValue(() => {});
+    applyPendingPlayMediaMock.mockClear();
     vi.unstubAllEnvs();
     globalThis.localStorage.clear();
   });
@@ -151,6 +180,72 @@ describe('boot (Tizen renderer entry)', () => {
     expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBe('http://chosen-tv:8096');
     cfg.onConnectionChange(null);
     expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBeNull();
+  });
+
+  it('S298: resolves the hub context from the persisted slots at boot', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
+    globalThis.localStorage.setItem('phlix.hubUrl', 'http://hub-tv:8800');
+    globalThis.localStorage.setItem('phlix.hubServerId', 'srv-abc123');
+    globalThis.localStorage.setItem('phlix.hubAccessToken', 'hub-jwt');
+
+    const mod = await import('@/main');
+    await mod.boot();
+
+    expect(resolveHubRelayConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        serverUrl: 'http://tv:8096',
+        hubUrl: 'http://hub-tv:8800',
+        serverId: 'srv-abc123',
+        envHubUrl: null,
+        envHubServerId: null,
+        accessTokenProvider: expect.any(Function)
+      })
+    );
+    expect(resolveHubRelayConfigMock.mock.calls[0][0].accessTokenProvider()).toBe('hub-jwt');
+  });
+
+  it('S298: opens the hub-relay consumer + wires the dispatch point when a hub context resolves', async () => {
+    const resolved = {
+      serverId: 'srv-abc123',
+      hubBaseUrl: 'http://hub-tv:8800',
+      tokenProvider: () => 'relay-tok'
+    };
+    resolveHubRelayConfigMock.mockReturnValue(resolved);
+
+    const mod = await import('@/main');
+    await mod.boot();
+
+    expect(openHubRelayConnectionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        serverId: 'srv-abc123',
+        hubBaseUrl: 'http://hub-tv:8800',
+        tokenProvider: expect.any(Function)
+      })
+    );
+    const openCfg = openHubRelayConnectionMock.mock.calls[0][0] as {
+      onPendingCommand: (command: unknown) => void;
+    };
+    // A delivered frame is adopted into the SyncPlay store (the consumer pair).
+    openCfg.onPendingCommand({ mediaId: 'media-9' });
+    expect(applyPendingPlayMediaMock).toHaveBeenCalledWith({ mediaId: 'media-9' });
+
+    expect(wirePendingPlayMediaDispatcherMock).toHaveBeenCalledWith(
+      fakeSyncPlayStore,
+      expect.objectContaining({
+        player: expect.anything(),
+        resolveMedia: expect.any(Function)
+      })
+    );
+  });
+
+  it('S298: opens NOTHING when no hub context resolves (honest no-app-open state)', async () => {
+    resolveHubRelayConfigMock.mockReturnValue(null);
+
+    const mod = await import('@/main');
+    await mod.boot();
+
+    expect(openHubRelayConnectionMock).not.toHaveBeenCalled();
+    expect(wirePendingPlayMediaDispatcherMock).not.toHaveBeenCalled();
   });
 });
 

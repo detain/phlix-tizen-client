@@ -36,8 +36,30 @@ import type {
   SyncPlayPlaybackCommand,
 } from '@phlix/contracts';
 import { SyncPlayClient, serializeMessage } from '@phlix/syncplay';
+import type { PendingPlayMediaCommand } from '../api/hubRelay';
 
 // ---- Types -----------------------------------------------------------------
+
+/**
+ * The store's session shape: the contracts `SyncPlaySession` plus the wire's
+ * `current_media_id` (S298).
+ *
+ * The pinned contracts v0.4.3 session type has no `currentMediaId` field (the
+ * ui added it to its own types in the S298 ui half for the same reason), so
+ * the carry-through is declared here, on the local mapping boundary: produced
+ * by {@link groupToSession} from the server's `current_media_id` (the group
+ * state emits it — the field is NOT pinned null), and written into the live
+ * session by {@link applyPendingPlayMedia} (the paired caller — the hub-relay
+ * consumer's "Alexa, play X" command carries the media id). The
+ * load-a-new-title dispatch point (`src/syncplayDispatch.ts`) consumes the
+ * command's own `mediaId` — exactly like the ui's Player.vue — so the session
+ * field stays a faithful wire carry + live-session signal for future session
+ * UI, never the load path's input.
+ */
+export interface LocalSyncPlaySession extends SyncPlaySession {
+  /** Media item id the group is (or last was) playing — `null` when none. */
+  currentMediaId: string | null;
+}
 
 /**
  * Input for creating a new SyncPlay group.
@@ -115,7 +137,7 @@ interface SyncPlayGroupsResponse {
  */
 interface JoinedGroup {
   room: SyncPlayGroup;
-  session: SyncPlaySession;
+  session: LocalSyncPlaySession;
 }
 
 /**
@@ -233,9 +255,11 @@ function normalizeGroup(raw: RawSyncPlayGroup | undefined): SyncPlayGroup {
  *
  * The server has no separate session entity — the GROUP is the session — so
  * the session id IS the group id. `playbackRate` has no server field either; a
- * playing group is 1× and anything else is 0.
+ * playing group is 1× and anything else is 0. `currentMediaId` carries the
+ * wire's `current_media_id` through (`null` when the group has no media yet —
+ * S298: the paired caller is {@link applyPendingPlayMedia}).
  */
-function groupToSession(raw: RawSyncPlayGroup | undefined): SyncPlaySession {
+function groupToSession(raw: RawSyncPlayGroup | undefined): LocalSyncPlaySession {
   const g = raw ?? {};
   const id = groupId(g);
   const state = sessionState(g);
@@ -246,6 +270,7 @@ function groupToSession(raw: RawSyncPlayGroup | undefined): SyncPlaySession {
     createdBy: g.host_id ?? '',
     createdAt: isoFromUnixSeconds(g.created_at),
     state,
+    currentMediaId: g.current_media_id ?? g.current_media ?? null,
     playbackPosition: num(g.playback_position),
     playbackRate: state === 'playing' ? 1 : 0,
     serverTime: num(g.last_activity_at, Math.floor(Date.now() / 1000)),
@@ -324,7 +349,7 @@ class SyncPlayApiClient {
     });
   }
 
-  async getState(groupId: string): Promise<SyncPlaySession> {
+  async getState(groupId: string): Promise<LocalSyncPlaySession> {
     const res = await this.request<SyncPlayGroupResponse>(
       `/api/v1/syncplay/groups/${encodeURIComponent(groupId)}`,
     );
@@ -374,10 +399,14 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   // ---- State ---------------------------------------------------------------
 
   const currentRoom = ref<SyncPlayGroup | null>(null);
-  const currentSession = ref<SyncPlaySession | null>(null);
+  const currentSession = ref<LocalSyncPlaySession | null>(null);
   const members = ref<SyncPlayUser[]>([]);
   const error = ref<string | null>(null);
   const isLoading = ref(false);
+  /** A hub-relay `pending_command` / `play_media` frame awaiting the
+   *  load-a-new-title dispatch point (S298). Cleared by
+   *  {@link consumePendingPlayMedia}. */
+  const pendingPlayMedia = ref<PendingPlayMediaCommand | null>(null);
 
   // WebSocket state
   const wsConnection = ref<WebSocket | null>(null);
@@ -564,6 +593,38 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   }
 
   // ---- Actions -------------------------------------------------------------
+
+  /**
+   * Adopt a hub-relay `pending_command` / `play_media` frame (S298).
+   *
+   * The hub's SyncPlay relay delivers "Alexa, play X" to the app's open
+   * `:8804` socket (see `src/api/hubRelay.ts`) REGARDLESS of SyncPlay room
+   * membership — the primary case has no room at all. This action is the
+   * store-side consumer:
+   *
+   * - `pendingPlayMedia` holds the command for the load-a-new-title dispatch
+   *   point (`src/syncplayDispatch.ts` — the ONLY place that can start
+   *   playback from a bare media id).
+   * - When a session exists, `currentMediaId` is written into it — the paired
+   *   caller for the `groupToSession()` carry-through: the field is produced
+   *   here (hub consumer) and consumed by the dispatch point, so it is not
+   *   dead wiring.
+   */
+  function applyPendingPlayMedia(command: PendingPlayMediaCommand): void {
+    pendingPlayMedia.value = command;
+    if (currentSession.value) {
+      currentSession.value = { ...currentSession.value, currentMediaId: command.mediaId };
+    }
+  }
+
+  /**
+   * Mark the pending play-media command as handled (the dispatch point loaded
+   * the title). Clears the store slot so a later session update cannot
+   * re-trigger the load path.
+   */
+  function consumePendingPlayMedia(): void {
+    pendingPlayMedia.value = null;
+  }
 
   /**
    * Handle a remote playback command from another member of the group.
@@ -810,6 +871,8 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     members,
     error,
     isLoading,
+    // S298: the hub-relay pending_command awaiting the load path.
+    pendingPlayMedia,
     // WebSocket state
     wsConnected,
     wsReconnecting,
@@ -829,6 +892,9 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     fetchPublicRooms,
     onRemoteCommand,
     clearError,
+    // S298: hub-relay pending_command consumer pair.
+    applyPendingPlayMedia,
+    consumePendingPlayMedia,
     // WebSocket (internal but exposed for debugging)
     connectWs,
     disconnectWs,
