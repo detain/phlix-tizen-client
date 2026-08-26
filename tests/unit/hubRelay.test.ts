@@ -319,7 +319,19 @@ describe('createRelayTokenProvider — the cached minting provider', () => {
       fetchImpl,
     });
     expect(provider()).toBeNull();
+    expect(provider.canRetry()).toBe(false); // no hub session — stay closed
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('canRetry is true while a hub access token exists (a later attempt can succeed)', () => {
+    const fetchImpl = vi.fn() as unknown as typeof fetch;
+    const provider = createRelayTokenProvider({
+      hubBaseUrl: 'http://hub.example.test',
+      serverId: SERVER_ID,
+      accessTokenProvider: () => 'hub-jwt',
+      fetchImpl,
+    });
+    expect(provider.canRetry()).toBe(true);
   });
 
   it('returns null when the mint fails, and re-tries on the next call', async () => {
@@ -357,6 +369,9 @@ describe('resolveHubRelayConfig — the Tizen boot resolution', () => {
     expect(resolved!.serverId).toBe(SERVER_ID);
     expect(resolved!.hubBaseUrl).toBe('http://192.168.1.50:8096');
     expect(typeof resolved!.tokenProvider).toBe('function');
+    // The tizen canRetry extension rides along so the connect path can re-ask
+    // while a mint is in flight.
+    expect(resolved!.canRetryToken?.()).toBe(true);
   });
 
   it('prefers an explicit hub URL over the server-url fallback', () => {
@@ -378,6 +393,17 @@ describe('resolveHubRelayConfig — the Tizen boot resolution', () => {
     });
     expect(resolved!.hubBaseUrl).toBe('http://hub-env.test');
     expect(resolved!.serverId).toBe('srv-env');
+  });
+
+  it('returns null with a malformed hub URL — parsed at the config boundary', () => {
+    expect(
+      resolveHubRelayConfig({
+        serverUrl: 'http://192.168.1.50:8096',
+        hubUrl: 'not a url',
+        serverId: SERVER_ID,
+        accessTokenProvider: () => 'hub-jwt',
+      }),
+    ).toBeNull();
   });
 
   it('returns null with no hub session (no server id) — nothing opens', () => {
@@ -485,6 +511,48 @@ describe('openHubRelayConnection — the open-whenever lifecycle', () => {
     const onStatusChange = vi.fn();
     openHubRelayConnection(config({ tokenProvider: () => null, onStatusChange }));
     expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(onStatusChange).toHaveBeenLastCalledWith('closed');
+  });
+
+  it('re-asks on the ladder while a MINT is in flight — the socket opens once the token lands', async () => {
+    vi.useFakeTimers();
+    // The tizen token provider mints asynchronously: the first call starts the
+    // mint and returns null; once the mint lands, the cached token is returned
+    // synchronously. The connect path must NOT dead-end on the null.
+    let minted: string | null = null;
+    let resolveMint: (token: string | null) => void = () => {};
+    const tokenProvider = vi.fn(() => {
+      if (minted) return minted;
+      void new Promise<string | null>((r) => {
+        resolveMint = r;
+      }).then((t) => {
+        minted = t;
+      });
+      return null;
+    });
+    const canRetryToken = () => true;
+
+    openHubRelayConnection(config({ tokenProvider, canRetryToken }));
+    expect(FakeWebSocket.instances).toHaveLength(0); // null token — no socket yet
+
+    // The mint lands; the next ladder rung presents the token and opens.
+    resolveMint('tok-minted');
+    await Promise.resolve(); // flush the mint's cache-write microtask
+    vi.advanceTimersByTime(1000);
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    const s = socket();
+    expect(s.protocols).toEqual(['bearer', 'tok-minted']);
+  });
+
+  it('no hub session (canRetry false): null token → closed, NO ladder, no re-asks', () => {
+    vi.useFakeTimers();
+    const tokenProvider = vi.fn(() => null);
+    const canRetryToken = vi.fn(() => false);
+    const onStatusChange = vi.fn();
+    openHubRelayConnection(config({ tokenProvider, canRetryToken, onStatusChange }));
+    vi.advanceTimersByTime(60_000);
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(tokenProvider).toHaveBeenCalledTimes(1); // never re-asked
     expect(onStatusChange).toHaveBeenLastCalledWith('closed');
   });
 

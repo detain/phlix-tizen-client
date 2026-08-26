@@ -47,9 +47,14 @@ import type { PendingPlayMediaCommand } from '../api/hubRelay';
  * The pinned contracts v0.4.3 session type has no `currentMediaId` field (the
  * ui added it to its own types in the S298 ui half for the same reason), so
  * the carry-through is declared here, on the local mapping boundary: produced
- * by {@link groupToSession} from the server's `current_media_id`, written into
- * the live session by {@link applyPendingPlayMedia} (the paired caller), and
- * consumed by the load-a-new-title dispatch point (`src/syncplayDispatch.ts`).
+ * by {@link groupToSession} from the server's `current_media_id` (the group
+ * state emits it — the field is NOT pinned null), and written into the live
+ * session by {@link applyPendingPlayMedia} (the paired caller — the hub-relay
+ * consumer's "Alexa, play X" command carries the media id). The
+ * load-a-new-title dispatch point (`src/syncplayDispatch.ts`) consumes the
+ * command's own `mediaId` — exactly like the ui's Player.vue — so the session
+ * field stays a faithful wire carry + live-session signal for future session
+ * UI, never the load path's input.
  */
 export interface LocalSyncPlaySession extends SyncPlaySession {
   /** Media item id the group is (or last was) playing — `null` when none. */

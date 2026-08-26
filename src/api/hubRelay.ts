@@ -82,8 +82,16 @@ export interface HubRelayConfig {
    * Re-read on EVERY attempt because relay tokens are short-lived (1h default);
    * a stale module-level token would fail validation the moment it expires.
    * Returning `null` keeps the socket closed.
+   *
+   * Tizen extension (`canRetry`): the tizen token provider MINTS asynchronously
+   * (S2a HTTP round trip), so its first call after a mint starts returns
+   * `null` while the mint is in flight. `canRetry()` distinguishes "nothing to
+   * present, but a later attempt may succeed" (mint pending / re-mintable)
+   * from "no hub session at all" (no access token — stay closed, no ladder).
    */
   tokenProvider: () => string | null;
+  /** Tizen extension — see {@link HubRelayConfig.tokenProvider}. */
+  canRetryToken?: () => boolean;
   /**
    * Hub base origin, e.g. `http://192.168.1.50:8800`. The relay listens on port
    * 8804 regardless of this origin's own port. Tizen has no same-origin layout
@@ -209,15 +217,21 @@ export interface RelayTokenProviderInput {
  *
  * Reconnects re-read the provider (relay tokens expire hourly). The provider
  * returns the cached plaintext while it is unexpired, re-mints once expired or
- * missing, and returns `null` when no hub access token is available or the
- * mint fails — the socket then stays closed (honest "no open app" state).
- * The mint is single-flighted: concurrent reconnect attempts share one mint.
+ * missing, and returns `null` while a mint is in flight or after a mint
+ * failure. `canRetry()` — the tizen extension the connect path consults — is
+ * `true` whenever a hub access token exists (a later attempt can succeed:
+ * the mint may land, or an expired token may be re-minted) and `false` when
+ * there is no hub session at all (the socket stays closed, honest "no open
+ * app" state, no ladder). The mint is single-flighted: concurrent reconnect
+ * attempts share one mint.
  */
-export function createRelayTokenProvider(input: RelayTokenProviderInput): () => string | null {
+export function createRelayTokenProvider(
+  input: RelayTokenProviderInput,
+): { (): string | null; canRetry: () => boolean } {
   let cached: MintedRelayToken | null = null;
   let minting: Promise<MintedRelayToken | null> | null = null;
 
-  return () => {
+  const provider = (): string | null => {
     const now = Math.floor(Date.now() / 1000);
     if (cached && cached.expiresAt > now) return cached.token;
 
@@ -237,10 +251,13 @@ export function createRelayTokenProvider(input: RelayTokenProviderInput): () => 
         },
       );
     }
-    // The mint is async; the socket layer treats a `null` token as "stay
-    // closed" and the reconnect ladder will re-ask on the next attempt.
+    // The mint is async; the socket layer treats a `null` token as "not yet
+    // present" and — via `canRetry` — re-asks on the reconnect ladder.
     return null;
   };
+  provider.canRetry = () => input.accessTokenProvider() !== null;
+
+  return provider;
 }
 
 // ── boot-time config resolution ──────────────────────────────────────────────
@@ -289,16 +306,26 @@ export function resolveHubRelayConfig(
 
   const hubUrl = input.hubUrl ?? input.envHubUrl ?? input.serverUrl;
   if (!hubUrl) return null;
+  // Parse at the boundary: a malformed hub URL (user-editable localStorage
+  // slot) can never produce a relay socket — resolve to nothing instead of
+  // letting a later `new URL()` throw during boot.
+  try {
+    new URL(hubUrl);
+  } catch {
+    return null;
+  }
 
+  const tokenProvider = createRelayTokenProvider({
+    hubBaseUrl: hubUrl,
+    serverId,
+    accessTokenProvider: input.accessTokenProvider,
+    fetchImpl: input.fetchImpl,
+  });
   return {
     serverId,
     hubBaseUrl: hubUrl,
-    tokenProvider: createRelayTokenProvider({
-      hubBaseUrl: hubUrl,
-      serverId,
-      accessTokenProvider: input.accessTokenProvider,
-      fetchImpl: input.fetchImpl,
-    }),
+    tokenProvider,
+    canRetryToken: tokenProvider.canRetry,
   };
 }
 
@@ -356,10 +383,19 @@ function connectHubRelaySocket(): void {
   if (!hubConfig) return;
   const token = hubConfig.tokenProvider();
   if (!token) {
-    setStatus('closed');
+    // No token to present. The tizen token provider MINTS asynchronously
+    // (S2a HTTP round trip): its first call after a mint starts returns null
+    // while the mint is in flight. When a hub access token exists, a later
+    // attempt can succeed — re-ask on the bounded reconnect ladder (the mint
+    // usually lands within the first rung). Without a hub session at all,
+    // stay closed with no ladder (the honest "no open app" state).
+    if (hubConfig.canRetryToken?.() === true) {
+      scheduleHubReconnect();
+    } else {
+      setStatus('closed');
+    }
     return;
   }
-  const url = buildHubRelayUrl(hubConfig.hubBaseUrl, hubConfig.serverId);
   setStatus(hubReconnectAttempts > 0 ? 'reconnecting' : 'connecting');
 
   let socket: WebSocket;
@@ -367,8 +403,10 @@ function connectHubRelaySocket(): void {
     // The token travels in the `bearer, <token>` SUBPROTOCOL — the only carrier
     // a Tizen webview WebSocket can present (S237: query-string refused by
     // design). The relay echoes it back (S355), completing the handshake.
-    socket = new WebSocket(url, ['bearer', token]);
+    socket = new WebSocket(buildHubRelayUrl(hubConfig.hubBaseUrl, hubConfig.serverId), ['bearer', token]);
   } catch {
+    // A malformed persisted hub URL (user-editable localStorage slot) or a
+    // WebSocket constructor failure must not crash boot — ladder it (bounded).
     scheduleHubReconnect();
     return;
   }

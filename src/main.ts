@@ -140,6 +140,10 @@ function wireHubRelayConsumer(
         return null; // unresolved — the command stays in the store slot
       }
     },
+    // No onUnresolved surface today: the command stays in the store's
+    // `pendingPlayMedia` slot (never silently dropped) and the NEXT frame
+    // replaces it — the honest refusal path keeps working. A future hub-mode
+    // session UI can read the slot or wire this callback.
   });
 }
 
