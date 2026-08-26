@@ -381,6 +381,7 @@ export function openHubRelayConnection(config: HubRelayConfig): void {
  */
 function connectHubRelaySocket(): void {
   if (!hubConfig) return;
+  setStatus(hubReconnectAttempts > 0 ? 'reconnecting' : 'connecting');
   const token = hubConfig.tokenProvider();
   if (!token) {
     // No token to present. The tizen token provider MINTS asynchronously
@@ -396,7 +397,6 @@ function connectHubRelaySocket(): void {
     }
     return;
   }
-  setStatus(hubReconnectAttempts > 0 ? 'reconnecting' : 'connecting');
 
   let socket: WebSocket;
   try {

@@ -556,6 +556,52 @@ describe('openHubRelayConnection — the open-whenever lifecycle', () => {
     expect(onStatusChange).toHaveBeenLastCalledWith('closed');
   });
 
+  it('a mint that NEVER lands exhausts the capped ladder, then stays closed (no 6th attempt)', () => {
+    vi.useFakeTimers();
+    // Mint in flight forever: every provider call returns null (canRetry true).
+    const tokenProvider = vi.fn(() => null);
+    const canRetryToken = () => true;
+    const onStatusChange = vi.fn();
+    openHubRelayConnection(config({ tokenProvider, canRetryToken, onStatusChange }));
+    expect(FakeWebSocket.instances).toHaveLength(0);
+
+    // Rungs 1..5 at 1s,2s,4s,8s,16s — exactly 5 re-asks (the initial + 5).
+    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(4000);
+    vi.advanceTimersByTime(8000);
+    vi.advanceTimersByTime(16000);
+    expect(tokenProvider).toHaveBeenCalledTimes(6); // 1 initial + 5 rungs
+
+    // Ladder spent — status closed, no further re-asks.
+    vi.advanceTimersByTime(60_000);
+    expect(tokenProvider).toHaveBeenCalledTimes(6);
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(onStatusChange).toHaveBeenLastCalledWith('closed');
+  });
+
+  it('a malformed hub URL with a valid token never throws — laddered, bounded, ends closed', () => {
+    vi.useFakeTimers();
+    // A hand-built config (bypassing resolveHubRelayConfig's boundary parse)
+    // with garbage hubBaseUrl: `new URL()` inside connect throws → ladder.
+    const onStatusChange = vi.fn();
+    openHubRelayConnection(
+      config({ hubBaseUrl: 'not a url', tokenProvider: () => 'tok-123', onStatusChange }),
+    );
+    expect(FakeWebSocket.instances).toHaveLength(0); // constructor never reached
+
+    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(4000);
+    vi.advanceTimersByTime(8000);
+    vi.advanceTimersByTime(16000);
+    vi.advanceTimersByTime(60_000);
+
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(onStatusChange).toHaveBeenLastCalledWith('closed');
+    expect(getHubRelaySocket()).toBeNull();
+  });
+
   it('does not duplicate a socket for the same server id', () => {
     openHubRelayConnection(config());
     openHubRelayConnection(config());
