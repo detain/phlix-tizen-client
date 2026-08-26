@@ -349,9 +349,11 @@ function setStatus(status: HubRelayStatus): void {
  * room at all. Call once at app boot (see `main.ts`); the socket stays open
  * with a capped reconnect ladder until {@link closeHubRelayConnection}.
  *
- * If the token provider yields nothing, the socket stays closed (`closed`
- * status) and no reconnect ladder is armed — the caller re-invokes after hub
- * auth is available.
+ * If the token provider yields nothing, the socket stays closed. When a later
+ * attempt can succeed (the tizen provider's mint is in flight — see
+ * {@link HubRelayConfig.canRetryToken}), a BOUNDED reconnect ladder is armed
+ * and re-asks until it is spent; without a hub session at all, no ladder is
+ * armed and the caller re-invokes after hub auth is available.
  */
 export function openHubRelayConnection(config: HubRelayConfig): void {
   if (hubWs && hubConfig?.serverId === config.serverId) return;
