@@ -26,8 +26,9 @@ import { ApiClient } from '@phlix/ui';
 import { useApiBase, usePlayerStore } from '@phlix/ui';
 import type { MediaItem } from '@phlix/contracts';
 
-interface PlaylistApiResponse {
-  items: MediaItem[];
+/** Envelope of `GET /api/v1/users/me/next-up` (WebPortalRouter::getNextUp). */
+interface NextUpApiResponse {
+  items?: MediaItem[];
 }
 
 const props = withDefaults(
@@ -113,8 +114,17 @@ const showUpNext = computed(() => {
 });
 
 /**
- * Load up next media info from the playlist API.
- * We fetch the playlist for the current media and find the next item.
+ * Load the up-next media from the registered Next-Up rail.
+ *
+ * S280 finding: this component previously called
+ * `GET /api/v1/media/{id}/playlist`, a route phlix-server never registered —
+ * the fetch always failed and the overlay silently never showed. The server's
+ * "what plays next" rail is `GET /api/v1/users/me/next-up` (`{items: […]}`,
+ * next unwatched episode per series, already ordered); the head of that list
+ * is the auto-advance candidate, mirroring the roku client's next-up handling.
+ * In practice the playing item is absent from the list (it is started, hence
+ * not "up next"); the id filter below makes that defensive against a
+ * not-yet-positioned pick.
  */
 async function loadUpNextMedia(): Promise<void> {
   const id = mediaId.value;
@@ -124,21 +134,13 @@ async function loadUpNextMedia(): Promise<void> {
 
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
-    // Fetch playlist info to get the next media item
-    // The playlist API returns items; we need to find the current media's position
-    // and return the next one
-    const response = await client.get<PlaylistApiResponse>(
-      `/api/v1/media/${encodeURIComponent(id)}/playlist`,
+    const response = await client.get<NextUpApiResponse>(
+      `/api/v1/users/me/next-up`,
     );
 
-    const items = response.items ?? [];
-    const currentIndex = items.findIndex((item) => item.id === id);
-
-    if (currentIndex >= 0 && currentIndex < items.length - 1) {
-      upNextMedia.value = items[currentIndex + 1];
-    } else {
-      upNextMedia.value = null;
-    }
+    // Head of the rail is the auto-advance candidate; skip a not-yet-
+    // positioned pick of the SAME item so the overlay never "up nexts" itself.
+    upNextMedia.value = response.items?.find((item) => item.id !== id) ?? null;
   } catch {
     upNextMedia.value = null;
   } finally {
