@@ -122,8 +122,9 @@ const showUpNext = computed(() => {
  * "what plays next" rail is `GET /api/v1/users/me/next-up` (`{items: […]}`,
  * next unwatched episode per series, already ordered); the head of that list
  * is the auto-advance candidate, mirroring the roku client's next-up handling.
- * The current media cannot appear in the list (it is started, hence not
- * "up next"), so no positional lookup against the old playlist is needed.
+ * In practice the playing item is absent from the list (it is started, hence
+ * not "up next"); the id filter below makes that defensive against a
+ * not-yet-positioned pick.
  */
 async function loadUpNextMedia(): Promise<void> {
   const id = mediaId.value;
@@ -137,7 +138,9 @@ async function loadUpNextMedia(): Promise<void> {
       `/api/v1/users/me/next-up`,
     );
 
-    upNextMedia.value = response.items?.[0] ?? null;
+    // Head of the rail is the auto-advance candidate; skip a not-yet-
+    // positioned pick of the SAME item so the overlay never "up nexts" itself.
+    upNextMedia.value = response.items?.find((item) => item.id !== id) ?? null;
   } catch {
     upNextMedia.value = null;
   } finally {

@@ -48,9 +48,13 @@
  *   every `/api/v1` code occurrence in src/** (comments stripped) — a
  *   mismatch means the scanner went blind and must be extended.
  * - Dynamic segments: `${expr}` interpolations canonicalise to one `{P}`
- *   token; a client `{P}` may only match a server `{param}` segment. Fully
- *   dynamic path segments built by string concatenation would evade every
- *   regex scanner — none exist in this tree (the sweep test guards that).
+ *   token; a client `{P}` may only match a server `{param}` segment. The
+ *   sweep guards every URL that keeps `/api/v1` CONTIGUOUS inside one string
+ *   (in-call concatenation like `'/api'+'/v1/x'` still lands as an unserved
+ *   fragment → RED). A URL deliberately SPLIT across separate quoted
+ *   fragments before the call (`const P = '/api'`; `client.get(P + '/v1/x')`)
+ *   evades both scanner and sweep — out of any regex gate's threat model by
+ *   design; none exists in this tree.
  * - WebSocket/relay transports (buildWsUrl port-8097 socket, hub-relay ws)
  *   are a DIFFERENT registry than the HTTP manifest — pinned OUT of scope by
  *   explicit negative assertions below, not silently ignored.
@@ -136,10 +140,13 @@ const WRAPPER_RE =
 /**
  * `this.request(...)` on the local SyncPlayApiClient: path literal first,
  * optional options object whose `method:` (if present) is the verb; absent →
- * GET (fetch default).
+ * GET (fetch default). The options body is brace-AWARE one level deep
+ * (`(?:[^{}]|\{[^{}]*\})*?`): a non-greedy `[\s\S]*?}` would truncate at the
+ * first `}` and could lose a `method:` that follows a nested body object —
+ * silently defaulting a POST site to GET (wrong-method false-green).
  */
 const SYNCPLAY_RE =
-  /this\.request(?:<[\s\S]{0,80}>)?\s*\(\s*([`'"])([^`'"]*)\1\s*,?\s*(?:\{([\s\S]{0,300}?)\}\s*,?)?\s*\)/g;
+  /this\.request(?:<[\s\S]{0,80}>)?\s*\(\s*([`'"])([^`'"]*)\1\s*,?\s*(?:\{((?:[^{}]|\{[^{}]*\})*?)\}\s*,?)?\s*\)/g;
 
 /**
  * Raw `/api/v1…` fragment inside any string/template — used by the blindness
@@ -269,6 +276,25 @@ describe(`${GATE_ID} — every URL tizen issues is tuple-exact served`, () => {
     }
     expect(Object.fromEntries(perFile)).toEqual(PER_FILE_COVERAGE);
     expect(sites.length).toBe(TOTAL_SITES);
+  });
+
+  it('pins the SyncPlay METHOD per site exactly (verb-blindness control)', () => {
+    // The syncplay surface is the only one whose verb is extracted from an
+    // options object rather than the receiver name — the one place a
+    // method-truncating scanner bug could read green under the wrong verb.
+    // Pin the full `METHOD path` multiset, not just per-file counts.
+    const syncplay = sites
+      .filter((s) => s.file === 'src/stores/useSyncPlayStore.ts')
+      .map((s) => `${s.method} ${s.path}`)
+      .sort();
+    expect(syncplay).toEqual([
+      'GET /api/v1/syncplay/groups',
+      'GET /api/v1/syncplay/groups/{P}',
+      'GET /api/v1/syncplay/groups/{P}',
+      'POST /api/v1/syncplay/groups',
+      'POST /api/v1/syncplay/groups/{P}/join',
+      'POST /api/v1/syncplay/groups/{P}/leave',
+    ]);
   });
 
   it('the scanner cannot have gone blind: every /api/v1 code literal is a scanned site', () => {
