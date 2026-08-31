@@ -5,6 +5,38 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — client route gate (S280)
+
+- **Vendored the canonical `@phlix/contracts` server route manifest** at
+  `tests/fixtures/server-route-manifest.json` — 400 route tuples with the
+  provenance server sha pinned inside the artifact, byte-identical to the
+  mobile/roku copies (md5 `cca4660dda7876fba840f9d108ad7c18`). Vendoring is the
+  sanctioned interim pattern until the next contracts tag ships the export: the
+  v0.4.4 tag predates it and its exports map blocks JSON subpaths, so no
+  npm-pin/import is possible yet.
+- **New vitest gate `tests/unit/routeManifest.gate.test.ts`** — every
+  server-addressed request URL in `src/` must be tuple-exact against the
+  manifest: 23 request sites / 19 distinct `(method, path)` tuples across 9
+  modules, pinned per-file. The hub-addressed `src/api/hubRelay.ts` is excluded
+  and its exclusion is negative-pinned; a scanner-blindness sweep pins every
+  `/api/v1` code occurrence 1:1. A planted unserved URL was demonstrated RED
+  before removal.
+- **New `tests/unit/RouteWireShape.test.ts`** pins both corrected response
+  envelopes fixed below (5 tests). Suite now stands at 289 vitest tests passing
+  (17 files).
+
+### Fixed — two never-registered rails, the route gate's first catches (S280, S279-class)
+
+- **`AudioTracksPage` fallback called `GET /api/v1/media/{id}/audio-tracks`** —
+  a route phlix-server never registered, so the fallback always failed and the
+  track list rendered empty. Now reads `audio_tracks` from the registered
+  `GET /api/v1/media/{id}/playback-info` — the same rail `@phlix/ui`'s player
+  uses.
+- **`UpNextOverlay` called `GET /api/v1/media/{id}/playlist`** — also never
+  registered, so the overlay silently never showed. Now reads the head of
+  `GET /api/v1/users/me/next-up` (`{items:[…]}`), skipping a self-entry —
+  mirroring the roku client's next-up handling.
+
 ### Changed
 
 - **`@phlix/contracts` pinned to v0.4.4 (S325 consumer bump).** v0.4.4 carries the canonical snake_case parental-controls wire shape (S234) and admits `dash_url` on the transcode shapes the server emits (S325).
