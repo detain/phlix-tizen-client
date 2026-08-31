@@ -20,18 +20,18 @@
  */
 
 import { computed } from 'vue';
-import type { StreamAudioTrack } from '@phlix/contracts';
+import type { AudioTrack } from '@phlix/contracts';
 
 interface Props {
-  /** Ordered list of audio tracks from the media stream. */
-  tracks: StreamAudioTrack[];
+  /** Ordered list of playback-info audio tracks (server StreamTrackShaper wire shape). */
+  tracks: AudioTrack[];
   /** The currently active/playing track id, if any. */
   activeTrackId?: string | null;
   /**
    * Called when the user selects an audio track.
-   * @param track The selected StreamAudioTrack
+   * @param track The selected wire AudioTrack
    */
-  onSelect: (track: StreamAudioTrack) => void;
+  onSelect: (track: AudioTrack) => void;
 }
 
 const props = withDefaults(defineProps<Props>(), {

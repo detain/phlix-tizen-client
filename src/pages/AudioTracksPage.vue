@@ -23,21 +23,21 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ApiClient } from '@phlix/ui';
 import { useApiBase, usePlayerStore } from '@phlix/ui';
-import type { StreamAudioTrack } from '@phlix/contracts';
+import type { AudioTrack } from '@phlix/contracts';
 import AudioTrackList from '../components/AudioTrackList.vue';
 
-/** One entry of `playback-info`'s `audio_tracks[]` (server StreamTrackShaper shape). */
-interface PlaybackInfoAudioTrack {
-  id: string;
-  codec: string;
-  language: string;
-  channels: number;
-  bitrate?: number | null;
-  title?: string | null;
-}
-
+/**
+ * `playback-info` response — only the slice this page reads. `audio_tracks[]`
+ * IS the contracts `AudioTrack` wire shape verbatim (server
+ * `StreamTrackShaper::audioTracks()`: `id, index, stream_index, codec,
+ * language, channels, bitrate (always present, nullable), title (nullable),
+ * default`), so the rows pass through untouched — S404: the previous hand-map
+ * into the `StreamAudioTrack` DB mirror silently discarded
+ * `index`/`stream_index`/`default`, a mapping the wire type makes
+ * unnecessary.
+ */
 interface PlaybackInfoApiResponse {
-  audio_tracks?: PlaybackInfoAudioTrack[];
+  audio_tracks?: AudioTrack[];
 }
 
 const route = useRoute();
@@ -45,7 +45,7 @@ const router = useRouter();
 const apiBase = useApiBase();
 const playerStore = usePlayerStore();
 
-const audioTracks = ref<StreamAudioTrack[]>([]);
+const audioTracks = ref<AudioTrack[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
@@ -71,7 +71,7 @@ async function loadAudioTracks(): Promise<void> {
   try {
     // First try to get tracks from the player store (HLS manifest)
     const storeAny = playerStore as unknown as Record<string, unknown>;
-    const playerTracks = storeAny.audioTracks as StreamAudioTrack[] | undefined;
+    const playerTracks = storeAny.audioTracks as AudioTrack[] | undefined;
 
     if (playerTracks && playerTracks.length > 0) {
       audioTracks.value = playerTracks;
@@ -82,14 +82,7 @@ async function loadAudioTracks(): Promise<void> {
       const response = await client.get<PlaybackInfoApiResponse>(
         `/api/v1/media/${encodeURIComponent(id)}/playback-info`,
       );
-      audioTracks.value = (response.audio_tracks ?? []).map((t) => ({
-        id: t.id,
-        codec: t.codec,
-        language: t.language,
-        channels: t.channels,
-        ...(t.bitrate != null ? { bitrate: t.bitrate } : {}),
-        ...(t.title != null ? { title: t.title } : {}),
-      }));
+      audioTracks.value = response.audio_tracks ?? [];
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load audio tracks';
@@ -104,7 +97,7 @@ async function loadAudioTracks(): Promise<void> {
  * Uses the player store's audio track switching method if available,
  * falling back to direct HLS audio track API.
  */
-function onSelectTrack(track: StreamAudioTrack): void {
+function onSelectTrack(track: AudioTrack): void {
   const storeAny = playerStore as unknown as Record<string, unknown>;
 
   // Try player store method first

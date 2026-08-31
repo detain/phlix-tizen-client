@@ -3,13 +3,24 @@
  * SubtitleTrackList — scrollable D-pad navigable list of subtitle tracks.
  *
  * Styled for a dark TV UI (nocturne theme). Each row shows the track language
- * (BCP 47 tag), codec, and flags (forced, default) as badges.
+ * (BCP 47 tag), the server-derived `label` (when it says more than the
+ * language), the codec, and the hearing-impaired flag as a badge. S404: the
+ * rows are typed as the playback-info WIRE `SubtitleTrack` (server
+ * StreamTrackShaper shape — `id, index, stream_index, language, label, codec,
+ * source, hearing_impaired, url`); the previously displayed forced/default
+ * badges read `isForced`/`isDefault`, keys the subtitle wire never emits
+ * (there is no forced/default concept for subtitle tracks — `hearing_impaired`
+ * is the only flag).
  *
  * Clicking/tapping a row calls `onSelect(track)` with the selected track.
  *
  * TV-SPECIFIC: No phlix-ui equivalent for standalone subtitle track list.
  * phlix-ui handles subtitles within CaptionsMenu.vue and CaptionOverlay.vue.
  * This component provides D-pad optimized list navigation for TV remote.
+ *
+ * NOTE: this component currently has no consumer in src/ — wiring the subtitle
+ * picker to playback data is filed as S407 (this step only makes the types
+ * and reads honest).
  *
  * @category TV-Specific Component
  * @duplicate No phlix-ui equivalent - TV-specific D-pad optimized component
@@ -19,19 +30,19 @@
  */
 
 import { computed } from 'vue';
-import type { StreamSubtitleTrack } from '@phlix/contracts';
+import type { SubtitleTrack } from '@phlix/contracts';
 
 interface Props {
-  /** Ordered list of subtitle tracks from the media stream. */
-  tracks: StreamSubtitleTrack[];
+  /** Ordered list of subtitle tracks from the playback-info wire. */
+  tracks: SubtitleTrack[];
   /** The currently active/selected track id, if any. */
   activeTrackId?: string | null;
   /**
    * Called when the user selects a subtitle track.
    * Pass `null` to disable subtitles.
-   * @param track The selected StreamSubtitleTrack, or null to turn off subtitles
+   * @param track The selected wire SubtitleTrack, or null to turn off subtitles
    */
-  onSelect: (track: StreamSubtitleTrack | null) => void;
+  onSelect: (track: SubtitleTrack | null) => void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -103,10 +114,9 @@ const totalCount = computed(() => props.tracks.length);
         :aria-selected="track.id === activeTrackId"
         :aria-label="[
           formatLanguage(track.language),
-          track.title,
+          track.label,
           track.codec,
-          track.isForced ? 'forced' : null,
-          track.isDefault ? 'default' : null,
+          track.hearing_impaired ? 'hearing impaired' : null,
         ].filter(Boolean).join(', ')"
         tabindex="0"
         @click="onSelect(track)"
@@ -119,23 +129,16 @@ const totalCount = computed(() => props.tracks.length);
               {{ formatLanguage(track.language) }}
             </span>
             <div
-              v-if="track.isForced || track.isDefault"
+              v-if="track.hearing_impaired"
               class="subtitle-track-list__badges"
             >
-              <span
-                v-if="track.isForced"
-                class="subtitle-track-list__badge subtitle-track-list__badge--forced"
-              >Forced</span>
-              <span
-                v-if="track.isDefault"
-                class="subtitle-track-list__badge subtitle-track-list__badge--default"
-              >Default</span>
+              <span class="subtitle-track-list__badge subtitle-track-list__badge--sdh">SDH</span>
             </div>
           </div>
           <span
-            v-if="track.title"
+            v-if="track.label && track.label !== track.language"
             class="subtitle-track-list__title"
-          >{{ track.title }}</span>
+          >{{ track.label }}</span>
         </div>
         <div class="subtitle-track-list__meta">
           <span class="subtitle-track-list__codec">{{ track.codec }}</span>
@@ -262,13 +265,7 @@ const totalCount = computed(() => props.tracks.length);
   letter-spacing: 0.05em;
 }
 
-.subtitle-track-list__badge--forced {
-  background: var(--surface-3, #27272a);
-  color: var(--text-muted, #a1a1aa);
-  border: 1px solid var(--border-subtle, #3f3f46);
-}
-
-.subtitle-track-list__badge--default {
+.subtitle-track-list__badge--sdh {
   background: var(--accent, #f59e0b);
   color: #000;
 }
