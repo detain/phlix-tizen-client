@@ -3,8 +3,15 @@
  * AudioTracksPage — displays the available audio tracks for a media item.
  *
  * Fetches audio tracks from the HLS manifest (via player store) or from
- * `GET /api/v1/media/{id}/audio-tracks`. Each track row allows switching
- * the active audio track during playback.
+ * `GET /api/v1/media/{id}/playback-info` (`audio_tracks`, shaped by the
+ * server's StreamTrackShaper). S280 finding: this page previously called
+ * `GET /api/v1/media/{id}/audio-tracks`, a route phlix-server never
+ * registered — the fallback silently threw on every non-HLS item and the
+ * page rendered an empty list. `playback-info` is the registered rail
+ * (`MediaItemController::getPlaybackInfo()`), and `@phlix/ui`'s own player
+ * already reads its audio tracks from there.
+ *
+ * Each track row allows switching the active audio track during playback.
  *
  * Route: /app/audio-tracks/:id  (registered via buildExtraRoutes in main.ts)
  *
@@ -19,8 +26,18 @@ import { useApiBase, usePlayerStore } from '@phlix/ui';
 import type { StreamAudioTrack } from '@phlix/contracts';
 import AudioTrackList from '../components/AudioTrackList.vue';
 
-interface AudioTracksApiResponse {
-  audioTracks: StreamAudioTrack[];
+/** One entry of `playback-info`'s `audio_tracks[]` (server StreamTrackShaper shape). */
+interface PlaybackInfoAudioTrack {
+  id: string;
+  codec: string;
+  language: string;
+  channels: number;
+  bitrate?: number | null;
+  title?: string | null;
+}
+
+interface PlaybackInfoApiResponse {
+  audio_tracks?: PlaybackInfoAudioTrack[];
 }
 
 const route = useRoute();
@@ -59,12 +76,20 @@ async function loadAudioTracks(): Promise<void> {
     if (playerTracks && playerTracks.length > 0) {
       audioTracks.value = playerTracks;
     } else {
-      // Fall back to API endpoint
+      // Fall back to the registered playback-info rail (S280: the previous
+      // `/media/{id}/audio-tracks` route was never registered server-side).
       const client = new ApiClient({ baseUrl: apiBase.value });
-      const response = await client.get<AudioTracksApiResponse>(
-        `/api/v1/media/${encodeURIComponent(id)}/audio-tracks`,
+      const response = await client.get<PlaybackInfoApiResponse>(
+        `/api/v1/media/${encodeURIComponent(id)}/playback-info`,
       );
-      audioTracks.value = response.audioTracks ?? [];
+      audioTracks.value = (response.audio_tracks ?? []).map((t) => ({
+        id: t.id,
+        codec: t.codec,
+        language: t.language,
+        channels: t.channels,
+        ...(t.bitrate != null ? { bitrate: t.bitrate } : {}),
+        ...(t.title != null ? { title: t.title } : {}),
+      }));
     }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load audio tracks';
