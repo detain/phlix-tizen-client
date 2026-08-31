@@ -85,10 +85,13 @@ function startEditSchedule(schedule: AccessSchedule): void {
   editingSchedule.value = schedule;
   scheduleForm.value = {
     name: schedule.name,
-    startTime: schedule.startTime,
-    endTime: schedule.endTime,
-    daysOfWeek: [...schedule.daysOfWeek],
-    isActive: schedule.isActive
+    // S325b: the server emits snake_case on the wire (AccessSchedule::toArray);
+    // @phlix/contracts v0.4.4 declares those field names — v0.4.3's camelCase
+    // declaration was the lie that let these reads compile as `undefined`.
+    startTime: schedule.start_time,
+    endTime: schedule.end_time,
+    daysOfWeek: [...schedule.days_of_week],
+    isActive: schedule.is_active
   };
 }
 
@@ -119,19 +122,19 @@ async function saveSchedule(): Promise<void> {
         {
           id: editingSchedule.value.id,
           name: scheduleForm.value.name,
-          startTime: scheduleForm.value.startTime,
-          endTime: scheduleForm.value.endTime,
-          daysOfWeek: scheduleForm.value.daysOfWeek,
-          isActive: scheduleForm.value.isActive
+          start_time: scheduleForm.value.startTime,
+          end_time: scheduleForm.value.endTime,
+          days_of_week: scheduleForm.value.daysOfWeek,
+          is_active: scheduleForm.value.isActive
         }
       );
     } else {
       await client.post(`/api/v1/profiles/${pid}/schedules`, {
         name: scheduleForm.value.name,
-        startTime: scheduleForm.value.startTime,
-        endTime: scheduleForm.value.endTime,
-        daysOfWeek: scheduleForm.value.daysOfWeek,
-        isActive: scheduleForm.value.isActive
+        start_time: scheduleForm.value.startTime,
+        end_time: scheduleForm.value.endTime,
+        days_of_week: scheduleForm.value.daysOfWeek,
+        is_active: scheduleForm.value.isActive
       });
     }
     editingSchedule.value = null;
@@ -173,7 +176,9 @@ async function addTag(): Promise<void> {
     const client = new ApiClient({ baseUrl: apiBase.value });
     await client.post(`/api/v1/profiles/${pid}/tags`, {
       tag,
-      tagType: 'blocked'
+      // S325b: canonical spelling — the server's key. `tagType` was the S234
+      // defect shape, kept alive only by the server's additive acceptance.
+      tag_type: 'blocked'
     });
     newTagInput.value = '';
     await loadTags();
@@ -279,7 +284,7 @@ async function loadTags(): Promise<void> {
     const data = await client.get<{ tags: ProfileTag[] }>(
       `/api/v1/profiles/${pid}/tags`
     );
-    blockedTags.value = (data.tags ?? []).filter(t => t.tagType === 'blocked');
+    blockedTags.value = (data.tags ?? []).filter(t => t.tag_type === 'blocked');
   } catch (e) {
     errorTags.value = e instanceof Error ? e.message : 'Failed to load tags';
     blockedTags.value = [];
@@ -465,14 +470,14 @@ onMounted(loadAll);
           v-for="schedule in schedules"
           :key="schedule.id"
           class="schedule-item"
-          :class="{ 'schedule-item--inactive': !schedule.isActive }"
+          :class="{ 'schedule-item--inactive': !schedule.is_active }"
         >
           <div class="schedule-item__info">
             <span class="schedule-item__name">{{ schedule.name }}</span>
-            <span class="schedule-item__time">{{ formatTime(schedule.startTime) }} – {{ formatTime(schedule.endTime) }}</span>
-            <span class="schedule-item__days">{{ formatDays(schedule.daysOfWeek) }}</span>
+            <span class="schedule-item__time">{{ formatTime(schedule.start_time) }} – {{ formatTime(schedule.end_time) }}</span>
+            <span class="schedule-item__days">{{ formatDays(schedule.days_of_week) }}</span>
             <span
-              v-if="!schedule.isActive"
+              v-if="!schedule.is_active"
               class="schedule-item__badge"
             >Inactive</span>
           </div>
