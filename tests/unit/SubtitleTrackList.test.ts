@@ -1,21 +1,31 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import SubtitleTrackList from '@/components/SubtitleTrackList.vue';
-import type { StreamSubtitleTrack } from '@phlix/contracts';
+import type { SubtitleTrack } from '@phlix/contracts';
 
-const createTrack = (overrides: Partial<StreamSubtitleTrack> = {}): StreamSubtitleTrack => ({
+/**
+ * S404: the list is typed as the playback-info WIRE `SubtitleTrack`
+ * (StreamTrackShaper::subtitleTracks() shape). A full honest fixture carries
+ * ALL nine wire keys — `title`/`isForced`/`isDefault` are NOT on the subtitle
+ * wire (the pre-S404 fixture pinned that fiction; rewritten, not deleted).
+ */
+const createTrack = (overrides: Partial<SubtitleTrack> = {}): SubtitleTrack => ({
   id: 'track-1',
+  index: 0,
+  stream_index: 1,
   language: 'en-US',
+  label: 'en-US',
   codec: 'webvtt',
-  isForced: false,
-  isDefault: false,
+  source: null,
+  hearing_impaired: false,
+  url: '/api/v1/media/item-1/subtitles/0?exp=1800000000&sig=dGVzdC1zaWc',
   ...overrides
 });
 
 function mountComponent(props: {
-  tracks?: StreamSubtitleTrack[];
+  tracks?: SubtitleTrack[];
   activeTrackId?: string | null;
-  onSelect?: (track: StreamSubtitleTrack | null) => void;
+  onSelect?: (track: SubtitleTrack | null) => void;
 }) {
   return mount(SubtitleTrackList, {
     props: {
@@ -43,7 +53,7 @@ describe('SubtitleTrackList', () => {
     it('renders tracks after "Off" option', () => {
       const tracks = [
         createTrack({ id: 'track-1', language: 'en-US' }),
-        createTrack({ id: 'track-2', language: 'fr-FR' })
+        createTrack({ id: 'track-2', language: 'fr-FR', index: 1, stream_index: 3 })
       ];
       const wrapper = mountComponent({ tracks });
       const items = wrapper.findAll('.subtitle-track-list__item');
@@ -77,30 +87,31 @@ describe('SubtitleTrackList', () => {
       expect(trackItem.find('.subtitle-track-list__active-indicator').exists()).toBe(true);
     });
 
-    it('displays forced badge for forced tracks', () => {
+    it('displays the SDH badge for hearing-impaired tracks', () => {
       const wrapper = mountComponent({
-        tracks: [createTrack({ id: 'track-1', isForced: true })]
+        tracks: [createTrack({ id: 'track-1', hearing_impaired: true })]
       });
-      expect(wrapper.find('.subtitle-track-list__badge--forced').exists()).toBe(true);
+      expect(wrapper.find('.subtitle-track-list__badge--sdh').exists()).toBe(true);
+      expect(wrapper.find('.subtitle-track-list__badge--sdh').text()).toBe('SDH');
     });
 
-    it('displays default badge for default tracks', () => {
+    it('displays no badge for plain tracks (the wire has no forced/default concept)', () => {
       const wrapper = mountComponent({
-        tracks: [createTrack({ id: 'track-1', isDefault: true })]
+        tracks: [createTrack({ id: 'track-1', hearing_impaired: false })]
       });
-      expect(wrapper.find('.subtitle-track-list__badge--default').exists()).toBe(true);
+      expect(wrapper.find('.subtitle-track-list__badges').exists()).toBe(false);
     });
 
-    it('displays track title when present', () => {
+    it('displays the server-derived label when it says more than the language', () => {
       const wrapper = mountComponent({
-        tracks: [createTrack({ id: 'track-1', title: 'English Subtitles' })]
+        tracks: [createTrack({ id: 'track-1', language: 'spa', label: 'Español (Forzada)' })]
       });
-      expect(wrapper.find('.subtitle-track-list__title').text()).toBe('English Subtitles');
+      expect(wrapper.find('.subtitle-track-list__title').text()).toBe('Español (Forzada)');
     });
 
-    it('does not display track title when absent', () => {
+    it('does not repeat the label when it is just the language', () => {
       const wrapper = mountComponent({
-        tracks: [createTrack({ id: 'track-1', title: undefined })]
+        tracks: [createTrack({ id: 'track-1', language: 'eng', label: 'eng' })]
       });
       expect(wrapper.find('.subtitle-track-list__title').exists()).toBe(false);
     });
@@ -186,7 +197,7 @@ describe('SubtitleTrackList', () => {
     });
 
     it('handles empty language tag', () => {
-      const track = createTrack({ language: '' });
+      const track = createTrack({ language: '', label: 'Subtitle 1' });
       const wrapper = mountComponent({ tracks: [track] });
       const languageSpan = wrapper.findAll('.subtitle-track-list__item')[1].find('.subtitle-track-list__language');
       expect(languageSpan.text()).toBeTruthy();
@@ -238,20 +249,27 @@ describe('SubtitleTrackList', () => {
       expect(ariaLabel).toContain('webvtt');
     });
 
-    it('includes forced flag in aria-label when track is forced', () => {
-      const track = createTrack({ id: 'track-1', isForced: true });
+    it('includes the server label in aria-label', () => {
+      const track = createTrack({ id: 'track-1', language: 'spa', label: 'Español (Forzada)' });
       const wrapper = mountComponent({ tracks: [track] });
       const trackItem = wrapper.findAll('.subtitle-track-list__item')[1];
-      const ariaLabel = trackItem.attributes('aria-label');
-      expect(ariaLabel).toContain('forced');
+      expect(trackItem.attributes('aria-label')).toContain('Español (Forzada)');
     });
 
-    it('includes default flag in aria-label when track is default', () => {
-      const track = createTrack({ id: 'track-1', isDefault: true });
+    it('includes the hearing-impaired flag in aria-label when set', () => {
+      const track = createTrack({ id: 'track-1', hearing_impaired: true });
       const wrapper = mountComponent({ tracks: [track] });
       const trackItem = wrapper.findAll('.subtitle-track-list__item')[1];
-      const ariaLabel = trackItem.attributes('aria-label');
-      expect(ariaLabel).toContain('default');
+      expect(trackItem.attributes('aria-label')).toContain('hearing impaired');
+    });
+
+    it('never mentions forced/default (fiction keys of the pre-S404 shape)', () => {
+      const track = createTrack({ id: 'track-1', hearing_impaired: false });
+      const wrapper = mountComponent({ tracks: [track] });
+      const trackItem = wrapper.findAll('.subtitle-track-list__item')[1];
+      const ariaLabel = trackItem.attributes('aria-label') ?? '';
+      expect(ariaLabel).not.toContain('forced');
+      expect(ariaLabel).not.toContain('default');
     });
   });
 });

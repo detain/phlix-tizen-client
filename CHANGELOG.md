@@ -118,3 +118,30 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - No contracts-side (payload) changes — this repo consumes only
   `buildPhlixHeaders` from `@phlix/contracts`; the version bump is for
   consistency with the rest of the Stream-Quality/ABR client fleet.
+
+### Changed — S404 track-shape alignment (contracts pin + honest track types)
+
+- **`@phlix/contracts` pinned to v0.4.5 (S404 consumer bump).** v0.4.5 corrects
+  the playback.ts `AudioTrack`/`SubtitleTrack` pair to the REAL
+  `StreamTrackShaper` wire emission (the pre-fix `display_title` pair was a
+  fiction the server never emitted; verified at server `01340633`) and exports
+  ordered key-list consts for parity gating.
+- **`AudioTrackList.vue` / `AudioTracksPage.vue` re-typed to the wire
+  `AudioTrack`.** The page's hand-map into the `StreamAudioTrack` DB mirror
+  silently DISCARDED `index`/`stream_index`/`default` (and dropped null
+  `bitrate`/`title`); the wire type needs no mapping, so the rows now pass
+  through untouched — the S280 test that pinned the discard was rewritten to
+  pin the pass-through (same rail, same URL assertion).
+- **`SubtitleTrackList.vue` reads only wire keys.** The title line moved from
+  `track.title` (never emitted on the subtitle wire) to the server-derived
+  `track.label` (shown only when it says more than the language); the
+  `Forced`/`Default` badges — backed by `isForced`/`isDefault`, keys the
+  subtitle wire never carries (there is no forced/default concept for
+  subtitles) — were replaced by the honest single `SDH` badge for the emitted
+  `hearing_impaired` flag. The component is still unconsumed in `src/` (wiring
+  it is S407); only its types/reads were made honest.
+- **Tests**: `SubtitleTrackList.test.ts` rewritten HONESTLY to full nine-key
+  wire fixtures (not deleted); new `TrackWireShape.test.ts` asserts golden
+  server-captured rows against the INSTALLED package's exported key consts
+  (5 tests). Suite 289 → 295 vitest tests (18 files); `routeManifest.gate`
+  untouched-green; vue-tsc/lint/build clean.

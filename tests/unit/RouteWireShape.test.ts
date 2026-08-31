@@ -123,7 +123,7 @@ describe('AudioTracksPage — playback-info wire shape (S280)', () => {
     return mount(AudioTracksPage, { attachTo: document.body });
   };
 
-  it('calls /api/v1/media/{id}/playback-info and maps audio_tracks to StreamAudioTrack', async () => {
+  it('calls /api/v1/media/{id}/playback-info and passes audio_tracks through as the wire AudioTrack shape', async () => {
     h.responses['/api/v1/media/m7/playback-info'] = {
       audio_tracks: [
         { id: 'a1', index: 0, stream_index: 1, codec: 'aac', language: 'en', channels: 2, bitrate: null, title: null, default: true },
@@ -134,12 +134,14 @@ describe('AudioTracksPage — playback-info wire shape (S280)', () => {
     await flushPromises();
     expect(h.calls).toEqual(['/api/v1/media/m7/playback-info']);
     const tracks = wrapper.findComponent(AudioTrackList).props('tracks');
-    // Server StreamTrackShaper extras (index/stream_index/default) are NOT
-    // forwarded, and null bitrate/title are OMITTED (contracts declares them
-    // optional, not nullable) — exact deep equality guards all of it.
+    // S404: the page types the rows as the playback-info WIRE AudioTrack
+    // (contracts v0.4.5), so all nine StreamTrackShaper keys pass through —
+    // the pre-S404 hand-map DISCARDED index/stream_index/default to coerce
+    // rows into the StreamAudioTrack DB mirror; that discard was the defect
+    // this alignment removes. Exact deep equality still guards the shape.
     expect(tracks).toEqual([
-      { id: 'a1', codec: 'aac', language: 'en', channels: 2 },
-      { id: 'a2', codec: 'eac3', language: 'es', channels: 6, bitrate: 640000, title: 'Cast' },
+      { id: 'a1', index: 0, stream_index: 1, codec: 'aac', language: 'en', channels: 2, bitrate: null, title: null, default: true },
+      { id: 'a2', index: 1, stream_index: 2, codec: 'eac3', language: 'es', channels: 6, bitrate: 640000, title: 'Cast', default: false },
     ]);
     wrapper.unmount();
   });
