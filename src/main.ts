@@ -28,6 +28,7 @@ import UpNextOverlay from './components/UpNextOverlay.vue';
 import PiPController from './components/PiPController.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
 import AudioTracksPage from './pages/AudioTracksPage.vue';
+import SubtitleTracksPage from './pages/SubtitleTracksPage.vue';
 import ParentalControlsPage from './pages/ParentalControlsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
 
@@ -62,6 +63,8 @@ export function buildExtraRoutes(): RouteRecordRaw[] {
     { path: '/app/library/scan', name: 'library-scan', component: LibraryScanPage },
     { path: '/app/chapters/:id', name: 'chapters', component: ChaptersPage },
     { path: '/app/audio-tracks/:id', name: 'audio-tracks', component: AudioTracksPage },
+    // S407: the subtitle picker's consumer page (mirror of audio-tracks).
+    { path: '/app/subtitle-tracks/:id', name: 'subtitle-tracks', component: SubtitleTracksPage },
     { path: '/app/recommendations', name: 'recommendations', component: RecommendationsScreen },
     { path: '/app/parental-controls', name: 'parental-controls', component: ParentalControlsPage },
   ];

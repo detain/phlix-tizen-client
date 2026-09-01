@@ -273,6 +273,16 @@ describe('buildExtraRoutes', () => {
     expect(names).toContain('admin-dashboard');
     expect(names).toContain('library-scan');
   });
+
+  it('S407: registers BOTH track-picker pages — audio AND the new subtitle consumer', async () => {
+    const { buildExtraRoutes } = await import('@/main');
+    const routes = buildExtraRoutes();
+    const names = routes.map((r) => r.name);
+    expect(names).toContain('audio-tracks');
+    expect(names).toContain('subtitle-tracks');
+    const subtitle = routes.find((r) => r.name === 'subtitle-tracks');
+    expect(subtitle?.path).toBe('/app/subtitle-tracks/:id');
+  });
 });
 
 describe('boot wires the nav menu + admin routes', () => {

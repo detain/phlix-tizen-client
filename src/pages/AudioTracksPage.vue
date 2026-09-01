@@ -1,17 +1,63 @@
+<script lang="ts">
+import { ApiClient } from '@phlix/ui';
+import type { AudioTrack, SubtitleTrack } from '@phlix/contracts';
+
+/**
+ * S407: the shared playback-info tracks loader. The wire tuple
+ * `GET /api/v1/media/{id}/playback-info` keeps EXACTLY ONE client-side URL
+ * literal (the route gate's per-file census pins `AudioTracksPage.vue: 1`) —
+ * every consumer of the rails imports THIS function instead of minting its
+ * own literal (S407's subtitle consumer does; the gate's pins stay untouched).
+ * The server always emits both rails (`MediaItemController::getPlaybackInfo`,
+ * `StreamTrackShaper`-shaped). The response passes through VERBATIM —
+ * consumers type the playback.ts WIRE pair, no hand-map (S404 ruling: the old
+ * `Stream*` DB-mirror hand-map silently discarded wire keys).
+ */
+export interface PlaybackInfoTracksResponse {
+  audio_tracks?: AudioTrack[];
+  subtitle_tracks?: SubtitleTrack[];
+}
+
+export async function fetchPlaybackInfoTracks(
+  baseUrl: string,
+  itemId: string,
+): Promise<PlaybackInfoTracksResponse> {
+  const client = new ApiClient({ baseUrl });
+  return client.get<PlaybackInfoTracksResponse>(
+    `/api/v1/media/${encodeURIComponent(itemId)}/playback-info`,
+  );
+}
+
+/**
+ * S407 NAMED REFUSAL (audio tracks). The vendored `@phlix/ui#v0.99.0` player
+ * store (dist/stores/usePlayerStore.d.ts) exposes NO audio-track surface: no
+ * `audioTracks`/`currentAudioTrackId` state, no `setAudioTrack`/
+ * `switchAudioTrack`/`setAudioTrackId` action, and no `hls` instance (only
+ * `hlsMasterUrl`). The pre-S407 `onSelectTrack` duck-probed exactly those four
+ * names and silently no-op'd on every miss (the S406 phantom-rail class). The
+ * probes are replaced by this stated limit — `TrackApplyBoundary.test.ts`
+ * asserts the real store surface, so if a genuine audio API lands, the
+ * boundary test goes RED and this refusal must be retired with it.
+ */
+export const AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE =
+  'Audio track choice cannot be applied: the @phlix/ui player store exposes no audio-track switching surface (state: none; actions: setSubtitle/setQuality only).';
+</script>
+
 <script setup lang="ts">
 /**
  * AudioTracksPage — displays the available audio tracks for a media item.
  *
- * Fetches audio tracks from the HLS manifest (via player store) or from
- * `GET /api/v1/media/{id}/playback-info` (`audio_tracks`, shaped by the
- * server's StreamTrackShaper). S280 finding: this page previously called
- * `GET /api/v1/media/{id}/audio-tracks`, a route phlix-server never
- * registered — the fallback silently threw on every non-HLS item and the
- * page rendered an empty list. `playback-info` is the registered rail
- * (`MediaItemController::getPlaybackInfo()`), and `@phlix/ui`'s own player
- * already reads its audio tracks from there.
+ * Fetches from `GET /api/v1/media/{id}/playback-info` (`audio_tracks`, shaped
+ * by the server's StreamTrackShaper) via the shared S407 loader. S280 finding:
+ * this page previously called `GET /api/v1/media/{id}/audio-tracks`, a route
+ * phlix-server never registered — the fallback silently threw on every
+ * non-HLS item and the page rendered an empty list. `playback-info` is the
+ * registered rail (`MediaItemController::getPlaybackInfo()`), and `@phlix/ui`'s
+ * own player already reads its audio tracks from there.
  *
- * Each track row allows switching the active audio track during playback.
+ * S407: selecting a row is a NAMED REFUSAL (`AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE`),
+ * not a silent no-op — the vendored store has no audio surface. The viewer
+ * stays on the page and sees the reason.
  *
  * Route: /app/audio-tracks/:id  (registered via buildExtraRoutes in main.ts)
  *
@@ -21,41 +67,30 @@
 
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { ApiClient } from '@phlix/ui';
-import { useApiBase, usePlayerStore } from '@phlix/ui';
-import type { AudioTrack } from '@phlix/contracts';
+import { useApiBase } from '@phlix/ui';
+// NOTE: `AudioTrack` type + `ApiClient` + the shared loader live in the plain
+// <script> block above — both blocks compile into ONE module scope, so they
+// are deliberately NOT re-imported here.
 import AudioTrackList from '../components/AudioTrackList.vue';
-
-/**
- * `playback-info` response — only the slice this page reads. `audio_tracks[]`
- * IS the contracts `AudioTrack` wire shape verbatim (server
- * `StreamTrackShaper::audioTracks()`: `id, index, stream_index, codec,
- * language, channels, bitrate (always present, nullable), title (nullable),
- * default`), so the rows pass through untouched — S404: the previous hand-map
- * into the `StreamAudioTrack` DB mirror silently discarded
- * `index`/`stream_index`/`default`, a mapping the wire type makes
- * unnecessary.
- */
-interface PlaybackInfoApiResponse {
-  audio_tracks?: AudioTrack[];
-}
 
 const route = useRoute();
 const router = useRouter();
 const apiBase = useApiBase();
-const playerStore = usePlayerStore();
 
 const audioTracks = ref<AudioTrack[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
+/** S407: the visible named refusal, set when the viewer picks a row. */
+const refusal = ref<string | null>(null);
 
 const mediaId = computed(() => String(route.params.id ?? ''));
 
-/** Current active audio track ID from player store */
-const activeTrackId = computed(() => {
-  const storeAny = playerStore as unknown as Record<string, unknown>;
-  return (storeAny.audioTrackId ?? storeAny.activeAudioTrack ?? null) as string | null;
-});
+/**
+ * S407 honest active-row state: null — the vendored store carries no
+ * current-audio-track, so no row may claim to be active (a duck-probe of
+ * absent fields pretended otherwise).
+ */
+const activeTrackId = computed<string | null>(() => null);
 
 async function loadAudioTracks(): Promise<void> {
   const id = mediaId.value;
@@ -67,23 +102,15 @@ async function loadAudioTracks(): Promise<void> {
 
   loading.value = true;
   error.value = null;
+  refusal.value = null;
 
   try {
-    // First try to get tracks from the player store (HLS manifest)
-    const storeAny = playerStore as unknown as Record<string, unknown>;
-    const playerTracks = storeAny.audioTracks as AudioTrack[] | undefined;
-
-    if (playerTracks && playerTracks.length > 0) {
-      audioTracks.value = playerTracks;
-    } else {
-      // Fall back to the registered playback-info rail (S280: the previous
-      // `/media/{id}/audio-tracks` route was never registered server-side).
-      const client = new ApiClient({ baseUrl: apiBase.value });
-      const response = await client.get<PlaybackInfoApiResponse>(
-        `/api/v1/media/${encodeURIComponent(id)}/playback-info`,
-      );
-      audioTracks.value = response.audio_tracks ?? [];
-    }
+    // S407: single honest path. The old `storeAny.audioTracks` probe tested a
+    // field the vendored store does not have — it missed on every call and the
+    // fetch below was the only live rail, so the fiction is gone and the wire
+    // fetch is simply THE source.
+    const response = await fetchPlaybackInfoTracks(apiBase.value, id);
+    audioTracks.value = response.audio_tracks ?? [];
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load audio tracks';
     audioTracks.value = [];
@@ -93,34 +120,14 @@ async function loadAudioTracks(): Promise<void> {
 }
 
 /**
- * Switch to the selected audio track.
- * Uses the player store's audio track switching method if available,
- * falling back to direct HLS audio track API.
+ * S407 named refusal replaces the 4-way duck-probe (setAudioTrack /
+ * switchAudioTrack / setAudioTrackId / hls.audioTrack — none exist on the
+ * vendored store; every branch silently missed and the page `router.back()`d
+ * as if something applied). The viewer sees the exact boundary instead and
+ * keeps the list open.
  */
-function onSelectTrack(track: AudioTrack): void {
-  const storeAny = playerStore as unknown as Record<string, unknown>;
-
-  // Try player store method first
-  if (typeof storeAny.setAudioTrack === 'function') {
-    storeAny.setAudioTrack(track.id);
-  } else if (typeof storeAny.switchAudioTrack === 'function') {
-    storeAny.switchAudioTrack(track.id);
-  } else if (typeof storeAny.setAudioTrackId === 'function') {
-    storeAny.setAudioTrackId(track.id);
-  } else {
-    // Fall back to direct HLS audio track setting via stored hls instance
-    const hls = storeAny.hls as { audioTrack: number } | undefined;
-    if (hls && typeof hls.audioTrack === 'number') {
-      // Find the track index by id
-      const trackIndex = audioTracks.value.findIndex(t => t.id === track.id);
-      if (trackIndex >= 0) {
-        hls.audioTrack = trackIndex;
-      }
-    }
-  }
-
-  // Navigate back after selection
-  void router.back();
+function onSelectTrack(_track: AudioTrack): void {
+  refusal.value = AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE;
 }
 
 function goBack(): void {
@@ -198,6 +205,13 @@ watch(mediaId, loadAudioTracks);
     </div>
 
     <template v-else>
+      <p
+        v-if="refusal"
+        class="audio-tracks-page__refusal"
+        role="alert"
+      >
+        {{ refusal }}
+      </p>
       <AudioTrackList
         :tracks="audioTracks"
         :active-track-id="activeTrackId"
@@ -297,6 +311,16 @@ watch(mediaId, loadAudioTracks);
 .audio-tracks-page__retry:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+}
+
+.audio-tracks-page__refusal {
+  margin: 0 0 var(--space-4, 1rem);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border: 1px solid var(--accent, #f59e0b);
+  border-radius: var(--radius-md, 0.375rem);
+  background: var(--surface-2, #1f1f23);
+  color: var(--accent, #f59e0b);
+  font-size: var(--text-sm, 0.875rem);
 }
 
 @media (prefers-reduced-motion: reduce) {
