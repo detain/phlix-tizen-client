@@ -29,7 +29,7 @@
   },
   "homepage": "https://github.com/detain/phlix-tizen-client",
   "dependencies": {
-    "@phlix/contracts": "github:detain/phlix-contracts#v0.4.5",
+    "@phlix/contracts": "github:detain/phlix-contracts#v0.4.6",
     "@phlix/syncplay": "github:detain/phlix-syncplay#v0.1.2",
     "@phlix/ui": "github:detain/phlix-ui#v0.99.0",
     "pinia": "^3.0.0",
