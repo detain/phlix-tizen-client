@@ -5,3 +5,7 @@ dist
 
 # Caliber local state
 .caliber/
+
+# Test coverage output (S409: build artifacts must not be tracked — a
+# stale committed copy actively poisoned greps with pre-S404 renderings)
+coverage/

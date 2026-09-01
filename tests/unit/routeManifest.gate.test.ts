@@ -11,12 +11,16 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.4.4, which predates the manifest export (it
- * landed on master at 09161041, untagged), and the package `exports` map
- * blocks JSON subpath imports anyway. Vendoring this one artifact is the
- * sanctioned interim pattern — identical to mobile (dc45e5c3) and roku
- * (1da0910e). Re-adoption of the contracts export replaces the copies when
- * the next contracts tag ships (tracked W19, phlix-ui #349 lane).
+ * `@phlix/contracts` at #v0.4.5, but the manifest shipped IN that tag is
+ * stale for this pin's purpose — it embeds server `8f72faec…` (md5
+ * cca4660d…), while the estate-wide canonical copy is the untagged master
+ * regen at server `01340633` (md5 pinned below, contracts 068d5e86) — and the
+ * package `exports` map blocks JSON subpath imports anyway. Vendoring this
+ * one artifact is the sanctioned interim pattern — identical to mobile
+ * (dc45e5c3) and roku (1da0910e). Re-adoption of the contracts export
+ * replaces the copies when the next contracts tag ships (tracked W19,
+ * phlix-ui #349 lane). (S412: this cite named the superseded #v0.4.4 pin;
+ * comment-only, zero behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
