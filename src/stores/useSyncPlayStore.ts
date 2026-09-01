@@ -8,8 +8,10 @@
  * `@phlix/ui` does not export its player-side SyncPlay API (`getSyncPlayApi`,
  * `openSyncPlayConnection`, `sendSyncPlayCommand` are internal to the package),
  * so the REST client and the WebSocket layer live here, typed against
- * `@phlix/contracts` v0.4.3 (SyncPlayGroup / SyncPlaySession / SyncPlayUser)
- * and framed by `@phlix/syncplay` v0.1.2.
+ * `@phlix/contracts` v0.4.6 (S415 type truth: `SyncPlayGroup` IS the
+ * `GroupState::getState()` emission with a DICT `members`, the list-row
+ * vocabulary lives on `SyncPlayGroupListItem`, and the five REST envelopes
+ * are declared) and framed by `@phlix/syncplay` v0.1.2.
  *
  * Wire contract (authority: phlix-syncplay/SPEC.md):
  *   - HTTP surface is exactly five routes under `/api/v1/syncplay/groups`
@@ -30,10 +32,11 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type {
   SyncPlayGroup,
-  SyncPlaySession,
-  SyncPlayUser,
-  SyncPlayMember,
-  SyncPlayPlaybackCommand,
+  SyncPlayGroupListItem,
+  SyncPlayMembersDict,
+  SyncPlayQueueItem,
+  SyncPlayRole,
+  SyncPlayPermission,
 } from '@phlix/contracts';
 import { SyncPlayClient, serializeMessage } from '@phlix/syncplay';
 import type { PendingPlayMediaCommand } from '../api/hubRelay';
@@ -41,24 +44,62 @@ import type { PendingPlayMediaCommand } from '../api/hubRelay';
 // ---- Types -----------------------------------------------------------------
 
 /**
- * The store's session shape: the contracts `SyncPlaySession` plus the wire's
- * `current_media_id` (S298).
+ * One member as the STORE views them: a local (camelCase) presentation of a
+ * contracts {@link SyncPlayMember} — the server wire carries only
+ * `{id, name, is_host, joined_at}` inside the group-state `members` dict;
+ * `profileId` has no server field (0), membership IS presence so `isOnline`
+ * is always `true` for a returned member, `role` is derived from `is_host`,
+ * and `lastSeen` is derived from `joined_at`.
  *
- * The pinned contracts v0.4.3 session type has no `currentMediaId` field (the
- * ui added it to its own types in the S298 ui half for the same reason), so
- * the carry-through is declared here, on the local mapping boundary: produced
- * by {@link groupToSession} from the server's `current_media_id` (the group
- * state emits it — the field is NOT pinned null), and written into the live
- * session by {@link applyPendingPlayMedia} (the paired caller — the hub-relay
- * consumer's "Alexa, play X" command carries the media id). The
- * load-a-new-title dispatch point (`src/syncplayDispatch.ts`) consumes the
- * command's own `mediaId` — exactly like the ui's Player.vue — so the session
- * field stays a faithful wire carry + live-session signal for future session
- * UI, never the load path's input.
+ * S415 note: this shape used to be typed by the contracts `SyncPlayUser`,
+ * which the server never emitted and which has been retired from
+ * `@phlix/contracts` — the view is now declared here, honestly, as the
+ * local derivation it always was.
  */
-export interface LocalSyncPlaySession extends SyncPlaySession {
+export interface LocalSyncPlayMember {
+  id: string;
+  name: string;
+  profileId: number;
+  role: SyncPlayRole;
+  isOnline: boolean;
+  lastSeen: string; // ISO 8601
+}
+
+/**
+ * The store's session shape — a LOCAL view derived from the group state (the
+ * server has no separate session entity: the GROUP is the session). Carries
+ * the wire's `current_media_id` as `currentMediaId` (S298).
+ *
+ * Produced by {@link groupToSession} from the server's `current_media_id`
+ * (the group state emits it — the field is NOT pinned null), and written
+ * into the live session by {@link applyPendingPlayMedia} (the paired caller —
+ * the hub-relay consumer's "Alexa, play X" command carries the media id).
+ * The load-a-new-title dispatch point (`src/syncplayDispatch.ts`) consumes
+ * the command's own `mediaId` — exactly like the ui's Player.vue — so the
+ * session field stays a faithful wire carry + live-session signal for future
+ * session UI, never the load path's input.
+ *
+ * S415 note: this used to extend the contracts `SyncPlaySession`, a ghost
+ * type the server never emitted (retired in contracts v0.4.6). The camelCase
+ * session vocabulary is the store's own model, and now says so in its types.
+ */
+export interface LocalSyncPlaySession {
+  /** The group id — the group IS the session. */
+  id: string;
+  roomId: string;
+  serverId: string;
+  createdBy: string; // host member id
+  createdAt: string; // ISO 8601
+  state: 'waiting' | 'playing' | 'paused' | 'ended';
   /** Media item id the group is (or last was) playing — `null` when none. */
   currentMediaId: string | null;
+  playbackPosition: number; // ms — the wire unit (S293)
+  playbackRate: number;
+  serverTime: number; // unix seconds
+  lastSync: string; // ISO 8601
+  activeUsers: LocalSyncPlayMember[];
+  roles: Record<string, SyncPlayRole>;
+  permissions: Record<string, SyncPlayPermission[]>;
 }
 
 /**
@@ -140,12 +181,25 @@ interface JoinedGroup {
   session: LocalSyncPlaySession;
 }
 
+/** Playback command verbs the store sends and receives. */
+type PlaybackCommandType = 'play' | 'pause' | 'seek' | 'sync';
+
 /**
  * A remote playback command as carried over the WebSocket. The wire frames
  * carry no `issued_by`/`issued_at` — the server derives the member identity
  * from the authenticated connection (SPEC.md §4).
+ *
+ * S415 note: this used to be a `Pick` of the contracts
+ * `SyncPlayPlaybackCommand`, a ghost type the server never emitted (retired
+ * in contracts v0.4.6). The command verbs are the store's own transport
+ * vocabulary, and now declare it.
  */
-type RemotePlaybackCommand = Pick<SyncPlayPlaybackCommand, 'type' | 'position' | 'rate'>;
+type RemotePlaybackCommand = {
+  type: PlaybackCommandType;
+  /** Milliseconds — the wire unit; applied verbatim on receive (S293). */
+  position?: number;
+  rate?: number;
+};
 
 // ---- Normalization (wire group → @phlix/contracts types) -------------------
 
@@ -172,10 +226,11 @@ function groupId(raw: RawSyncPlayGroup): string {
 /**
  * Normalize the server's `members` — a dict keyed by member id from
  * `GroupState::getState()`, or `[]` from the raw-snapshot fallback — into the
- * store's `SyncPlayUser[]`. The server carries no per-member online flag
- * (membership IS presence), so `isOnline` is `true` for every returned member.
+ * store's `LocalSyncPlayMember[]`. The server carries no per-member online
+ * flag (membership IS presence), so `isOnline` is `true` for every returned
+ * member.
  */
-function normalizeMembers(raw: RawSyncPlayGroup | undefined): SyncPlayUser[] {
+function normalizeMembers(raw: RawSyncPlayGroup | undefined): LocalSyncPlayMember[] {
   const members = raw?.members;
   if (!members) return [];
   const list: RawSyncPlayMember[] = Array.isArray(members)
@@ -191,23 +246,33 @@ function normalizeMembers(raw: RawSyncPlayGroup | undefined): SyncPlayUser[] {
   }));
 }
 
-/** Same normalization as {@link normalizeMembers}, but to the contracts `SyncPlayMember` shape. */
-function normalizeGroupMembers(raw: RawSyncPlayGroup | undefined): SyncPlayMember[] {
+/**
+ * Same normalization as {@link normalizeMembers}, but to the contracts
+ * `SyncPlayMember` shape — kept as the DICTIONARY the server emits, keyed by
+ * member id (S415: `members` is a dict on the wire; the array spelling is
+ * only the raw-snapshot fallback / pre-S416 lib output, so it folds in).
+ */
+function normalizeGroupMembers(raw: RawSyncPlayGroup | undefined): SyncPlayMembersDict {
   const members = raw?.members;
-  if (!members) return [];
+  if (!members) return {};
   const list: RawSyncPlayMember[] = Array.isArray(members)
     ? members
     : Object.entries(members).map(([key, value]) => ({ id: key, ...value }));
-  return list.map((m) => ({
-    id: m.id ?? '',
-    name: m.name ?? '',
-    is_host: m.is_host === true,
-    joined_at: num(m.joined_at),
-  }));
+  const dict: SyncPlayMembersDict = {};
+  for (const m of list) {
+    const id = m.id ?? '';
+    dict[id] = {
+      id,
+      name: m.name ?? '',
+      is_host: m.is_host === true,
+      joined_at: num(m.joined_at),
+    };
+  }
+  return dict;
 }
 
 /** Map `playback_state` onto the store's session state. */
-function sessionState(raw: RawSyncPlayGroup): SyncPlaySession['state'] {
+function sessionState(raw: RawSyncPlayGroup): LocalSyncPlaySession['state'] {
   switch (raw.playback_state) {
     case 'playing':
       return 'playing';
@@ -219,39 +284,66 @@ function sessionState(raw: RawSyncPlayGroup): SyncPlaySession['state'] {
   }
 }
 
+/** One queue entry of the group state, parsed to the contracts `SyncPlayQueueItem`. */
+function normalizeQueueItem(item: unknown): SyncPlayQueueItem {
+  const q = (typeof item === 'object' && item !== null ? item : {}) as Record<string, unknown>;
+  const info = q.media_info;
+  return {
+    media_id: typeof q.media_id === 'string' ? q.media_id : '',
+    media_info: typeof info === 'object' && info !== null ? (info as Record<string, unknown>) : {},
+    added_at: num(q.added_at),
+    added_by: typeof q.added_by === 'string' ? q.added_by : null,
+  };
+}
+
 /**
- * Map a raw server group onto the contracts `SyncPlayGroup`.
+ * Map a raw server group state onto the contracts `SyncPlayGroup` — the
+ * verbatim `GroupState::getState()` vocabulary (S415 authority ruling):
+ * `group_id`/`group_name`, dict-keyed `members`, nullable `host_id`/
+ * `current_media_id`, no `has_password`/`current_media`/`is_playing` — those
+ * three belong to LIST ROWS ({@link normalizeListRow}), never to the state.
  *
- * `is_playing` is derived from `playback_state` (the listing rows carry the
- * flag; the group state does not). `has_password` is the only public/private
- * signal the server emits, and only on the listing rows.
+ * The raw view is still read with fallbacks (listing rows reach some call
+ * sites on older paths), but the RESULT is honest: a `SyncPlayGroup` only
+ * ever carries state keys.
  */
 function normalizeGroup(raw: RawSyncPlayGroup | undefined): SyncPlayGroup {
   const g = raw ?? {};
-  const id = groupId(g);
+  const members = normalizeGroupMembers(g);
   return {
-    id,
-    name: g.group_name ?? g.name ?? '',
-    member_count: num(g.member_count, normalizeMembers(g).length),
-    has_password: g.has_password === true,
-    // Listing rows spell it `current_media`, full state `current_media_id`
-    // (contracts `SyncPlayGroupListItem` vs `SyncPlayGroup`) — accept either.
-    current_media: g.current_media ?? g.current_media_id ?? null,
-    is_playing: g.is_playing === true || g.playback_state === 'playing',
-    members: normalizeGroupMembers(g),
-    host_id: g.host_id ?? '',
+    group_id: groupId(g),
+    group_name: g.group_name ?? g.name ?? '',
+    member_count: num(g.member_count, Object.keys(members).length),
+    members,
+    host_id: typeof g.host_id === 'string' && g.host_id !== '' ? g.host_id : null,
     current_media_id: g.current_media_id ?? g.current_media ?? null,
-    current_media_duration: g.current_media_duration ?? null,
+    current_media_duration: num(g.current_media_duration),
     playback_position: num(g.playback_position),
     playback_state: g.playback_state ?? 'stopped',
-    queue: g.queue ?? [],
+    queue: (Array.isArray(g.queue) ? g.queue : []).map(normalizeQueueItem),
     created_at: num(g.created_at),
     last_activity_at: num(g.last_activity_at),
   };
 }
 
 /**
- * Map a raw server group onto the contracts `SyncPlaySession`.
+ * Map a raw LIST ROW onto the contracts `SyncPlayGroupListItem` — the
+ * list-only vocabulary (`id`/`name`/`has_password`/`current_media`/
+ * `is_playing`) as `SyncPlaySnapshotService::listGroups()` emits it.
+ */
+function normalizeListRow(raw: RawSyncPlayGroup): SyncPlayGroupListItem {
+  return {
+    id: groupId(raw),
+    name: raw.group_name ?? raw.name ?? '',
+    member_count: num(raw.member_count),
+    has_password: raw.has_password === true,
+    current_media: raw.current_media ?? raw.current_media_id ?? null,
+    is_playing: raw.is_playing === true || raw.playback_state === 'playing',
+  };
+}
+
+/**
+ * Map a raw server group onto the store's local session view.
  *
  * The server has no separate session entity — the GROUP is the session — so
  * the session id IS the group id. `playbackRate` has no server field either; a
@@ -356,16 +448,16 @@ class SyncPlayApiClient {
     return groupToSession(res.group);
   }
 
-  async getMembers(groupId: string): Promise<SyncPlayUser[]> {
+  async getMembers(groupId: string): Promise<LocalSyncPlayMember[]> {
     const res = await this.request<SyncPlayGroupResponse>(
       `/api/v1/syncplay/groups/${encodeURIComponent(groupId)}`,
     );
     return normalizeMembers(res.group);
   }
 
-  async listGroups(): Promise<SyncPlayGroup[]> {
+  async listGroups(): Promise<SyncPlayGroupListItem[]> {
     const res = await this.request<SyncPlayGroupsResponse>('/api/v1/syncplay/groups');
-    return Array.isArray(res.groups) ? res.groups.map(normalizeGroup) : [];
+    return Array.isArray(res.groups) ? res.groups.map(normalizeListRow) : [];
   }
 }
 
@@ -400,7 +492,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
 
   const currentRoom = ref<SyncPlayGroup | null>(null);
   const currentSession = ref<LocalSyncPlaySession | null>(null);
-  const members = ref<SyncPlayUser[]>([]);
+  const members = ref<LocalSyncPlayMember[]>([]);
   const error = ref<string | null>(null);
   const isLoading = ref(false);
   /** A hub-relay `pending_command` / `play_media` frame awaiting the
@@ -457,7 +549,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   function connectWs(apiBase: string, roomId: string, token: string): void {
     // Early exit if already connected to this group
     if (wsConnection.value && wsConnection.value.readyState === WebSocket.OPEN) {
-      if (currentRoom.value?.id === roomId) return;
+      if (currentRoom.value?.group_id === roomId) return;
       // Different group — close the existing connection first
       disconnectWs();
     }
@@ -684,13 +776,13 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
       const room = await api.createRoom(input);
 
       // The join response is the full group state — the room AND the session.
-      const joined = await api.joinRoom(room.id);
+      const joined = await api.joinRoom(room.group_id);
       currentRoom.value = joined.room;
       currentSession.value = joined.session;
       members.value = joined.session.activeUsers;
 
       // Establish WebSocket connection after successful join
-      connectWs(apiBase, joined.room.id, token);
+      connectWs(apiBase, joined.room.group_id, token);
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to create room';
       throw e;
@@ -745,7 +837,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
 
     try {
       const api = new SyncPlayApiClient(apiBase, token);
-      await api.leaveRoom(currentRoom.value.id);
+      await api.leaveRoom(currentRoom.value.group_id);
 
       // Disconnect WebSocket before clearing state
       disconnectWs();
@@ -767,15 +859,18 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
    * command route does not exist (v0.99.0 removed `sendCommand` from the API
    * client). No-op when the socket is not connected.
    */
-  async function sendCommand(
-    _apiBase: string,
-    _token: string,
-    type: SyncPlayPlaybackCommand['type'],
-    options?: { position?: number; rate?: number },
-  ): Promise<void> {
-    if (!currentSession.value) return;
+   async function sendCommand(
+     _apiBase: string,
+     _token: string,
+     type: PlaybackCommandType,
+     options?: { position?: number; rate?: number },
+   ): Promise<void> {
+     if (!currentSession.value) return;
 
-    const command: SyncPlayPlaybackCommand = {
+    // `issued_by`/`issued_at` were never read past here (the server derives the
+    // member identity from the authenticated connection — SPEC.md §4), so the
+    // local command carries exactly what dispatch consumes.
+    const command: RemotePlaybackCommand = {
       type,
       // S293: `options.position` is SECONDS (the store-internal unit); the
       // wire unit is MILLISECONDS (phlix-syncplay SPEC.md:91). Convert at the
@@ -783,8 +878,6 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
       // a position never reaches `undefined * 1000` (NaN).
       position: options?.position !== undefined ? options.position * 1000 : undefined,
       rate: options?.rate,
-      issued_by: currentSession.value.createdBy,
-      issued_at: new Date().toISOString(),
     };
 
     if (!syncPlayClient) return;
@@ -833,7 +926,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
 
     try {
       const api = new SyncPlayApiClient(apiBase, token);
-      const membersList = await api.getMembers(currentRoom.value.id);
+      const membersList = await api.getMembers(currentRoom.value.group_id);
       members.value = membersList;
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to refresh members';
@@ -844,7 +937,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   /**
    * Fetch the list of public groups available to join.
    */
-  async function fetchPublicRooms(apiBase: string, token: string): Promise<SyncPlayGroup[]> {
+  async function fetchPublicRooms(apiBase: string, token: string): Promise<SyncPlayGroupListItem[]> {
     try {
       const api = new SyncPlayApiClient(apiBase, token);
       return await api.listGroups();
