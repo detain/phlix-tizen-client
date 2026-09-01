@@ -232,19 +232,20 @@ const TOTAL_SITES = Object.values(PER_FILE_COVERAGE).reduce((a, b) => a + b, 0);
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
-    expect(manifest.provenance.serverSha).toBe('8f72faec6ef85c9df1382148d4f294a450d71bed');
+    expect(manifest.provenance.serverSha).toBe('0134063318bf601dcc152c6c175368cdf9168378');
     expect(manifest.provenance.total).toBe(400);
     expect(manifest.routes).toHaveLength(400);
     expect(manifest.provenance.generator).toBe('scripts/generate-server-route-manifest.mjs');
   });
 
   it('is byte-identical to the sibling contracts artifact it vendors', () => {
-    // md5 of `@phlix/contracts` `dist/server-route-manifest.json` at 09161041.
+    // md5 of `@phlix/contracts` `dist/server-route-manifest.json` at this wave's
+    // merged master provenance regen (untagged, s280rest doctrine).
     // Mobile and roku vendored the SAME bytes — one source across the estate;
     // any drift here means this copy was edited (the artifact says "do not").
     const raw = readFileSync(MANIFEST_PATH);
     const md5 = createHash('md5').update(raw).digest('hex');
-    expect(md5).toBe('cca4660dda7876fba840f9d108ad7c18');
+    expect(md5).toBe('6ea0eac92bfb0632d986b122608b9acc');
     const unique = new Set(manifest.routes.map(([m, r]) => `${m} ${r}`));
     expect(unique.size).toBe(400);
   });
