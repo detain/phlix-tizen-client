@@ -5,6 +5,16 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W29 (cs17): route-manifest provenance re-pin (no route change) — 2026-09-04
+
+- **cs#17 currency cascade.** `tests/fixtures/server-route-manifest.json`
+  re-vendored verbatim from `@phlix/contracts` master `55311c68` (regen
+  against server master `4b620f59`; previous provenance `888a42b2`). All 400
+  tuples byte-identical — only provenance moves. The gate pins follow in
+  `tests/unit/routeManifest.gate.test.ts`: vendored md5 `9727f2d3` →
+  `81eeef82`, serverSha `888a42b2` → `4b620f59`, and the contracts regen cite
+  `c7125362` → `55311c68`. No issued-URL or coverage pin moved.
+
 ### Added — client route gate (S280)
 
 - **Vendored the canonical `@phlix/contracts` server route manifest** at
