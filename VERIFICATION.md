@@ -157,7 +157,7 @@
 
 ## Step 1.3 - @phlix/* Dependencies
 **Status**: Verified aligned
-**Finding**: @phlix/contracts v0.3.12, @phlix/syncplay v0.1.2 - aligned between tizen-client and phlix-ui
+**Finding**: @phlix/syncplay #v0.1.4 - aligned between tizen-client and phlix-ui (S418 re-pin from #v0.1.2, 2026-09-04). @phlix/contracts pins differ as measured at the package.json files this session: tizen-client v0.4.6 vs phlix-ui v0.4.5.
 
 ## Step 1.4 - @phlix/tokens Integration
 **Status**: Verified OK
@@ -1070,7 +1070,7 @@ Category 11 covers SyncPlay — a collaborative playback synchronization feature
 | 11.3 | **NOT TV-APPLICABLE** | Per AGENTS.md: "this repo writes no media/library/auth UI — that lives in @phlix/ui". SyncPlay UI components (SyncPlayOverlay, SyncPlayModal, SyncPlayControls) are part of @phlix/ui, not this thin TV client repo. |
 | 11.4 | **TV-SPECIFIC** | tizen's `syncStatus` computed (lines 190-193) returns `'synced' \| 'outOfSync' \| 're-syncing'` based solely on session state — no drift computation. However, `usePlayerStore` (from @phlix/ui) handles playback rate sync for SyncPlay sessions. The lack of drift computation is by design for this TV-specific implementation. |
 | 11.5 | **TV-SPECIFIC REIMPLEMENTATION** | tizen connects WebSocket to `${apiBase.replace(/^http/, 'ws')}/api/v1/syncplay/${roomId}?token=${token}` — using the API port, NOT port 8097. Uses custom JSON message format (`WsMessage` type with 'command' \| 'member_joined' \| 'member_left' \| 'state_sync' \| 'error'). This is a deliberate protocol reimplementation for the TV client. |
-| 11.6 | **NOT USED** | `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.2"` is declared in `package.json` (line 33) but `grep -r "@phlix/syncplay" src/` returns **no matches** — the package is not imported or used anywhere in the codebase. |
+| 11.6 | **IN USE** | `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.4"` is declared in `package.json` (line 33) and IS imported: `grep -r "@phlix/syncplay" src/` matches `src/stores/useSyncPlayStore.ts` (import at line 41 — `SyncPlayClient` + `serializeMessage`; `SyncPlayClient` instantiated in `connectWs()` at line 564 with `onState` at line 578; `ws.onmessage` feeds `client.handleIncoming` at lines 603-605). The earlier "no matches / orphaned dependency" reading was true only of the pre-S415 store and is false at tip (re-measured 2026-09-04). |
 
 ## Decision Distribution
 
@@ -1092,8 +1092,8 @@ The tizen-client implements its own WebSocket class with:
 - Exponential backoff reconnection (MAX_RECONNECT_ATTEMPTS=5, BASE_RECONNECT_DELAY=1000ms)
 - WebSocket on API port (not 8097)
 
-### 2. Unused @phlix/syncplay Dependency (11.6)
-The package is declared but never imported. A `grep -r "@phlix/syncplay" src/` finds no matches. This is an orphaned dependency that could be removed if the TV-specific approach is confirmed as correct.
+### 2. @phlix/syncplay Dependency in Use (11.6)
+The package IS imported and drives the SyncPlay WebSocket protocol: `useSyncPlayStore.ts` imports `SyncPlayClient`/`serializeMessage` (line 41) and instantiates the client in `connectWs()` (line 564). The earlier "declared but never imported / orphaned dependency" finding predates the S415 store rewrite and no longer holds (re-measured by grep at tip, 2026-09-04).
 
 ### 3. No Drift Computation (11.4)
 tizen's `syncStatus` computed property does not use drift computation. It simply checks if `currentSession.value.state === 'playing' || currentSession.value.state === 'paused'`. The context notes that `usePlayerStore` handles playback rate sync for SyncPlay sessions, so drift computation may not be needed at the store level.
@@ -1103,8 +1103,8 @@ The AGENTS.md explicitly states this repo "writes no media/library/auth UI — t
 
 ## Verification Evidence
 
-- **useSyncPlayStore.ts**: 645 lines, custom WebSocket implementation, NO @phlix/syncplay imports
-- **package.json**: `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.2"` declared but unused
+- **useSyncPlayStore.ts**: 994 lines (measured `wc -l`, 2026-09-04); the WebSocket layer runs the real `@phlix/syncplay` `SyncPlayClient` (import line 41, instantiation line 564)
+- **package.json**: `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.4"` declared and used (S418 re-pin from #v0.1.2)
 - **AGENTS.md**: Confirms thin TV consumer model
 - **usePlayerStore**: Not present in tizen-client (comes from @phlix/ui) — handles playback rate sync
 
