@@ -11,7 +11,7 @@
  * `@phlix/contracts` v0.4.6 (S415 type truth: `SyncPlayGroup` IS the
  * `GroupState::getState()` emission with a DICT `members`, the list-row
  * vocabulary lives on `SyncPlayGroupListItem`, and the five REST envelopes
- * are declared) and framed by `@phlix/syncplay` v0.1.2.
+ * are declared) and framed by `@phlix/syncplay` v0.1.4.
  *
  * Wire contract (authority: phlix-syncplay/SPEC.md):
  *   - HTTP surface is exactly five routes under `/api/v1/syncplay/groups`
