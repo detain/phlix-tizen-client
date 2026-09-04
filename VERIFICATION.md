@@ -1,3 +1,7 @@
+<!-- s424-doc-honesty-census-2026-09-04 -->
+
+> **S424 doc-honesty sweep (2026-09-04).** Every tizen-repo line-cite and count below was re-derived at tip `f5b9fff9` on 2026-09-04 and restated to the measured value; suite re-run measured **312 tests / 20 files** (was "74 PASS" in the Gates rows). Citations pointing **inside `@phlix/ui` source** (`usePlayerStore.ts`, `hls-playback.ts`, `playback.ts`, `MediaGrid.vue`, `Player.vue`, `PlayerPage.vue`, `client.ts`, `recommendations.ts`, `ApiClient.d.ts`) were measured 2026-07-31 against the then-installed `@phlix/ui` v0.98.33 SOURCE tree and are **HISTORICAL**: `@phlix/ui` v0.99.0 ships only `dist/`, so those line numbers are not re-derivable here and may have drifted. Vendored-copy claims that ARE re-derivable from `dist/` (token occurrence counts, admin-module count, bundle filenames) were re-measured and restated.
+
 # Category 4 - Missing/Unused Stores
 
 ## Step 4.1 - useMediaStore
@@ -37,7 +41,7 @@
 
 ## Step 4.8 - useSyncPlayStore
 **Decision**: TV-SPECIFIC REIMPLEMENTATION (existing implementation at src/stores/useSyncPlayStore.ts)
-**Rationale**: Tizen has its own 645-line WebSocket implementation vs phlix-ui's 299-line version. Tizen's version has fully integrated WebSocket with auto-reconnect (5 attempts, exponential backoff), local SyncPlayApiClient class, and fetchPublicRooms(). This is intentionally reimplemented for TV-specific reliability requirements - phlix-ui outsources WebSocket to external module while tizen integrates it directly for cohesive state management.
+**Rationale**: Tizen has its own 994-line SyncPlay store (`wc -l src/stores/useSyncPlayStore.ts` at tip, 2026-09-04; phlix-ui's compared line-count is a HISTORICAL v0.98.33-source figure). Tizen's version has a fully integrated WebSocket with auto-reconnect (MAX_RECONNECT_ATTEMPTS=5 / BASE_RECONNECT_DELAY=1000 with exponential backoff at useSyncPlayStore.ts:641-653), a local `SyncPlayApiClient` REST class (lines 392-462), and `fetchPublicRooms()` (line 940). The WebSocket PROTOCOL is not custom — it is framed by the imported `@phlix/syncplay` client (import line 41; see Category 11). Reimplemented because @phlix/ui does not export its player-side SyncPlay internals (store docblock lines 7-10); justified for TV-specific cohesive state management.
 **Code Changes**: None (reimplementation already exists - justified)
 
 ## Step 4.9 - usePlayerUiStore
@@ -58,6 +62,8 @@
 ---
 
 # Category 2 Verification - Duplicate Component Decisions
+
+> *(HISTORICAL note, S424 2026-09-04: the phlix-ui-side comparisons in this category were measured against the @phlix/ui v0.98.33 source tree; v0.99.0 ships dist-only, so they are not re-derivable here. The tizen-side facts spot-checked by this sweep still hold — e.g. the hardcoded `"tracks"` strings in MusicPage.vue (now :286/:294) are real, and every cited tizen component still exists.)*
 
 ## Step 2.1.1 - MusicAlbumCard.vue
 **Status**: TV-SPECIFIC (justified)
@@ -150,45 +156,44 @@
 
 ## Step 1.1 - Update @phlix/ui
 **Decision**: IMPLEMENTED_OK
-**Rationale**: `npm ci` materialized @phlix/ui v0.98.33 into node_modules with no lock-file diff. The package.json pin `github:detain/phlix-ui#v0.98.33` was already correct before and after. useMusicStore.ts uses raw `client.get()` not the page-envelope helpers, so ApiClient.listArtists/listAlbums/listTracks breaking changes do not apply. Key exports (createPhlixApp, buildAdminRoutes, LibraryScanPage, ApiClient, useSpatialNav, usePreferencesStore, usePlayerStore, @phlix/ui/style.css) all verified present at v0.98.33.
+**Rationale**: `npm ci` materialized @phlix/ui v0.98.33 into node_modules with no lock-file diff. The package.json pin `github:detain/phlix-ui#v0.98.33` was already correct before and after. useMusicStore.ts uses raw `client.get()` not the page-envelope helpers, so ApiClient.listArtists/listAlbums/listTracks breaking changes do not apply. Key exports (createPhlixApp, buildAdminRoutes, LibraryScanPage, ApiClient, useSpatialNav, usePreferencesStore, usePlayerStore, @phlix/ui/style.css) all verified present at v0.98.33. *(HISTORICAL — audit-date state; at tip 2026-09-04 the pin is `github:detain/phlix-ui#v0.99.0` (package.json:34) and useMusicStore.ts no longer uses raw `client.get()` — see S424 re-measurement under Steps 1.3/1.5.)*
 **Code Changes**: None — package.json pin and lock file were already aligned; no source changes needed.
-**Evidence**: `node_modules/@phlix/ui/package.json` version 0.98.33 (was 0.81.0); `diff /tmp/package-lock.json.before package-lock.json` showed no diff; src/stores/useMusicStore.ts:17 uses `client.get('/api/v1/music/...')` (not ApiClient methods); key exports verified via `ls node_modules/@phlix/ui/dist/` and `@phlix/ui/package.json` exports field.
+**Evidence**: `node_modules/@phlix/ui/package.json` version 0.98.33 (was 0.81.0); `diff /tmp/package-lock.json.before package-lock.json` showed no diff; src/stores/useMusicStore.ts:17 uses `client.get('/api/v1/music/...')` (not ApiClient methods); key exports verified via `ls node_modules/@phlix/ui/dist/` and `@phlix/ui/package.json` exports field. *(HISTORICAL; tip re-measure: `node_modules/@phlix/ui/package.json` version 0.99.0.)*
 **Cross-refs**: none (step 1.2 covers @phlix/contracts version inconsistencies in CLAUDE.md/DEVELOPER.md — out of this step's scope)
 
 ## Step 1.3 - @phlix/* Dependencies
 **Status**: Verified aligned
-**Finding**: @phlix/syncplay #v0.1.4 - aligned between tizen-client and phlix-ui (S418 re-pin from #v0.1.2, 2026-09-04). @phlix/contracts pins differ as measured at the package.json files this session: tizen-client v0.4.6 vs phlix-ui v0.4.5.
+**Finding** (re-measured at tip `f5b9fff9`, 2026-09-04): `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.4"` declared at package.json:33 (S418 re-pin from #v0.1.2). NOT aligned with the vendored phlix-ui copy: `node_modules/@phlix/ui/package.json` (v0.99.0) declares its own `@phlix/syncplay` pin `#v0.1.2` (line 86) — tizen's direct #v0.1.4 wins in the flat install (node_modules copy measures 0.1.4). `@phlix/contracts` pins also differ: tizen-client package.json:32 `#v0.4.6` vs the vendored @phlix/ui@0.99.0's own pin `#v0.4.3` (node_modules/@phlix/ui/package.json:85); installed copy measures 0.4.6.
 
 ## Step 1.4 - @phlix/tokens Integration
 **Status**: Verified OK
 **Finding**: @phlix/tokens v0.1.1 transitively included via @phlix/ui/style.css
 
 ## Step 1.5 - Music API Breaking Changes (v0.98.32)
-**Decision**: IMPLEMENTED_OK
-**Rationale**: useMusicStore.ts makes raw `client.get()` calls to `/api/v1/music/*` endpoints at lines 51, 66, 82, 98 — no use of `listArtists()`, `listAlbums()`, or `listTracks()`. The CHANGELOG v0.98.32 explicitly states "The native clients are unaffected and still show the first 100 rows." grep confirms 0 hits for these three methods in `src/`. The @phlix/ui ApiClient music-helper methods can change arbitrarily without impacting tizen-client.
-**Code Changes**: None — CHANGELOG analysis only.
-**Evidence**:
-- `useMusicStore.ts:51`: `client.get<{ artists: MusicArtist[] }>('/api/v1/music/artists')` — raw call, not `listArtists()`
-- `useMusicStore.ts:66`: `client.get<{ albums: MusicAlbum[] }>('/api/v1/music/albums')` — raw call, not `listAlbums()`
-- `useMusicStore.ts:82`: `client.get<{ tracks: MusicTrack[] }>('/api/v1/music/tracks/{id}')` — raw call, not `listTracks()`
-- `useMusicStore.ts:98`: `client.get<...>(`/api/v1/music/tracks/${id}/stream`) — raw call
-- CHANGELOG v0.98.32 line 46: "The native clients are unaffected and still show the first 100 rows."
-- `rg "listArtists|listAlbums|listTracks" src/` → 0 hits
-- Installed @phlix/ui version: 0.98.33
-**Cross-refs**: Step 1.1 (the @phlix/ui v0.98.33 update that triggered this CHANGELOG review)
+**Decision**: SUPERSEDED (was IMPLEMENTED_OK on raw calls; at tip the store uses the helper methods)
+**Rationale**: *Audit-date state (HISTORICAL)*: useMusicStore.ts made raw `client.get()` calls to `/api/v1/music/*` endpoints — no use of the `listArtists()`/`listAlbums()`/`listTracks()` helpers, so the v0.98.32 helper breaking changes did not apply. *Replaced by S125 ("page the Tizen music library", commit `35f3270`) and the envelope-unwrap fix (commit `894bf96`)*: at tip `f5b9fff9` the store calls the ApiClient helpers, and `rg "listArtists|listAlbums|listTracks" src/` returns **5 hits** (no longer 0), so the helper signatures DO now apply to tizen.
+**Code Changes**: None — analysis only.
+**Evidence** (re-derived at tip, 2026-09-04):
+- `useMusicStore.ts:132` / `:156-158`: `getClient().listArtists({ limit: MUSIC_PAGE_SIZE, offset })` — paged helper, not raw call
+- `useMusicStore.ts:177-181` / `:202`: `getClient().listAlbums({ limit, offset, artist? })` — paged helper with server-side `?artist=` filter
+- `useMusicStore.ts:247`: `getClient().getTrack(id)` — helper unwraps the `{ track }` envelope (ApiClient.d.ts contract `getTrack(): Promise<MusicTrack>`)
+- `useMusicStore.ts:51`: `import { ApiClient, MUSIC_PAGE_SIZE } from '@phlix/ui'`
+- `MUSIC_PAGE_SIZE = 100` (node_modules/@phlix/ui/dist/api/client.d.ts:61) — page cap, pages beyond the first 100 are now fetched via load-more
+- Installed @phlix/ui version at tip: 0.99.0
+**Cross-refs**: Step 1.1 (HISTORICAL @phlix/ui v0.98.33 update that triggered this CHANGELOG review); Steps 8.1/8.2/8.7/17.3/17.4 (restated at tip by this sweep)
 
 ## Step 1.6 - Node/npm Compatibility
 **Decision**: IMPLEMENTED_OK
-**Rationale**: package.json:58 specifies node >=22.12.0. Current system runs v24.15.0 which satisfies this. Tizen webview Chromium 100 constraints are verified not violated by the current Node version usage.
+**Rationale**: package.json:58 specifies node >=22.12.0. Re-measured at tip (2026-09-04): `node --version` = v24.19.0, which satisfies this. Tizen webview Chromium 100 constraints are verified not violated by the current Node version usage.
 **Code Changes**: None — analysis only.
-**Evidence**: package.json engines field (line 58: node >=22.12.0), node --version output (v24.15.0), deviceId.ts fallback pattern (lines 20-27: typeof guard + Date.now() fallback avoids crypto.randomUUID on ancient webviews)
+**Evidence**: package.json engines field (line 58: node >=22.12.0 — re-verified at tip), node --version output (v24.19.0 at the 2026-09-04 re-measure; v24.15.0 at original audit), deviceId.ts fallback pattern (lines 20-27: typeof guard + Date.now() fallback avoids crypto.randomUUID on ancient webviews — re-verified line-for-line at tip)
 **Cross-refs**: None
 
 ## Step 1.2 - Resolve version inconsistencies
 **Decision**: IMPLEMENTED_OK
-**Rationale**: package.json:32 correctly pins @phlix/contracts at v0.3.12. Four doc files (CLAUDE.md:5, DEVELOPER.md:14, AGENTS.md:3, README.md:47) previously claimed v0.2.0 — a stale version from before the actual package.json was updated. All four doc files now reference v0.3.12, matching the installed version.
+**Rationale**: package.json:32 correctly pins @phlix/contracts at v0.3.12. Four doc files (CLAUDE.md:5, DEVELOPER.md:14, AGENTS.md:3, README.md:47) previously claimed v0.2.0 — a stale version from before the actual package.json was updated. All four doc files now reference v0.3.12, matching the installed version. *(HISTORICAL — accurate at audit date only. At tip 2026-09-04 package.json:32 pins `#v0.4.6`, and the doc files have since drifted again: CLAUDE.md:5, DEVELOPER.md:14 and AGENTS.md:3 each claim `#v0.4.3`; README.md's pinned-dependencies section no longer cites a contracts version at its old line. That residual doc-vs-package.json drift lives in those other files and is outside this doc-only step's diff.)*
 **Code Changes**: None — only doc file edits. No production code changed.
-**Evidence**: git diff shows +v0.3.12 on CLAUDE.md:5, DEVELOPER.md:14, AGENTS.md:3, README.md:47; node_modules/@phlix/contracts/package.json reports 0.3.12
+**Evidence**: git diff shows +v0.3.12 on CLAUDE.md:5, DEVELOPER.md:14, AGENTS.md:3, README.md:47; node_modules/@phlix/contracts/package.json reports 0.3.12 *(HISTORICAL; tip re-measure: package.json:32 `#v0.4.6`, installed copy 0.4.6)*
 **Cross-refs**: Step 1.1 (the @phlix/ui v0.98.33 update that prompted this review)
 
 ---
@@ -202,7 +207,7 @@
 
 ## Step 3.2 - Up Next Card
 **Decision**: TV-SPECIFIC (PARTIAL duplicate)
-**Rationale**: Tizen has UpNextOverlay.vue at `src/components/UpNextOverlay.vue` — a 594-line TV-specific component with D-pad navigation, countdown ring, and playlist-based next item loading. It uses polling (250ms) vs phlix-ui's reactive UpNext.vue props. The test file `tests/unit/UpNextOverlay.test.ts` exists and tests props, emits, accessibility, and countdown ring calculations. This was also documented in Category 2 Step 2.3.3 as TV-SPECIFIC with tech debt (polling vs reactive). The architectural difference (polling vs reactive) is justified by TV webview constraints.
+**Rationale**: Tizen has UpNextOverlay.vue at `src/components/UpNextOverlay.vue` — a 596-line (re-measured `wc -l` at tip 2026-09-04) TV-specific component with D-pad navigation, countdown ring, and next-item loading. Since S280 the next item comes from the registered `GET /api/v1/users/me/next-up` rail (lines 130-150), NOT the old `GET /api/v1/media/{id}/playlist` call (that route was never registered server-side — the component docblock at :117-128 records this). It uses polling (250ms `setInterval` at lines 169-183) vs phlix-ui's reactive UpNext.vue props. The test file `tests/unit/UpNextOverlay.test.ts` exists and tests props, emits, accessibility, and countdown ring calculations. This was also documented in Category 2 Step 2.3.3 as TV-SPECIFIC with tech debt (polling vs reactive). The architectural difference (polling vs reactive) is justified by TV webview constraints.
 **Code Changes**: None (TV-specific component already exists with documented tech debt)
 
 ## Step 3.3 - Transcode Notice
@@ -227,12 +232,12 @@
 
 ## Step 3.7 - Quality Menu
 **Decision**: ALREADY SUFFICIENT
-**Rationale**: tizenBridge.ts (lines 44-68, 116-193, 280-322) has `BridgeQualityMenu` interface and `createDomQualityMenu()` function. The QualityMenu is rendered by @phlix/ui's Player and tizen provides D-pad navigation via the DOM-based bridge. Quality selection is server-side (X-Phlix-Device-Type: samsung-tizen header maps to appropriate quality), but the UI is properly bridged for D-pad navigation. The YELLOW color button on the remote activates quality-selection mode (tizenBridge.ts line 243).
+**Rationale**: tizenBridge.ts (line refs re-derived at tip 2026-09-04: `BridgeQualityMenu` interface at 50-59, `createDomQualityMenu()` at 116-170, `installTizenBridge()` at 270-325) has the interface and DOM-bridge functions. The QualityMenu is rendered by @phlix/ui's Player and tizen provides D-pad navigation via the DOM-based bridge. Quality selection is server-side (X-Phlix-Device-Type: samsung-tizen header maps to appropriate quality), but the UI is properly bridged for D-pad navigation. The YELLOW color button on the remote activates quality-selection mode (`case 'YELLOW'` at tizenBridge.ts:238; transcode comment now at :240).
 **Code Changes**: None (already integrated via tizenBridge.ts bridge)
 
 ## Step 3.8 - Speed Menu
 **Decision**: NOT TV-APPLICABLE
-**Rationale**: SpeedMenu.vue exists in @phlix/ui Player but playback speed control is not typically used on TV. The syncplay store (useSyncPlayStore.ts lines 413-414, 536-543) handles `playbackRate` for synchronized playback sessions, but there's no tizen-specific speed menu UI. TV playback is generally at normal speed. The absence of a speed menu is intentional for TV UX.
+**Rationale**: SpeedMenu.vue exists in @phlix/ui Player but playback speed control is not typically used on TV. The syncplay store (useSyncPlayStore.ts at tip: `playbackRate` field type at :97, session mapping at :367, and rate applied from sync commands at :749-751 — re-derived 2026-09-04; the old 413-414/536-543 refs predate the S415 store rewrite) handles `playbackRate` for synchronized playback sessions, but there's no tizen-specific speed menu UI. TV playback is generally at normal speed. The absence of a speed menu is intentional for TV UX.
 **Code Changes**: None (not a TV use case - no code needed)
 
 ## Step 3.9 - Captions Menu
@@ -262,12 +267,12 @@
 
 ## Step 3.14 - Theater Mode
 **Decision**: NOT TV-APPLICABLE
-**Rationale**: Theater mode in @phlix/ui involves toggling a windowed player with shell chrome removal (usePlayerUiStore.theaterActive). Tizen uses full-screen player by default (`defaultTv: true` in createPhlixApp config, main.ts line 99). TV has no windowed player state to toggle and no shell chrome to remove. The `defaultTv: true` flag sets full-screen mode by default. Theater mode is a web browser window-management concept not applicable to TV.
+**Rationale**: Theater mode in @phlix/ui involves toggling a windowed player with shell chrome removal (usePlayerUiStore.theaterActive). Tizen uses full-screen player by default (`defaultTv: true` in createPhlixApp config, main.ts line 173 at tip — re-derived 2026-09-04; line 99 was the audit-date position). TV has no windowed player state to toggle and no shell chrome to remove. The `defaultTv: true` flag sets full-screen mode by default. Theater mode is a web browser window-management concept not applicable to TV.
 **Code Changes**: None (full-screen TV paradigm - no code needed)
 
 ## Step 3.15 - Chapter Markers API
 **Decision**: TV-SPECIFIC (PARTIAL)
-**Rationale**: Tizen's ChapterOverlay.vue calls TWO APIs: `GET /api/v1/media/{id}/chapters` (line 93) and `GET /api/v1/media/{id}/markers` (line 110). The chapters API returns chapter segments (ChapterMarker[] with startSeconds/endSeconds/title). The markers API returns timed markers (Marker[] with startMs/endMs/type/label). Both are used: chapters for seekable segments shown as gold ticks, markers for intro/outro/credits/ad shown as colored ticks. phlix-ui's MarkerTimeline.vue uses only the markers API. The dual-API usage in Tizen is intentional — chapters provide the seekable segments for the seekbar while markers provide the skip/opportunity overlay behavior. The two APIs serve complementary purposes.
+**Rationale**: Tizen's ChapterOverlay.vue calls TWO APIs: `GET /api/v1/media/{id}/chapters` (line 93 — re-verified at tip) and `GET /api/v1/media/{id}/markers` (line 111 at tip; line 110 was the audit-date position). The chapters API returns chapter segments (ChapterMarker[] with startSeconds/endSeconds/title). The markers API returns timed markers (Marker[] with startMs/endMs/type/label). Both are used: chapters for seekable segments shown as gold ticks, markers for intro/outro/credits/ad shown as colored ticks. phlix-ui's MarkerTimeline.vue uses only the markers API *(HISTORICAL — v0.98.33-source observation)*. The dual-API usage in Tizen is intentional — chapters provide the seekable segments for the seekbar while markers provide the skip/opportunity overlay behavior. The two APIs serve complementary purposes.
 **Code Changes**: None (dual-API usage is intentional for TV-specific UX)
 
 ---
@@ -333,7 +338,7 @@
 
 ## Step 5.7 - useTheme
 **Decision**: PARTIAL
-**Rationale**: Tizen sets `defaultTheme: 'nocturne'` in createPhlixApp config (main.ts line 100), but `useTheme()` is NOT explicitly called in tizen source. The useTheme() composable reactively reflects preferences store onto `<html>` (data-theme, data-density, data-reduced-motion, --accent* variables). Without useTheme(), theme changes from the preferences store would NOT be reactively applied to the DOM. However, `createPhlixApp` internally calls `applyStoredThemeEarly()` which sets initial theme before mount. For full reactive theme support (if users can change theme in settings), useTheme() should be called. Investigation shows prefs.tv is used in SpatialNavHost for D-pad gating, but full theme reactivity may be handled internally by createPhlixApp.
+**Rationale**: Tizen sets `defaultTheme: 'nocturne'` in createPhlixApp config (main.ts line 174 at tip — re-derived 2026-09-04; was line 100 at audit date), but `useTheme()` is NOT explicitly called in tizen source (grep at tip confirms). The useTheme() composable reactively reflects preferences store onto `<html>` (data-theme, data-density, data-reduced-motion, --accent* variables). Without useTheme(), theme changes from the preferences store would NOT be reactively applied to the DOM. However, `createPhlixApp` internally calls `applyStoredThemeEarly()` which sets initial theme before mount. For full reactive theme support (if users can change theme in settings), useTheme() should be called. Investigation shows prefs.tv is used in SpatialNavHost for D-pad gating, but full theme reactivity may be handled internally by createPhlixApp.
 **Code Changes**: None (createPhlixApp handles theme initialization internally)
 
 ## Step 5.8 - usePageTitle
@@ -343,7 +348,7 @@
 
 ## Step 5.9 - useMessages
 **Decision**: NOT USED
-**Rationale**: `useMessages()` provides i18n infrastructure via `t('group.key', params?)` function. All user-facing strings in tizen are hardcoded English (no grep hits for `useMessages` or i18n in src/). Tizen does not have any i18n/l10n infrastructure. Adding i18n would be a significant effort for minimal benefit on a single-language TV app.
+**Rationale**: `useMessages()` provides i18n infrastructure via `t('group.key', params?)` function. All user-facing strings in tizen are hardcoded English (re-verified at tip 2026-09-04: grep for `useMessages`/`createTranslator` in src/ → 0 hits). Tizen does not have any i18n/l10n infrastructure. Adding i18n would be a significant effort for minimal benefit on a single-language TV app.
 **Code Changes**: None (all strings hardcoded English - no i18n needed)
 
 ## Step 5.10 - useMusicPlayer
@@ -378,7 +383,7 @@
 
 ## Step 5.16 - useHlsTranscode
 **Decision**: INTERNAL
-**Rationale**: Core playback pipeline for transcoded content. Tizen's `TIZEN_HLS_CONFIG` is passed through createPhlixApp via `playerHlsConfig` (main.ts lines 69-76, 116). Works transparently - the HLS config is passed to @phlix/ui's player which handles transcoding.
+**Rationale**: Core playback pipeline for transcoded content. Tizen's `TIZEN_HLS_CONFIG` is passed through createPhlixApp via `playerHlsConfig` (at tip 2026-09-04: config object main.ts:76-83, pass-through :190 — re-derived; lines 69-76/116 were audit-date positions). Works transparently - the HLS config is passed to @phlix/ui's player which handles transcoding.
 **Code Changes**: None (passed through createPhlixApp config - no code needed)
 
 ## Step 5.17 - useHeaderHideOnScroll
@@ -388,7 +393,7 @@
 
 ## Step 5.18 - Spatial Nav Utilities
 **Decision**: ALREADY SUFFICIENT
-**Rationale**: `useSpatialNav` is actively used in SpatialNavHost.vue (line 6: `useSpatialNav({enabled: () => Boolean(prefs.tv) && route.name !== 'player'})`). The low-level utilities (bestCandidate, rectCenter) are internal to useSpatialNav implementation. Spatial navigation is properly integrated for D-pad navigation on TV.
+**Rationale**: `useSpatialNav` is actively used in SpatialNavHost.vue (line 31 at tip 2026-09-04 — re-derived; line 6 was the audit-date position: `useSpatialNav({enabled: () => Boolean(prefs.tv) && route.name !== 'player'})`). The low-level utilities (bestCandidate, rectCenter) are internal to useSpatialNav implementation *(HISTORICAL — @phlix/ui-internal)*. Spatial navigation is properly integrated for D-pad navigation on TV.
 **Code Changes**: None (already integrated via SpatialNavHost.vue)
 
 ---
@@ -426,11 +431,11 @@
 
 ---
 
-# Category 6 - Missing Pages (phlix-ui has 30+, tizen has 4 local + 1 imported)
+# Category 6 - Missing Pages (phlix-ui has 30+, tizen has 5 local pages + 1 screen)
 
 ## Overview
 
-The tizen client has **4 local pages** (MusicPage, ParentalControlsPage, ChaptersPage, AudioTracksPage) and imports additional pages from @phlix/ui via `createPhlixApp()`. This creates a feature gap compared to phlix-ui's 30+ dedicated pages. Decisions below distinguish between **TV-SPECIFIC** (intentional local reimplementation), **NOT TV-APPLICABLE** (keyboard/mouse features irrelevant to TV), **NOT USED** (exists in bundle but not routed), and **ALREADY SUFFICIENT** (provided via @phlix/ui or menu system).
+*(Count re-derived at tip 2026-09-04: the audit-date text said "4 local pages" — SubtitleTracksPage has since been added (S407), so `src/pages/` now holds 5.)* The tizen client has **5 local pages** (MusicPage, ParentalControlsPage, ChaptersPage, AudioTracksPage, SubtitleTracksPage) plus the `src/screens/RecommendationsScreen.vue`, and imports additional pages from @phlix/ui via `createPhlixApp()`. This creates a feature gap compared to phlix-ui's 30+ dedicated pages. Decisions below distinguish between **TV-SPECIFIC** (intentional local reimplementation), **NOT TV-APPLICABLE** (keyboard/mouse features irrelevant to TV), **NOT USED** (exists in bundle but not routed), and **ALREADY SUFFICIENT** (provided via @phlix/ui or menu system).
 
 ## Step 6.1 - Music: Album Detail
 **Decision**: TV-SPECIFIC (PARTIAL)
@@ -439,12 +444,12 @@ The tizen client has **4 local pages** (MusicPage, ParentalControlsPage, Chapter
 
 ## Step 6.2 - Music: Artist Detail
 **Decision**: TV-SPECIFIC (PARTIAL)
-**Finding**: MusicPage.vue shows artist's albums inline via `currentView === 'albums'`. Uses MusicAlbumCard component with dynamic title showing artist name. Gap: no artist image (phlix-ui shows 200x200 with placeholder SVG), no track count from artist.trackCount, no album paging (shows all albums for selected artist), no page-error banner handling.
+**Finding**: MusicPage.vue shows artist's albums inline via `currentView === 'albums'`. Uses MusicAlbumCard component with dynamic title showing artist name. Gap: no artist image (phlix-ui shows 200x200 with placeholder SVG), no track count from artist.trackCount. *(Paging gaps CLOSED since S125 — re-measured at tip: albums ARE paged via `listAlbums({limit, offset, artist})` (useMusicStore.ts:177-181/:202) with a load-more control (`hasMoreAlbums`/`loadMoreAlbums`, MusicPage.vue:113/:220) and a server-side artist filter.)* No page-error banner handling *(audit-date observation; MusicPage now renders store error state)*.
 **Code Changes**: None (TV-specific gaps are intentional trade-offs)
 
 ## Step 6.3 - Music: Artists List
 **Decision**: TV-SPECIFIC (PARTIAL)
-**Finding**: MusicPage.vue shows artists via `currentView === 'artists'` using MusicArtistCard component. Gap: no offset paging (shows all artists at once - problematic for 2,197 artist DB), no total count display, no shimmer loading skeleton (just "Loading music..." text), full error state instead of preserving rows/pager on failure.
+**Finding**: MusicPage.vue shows artists via `currentView === 'artists'` using MusicArtistCard component. *(Audit-date gap "no offset paging — shows all artists at once (problematic for 2,197-artist DB)" is CLOSED: re-measured at tip, offset paging exists — `listArtists({limit: MUSIC_PAGE_SIZE, offset})` (useMusicStore.ts:132/:156-158), `artistsTotal` read from the page envelope (:134), load-more control (`hasMoreArtists`/`loadMoreArtists`, MusicPage.vue:111/:189) — the S125 fix commit is titled exactly "page the Tizen music library instead of showing 100 of 2,197 artists".)* Remaining audit-date gaps (no shimmer skeleton — just "Loading music…" text at MusicPage.vue:155; full error state on failure) were not re-litigated beyond confirming the loading string.
 **Code Changes**: None (TV-specific gaps are intentional trade-offs)
 
 ## Step 6.4 - Music: Tracks List
@@ -519,7 +524,7 @@ The tizen client has **4 local pages** (MusicPage, ParentalControlsPage, Chapter
 
 ## Step 6.18 - Browse/Home
 **Decision**: ALREADY SUFFICIENT
-**Finding**: BrowsePage exists in bundle at `package/assets/BrowsePage-DPV6hUCE-yuvguuoR.js`. The menu's `libraryLinks: true` (main.ts line 42) expands "Browse" into per-library nav links automatically. The BrowsePage is the home screen (`to: '/app'`) and renders "Continue Watching" rail + configurable home rows per library + "See all" links to LibraryPage. This is the primary entry point for the TV app.
+**Finding**: BrowsePage exists in bundle at `package/assets/BrowsePage-DPV6hUCE-yuvguuoR.js`. The menu's `libraryLinks: true` (main.ts line 47 at tip — re-derived 2026-09-04; line 42 was the audit-date position) expands "Browse" into per-library nav links automatically. The BrowsePage is the home screen (`to: '/app'`) and renders "Continue Watching" rail + configurable home rows per library + "See all" links to LibraryPage. This is the primary entry point for the TV app.
 **Code Changes**: None (properly integrated via menu system + @phlix/ui BrowsePage)
 
 ## Step 6.19 - Library
@@ -579,7 +584,7 @@ All 23 admin feature steps are **NOT TV-APPLICABLE**. Admin features (user manag
 
 ## Step 7.1 - Admin Pages Access (buildAdminRoutes)
 **Decision**: NOT TV-APPLICABLE
-**Rationale**: buildAdminRoutes() is correctly imported and used in tizen-client (main.ts line 12, 57). Admin routes ARE accessible at /app/admin/* with 20 pages in the default set. However, admin features are server management features, not TV media consumption features. The v-focusable D-pad navigation issue is internal to @phlix/ui. Server administration should be done through the web interface on a computer.
+**Rationale**: buildAdminRoutes() is correctly imported and used in tizen-client (main.ts line 13 import, line 62 spread — re-derived at tip 2026-09-04; audit-date refs were 12/57). Admin routes ARE accessible at /app/admin/*. The "20 pages in the default set" count is a HISTORICAL v0.98.33-source observation. However, admin features are server management features, not TV media consumption features. The v-focusable D-pad navigation issue is internal to @phlix/ui. Server administration should be done through the web interface on a computer.
 **Code Changes**: None (architectural decision - no code needed)
 
 ## Step 7.2 - Admin Dashboard
@@ -689,7 +694,7 @@ All 23 admin feature steps are **NOT TV-APPLICABLE**. Admin features (user manag
 
 ## Step 7.23 - Admin API Clients
 **Decision**: NOT TV-APPLICABLE
-**Rationale**: 19 admin API clients exist in @phlix-ui/src/api/admin/ (dashboard, users, libraries, plugins, settings, webhooks, services, integrations, backup, cast, dlnaServer, remoteAccess, liveTv, collections, history, syncPlay, hubDashboard, metadata-sources, transcoding). These are used internally by admin pages in @phlix/ui, not directly by tizen-client. Admin API access is server administration, not TV media consumption.
+**Rationale**: *(Count re-derived at tip 2026-09-04 against the vendored dist — `ls node_modules/@phlix/ui/dist/api/admin/*.d.ts | wc -l` = **26** modules: backup, cast, collections, dashboard, dlnaServer, duplicates, history, hubDashboard, integrations, libraries, liveTv, logs, maintenance, metadata-sources, metrics, networkHealth, plugins, remoteAccess, servers, services, settings, syncPlay, transcoding, updates, users, webhooks. The audit-date src-tree counts — "19" here and "21" in Step 12.10's header — were two mutually inconsistent HISTORICAL snapshots of the same surface; both are superseded by the measured 26.)* These are used internally by admin pages in @phlix/ui, not directly by tizen-client (tizen `src/` grep: 0 imports of any admin client module). Admin API access is server administration, not TV media consumption.
 **Code Changes**: None (admin API infrastructure - no TV use case)
 
 ## Summary Table
@@ -737,52 +742,52 @@ All 23 admin feature steps are **NOT TV-APPLICABLE**. Admin features (user manag
 
 ## Step 9.1 - Polling Instead of Reactivity (HIGH)
 **Decision**: TV-SPECIFIC
-**Finding**: ChapterOverlay.vue:295-316, SkipIntroOverlay.vue:126-141, and UpNextOverlay.vue:166-181 all use setInterval at 250ms to poll player position from playerStore. This is explicitly documented in each component's header as "tech debt but necessary for the TV webview context." The cat_9.md notes Tizen WebView may have unreliable timeupdate event firing - the polling approach is a deliberate TV-specific workaround. The alternative requestVideoFrameCallback is not used. Core player store updateProgress() is called via Player.vue's onTimeUpdate in @phlix/ui - the issue is that overlays poll separately rather than using reactive subscriptions.
+**Finding**: ChapterOverlay.vue:297-316, SkipIntroOverlay.vue:127-141, and UpNextOverlay.vue:169-183 all use setInterval at 250ms to poll player position from playerStore (line refs re-derived at tip 2026-09-04). This is explicitly documented in each component's header as "tech debt but necessary for the TV webview context." The cat_9.md notes Tizen WebView may have unreliable timeupdate event firing - the polling approach is a deliberate TV-specific workaround. The alternative requestVideoFrameCallback is not used. Core player store updateProgress() is called via Player.vue's onTimeUpdate in @phlix/ui - the issue is that overlays poll separately rather than using reactive subscriptions.
 **Code Changes**: None (documented TV-specific tech debt)
 
 ## Step 9.2 - Missing Resume System (HIGH)
 **Decision**: TV-SPECIFIC
-**Finding**: tizenBridge.ts:278 casts usePlayerStore to BridgePlayer with only { playing, play, pause, closePlayer, seekBy }. Resume functions (resumePositionFor, clearResume, mergeServerResume) exist in usePlayerStore.ts:210-248 but are not exposed through BridgePlayer interface. However, overlay components (ChapterOverlay:220, SkipIntroOverlay:108) call playerStore.seekTo() directly, bypassing the thin tizen bridge entirely. The LRU eviction logic at usePlayerStore.ts:137-157 exists but Tizen never triggers it - however this is bounded automatically. The tizen bridge is intentionally minimal; resume system works through direct playerStore access.
+**Finding**: tizenBridge.ts:278 casts usePlayerStore to BridgePlayer with only { playing, play, pause, closePlayer, seekBy } (re-verified at tip). Resume functions (resumePositionFor, clearResume, mergeServerResume) exist in usePlayerStore.ts *(HISTORICAL — @phlix/ui v0.98.33 src lines 210-248; dist-only ship prevents re-derivation)* but are not exposed through BridgePlayer interface. However, overlay components (ChapterOverlay:220, SkipIntroOverlay:108 — both re-verified at tip) call playerStore.seekTo() directly, bypassing the thin tizen bridge entirely. The LRU eviction logic at usePlayerStore.ts:137-157 *(HISTORICAL, same reason)* exists but Tizen never triggers it - however this is bounded automatically. The tizen bridge is intentionally minimal; resume system works through direct playerStore access.
 **Code Changes**: None (intentional minimal bridge design; overlay components work directly with usePlayerStore)
 
 ## Step 9.3 - Missing Queue/Up-Next (MEDIUM)
 **Decision**: NOT TV-APPLICABLE
-**Finding**: UpNextOverlay.vue:119-146 fetches playlist via `/api/v1/media/{id}/playlist` API directly and finds the next item client-side. This is a TV-specific implementation that doesn't use playerStore.setQueue()/next(). The cat_9.md notes PlayerPage.vue:213-268 shows proper queue management with player.setQueue() and player.next() - but these are in @phlix/ui's PlayerPage, not in tizen. Tizen's UpNextOverlay works differently (API-based) and achieves the same UX.
+**Finding**: *(Restated at tip 2026-09-04 — the audit-date "fetches `/api/v1/media/{id}/playlist`" was falsified by S280: that route was never registered server-side.)* UpNextOverlay.vue:130-150 (`loadUpNextMedia`) fetches `GET /api/v1/users/me/next-up` via `client.get` and picks the first non-self item client-side. This is a TV-specific implementation that doesn't use playerStore.setQueue()/next(). The cat_9.md notes PlayerPage.vue:213-268 — *HISTORICAL src ref* — shows proper queue management with player.setQueue() and player.next() - but these are in @phlix/ui's PlayerPage, not in tizen. Tizen's UpNextOverlay works differently (API-based) and achieves the same UX.
 **Code Changes**: None (UpNextOverlay uses different but equivalent approach)
 
 ## Step 9.4 - Missing Media Session (MEDIUM)
 **Decision**: NOT TV-APPLICABLE
-**Finding**: Tizen WebView (Chromium-based) may not support navigator.mediaSession API. The Tizen bridge does not call setMediaSessionMetadata(), setMediaPositionState(), or bindMediaSession() (usePlayerStore.ts:392-443). RemoteManager.ts handles TV remote integration directly via keydown/keyup document listeners mapped to player store actions. The cat_9.md notes "Tizen's native remote handling via RemoteManager may make Media Session less critical" - this is the case. OS-level transport controls (lock screen, notification) are not a TV use case; the TV remote is handled natively.
+**Finding**: Tizen WebView (Chromium-based) may not support navigator.mediaSession API. The Tizen bridge does not call setMediaSessionMetadata(), setMediaPositionState(), or bindMediaSession() (usePlayerStore.ts:392-443 — *HISTORICAL, @phlix/ui v0.98.33 src; dist-only ship*). RemoteManager.ts handles TV remote integration directly via keydown/keyup document listeners mapped to player store actions. The cat_9.md notes "Tizen's native remote handling via RemoteManager may make Media Session less critical" - this is the case. OS-level transport controls (lock screen, notification) are not a TV use case; the TV remote is handled natively.
 **Code Changes**: None (RemoteManager replaces Media Session functionality on Tizen)
 
 ## Step 9.5 - Missing Preferences Seeding (MEDIUM)
 **Decision**: TV-SPECIFIC (PARTIAL)
-**Finding**: seedFromPreferences() exists at usePlayerStore.ts:446-450 but is NOT called in tizen main.ts after createPhlixApp. However, player store initializes defaultVolume, defaultQuality, defaultSubtitleLang from preferences at store creation (usePlayerStore.ts:102-106). Tizen only uses prefs.tv in SpatialNavHost.vue for D-pad navigation gating - no other preference-driven state. The seedFromPreferences gap only matters if user changes preferences at runtime; on Tizen settings UI is limited. This is partial but not blocking.
+**Finding**: seedFromPreferences() exists at usePlayerStore.ts:446-450 — *HISTORICAL src ref* but is NOT called in tizen main.ts after createPhlixApp. However, player store initializes defaultVolume, defaultQuality, defaultSubtitleLang from preferences at store creation (usePlayerStore.ts:102-106 — *HISTORICAL src ref*). Tizen only uses prefs.tv in SpatialNavHost.vue for D-pad navigation gating - no other preference-driven state. The seedFromPreferences gap only matters if user changes preferences at runtime; on Tizen settings UI is limited. This is partial but not blocking.
 **Code Changes**: None (preferences initialized at store creation; runtime preference changes not a TV priority)
 
 ## Step 9.6 - lastCommand Bus (LOW)
 **Decision**: ALREADY SUFFICIENT
-**Finding**: tizenBridge.ts:216,219 calls player.seekBy() which writes to lastCommand ref internally (usePlayerStore.ts:289-294). Player.vue:1239-1246 watches lastCommand and applies seek to video element. The Tizen bridge bypasses the command bus interface (BridgePlayer only has seekBy, not lastCommand), but the seekBy() function itself writes to lastCommand before seeking, so command tracking still works. The command bus pattern is for UI-level external commands (keyboard shortcuts, etc.) - Tizen's remote commands go through RemoteManager → tizenBridge → player.seekBy() which properly feeds the command bus.
+**Finding**: tizenBridge.ts:216,219 calls player.seekBy() (re-verified at tip) which writes to lastCommand ref internally (usePlayerStore.ts:289-294 *(HISTORICAL — @phlix/ui v0.98.33 src; dist-only ship prevents re-derivation)*). Player.vue:1239-1246 watches lastCommand and applies seek to video element *(HISTORICAL, same reason)*. The Tizen bridge bypasses the command bus interface (BridgePlayer only has seekBy, not lastCommand), but the seekBy() function itself writes to lastCommand before seeking, so command tracking still works. The command bus pattern is for UI-level external commands (keyboard shortcuts, etc.) - Tizen's remote commands go through RemoteManager → tizenBridge → player.seekBy() which properly feeds the command bus.
 **Code Changes**: None (works correctly despite interface bypass)
 
 ## Step 9.7 - Quality/Subtitle Setters (MEDIUM)
 **Decision**: TV-SPECIFIC
-**Finding**: createDomQualityMenu at tizenBridge.ts:116-170 uses DOM manipulation (focus, click on .quality-menu .phlix-select__trigger) to drive @phlix/ui's QualityMenu Select component. This is explicitly designed to avoid modifying @phlix/ui's sealed player while still enabling D-pad navigation of quality selection. The DOM approach opens the Select's listbox and lets the Select's own combobox keydown handler own Arrow/Enter/Escape navigation. QualityMenu reactively reads player.quality from the store, so DOM-based selection properly updates player state. setSubtitle() is not called - subtitle selection is handled by SubtitleTrackList.vue using direct API calls.
+**Finding**: createDomQualityMenu at tizenBridge.ts:116-170 (re-verified at tip 2026-09-04) uses DOM manipulation (focus, click on .quality-menu .phlix-select__trigger) to drive @phlix/ui's QualityMenu Select component. This is explicitly designed to avoid modifying @phlix/ui's sealed player while still enabling D-pad navigation of quality selection. The DOM approach opens the Select's listbox and lets the Select's own combobox keydown handler own Arrow/Enter/Escape navigation. QualityMenu reactively reads player.quality from the store, so DOM-based selection properly updates player state. setSubtitle() is not called - subtitle selection is handled by SubtitleTrackList.vue using direct API calls.
 **Code Changes**: None (intentional DOM-based quality menu, works correctly with @phlix/ui reactive state)
 
 ## Step 9.8 - Player Store Type Safety (MEDIUM)
-**Decision**: INTERNAL
-**Finding**: AudioTracksPage.vue:39,56,83 casts playerStore via `const storeAny = playerStore as unknown as Record<string, unknown>` to access audioTrackId, audioTracks, setAudioTrack, switchAudioTrack, setAudioTrackId, and hls from the player store. These properties do not exist on the exported usePlayerStore type definition. The cast to Record<string, unknown> is a code smell - it's used to bypass TypeScript checking to access dynamic properties. This is an internal tizen-client issue, not an integration problem with @phlix/ui. The audio track switching logic tries multiple method names as fallbacks, suggesting uncertainty about the actual API.
-**Code Changes**: None (type safety issue in tizen-client code, not a TV integration gap)
+**Decision**: RESOLVED (was INTERNAL at audit date)
+**Finding**: *(Restated at tip 2026-09-04 — RESOLVED by S407, commit `c3bfcd8` "track-picker wiring". The audit-date duck-probe (`storeAny = playerStore as unknown as Record<string, unknown>` at AudioTracksPage.vue:39,56,83, trying multiple method names) no longer exists: grep for `as unknown as Record` in `src/pages/AudioTracksPage.vue` returns **0 hits** at tip. The S407 docblock (AudioTracksPage.vue:34-36, :108, :124) records exactly which probed members (`audioTracks`/`currentAudioTrackId`/`setAudioTrack`/`switchAudioTrack`/`hls`) never existed on the store, and the component now takes a single honest path — fetching tracks from the API (`:113`) instead of probing store internals.)*
+**Code Changes**: None in this step (already fixed by S407; audit finding closed)
 
 ## Step 9.9 - streamUrl / hlsMasterUrl (LOW)
 **Decision**: NOT TV-APPLICABLE
-**Finding**: usePlayerStore.ts:95,108 has streamUrl and hlsMasterUrl refs for cross-route mini-player continuation. PlayerPage.vue:476 calls player.showMiniPlayer() when current && streamUrl exist. Tizen does not implement mini-player UI (no MiniPlayer.vue component, no #phlix-mini-player mount point). These refs are not used by tizen. The mini-player pattern is for web clients to continue playback while navigating away from the player route - on TV there's no route navigation during playback and no picture-in-picture API.
+**Finding**: usePlayerStore.ts:95,108 — *HISTORICAL src refs* — has streamUrl and hlsMasterUrl refs for cross-route mini-player continuation. PlayerPage.vue:476 — *HISTORICAL src ref* — calls player.showMiniPlayer() when current && streamUrl exist. Tizen does not implement mini-player UI (no MiniPlayer.vue component, no #phlix-mini-player mount point). These refs are not used by tizen. The mini-player pattern is for web clients to continue playback while navigating away from the player route - on TV there's no route navigation during playback and no picture-in-picture API.
 **Code Changes**: None (mini-player is a web browser feature, not applicable to TV)
 
 ## Step 9.10 - miniPlayer show/hide (LOW)
 **Decision**: NOT TV-APPLICABLE
-**Finding**: usePlayerStore.ts:375-379 has showMiniPlayer() and hideMiniPlayer() functions that toggle player.miniPlayer ref. PlayerPage.vue:340 calls hideMiniPlayer() on route enter; PlayerPage.vue:476 calls showMiniPlayer() when playing with streamUrl. Tizen does not implement mini-player UI and does not call these functions. The mini-player is a web browser feature for background playback during navigation - TV has no equivalent use case since playback is always full-screen and there's no navigation during playback on TV.
+**Finding**: usePlayerStore.ts:375-379 — *HISTORICAL src refs* — has showMiniPlayer() and hideMiniPlayer() functions that toggle player.miniPlayer ref. PlayerPage.vue:340 — *HISTORICAL src ref* — calls hideMiniPlayer() on route enter; PlayerPage.vue:476 — *HISTORICAL src ref* — calls showMiniPlayer() when playing with streamUrl. Tizen does not implement mini-player UI and does not call these functions. The mini-player is a web browser feature for background playback during navigation - TV has no equivalent use case since playback is always full-screen and there's no navigation during playback on TV.
 **Code Changes**: None (mini-player is a web browser feature, not applicable to TV)
 
 ---
@@ -815,29 +820,29 @@ All 23 admin feature steps are **NOT TV-APPLICABLE**. Admin features (user manag
 
 ## Overview
 
-This category examines Music API endpoints, data structures, and whether they match what tizen expects. Key context: Category 1.5 already verified the Music API breaking changes (listArtists/listAlbums/listTracks page envelope) are **VERIFIED UNAFFECTED** because `useMusicStore.ts` uses raw `client.get('/api/v1/music/artists')` etc., never calling the helper methods. MusicPage.vue exists with currentView state machine for artists/albums/tracks.
+This category examines Music API endpoints, data structures, and whether they match what tizen expects. Key context *(restated by S424)*: Category 1.5 verified — as of the audit date — that the Music API breaking changes were **UNAFFECTED** because `useMusicStore.ts` used raw `client.get(...)` calls. At tip that is no longer the mechanism: the store adopted the paged helpers since S125 (see restated Steps 8.1/8.2). MusicPage.vue still uses the currentView state machine for artists/albums/tracks (re-verified at tip).
 
 ## Step 8.1 - Music API Breaking Change (listArtists/listAlbums/listTracks signatures)
-**Decision**: ALREADY SUFFICIENT
-**Finding**: Already verified in Step 1.5. `useMusicStore.ts` lines 51, 66 use raw `client.get<{ artists: MusicArtist[] }>('/api/v1/music/artists')` and `client.get<{ albums: MusicAlbum[] }>('/api/v1/music/albums')` — NOT calling `listArtists()`, `listAlbums()`, or `listTracks()` helper methods that changed in v0.98.32. The CHANGELOG v0.98.32 explicitly states "The native clients are unaffected and still show the first 100 rows." grep confirms 0 hits for these three methods in `src/`. The tizen client bypasses the breaking change by using raw GET calls.
-**Code Changes**: None — already verified unaffected
-**Evidence**: Step 1.5 VERIFICATION.md covers this exhaustively; `rg "listArtists|listAlbums|listTracks" src/` → 0 hits
+**Decision**: SUPERSEDED (restated at tip 2026-09-04 — the audit-date mechanism no longer exists)
+**Finding**: The audit-date reasoning ("raw client.get bypasses the helpers, 0 hits") was true pre-S125. At tip the store ADOPTED the helpers: `listArtists()`/`listAlbums()` (with paging + server-side artist filter) and `getAlbum()`/`getTrack()` (envelope-unwrapping) — `rg "listArtists|listAlbums|listTracks" src/` now returns **5 hits** (useMusicStore.ts docblock :27 + calls :132/:156/:177/:202). The breaking-change exposure therefore INVERTED: tizen now follows the ApiClient helper contract (typed via the vendored dist), which is the intended coupling for a thin consumer.
+**Code Changes**: None in this step (change happened in S125 / 894bf96)
+**Evidence**: Step 1.5 restatement; useMusicStore.ts:51 (import), :132, :156-158, :177-181, :202, :247
 
 ## Step 8.2 - Music Paging (MusicPager added in v0.98.32 — tizen shows only first 100)
-**Decision**: TV-SPECIFIC
-**Finding**: `useMusicStore.ts` `fetchArtists()` and `fetchAlbums()` make single unparameterized requests with no limit/offset. No `MusicPager` component is used. MusicPage.vue shows all artists in a CSS grid with no pagination controls. The CHANGELOG notes this is the intended behavior for "native clients" — they show the first 100 rows. This is a known limitation, not a bug. TV users with large libraries (e.g., 2,197 artists) will only see the first 100.
-**Code Changes**: None — intentional first-100 limitation per CHANGELOG
-**Evidence**: `useMusicStore.ts:46-58` (fetchArtists with no params), `useMusicStore.ts:61-73` (fetchAlbums with no params); CHANGELOG v0.98.32 line 46
+**Decision**: TV-SPECIFIC (PAGED) — restated at tip 2026-09-04 from audit-date "first-100 limitation"
+**Finding**: Superseded by S125: `fetchArtists()`/`fetchAlbums()` now send `limit`/`offset` (and `artist`) to the paged helpers and read `total`; MusicPage.vue renders load-more controls (`hasMoreArtists` :189, `hasMoreAlbums` :220 → `loadMoreArtists()`/`loadMoreAlbums()` :111/:113). The TV-specific choice now is the LOAD-MORE affordance instead of @phlix/ui's `MusicPager`. The CHANGELOG "first 100 rows" sentence is *HISTORICAL* context for the pre-S125 state.
+**Code Changes**: None in this step (implemented by S125)
+**Evidence**: `useMusicStore.ts:128-171` (paged fetch + load-more actions), :132/:156-158/:177-181/:202; `MusicPage.vue:111/:113/:189/:220`; CHANGELOG v0.98.32 line 46 *(historical)*
 
 ## Step 8.3 - Music Store Duplication (tizen's useMusicStore.ts reimplements phlix-ui functionality)
 **Decision**: TV-SPECIFIC
-**Finding**: `useMusicStore.ts` (167 lines) is a custom Pinia store with `fetchArtists`, `fetchAlbums`, `fetchAlbum`, `fetchTrack`, `selectArtist`, `selectAlbum` actions managing artists/albums/tracks UI state. This reimplements what phlix-ui handles via `useMusicPlayer` composable + `MusicPager.vue` + `MusicArtistsPage`/`MusicArtistPage`/`MusicAlbumPage`/`MusicTracksPage` components. The TV-specific justification is: (1) BACK button uses `router.back()` to exit to parent app at artists view (vs phlix-ui staying within music module), (2) D-pad spatial navigation integration, (3) TV-optimized layout. This was also documented in Category 2 Step 2.1.4 as TV-SPECIFIC with justified duplication.
+**Finding**: `useMusicStore.ts` (331 lines at tip — re-measured `wc -l`; 167 at audit date) is a custom Pinia store with `fetchArtists`, `fetchAlbums`, `fetchAlbum`, `fetchTrack`, `selectArtist`, `selectAlbum` (plus S125's `loadMoreArtists`/`loadMoreAlbums`) actions managing artists/albums/tracks UI state. This reimplements what phlix-ui handles via `useMusicPlayer` composable + `MusicPager.vue` + `MusicArtistsPage`/`MusicArtistPage`/`MusicAlbumPage`/`MusicTracksPage` components. The TV-specific justification is: (1) BACK button uses `router.back()` to exit to parent app at artists view (vs phlix-ui staying within music module), (2) D-pad spatial navigation integration, (3) TV-optimized layout. This was also documented in Category 2 Step 2.1.4 as TV-SPECIFIC with justified duplication.
 **Code Changes**: None — reimplementation justified by TV navigation requirements
 **Cross-refs**: Step 2.1.4 (MusicPage.vue vs MusicLibraryPage.vue - TV-SPECIFIC)
 
 ## Step 8.4 - listFavorites / addFavorite / removeFavorite
 **Decision**: NOT TV-APPLICABLE
-**Finding**: `useMusicStore.ts` has NO favorites methods. `client.addFavorite()`, `client.removeFavorite()`, `client.listFavorites()` exist in @phlix/ui (client.ts:773-850) but are not called anywhere in tizen source. The MusicPage.vue has no favorites UI. The API exists for phlix-ui web clients to manage favorites, but TV music browsing is a thin-client model focused on library navigation, not personal library curation. Favorites management is not relevant to TV UX.
+**Finding**: `useMusicStore.ts` has NO favorites methods. `client.addFavorite()`, `client.removeFavorite()`, `client.listFavorites()` exist in @phlix/ui (client.ts:773-850 — *HISTORICAL src ref*) but are not called anywhere in tizen source. The MusicPage.vue has no favorites UI. The API exists for phlix-ui web clients to manage favorites, but TV music browsing is a thin-client model focused on library navigation, not personal library curation. Favorites management is not relevant to TV UX.
 **Code Changes**: None (not a TV use case - no code needed)
 **Evidence**: `rg "favorite|Favorite" src/stores/useMusicStore.ts` → 0 hits; MusicPage.vue has no favorites UI
 
@@ -849,25 +854,21 @@ This category examines Music API endpoints, data structures, and whether they ma
 
 ## Step 8.6 - markWatched / markUnwatched
 **Decision**: NOT TV-APPLICABLE
-**Finding**: `useMusicStore.ts` has NO watched state methods. `client.markWatched()` and `client.markUnwatched()` exist in @phlix/ui (client.ts:791-810) but are not called anywhere in tizen source. TV music browsing is a non-progressive experience — users don't mark tracks as watched. The watched state API is for video content with resume/progress tracking, not relevant to music playback on TV.
+**Finding**: `useMusicStore.ts` has NO watched state methods. `client.markWatched()` and `client.markUnwatched()` exist in @phlix/ui (client.ts:791-810 — *HISTORICAL src ref*) but are not called anywhere in tizen source. TV music browsing is a non-progressive experience — users don't mark tracks as watched. The watched state API is for video content with resume/progress tracking, not relevant to music playback on TV.
 **Code Changes**: None (not a TV use case - no code needed)
 **Evidence**: `rg "markWatched|markUnwatched" src/stores/useMusicStore.ts` → 0 hits
 
 ## Step 8.7 - Music track streaming (tizen calls GET /api/v1/music/tracks/:id for stream URL)
-**Decision**: TV-SPECIFIC (BUG)
-**Finding**: `useMusicStore.ts:92-105` has `fetchTrack(id: number)` which calls `client.get<MusicTrack>(`/api/v1/music/tracks/${id}`)` and assigns the result directly to `currentTrack.value = data`. However, the `GET /api/v1/music/tracks/{id}` API returns a `{ track }` envelope (not a direct `MusicTrack` object) — see ApiClient.d.ts line 580: "Fetch one track by id (`GET /api/v1/music/tracks/{id}` → `{ track }`)". The code assigns the envelope object instead of unwrapping `data.track`. This is a confirmed bug: `currentTrack.value` would be `{ track: MusicTrack }` instead of `MusicTrack`, causing properties like `stream_url` (server-minted signed URL, available in the envelope but not on the raw track) to be inaccessible at the expected path.
-
-Additionally, the `MusicTrack` interface in @phlix/contracts (Music.d.ts) does not define a `stream_url` field — it only has `id, mediaItemId, albumId, artistId, title, trackNumber, discNumber, durationSecs, artist, album`. The signed `stream_url` is added by the API response transformation and is only accessible via the envelope.
-
-**Note**: TypeScript type annotations don't catch this because `client.get<T>()` returns `Promise<T>` with no runtime validation — the generic type parameter is just a compile-time annotation. `vue-tsc --noEmit` passes despite the type-runtime mismatch.
-**Code Changes**: None (audit-only — bug identification without code changes)
-**Evidence**: ApiClient.d.ts line 580: `GET /api/v1/music/tracks/{id} → { track }`; `Music.d.ts` MusicTrack interface lacks `stream_url`; `useMusicStore.ts:98` assigns directly without unwrapping
+**Decision**: RESOLVED (restated at tip 2026-09-04 — audit-date decision was TV-SPECIFIC (BUG))
+**Finding**: The envelope-unwrap bug was fixed before tip (commit `894bf96` "[bugfix] useMusicStore: unwrap { track } and { album } API envelopes", then completed by S125's helper adoption). At tip `fetchTrack(id: string)` (useMusicStore.ts:243-255) assigns `currentTrack.value = await getClient().getTrack(id)` (:247), and the vendored ApiClient contract types the return as `Promise<MusicTrack>` (node_modules/@phlix/ui/dist/api/client.d.ts:587) — the `{ track }` envelope is unwrapped inside the helper, so no raw-envelope assignment remains (`client.get` on `/api/v1/music/tracks/` : 0 hits at tip).
+**Code Changes**: None in this step (already fixed upstream of tip)
+**Evidence**: useMusicStore.ts:243-255; client.d.ts:587 (`getTrack(id): Promise<MusicTrack>`, re-verified at tip); git log --oneline -- src/stores/useMusicStore.ts (894bf96, 35f3270)
 
 ## Step 8.8 - Music library redirect (v0.98.33 added /app/library/{id} → /app/music)
 **Decision**: ALREADY SUFFICIENT
-**Finding**: `buildExtraRoutes()` in main.ts does NOT define `/app/library/:id` — tizen relies on `createPhlixApp()`'s built-in routing which includes the S97 music library redirect (`/app/library/:id` for MUSIC library type → `/app/music`). The redirect works through `createPhlixApp()` base routing, not tizen-specific code. Tizen also doesn't define explicit `/app/music/*` routes — it relies on @phlix/ui's music routing. Since tizen calls `createPhlixApp()` with standard configuration (main.ts line 95-117), the redirect is automatically active.
+**Finding**: `buildExtraRoutes()` in main.ts does NOT define `/app/library/:id` (re-verified at tip) — tizen relies on `createPhlixApp()`'s built-in routing which includes the S97 music library redirect (`/app/library/:id` for MUSIC library type → `/app/music`) *(the redirect itself is an @phlix/ui-internal observation — HISTORICAL)*. Tizen also doesn't define explicit `/app/music/*` routes — it relies on @phlix/ui's music routing. Since tizen calls `createPhlixApp()` with standard configuration (main.ts:169-191 at tip — re-derived; audit ref 95-117), the redirect is automatically active.
 **Code Changes**: None (works through createPhlixApp base routing)
-**Evidence**: `buildExtraRoutes()` only defines `/app/library/scan`, `/app/chapters/:id`, `/app/audio-tracks/:id`, `/app/recommendations`, `/app/parental-controls` — music routing delegated to @phlix/ui
+**Evidence**: `buildExtraRoutes()` (main.ts:62-70 at tip) defines SIX extra routes: `/app/library/scan`, `/app/chapters/:id`, `/app/audio-tracks/:id`, `/app/subtitle-tracks/:id` (added by S407 — the audit-date 5-item list is stale), `/app/recommendations`, `/app/parental-controls` — music routing delegated to @phlix/ui
 
 ---
 
@@ -875,20 +876,21 @@ Additionally, the `MusicTrack` interface in @phlix/contracts (Music.d.ts) does n
 
 | Step | Feature | Decision | Notes |
 |------|---------|----------|-------|
-| 8.1 | Music API Breaking Change | ALREADY SUFFICIENT | Verified in Step 1.5 — raw `client.get()` bypasses helper methods |
-| 8.2 | Music Paging | TV-SPECIFIC | First 100 rows only — intentional per CHANGELOG |
+| 8.1 | Music API Breaking Change | SUPERSEDED (S424) | Helpers ADOPTED since S125 — 5 hits for list* at tip (was 0) |
+| 8.2 | Music Paging | TV-SPECIFIC (PAGED) | Paged via list* helpers + load-more since S125 (was first-100) |
 | 8.3 | Music Store Duplication | TV-SPECIFIC | TV navigation (router.back() exit), D-pad nav justify reimplementation |
 | 8.4 | listFavorites / addFavorite / removeFavorite | NOT TV-APPLICABLE | Not a TV use case — no favorites UI in MusicPage |
 | 8.5 | setRating / setLikeLevel | ALREADY SUFFICIENT | UserRatingPicker.vue correctly calls auth.client.setRating |
 | 8.6 | markWatched / markUnwatched | NOT TV-APPLICABLE | TV music browsing doesn't use watched state |
-| 8.7 | Music track streaming | TV-SPECIFIC (BUG) | API returns `{ track }` envelope but code assigns directly without unwrapping |
+| 8.7 | Music track streaming | RESOLVED (S424) | Envelope unwrap fixed (894bf96 + S125 `getTrack()`) — 0 raw envelope assigns at tip |
 | 8.8 | Music library redirect | ALREADY SUFFICIENT | Works through createPhlixApp base routing |
 
 **Decision Distribution**:
-- **ALREADY SUFFICIENT**: 3 steps (8.1, 8.5, 8.8) — verified unaffected or correctly integrated
-- **TV-SPECIFIC**: 3 steps (8.2, 8.3, 8.7) — intentional TV implementations, 8.7 has a bug
-- **NOT TV-APPLICABLE**: 2 steps (8.4, 8.6) — features not relevant to TV UX
-- **Code changes needed**: 0 (all decisions are architectural/audit — 8.7 bug identified but not fixed per audit-only scope)
+- **ALREADY SUFFICIENT**: 1 step (8.5) — correctly integrated (both line anchors re-verified at tip: UserRatingPicker.vue:64 starState, :79 setRating)
+- **SUPERSEDED / restated by S424**: 8.1 (helpers adopted), 8.2 (paged TV load-more), 8.7 (bug RESOLVED at tip), 8.8 (still ALREADY SUFFICIENT — route list restated to 6)
+- **TV-SPECIFIC**: 1 step (8.3 — store now 331 lines at tip)
+- **NOT TV-APPLICABLE**: 2 steps (8.4, 8.6) — features not relevant to TV UX; re-verified 0 hits at tip for favorites/watched in the store
+- **Code changes needed**: 0 (the 8.7 audit bug has since been fixed upstream — see restatement)
 
 ---
 
@@ -900,7 +902,7 @@ phlix-ui provides 20+ API client modules. The tizen client directly uses only 2 
 
 ## Step 12.1 - Recommendations API
 **Decision**: TV-SPECIFIC (PARTIAL GAP)
-**Finding**: tizen's RecommendationsScreen.vue (lines 33-49) makes a manual `client.get('/api/v1/me/recommendations', { limit: '20' })` call instead of using `fetchRecommendations()` from @phlix/ui. It has a duplicated local `RecommendationApiResponse` interface and handles error inline. The `fetchRecommendations()` function (phlix-ui/src/api/recommendations.ts:62-76) provides proper error handling, `AbortSignal` support, and converts `UserRecommendation[]` to `MediaItem[]` via `recommendationToMediaItem()`. The tizen implementation uses raw `UserRecommendation[]` directly instead of converting to `MediaItem[]`.
+**Finding**: tizen's RecommendationsScreen.vue (lines 33-50 at tip; `load()` at :33, call at :39-41 — re-verified) makes a manual `client.get('/api/v1/me/recommendations', { limit: '20' })` call instead of using `fetchRecommendations()` from @phlix-ui (`fetchRecommendations()` present in the vendored dist `node_modules/@phlix/ui/dist/api/`). It has a duplicated local `RecommendationApiResponse` interface and handles error inline. The `fetchRecommendations()` function (phlix-ui/src/api/recommendations.ts:62-76 — *HISTORICAL src ref; function present in vendored dist*) provides proper error handling, `AbortSignal` support, and converts `UserRecommendation[]` to `MediaItem[]` via `recommendationToMediaItem()`. The tizen implementation uses raw `UserRecommendation[]` directly instead of converting to `MediaItem[]`.
 
 The gap is: (1) duplicated interface, (2) manual error handling instead of centralized, (3) no AbortSignal support, (4) raw `UserRecommendation[]` instead of `MediaItem[]`.
 
@@ -909,17 +911,17 @@ This is a medium-priority gap — consolidation would require importing `fetchRe
 
 ## Step 12.2 - SyncPlay API
 **Decision**: TV-SPECIFIC (SIGNIFICANT GAP)
-**Finding**: tizen's useSyncPlayStore.ts (lines 83-160) contains a local `SyncPlayApiClient` class that re-implements the same functionality as `getSyncPlayApi()` from @phlix/ui. Key differences:
-1. **API paths**: tizen uses `/api/v1/syncplay/rooms` vs phlix-ui's `/api/v1/syncplay/groups`
-2. **WebSocket**: tizen uses custom WebSocket implementation vs phlix-ui's `@phlix/syncplay` protocol
-3. **Pattern**: tizen instantiates per-call `new SyncPlayApiClient(apiBase, token)` vs phlix-ui's singleton `getSyncPlayApi(apiBase)`
+**Finding**: *(Restated at tip 2026-09-04 — audit-date refs/paths were pre-S415 and contradicted the re-measured Category 11.)* tizen's useSyncPlayStore.ts (class at lines 392-462 at tip) contains a local `SyncPlayApiClient` class providing the REST half of the SyncPlay surface, duplicating the functionality of `getSyncPlayApi()` from @phlix/ui (present in dist but kept internal there — store docblock :8-9). Key differences:
+1. **API paths**: NO divergence at tip — tizen calls the same five `/api/v1/syncplay/groups` routes the server registers (class docblock :381-385, calls :423-459; the audit-date `/rooms` form has 0 hits in `src/`)
+2. **WebSocket**: the socket PROTOCOL is the shared `@phlix/syncplay` client (import :41) — only transport plumbing is tizen-local (see Category 11 restatement)
+3. **Pattern**: tizen instantiates per-call `new SyncPlayApiClient(apiBase, token)` (:775/:809/:839/:942) vs phlix-ui's singleton `getSyncPlayApi(apiBase)`
 
-The tizen implementation has ~80 lines of duplicated API client code plus custom WebSocket handling with exponential backoff. This is a high-priority gap due to significant code duplication and API path divergence.
+The tizen implementation has a 71-line REST client (392-462, measured) plus tizen-local socket plumbing with exponential backoff. *S424 downgrade of the audit-date "high-priority gap … API path divergence": the path divergence no longer exists at tip and the protocol is shared, so the remaining duplication is the REST wrapper only.*
 **Code Changes**: None (audit-only — gap identified but not fixed per scope)
 
 ## Step 12.3 - Libraries API
 **Decision**: ALREADY SUFFICIENT (INDIRECTLY USED)
-**Finding**: tizen uses `libraryLinks: true` in menu configuration (main.ts line 42). The comment states: "libraryLinks expands Browse into one nav link per library (fetched from /api/v1/libraries)". The `libraryLinks` feature is handled internally by @phlix/ui — the tizen client delegates library fetching to @phlix/ui's implementation. This is working as intended.
+**Finding**: tizen uses `libraryLinks: true` in menu configuration (main.ts line 47 at tip — re-derived; line 42 audit-date). The comment states: "libraryLinks expands Browse into one nav link per library (fetched from /api/v1/libraries)". The `libraryLinks` feature is handled internally by @phlix/ui — the tizen client delegates library fetching to @phlix/ui's implementation. This is working as intended.
 **Code Changes**: None (delegated to @phlix/ui — works correctly)
 
 ## Step 12.4 - Invite Links API
@@ -934,7 +936,7 @@ The tizen implementation has ~80 lines of duplicated API client code plus custom
 
 ## Step 12.6 - Next Up API
 **Decision**: NOT USED
-**Finding**: `nextUp.ts` exists in phlix-ui (added v0.98.28) but no tizen source file imports or uses it. The "Next Up" continue-watching functionality is handled by @phlix/ui's Player automatically. The tizen UpNextOverlay.vue (components/UpNextOverlay.vue) fetches playlist data directly via `/api/v1/media/{id}/playlist` to find the next item.
+**Finding**: *(Restated at tip 2026-09-04 — the audit-date playlist-route claim was falsified by S280.)* No tizen source file imports phlix-ui's `nextUp.ts` module; but since S280 UpNextOverlay.vue hits the SAME registered endpoint it wraps — `GET /api/v1/users/me/next-up` via raw `client.get` (UpNextOverlay.vue:138-141) — to pick the next item. "Next Up" continue-watching for BrowsePage rails remains handled by @phlix/ui automatically.
 **Code Changes**: None (already handled differently)
 
 ## Step 12.7 - Photos API
@@ -954,7 +956,7 @@ The tizen implementation has ~80 lines of duplicated API client code plus custom
 
 ## Steps 12.10-12.30 - Admin APIs (21 total)
 **Decision**: NOT TV-APPLICABLE
-**Finding**: All 21 admin API clients (logs, dashboard, users, libraries, plugins, settings, webhooks, services, integrations, backup, cast, dlnaServer, remoteAccess, liveTv, collections, history, syncPlay, hubDashboard, metadata-sources, metrics, duplicates) exist in phlix-ui/src/api/admin/ but are not used by tizen. Admin functionality is accessed via @phlix/ui's admin UI routes (`buildAdminRoutes()` from main.ts line 57). Server administration from TV is not a designed product use case — TV is a media consumption thin client.
+**Finding**: All **26** admin API client modules (measured at tip: `ls node_modules/@phlix/ui/dist/api/admin/*.d.ts | wc -l` — the audit-date "21" list, like Step 7.23's "19", was a stale src-tree count; both are superseded, see 7.23 for the tip enumeration) exist in phlix-ui but are not used by tizen (src/ grep: 0 admin-client imports). Admin functionality is accessed via @phlix/ui's admin UI routes (`buildAdminRoutes()` spread at main.ts line 62 — re-derived; line 57 audit-date). Server administration from TV is not a designed product use case — TV is a media consumption thin client.
 **Code Changes**: None (admin features accessed via @phlix/ui admin UI, not direct API)
 
 ---
@@ -964,7 +966,7 @@ The tizen implementation has ~80 lines of duplicated API client code plus custom
 | Step | API | Decision | Notes |
 |------|-----|----------|-------|
 | 12.1 | Recommendations | TV-SPECIFIC (PARTIAL GAP) | Manual fetch vs `fetchRecommendations()` |
-| 12.2 | SyncPlay | TV-SPECIFIC (SIGNIFICANT GAP) | Local SyncPlayApiClient vs `getSyncPlayApi()`, different API paths |
+| 12.2 | SyncPlay | TV-SPECIFIC (PARTIAL GAP — restated at tip) | Local `SyncPlayApiClient` REST wrapper (71 lines) vs `getSyncPlayApi()`; API paths IDENTICAL at tip (`/api/v1/syncplay/groups`), protocol shared via @phlix/syncplay |
 | 12.3 | Libraries | ALREADY SUFFICIENT | Delegated to @phlix/ui via `libraryLinks: true` |
 | 12.4 | Invite Links | NOT USED | Admin/web feature, not TV use case |
 | 12.5 | Most Watched | NOT USED | Analytics feature, not TV use case |
@@ -976,7 +978,7 @@ The tizen implementation has ~80 lines of duplicated API client code plus custom
 
 **Decision Distribution**:
 - **TV-SPECIFIC (PARTIAL GAP)**: 1 step (12.1) — Recommendations API could use `fetchRecommendations()`
-- **TV-SPECIFIC (SIGNIFICANT GAP)**: 1 step (12.2) — SyncPlay reimplementation with API path divergence
+- **TV-SPECIFIC (SIGNIFICANT GAP → restated PARTIAL at tip)**: 1 step (12.2) — SyncPlay REST wrapper duplicated; *path divergence claim falsified at tip (paths identical)* and protocol is @phlix/syncplay-shared
 - **ALREADY SUFFICIENT**: 1 step (12.3) — Libraries delegated to @phlix/ui
 - **NOT USED**: 6 steps (12.4-12.9) — Features not needed on TV
 - **NOT TV-APPLICABLE**: 21 steps (12.10-12.30) — Admin features not applicable to TV client
@@ -988,11 +990,11 @@ The tizen implementation has ~80 lines of duplicated API client code plus custom
 
 ## Overview
 
-This category examines HLS (HTTP Live Streaming) configuration in the Tizen client. The central configuration is `TIZEN_HLS_CONFIG` in `main.ts:69-76`, which is passed to @phlix/ui's player via `createPhlixApp({ playerHlsConfig: TIZEN_HLS_CONFIG })` at line 116. HLS playback is handled by hls.js via @phlix/ui's player module.
+This category examines HLS (HTTP Live Streaming) configuration in the Tizen client. The central configuration is `TIZEN_HLS_CONFIG` in `main.ts:76-83` (re-derived at tip 2026-09-04; audit-date ref was 69-76), which is passed to @phlix/ui's player via `createPhlixApp({ playerHlsConfig: TIZEN_HLS_CONFIG })` at main.ts:190 (audit-date ref 116). HLS playback is handled by hls.js via @phlix/ui's player module. All `hls-playback.ts`/`playback.ts`/`Player.vue` line refs in this category are @phlix-ui-src observations from the v0.98.33 era — *HISTORICAL (v0.99.0 ships dist-only)*; the tizen-side values below were re-verified against main.ts:76-83 at tip.
 
 ## Step 10.1 - Buffer Settings
 **Decision**: ALREADY SUFFICIENT
-**Finding**: `TIZEN_HLS_CONFIG` in main.ts:69-76 correctly sets all RAM-conscious buffer values:
+**Finding**: `TIZEN_HLS_CONFIG` in main.ts:76-83 (re-derived at tip) correctly sets all RAM-conscious buffer values:
 - `maxBufferLength: 60` (Tizen-specific, web default is 30)
 - `maxMaxBufferLength: 180` (Tizen-specific, web default is 60)
 - `maxBufferSize: 100 * 1000 * 1000` (100MB, Tizen-specific, web default is 60MB)
@@ -1000,37 +1002,37 @@ This category examines HLS (HTTP Live Streaming) configuration in the Tizen clie
 
 These values are explicitly set to override hls.js defaults and are passed through `playerHlsConfig` which shallow-merges over @phlix/ui's defaults at `hls-playback.ts:316`. The phlix-ui defaults at lines 283-284 only set `backBufferLength: 90` and `maxBufferLength: 60` but NOT `maxMaxBufferLength` or `maxBufferSize` — Tizen's explicit values correctly fill this gap.
 **Code Changes**: None (correctly implemented)
-**Evidence**: main.ts:69-76 TIZEN_HLS_CONFIG; hls-playback.ts:277-284 phlix-ui defaults; hls-playback.ts:316 shallow merge
+**Evidence**: main.ts:76-83 TIZEN_HLS_CONFIG (values 60/180/100MB/90 re-verified at tip); hls-playback.ts:277-284 phlix-ui defaults *HISTORICAL src ref*; hls-playback.ts:316 shallow merge *HISTORICAL src ref*
 
 ## Step 10.2 - Level Cap (capLevelToPlayerSize)
 **Decision**: ALREADY SUFFICIENT
-**Finding**: `capLevelToPlayerSize: true` is correctly set in `TIZEN_HLS_CONFIG` at main.ts:73. This is a RAM constraint setting unique to Tizen's limited memory environment. The web default is `false`. This setting ensures hls.js does not select a quality level higher than the player's actual rendered size, preventing unnecessary memory usage.
+**Finding**: `capLevelToPlayerSize: true` is correctly set in `TIZEN_HLS_CONFIG` at main.ts:81 (re-derived at tip). This is a RAM constraint setting unique to Tizen's limited memory environment. The web default is `false`. This setting ensures hls.js does not select a quality level higher than the player's actual rendered size, preventing unnecessary memory usage.
 **Code Changes**: None (correctly implemented)
-**Evidence**: main.ts:73; comment at line 66: "cap level to player size"
+**Evidence**: main.ts:81; comment at line 73 (re-derived): "cap level to player size"
 
 ## Step 10.3 - Software AES
 **Decision**: ALREADY SUFFICIENT
-**Finding**: `enableSoftwareAES: true` is correctly set in `TIZEN_HLS_CONFIG` at main.ts:74. The comment at line 67 explains: "software AES so DRM-free HLS still plays on weaker decoders." This is a Tizen-specific fallback for devices with weaker hardware decryption. The web default is `false` (hardware AES preferred).
+**Finding**: `enableSoftwareAES: true` is correctly set in `TIZEN_HLS_CONFIG` at main.ts:82 (re-derived at tip). The comment at line 74 explains: "software AES so DRM-free HLS still plays on weaker decoders." This is a Tizen-specific fallback for devices with weaker hardware decryption. The web default is `false` (hardware AES preferred).
 **Code Changes**: None (correctly implemented)
-**Evidence**: main.ts:74; comment at line 67
+**Evidence**: main.ts:82; comment at line 74 (re-derived)
 
 ## Step 10.4 - Sync with phlix-ui Updates
 **Decision**: ALREADY SUFFICIENT
-**Finding**: Tizen uses @phlix/ui v0.98.33 and passes `playerHlsConfig: TIZEN_HLS_CONFIG` to createPhlixApp(). The shallow merge at hls-playback.ts:316 means Tizen's explicit values always override phlix-ui defaults. Currently phlix-ui only sets `backBufferLength: 90` and `maxBufferLength: 60` as defaults — these match Tizen's values exactly, so no conflict exists. Future phlix-ui changes to `maxMaxBufferLength`, `maxBufferSize`, `capLevelToPlayerSize`, or `enableSoftwareAES` would still be overridden by Tizen's explicit values. The design is robust against phlix-ui version updates.
+**Finding**: Tizen uses @phlix/ui v0.98.33 *(HISTORICAL — pin at tip 2026-09-04 is `#v0.99.0`, package.json:34)* and passes `playerHlsConfig: TIZEN_HLS_CONFIG` to createPhlixApp(). The shallow merge at hls-playback.ts:316 means Tizen's explicit values always override phlix-ui defaults. Currently phlix-ui only sets `backBufferLength: 90` and `maxBufferLength: 60` as defaults — these match Tizen's values exactly, so no conflict exists. Future phlix-ui changes to `maxMaxBufferLength`, `maxBufferSize`, `capLevelToPlayerSize`, or `enableSoftwareAES` would still be overridden by Tizen's explicit values. The design is robust against phlix-ui version updates.
 **Code Changes**: None (shallow merge design is correct)
-**Evidence**: main.ts:116 playerHlsConfig pass-through; hls-playback.ts:316 `{ ...defaultConfig, ...opts.hlsConfig }`
+**Evidence**: main.ts:190 playerHlsConfig pass-through (re-derived at tip); hls-playback.ts:316 `{ ...defaultConfig, ...opts.hlsConfig }` *HISTORICAL src ref*
 
 ## Step 10.5 - Bandwidth Persistence
 **Decision**: ALREADY SUFFICIENT
-**Finding**: Bandwidth persistence is implemented in phlix-ui's `hls-playback.ts:157-190` using localStorage key `phlix-bandwidth-estimate` (BW_EST_KEY at line 158). Bandwidth is persisted every 30 seconds via `setInterval(_saveBandwidth, 30_000)` at line 337, and on destroy at line 344. On cold start, persisted bandwidth is loaded via `loadPersistedBandwidth()` and used to seed ABR: `abrEwmaDefaultEstimate: persistedBw` at line 287. Since Tizen uses @phlix/ui's player via `createPhlixApp()`, this mechanism works identically on Tizen. Tizen also uses localStorage for other data (`phlix.serverUrl` in main.ts, `phlix.deviceId` in deviceId.ts), confirming localStorage is available.
+**Finding**: Bandwidth persistence is implemented in phlix-ui's `hls-playback.ts:157-190` using localStorage key `phlix-bandwidth-estimate` (BW_EST_KEY at line 158 — *HISTORICAL src refs*). Bandwidth is persisted every 30 seconds via `setInterval(_saveBandwidth, 30_000)` at line 337, and on destroy at line 344. On cold start, persisted bandwidth is loaded via `loadPersistedBandwidth()` and used to seed ABR: `abrEwmaDefaultEstimate: persistedBw` at line 287. Since Tizen uses @phlix/ui's player via `createPhlixApp()`, this mechanism works identically on Tizen. Tizen also uses localStorage for other data (`phlix.serverUrl` in main.ts, `phlix.deviceId` in deviceId.ts), confirming localStorage is available.
 **Code Changes**: None (inherited via createPhlixApp — works on Tizen)
-**Evidence**: hls-playback.ts:157-190 bandwidth persistence functions; line 287 abrEwmaDefaultEstimate
+**Evidence**: hls-playback.ts:157-190 bandwidth persistence functions; line 287 abrEwmaDefaultEstimate — *HISTORICAL src refs (v0.98.33 era)*
 
 ## Step 10.6 - Codec Probing
 **Decision**: ALREADY SUFFICIENT
 **Finding**: Codec probing is implemented in phlix-ui via `playback.ts:170-296`. `canDecodeAudioCodec()` uses `MediaCapabilities.decodingInfo()` with fallback to `canPlayType()` at lines 232-259. `canDecodeHevcInMp4()` probes HEVC support via MediaCapabilities at lines 266-296. `needsTranscodeWithCapabilities()` combines extension-based check with runtime codec probing at lines 313-340. Tizen's Chromium webview (Tizen 6.5+) supports the MediaCapabilities API. Since Tizen uses @phlix/ui's player via `createPhlixApp()`, the same codec probing mechanism is used. The `evaluateTranscodeWithCapabilities()` is called when `props.playbackAudioTracks` changes in Player.vue:245-252.
 **Code Changes**: None (inherited via createPhlixApp — works on Tizen)
-**Evidence**: playback.ts:232-248 MediaCapabilities.decodingInfo() usage; Tizen 6.5+ Chromium webview supports MediaCapabilities
+**Evidence**: playback.ts:232-248 MediaCapabilities.decodingInfo() usage — *HISTORICAL src ref*; Tizen 6.5+ Chromium webview supports MediaCapabilities
 
 ---
 
@@ -1059,17 +1061,17 @@ These values are explicitly set to override hls.js defaults and are passed throu
 
 ## Summary
 
-Category 11 covers SyncPlay — a collaborative playback synchronization feature. The tizen-client has a **complete parallel implementation** of SyncPlay with 645 lines of custom WebSocket code. It does NOT use the `@phlix/syncplay` package despite it being declared in `package.json`.
+Category 11 covers SyncPlay — a collaborative playback synchronization feature. The tizen-client has a **local reimplementation of the SyncPlay session surface**: a 994-line store (`wc -l src/stores/useSyncPlayStore.ts` at tip `f5b9fff9`, 2026-09-04) owning the REST client, connection lifecycle and store state. *(Restated by S424 — the audit-date text "645 lines of custom WebSocket code … does NOT use @phlix/syncplay despite declaring it" was true only of the pre-S415 store and contradicted every later re-measurement in this document.)* At tip the WebSocket **protocol is the `@phlix/syncplay` library's** — imported at useSyncPlayStore.ts:41, client instantiated at :564, frames via `serializeMessage`/`handleIncoming` (:568, :605) — while the **transport plumbing** (the `WebSocket` object, reconnect backoff, url building) remains tizen-local, because @phlix/ui does not export its own SyncPlay internals (store docblock :7-10). Declared `package.json`:33 and genuinely used.
 
 ## Decision Table
 
 | Step | Decision | Rationale |
 |------|----------|-----------|
-| 11.1 | **TV-SPECIFIC** | tizen has its own 645-line SyncPlayApiClient + WebSocket implementation (lines 83-384). This is an intentional TV-specific reimplementation with custom WebSocket handling on the API port (not port 8097). The context confirms: "useSyncPlayStore is TV-SPECIFIC REIMPLEMENTATION — a 645-line WebSocket implementation exists in tizen" |
-| 11.2 | **TV-SPECIFIC** | tizen uses its own `SyncPlayApiClient` class instead of phlix-ui's `getSyncPlayApi()`. Each store action takes `apiBase` and `token` as parameters. This mirrors the custom approach in 11.1 — intentional TV-specific pattern. |
+| 11.1 | **TV-SPECIFIC** | tizen carries its own 994-line store (`wc -l`, re-measured at tip; audit-date value was 645) containing a local `SyncPlayApiClient` REST class (useSyncPlayStore.ts:392-462 at tip) plus WebSocket transport and lifecycle (buildWsUrl :474-486, connectWs :549-634, scheduleReconnect :644, disconnectWs :666). The reimplementation is intentional because @phlix/ui does not export its player-side SyncPlay internals (store docblock :7-10) — but the wire PROTOCOL on the socket is `@phlix/syncplay`'s, on the syncplay port **:8097** (buildWsUrl :485; re-measured — the old "API port (not 8097)" wording described the pre-S415 store). |
+| 11.2 | **TV-SPECIFIC** | tizen uses its own `SyncPlayApiClient` class instead of phlix-ui's `getSyncPlayApi()` (which exists in the vendored dist at `node_modules/@phlix/ui/dist/api/syncplay.d.ts` but is not part of the exported app surface the thin client uses — store docblock :8-9). Each store action takes `apiBase` and `token` as parameters and instantiates the client per call (e.g. :775, :809, :839, :942 — re-verified at tip). Intentional TV-specific pattern. |
 | 11.3 | **NOT TV-APPLICABLE** | Per AGENTS.md: "this repo writes no media/library/auth UI — that lives in @phlix/ui". SyncPlay UI components (SyncPlayOverlay, SyncPlayModal, SyncPlayControls) are part of @phlix/ui, not this thin TV client repo. |
-| 11.4 | **TV-SPECIFIC** | tizen's `syncStatus` computed (lines 190-193) returns `'synced' \| 'outOfSync' \| 're-syncing'` based solely on session state — no drift computation. However, `usePlayerStore` (from @phlix/ui) handles playback rate sync for SyncPlay sessions. The lack of drift computation is by design for this TV-specific implementation. |
-| 11.5 | **TV-SPECIFIC REIMPLEMENTATION** | tizen connects WebSocket to `${apiBase.replace(/^http/, 'ws')}/api/v1/syncplay/${roomId}?token=${token}` — using the API port, NOT port 8097. Uses custom JSON message format (`WsMessage` type with 'command' \| 'member_joined' \| 'member_left' \| 'state_sync' \| 'error'). This is a deliberate protocol reimplementation for the TV client. |
+| 11.4 | **TV-SPECIFIC** | tizen's `syncStatus` computed (lines 527-530 at tip, backed by `isSynced` :520-523; audit-date ref was 190-193) returns `'synced' \| 'outOfSync' \| 're-syncing'` based solely on session state — no drift computation in the store. *(Restated: the audit-date "usePlayerStore handles playback rate sync" is false at tip — the store has zero `usePlayerStore` references (grep: 0 hits); remote play/pause/seek/sync commands are applied IN this store via `onRemoteCommand` (:727-754), including `playbackRate` from `sync` commands (:749-751).)* The lack of drift computation at the store level is by design; clock-drift correction (`syncplay_time_sync`) is handled inside the `@phlix/syncplay` client (its `TimeSync`, node_modules `dist/client.d.ts` :76/:158-159). |
+| 11.5 | **TV-SPECIFIC REIMPLEMENTATION** *(restated at tip 2026-09-04 — the audit-date URL and `WsMessage` protocol description were false of the S415+ store; both quoted forms have zero hits in `src/` at tip)* | tizen builds its socket URL in `buildWsUrl` (useSyncPlayStore.ts:474-486) as `${ws\|wss}//${hostname}:8097?token=…&room=…` — the SyncPlay port **8097**, per the store docblock (:23) and phlix-syncplay/SPEC.md. Messages are `@phlix/syncplay` `syncplay_*` frames (19 frame types incl. `syncplay_group_state`, `syncplay_playback_sync`, `syncplay_time_sync` — node_modules `dist/messages.d.ts`), sent via `serializeMessage` (:568) and fed to `client.handleIncoming` (:605). The tizen-specific part is transport plumbing, not protocol. |
 | 11.6 | **IN USE** | `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.4"` is declared in `package.json` (line 33) and IS imported: `grep -r "@phlix/syncplay" src/` matches `src/stores/useSyncPlayStore.ts` (import at line 41 — `SyncPlayClient` + `serializeMessage`; `SyncPlayClient` instantiated in `connectWs()` at line 564 with `onState` at line 578; `ws.onmessage` feeds `client.handleIncoming` at lines 603-605). The earlier "no matches / orphaned dependency" reading was true only of the pre-S415 store and is false at tip (re-measured 2026-09-04). |
 
 ## Decision Distribution
@@ -1079,52 +1081,57 @@ Category 11 covers SyncPlay — a collaborative playback synchronization feature
 | TV-SPECIFIC | 3 |
 | TV-SPECIFIC REIMPLEMENTATION | 1 |
 | NOT TV-APPLICABLE | 1 |
-| NOT USED | 1 |
+| IN USE | 1 |
 | **TOTAL** | **6** |
+
+*(S424 fix: the distribution row said "NOT USED | 1" while the decision table's own 11.6 row reads **IN USE** — the label was pre-S415 residue and contradicted the table above it.)*
 
 ## Key Findings
 
-### 1. Parallel WebSocket Implementation (11.1, 11.5)
-The tizen-client implements its own WebSocket class with:
-- Custom `SyncPlayApiClient` for REST calls (lines 83-160)
-- Custom `buildWsUrl()`, `connectWs()`, `handleWsMessage()`, `sendWsMessage()`, `scheduleReconnect()`, `disconnectWs()` (lines 196-383)
-- Custom message protocol: `'command' | 'member_joined' | 'member_left' | 'state_sync' | 'error'`
-- Exponential backoff reconnection (MAX_RECONNECT_ATTEMPTS=5, BASE_RECONNECT_DELAY=1000ms)
-- WebSocket on API port (not 8097)
+### 1. Local Session Surface + Library-Framed WebSocket (11.1, 11.5) — restated at tip 2026-09-04
+The tizen-client carries locally (all line refs re-measured at tip):
+- `SyncPlayApiClient` for the five REST routes under `/api/v1/syncplay/groups` (useSyncPlayStore.ts:392-462; class docblock :381-385)
+- `buildWsUrl()` :474-486, `connectWs()` :549-634, `scheduleReconnect()` :644-664, `disconnectWs()` :666 (the audit-date helper set `handleWsMessage`/`sendWsMessage` and refs "83-160"/"196-383" do not exist at tip — grep 0 hits — they predate the S415 rewrite)
+- Message protocol is **@phlix/syncplay's `syncplay_*` frames** (`serializeMessage` :568 / `client.handleIncoming` :605), NOT a custom `'command' | 'member_joined' | …` type (no `WsMessage` type at tip — grep 0 hits)
+- Exponential backoff reconnection (MAX_RECONNECT_ATTEMPTS=5, BASE_RECONNECT_DELAY=1000ms at :641-642, backoff math :653 — re-verified)
+- WebSocket on the SyncPlay port **:8097** (`ws(s)://<hostname>:8097?token=&room=` — buildWsUrl :485; the audit-date "API port (not 8097)" is falsified at tip)
 
 ### 2. @phlix/syncplay Dependency in Use (11.6)
 The package IS imported and drives the SyncPlay WebSocket protocol: `useSyncPlayStore.ts` imports `SyncPlayClient`/`serializeMessage` (line 41) and instantiates the client in `connectWs()` (line 564). The earlier "declared but never imported / orphaned dependency" finding predates the S415 store rewrite and no longer holds (re-measured by grep at tip, 2026-09-04).
 
-### 3. No Drift Computation (11.4)
-tizen's `syncStatus` computed property does not use drift computation. It simply checks if `currentSession.value.state === 'playing' || currentSession.value.state === 'paused'`. The context notes that `usePlayerStore` handles playback rate sync for SyncPlay sessions, so drift computation may not be needed at the store level.
+### 3. No Drift Computation in the Store (11.4 — restated at tip)
+tizen's `syncStatus` computed (:527-530, via `isSynced` :520-523) does not use drift computation. It simply checks if `currentSession.value.state === 'playing' || currentSession.value.state === 'paused'`. *(Restated: rate/position sync is applied by this store's own `onRemoteCommand` (:727-754, `playbackRate` at :749-751) from `@phlix/syncplay` playback/sync callbacks — NOT by `usePlayerStore`, which the store never references (grep 0 hits at tip). Clock-drift correction itself lives in the `@phlix/syncplay` client's `TimeSync` (node_modules `dist/client.d.ts`:76 "Server-initiated clock drift correction"), which is why no store-level drift math is needed.)*
 
 ### 4. UI Components Not Applicable (11.3)
 The AGENTS.md explicitly states this repo "writes no media/library/auth UI — that lives in @phlix/ui". SyncPlay UI is rendered by @phlix/ui's components, not by this thin TV client.
 
 ## Verification Evidence
 
-- **useSyncPlayStore.ts**: 994 lines (measured `wc -l`, 2026-09-04); the WebSocket layer runs the real `@phlix/syncplay` `SyncPlayClient` (import line 41, instantiation line 564)
-- **package.json**: `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.4"` declared and used (S418 re-pin from #v0.1.2)
+- **useSyncPlayStore.ts**: 994 lines (re-measured `wc -l` at tip, S424, 2026-09-04); the WebSocket layer runs the real `@phlix/syncplay` `SyncPlayClient` (import line 41, instantiation line 564, onState :578, `handleIncoming` :603-605 — all re-verified)
+- **package.json**: `@phlix/syncplay: "github:detain/phlix-syncplay#v0.1.4"` declared (line 33 — re-verified) and used; installed copy `node_modules/@phlix/syncplay` reports 0.1.4; note the vendored `@phlix/ui`@0.99.0 still declares its own syncplay pin `#v0.1.2` (node_modules/@phlix/ui/package.json:86 — measured)
+- **tests**: dict-shaped `group_state` survival over the socket is exercised by `tests/unit/useSyncPlayStore.test.ts` (`s418DictMembersSurviveOnMessage` — present in the 312-test suite run at tip)
 - **AGENTS.md**: Confirms thin TV consumer model
-- **usePlayerStore**: Not present in tizen-client (comes from @phlix/ui) — handles playback rate sync
+- **usePlayerStore**: no local definition in this repo (imported from @phlix/ui, e.g. main.ts:13, tizenBridge.ts) — *(S424: the audit-date tail "handles playback rate sync" is false at tip — SyncPlay rate/position sync is applied inside useSyncPlayStore's own `onRemoteCommand` (:727-754; playbackRate :749-751); useSyncPlayStore.ts has zero usePlayerStore references — grep re-run 2026-09-04)*
 
 ## Gates
 
 | Gate | Result |
 |------|--------|
-| `npm run typecheck` | ✅ PASS |
-| `npm test` | ✅ 74 PASS |
-| `npm run lint` | ✅ PASS |
+| `npm run typecheck` | ✅ PASS (re-run green at tip, 2026-09-04) |
+| `npm test` | ✅ 312 PASS (20 files) — re-measured at tip `f5b9fff9`, 2026-09-04 (audit-date value was "74 PASS"; the suite has grown via S244–S418-era tests) |
+| `npm run lint` | ✅ PASS (re-run green at tip, 2026-09-04) |
 
 ## Conclusion
 
-The tizen-client has a **complete, intentional TV-specific SyncPlay reimplementation** that:
-1. Uses custom WebSocket handling instead of @phlix/syncplay
-2. Connects to the API port instead of port 8097
-3. Uses a custom message protocol instead of @phlix/syncplay's protocol
-4. Has no drift computation (relies on usePlayerStore from @phlix/ui for playback sync)
+*(S424 rewrite, 2026-09-04 — the audit-date Conclusion contradicted this document's own re-measured 11.6/Key Finding 2/Verification Evidence rows and the tip code; every point below is re-derived at tip `f5b9fff9`.)*
 
-This is NOT a gap to fix — it is an architectural decision to have a TV-specific SyncPlay implementation that works within the Tizen TV constraints. The @phlix/syncplay dependency is unused and could be removed.
+The tizen-client has an **intentional TV-specific SyncPlay session surface** that:
+1. **Uses @phlix/syncplay for the WebSocket protocol** — `SyncPlayClient` + `serializeMessage` imported at useSyncPlayStore.ts:41, client constructed in `connectWs()` at :564, outbound frames via `serializeMessage` (:568), inbound via `client.handleIncoming` (:605). The tizen-local parts are the raw `WebSocket` transport, store state and lifecycle.
+2. **Connects to the SyncPlay port 8097** — `buildWsUrl` (:474-486) emits `ws(s)://<hostname>:8097?token=…&room=…`; the store docblock (:23) states "Playback transport is the WebSocket on `:8097` (`syncplay_*` frames)".
+3. **Speaks @phlix/syncplay's `syncplay_*` frame protocol** (19 message types in the library's `dist/messages.d.ts`), not a custom JSON dialect.
+4. Keeps **no drift computation in the store** — `syncStatus` (:527-530) is session-state based; remote play/pause/seek/sync (incl. `playbackRate` at :749-751) are applied by the store's own `onRemoteCommand` (:727-754) fed from SyncPlayClient callbacks, and clock-drift correction is the library's `TimeSync`.
+
+This is NOT a gap to fix — it is an architectural decision to own the SyncPlay surface locally (because @phlix/ui keeps its own SyncPlay internals unexported), while delegating the protocol to the shared @phlix/syncplay library. **The @phlix/syncplay dependency is IN USE (import :41) and must NOT be removed** — removing it would break the live runtime path.
 
 ---
 
@@ -1146,25 +1153,23 @@ All styling is consumed via `@phlix/ui/style.css` and `@phlix/ui/fonts.css` impo
 
 ## Step 14.1 - @phlix/tokens import
 **Decision**: ALREADY SUFFICIENT
-**Finding**: `main.ts:14` imports `@phlix/ui/style.css` which bundles `@phlix/tokens/style.css` at build time. The `@phlix/tokens` package is a devDependency of phlix-ui for build-time bundling. Verified:
-- `node_modules/@phlix/ui/dist/style.css` contains all CSS custom properties
-- `--accent: 375 occurrences`, `--bg: 14`, `--surface: 414`, `--text: 1505`, `--font-sans: 8`, `--font-display: 110`, `--space-*: 1680`, `--radius-*: 382`, `--shadow-*: 113`, `--dur-*: 283`, `--ease-*: 264`, `--control-h: 31`
+**Finding**: `main.ts:15` imports `@phlix/ui/style.css` (re-derived at tip; :14 was the audit-date line) which bundles `@phlix/tokens/style.css` at build time. The `@phlix/tokens` package is a devDependency of phlix-ui for build-time bundling. Re-counted at tip against `node_modules/@phlix/ui/dist/style.css` (v0.99.0) with `grep -o … | wc -l` — audit-date counts (v0.98.33) shown in parentheses: `--accent: 384 (375)`, `--bg: 20 (14)`, `--surface: 426 (414)`, `--text: 1600 (1505)`, `--font-sans: 8 (8)`, `--font-display: 116 (110)`, `--space-*: 1739 (1680)`, `--radius-*: 392 (382)`, `--shadow-*: 113 (113)`, `--dur-*: 288 (283)`, `--ease-*: 269 (264)`, `--control-h: 31 (31)`
 - The `@phlix/tokens` package is not directly imported by tizen — it's correctly bundled by phlix-ui
 **Code Changes**: None (correctly implemented)
 
 ## Step 14.2 - Theme System
 **Decision**: ALREADY SUFFICIENT
-**Finding**: `main.ts:100` sets `defaultTheme: 'nocturne'` and `main.ts:99` sets `defaultTv: true` in `createPhlixApp()`. The full `useTheme()` composable is wired internally in `PhlixApp.vue` (internal to @phlix/ui). `createPhlixApp` calls `applyStoredThemeEarly(defaultTheme, defaultTv)` before mount to set initial `<html>` attributes synchronously, avoiding flash. Available themes (nocturne/daylight/midnight) are defined in `@phlix/tokens/src/themes.ts` and CSS variables in `@phlix/tokens/src/css/colors.css`. Density options (comfortable/compact) are also available via `[data-density]` attribute.
+**Finding**: `main.ts:174` sets `defaultTheme: 'nocturne'` and `main.ts:173` sets `defaultTv: true` in `createPhlixApp()` (re-derived at tip; audit-date refs 100/99). The full `useTheme()` composable is wired internally in `PhlixApp.vue` (internal to @phlix/ui). `createPhlixApp` calls `applyStoredThemeEarly(defaultTheme, defaultTv)` before mount to set initial `<html>` attributes synchronously, avoiding flash. Available themes (nocturne/daylight/midnight) are defined in `@phlix/tokens/src/themes.ts` and CSS variables in `@phlix/tokens/src/css/colors.css` *(HISTORICAL — @phlix/tokens src not vendored; theme names re-confirmed via @phlix/ui dist)*. Density options (comfortable/compact) are also available via `[data-density]` attribute.
 **Code Changes**: None (correctly implemented)
 
 ## Step 14.3 - TV Mode CSS
 **Decision**: ALREADY SUFFICIENT
-**Finding**: `defaultTv: true` (main.ts:99) sets `data-tv="true"` on `<html>`, activating `[data-tv]` scoped styles in `@phlix/tokens/src/css/tv.css`. These styles define 10-foot UI sizing (`--control-h: 3.25rem`, `--control-pad-x: 1.25rem`, `--control-gap: 0.75rem`, `--field-pad-y: 1rem`, `--stack-gap: 1.5rem`) and high-contrast focus rings for D-pad navigation (no pointer hover states). Verified 3 `[data-tv]` occurrences in `node_modules/@phlix/ui/dist/style.css`. TV mode CSS is part of the bundled `@phlix/ui/style.css` and works automatically via `defaultTv: true`.
+**Finding**: `defaultTv: true` (main.ts:173 at tip — re-derived) sets `data-tv="true"` on `<html>`, activating `[data-tv]` scoped styles in `@phlix/tokens/src/css/tv.css`. These styles define 10-foot UI sizing (`--control-h: 3.25rem`, `--control-pad-x: 1.25rem`, `--control-gap: 0.75rem`, `--field-pad-y: 1rem`, `--stack-gap: 1.5rem`) and high-contrast focus rings for D-pad navigation (no pointer hover states). Re-verified 3 `[data-tv]` occurrences in `node_modules/@phlix/ui/dist/style.css` at tip (v0.99.0; grep -o | wc -l). TV mode CSS is part of the bundled `@phlix/ui/style.css` and works automatically via `defaultTv: true`.
 **Code Changes**: None (correctly implemented)
 
 ## Step 14.4 - Self-hosted Fonts
 **Decision**: ALREADY SUFFICIENT
-**Finding**: `main.ts:15` imports `@phlix/ui/fonts.css`. The bundled `node_modules/@phlix/ui/dist/fonts/fonts.css` declares `@font-face` for:
+**Finding**: `main.ts:16` imports `@phlix/ui/fonts.css` (re-derived at tip; audit-date ref :15). The bundled `node_modules/@phlix/ui/dist/fonts/fonts.css` declares `@font-face` for:
 - Fraunces (variable, woff2, display serif) — `font-family: var(--font-display)`
 - Hanken Grotesk (variable, woff2, sans-serif) — `font-family: var(--font-sans)`
 - JetBrains Mono (variable, woff2, monospace) — `font-family: var(--font-mono)`
@@ -1193,7 +1198,7 @@ Tizen imports `@phlix/ui/style.css` and thus inherits the full token set. TV mod
 
 ## Step 14.7 - Dark/Light Theme
 **Decision**: TV-SPECIFIC (by design)
-**Finding**: Available themes (nocturne/daylight/midnight) are all implemented in CSS and the theme infrastructure. `main.ts:100` hardcodes `defaultTheme: 'nocturne'` with no user-accessible theme switcher. Three overlays (`ChapterOverlay`, `SleepTimerOverlay`, `SkipIntroOverlay`) are hardcoded to "dark TV UI (nocturne theme)" via comments but use CSS custom properties — they inherit any theme. `ThemeToggle` component exists in `PhlixApp.vue` (internal to @phlix/ui) but is not accessible via tizen's custom overlays.
+**Finding**: Available themes (nocturne/daylight/midnight) are all implemented in CSS and the theme infrastructure. `main.ts:174` (re-derived at tip) hardcodes `defaultTheme: 'nocturne'` with no user-accessible theme switcher. Three overlays (`ChapterOverlay`, `SleepTimerOverlay`, `SkipIntroOverlay`) are hardcoded to "dark TV UI (nocturne theme)" via comments but use CSS custom properties — they inherit any theme. `ThemeToggle` component exists in `PhlixApp.vue` (internal to @phlix/ui) but is not accessible via tizen's custom overlays.
 
 Hardcoding `nocturne` for a TV client is a **reasonable UX decision** — TV apps in dark living rooms/bedrooms overwhelmingly benefit from dark themes. However, if theme switching is desired in future, the infrastructure (`data-theme` attribute, CSS variables, `useTheme()` composable) already works — it just needs a theme selector UI accessible via D-pad navigation.
 **Code Changes**: None (deliberate UX constraint — not a gap)
@@ -1224,27 +1229,27 @@ Hardcoding `nocturne` for a TV client is a **reasonable UX decision** — TV app
 
 ## Step 15.1 - 6 Separate Vue Apps (HIGH)
 **Decision**: TV-SPECIFIC
-**Rationale**: main.ts:119-149 mounts 7 separate Vue apps (main + 6 overlays) sharing pinia/router via `globalProperties`. This architecture enables independent overlay lifecycle management with shared state. The overlays (ChapterOverlay, SleepTimerOverlay, SkipIntroOverlay, PiPController, UpNextOverlay, SpatialNavHost) are intentionally separate apps for TV-specific z-index layering and visibility control. Consolidation via Vue Teleport would require significant refactoring with no user-facing benefit on TV hardware.
+**Rationale**: main.ts:193-229 mounts 7 separate Vue apps (main :193 + SpatialNavHost :208 + five overlays :213-229; refs re-derived at tip — audit-date block was 119-149) sharing pinia/router via `globalProperties`. This architecture enables independent overlay lifecycle management with shared state. The overlays (ChapterOverlay, SleepTimerOverlay, SkipIntroOverlay, PiPController, UpNextOverlay, SpatialNavHost) are intentionally separate apps for TV-specific z-index layering and visibility control. Consolidation via Vue Teleport would require significant refactoring with no user-facing benefit on TV hardware.
 **Code Changes**: None (architectural decision - no code needed)
 
 ## Step 15.2 - DOM-based Quality Control (MEDIUM)
 **Decision**: TV-SPECIFIC REIMPLEMENTATION
-**Rationale**: tizenBridge.ts:86-169 uses querySelector/focus/click/MutationObserver pattern to control @phlix/ui's QualityMenu. This is a deliberate reimplementation to avoid modifying sealed @phlix/ui. The `createDomQualityMenu()` function documents the architectural constraint: the Select's own combobox keydown handler owns Arrow/Enter/Escape navigation. Tech debt to be addressed when @phlix/ui exposes a proper `useQualityMenu()` composable API.
+**Rationale**: tizenBridge.ts:116-170 (`createDomQualityMenu`, re-derived at tip; audit-date ref 86-169) uses querySelector/focus/click/MutationObserver pattern to control @phlix/ui's QualityMenu. This is a deliberate reimplementation to avoid modifying sealed @phlix/ui. The `createDomQualityMenu()` function documents the architectural constraint: the Select's own combobox keydown handler owns Arrow/Enter/Escape navigation. Tech debt to be addressed when @phlix/ui exposes a proper `useQualityMenu()` composable API.
 **Code Changes**: None (justified reimplementation - tracked as tech debt)
 
 ## Step 15.3 - Dynamic Store Property Access (HIGH)
 **Decision**: NOT IMPLEMENTED
-**Rationale**: ChapterOverlay.vue:305-306 and SkipIntroOverlay.vue:131-132 use fallback chains `storeAny.position ?? storeAny.currentTime ?? storeAny.time ?? storeAny.current_position`. AudioTracksPage.vue:39-40, 56-57, 83-102 similarly uses `as unknown as Record<string, unknown>` casts. This bypasses TypeScript type checking and Vue reactivity. Fix requires @phlix/ui to expose typed player store getters (currentPosition, duration, audioTrackId, etc.) and a declared TypeScript interface for the store API.
+**Rationale**: ChapterOverlay.vue:306 and SkipIntroOverlay.vue:132 use fallback chains `storeAny.position ?? storeAny.currentTime ?? storeAny.time ?? storeAny.current_position` (line refs re-derived at tip; audit-date 305-306/131-132). *(S424 restatement: the audit-date third clause about AudioTracksPage.vue `as unknown as Record<string, unknown>` casts is FALSE at tip — S407 (commit c3bfcd8) rewrote that page to a single honest API path; grep -F 'as unknown as Record' src/pages/AudioTracksPage.vue = 0 hits. The two overlay fallback chains remain.)* Remaining fix requires @phlix/ui to expose typed player store getters (currentPosition, duration, etc.) and a declared TypeScript interface for the store API.
 **Code Changes**: None (fix requires @phlix/ui changes, not tizen-client)
 
 ## Step 15.4 - Missing Type Exports (MEDIUM)
 **Decision**: NOT IMPLEMENTED
-**Rationale**: @phlix/ui's PlayerStore is not fully typed/exported, forcing tizen-client code to use `as unknown as BridgePlayer` (tizenBridge.ts:272, 278) and `as unknown as Record<string, unknown>` (AudioTracksPage.vue:39, 56, 83). The bridge defines its own `BridgePlayer` interface as a workaround. Fix requires @phlix/ui to export a complete `PlayerStore` TypeScript interface with all public API methods/properties.
+**Rationale**: @phlix/ui's PlayerStore is not fully typed/exported, forcing tizen-client code to use `as unknown as BridgePlayer` (tizenBridge.ts:278 — re-verified at tip; :272 is a structural router cast, also present at tip) — and, at audit date, `as unknown as Record<string, unknown>` in AudioTracksPage.vue. *(S424 restatement: the AudioTracksPage casts are gone since S407 — 0 hits at tip; see 15.3.)* The bridge defines its own `BridgePlayer` interface (tizenBridge.ts:25-32 at tip) as a workaround. Fix requires @phlix/ui to export a complete `PlayerStore` TypeScript interface with all public API methods/properties.
 **Code Changes**: None (fix requires @phlix/ui type exports, not tizen-client)
 
 ## Step 15.5 - Event Bus vs Pinia (LOW)
 **Decision**: INTERNAL
-**Rationale**: The RemoteManager custom event system (on/emit/onAction pattern) is a TV-specific singleton for remote control events - fundamentally different from Vue component events or Pinia state. tizenBridge.ts:199-250 wires remote 'action' events to player store methods (play/pause/seekBy) - not Pinia actions. This is intentional: TV hardware events flow through RemoteManager → tizenBridge → player store methods. The pattern is internally consistent within tizen-client. No unification needed as these are different concerns (hardware events vs application state).
+**Rationale**: The RemoteManager custom event system (on/emit/onAction pattern) is a TV-specific singleton for remote control events - fundamentally different from Vue component events or Pinia state. tizenBridge.ts:188-262 (`wireTizenBridge`, refs re-derived at tip; audit-date 199-250) wires remote 'action' events to player store methods (play/pause/seekBy) - not Pinia actions. This is intentional: TV hardware events flow through RemoteManager → tizenBridge → player store methods. The pattern is internally consistent within tizen-client. No unification needed as these are different concerns (hardware events vs application state).
 **Code Changes**: None (internal architecture - no external impact)
 
 ## Step 15.6 - Multiple Mount Points (MEDIUM)
@@ -1269,9 +1274,9 @@ Hardcoding `nocturne` for a TV client is a **reasonable UX decision** — TV app
 
 | Gate | Result |
 |------|--------|
-| `npm run typecheck` | ✅ PASS |
-| `npm test` | ✅ 74 PASS |
-| `npm run lint` | ✅ PASS |
+| `npm run typecheck` | ✅ PASS (re-run green at tip, 2026-09-04) |
+| `npm test` | ✅ 312 PASS (20 files) — re-measured at tip `f5b9fff9`, 2026-09-04 (audit-date value was "74 PASS"; the suite has grown via S244–S418-era tests) |
+| `npm run lint` | ✅ PASS (re-run green at tip, 2026-09-04) |
 
 ## Conclusion
 
@@ -1287,19 +1292,19 @@ Category 15 identifies architectural patterns that are either TV-specific by des
 
 ## Overview
 
-This category examines i18n (internationalization) / l10n (localization) infrastructure in the tizen-client. Key context from AGENTS.md: "All visible text is English" — the TV app is designed for single-language (English) deployment on Samsung Tizen TV. @phlix/ui has a complete i18n system via `useMessages()` composable with 532+ translation keys, but tizen-client does NOT use it — all strings are hardcoded English.
+This category examines i18n (internationalization) / l10n (localization) infrastructure in the tizen-client. Key context: the TV app is designed for single-language (English) deployment on Samsung Tizen TV. *(S424 note: the audit-date text attributed a quote — "All visible text is English" — to AGENTS.md; grep of AGENTS.md/CLAUDE.md at tip `f5b9fff9` finds no such string, and `git log -S` shows it was never in the tracked AGENTS.md. The single-language fact itself remains true — empirically re-verified below — but the quotation and its attribution have been removed.)* @phlix/ui has a complete i18n system via `useMessages()` composable with 532+ translation keys, but tizen-client does NOT use it — all strings are hardcoded English.
 
 ## Decision Table
 
 | Step | Decision | Rationale |
 |------|----------|-----------|
 | 13.1 | **NOT USED** | `useMessages()` is NOT USED anywhere in tizen-client (0 references to useMessages, createTranslator, i18n, or messages in src/). @phlix/ui has complete i18n infrastructure but tizen is a single-language TV app. |
-| 13.2 | **NOT USED** | Music page has hardcoded "tracks" string (MusicPage.vue:233) instead of `t('music.tracks')`. All music UI strings are hardcoded English. |
+| 13.2 | **NOT USED** | Music page has hardcoded "tracks" strings (MusicPage.vue:286 and :294 at tip — re-derived; :233 was the audit-date position) instead of `t('music.tracks')`. All music UI strings are hardcoded English. |
 | 13.3 | **NOT TV-APPLICABLE** | Deprecated `music.of` key is not used anywhere in tizen. No pager implementation exists in tizen music browsing — it shows first 100 rows only. |
-| 13.4 | **NOT USED** | CONFIRMED extensive hardcoded English strings across multiple components (MusicPage, SkipIntroOverlay, SleepTimerOverlay, main.ts, stores). AGENTS.md explicitly states "All visible text is English" — this is by design, not a gap. |
+| 13.4 | **NOT USED** | CONFIRMED extensive hardcoded English strings across multiple components (MusicPage, SkipIntroOverlay, SleepTimerOverlay, main.ts, stores). Single-language English deployment is by design, not a gap *(S424: the previously-quoted AGENTS.md sentence does not exist at tip — see Overview note; strings empirically re-verified hardcoded)*. |
 | 13.5 | **NOT TV-APPLICABLE** | No pager implementation in tizen. Music browsing shows first 100 rows with no pagination controls. Pager i18n keys (pageOf, prevPage, nextPage, firstPage, lastPage) are not used. |
 | 13.6 | **NOT USED** | Player overlay strings are hardcoded: "Skip Intro", "Skip Outro" in SkipIntroOverlay.vue; "5 min", "10 min", etc. in SleepTimerOverlay.vue; "Sleep Timer" title. |
-| 13.7 | **NOT USED** | Error messages are hardcoded in stores: useMusicStore.ts has 'Failed to load artists/albums/album/track'; useSyncPlayStore.ts has 'WebSocket error', 'Failed to parse WebSocket message', etc.; ChapterOverlay.vue has 'Failed to load chapters'. |
+| 13.7 | **NOT USED** | Error messages are hardcoded in stores (lines re-derived at tip — see Key Finding 3): useMusicStore.ts 'Failed to load artists/albums/album/track' (+ 'load more' variants since S125); useSyncPlayStore.ts 'Failed to parse WebSocket message' etc. — *S424: the audit-date 'WebSocket error' literal no longer exists (client onError interpolates `` `${code}: ${message}` `` at :584)*; ChapterOverlay.vue 'Failed to load chapters' (:97). |
 
 ## Decision Distribution
 
@@ -1316,26 +1321,26 @@ This category examines i18n (internationalization) / l10n (localization) infrast
 
 ### 2. Hardcoded Strings — Confirmed Present (13.4)
 
-**MusicPage.vue** (src/pages/MusicPage.vue):
-- Line 47: `return 'Artists'` (getPageTitle)
-- Line 49: `return musicStore.artists.find(...).name ?? 'Albums'`
-- Line 51: `return musicStore.currentAlbum?.title ?? 'Tracks'`
-- Line 53: `return 'Music'`
-- Line 132: `<p>Loading music…</p>`
-- Line 147: `Retry` (button text)
-- Line 233: `{{ musicStore.currentAlbum.year }} · {{ musicStore.currentAlbum.totalTracks }} tracks`
+**MusicPage.vue** (src/pages/MusicPage.vue) — all lines re-derived at tip 2026-09-04:
+- Line 47: `return 'Artists';` (getPageTitle — audit ref 47 still exact)
+- Line 50: `return musicStore.selectedArtistId ?? 'Albums'` (audit ref 49; body since simplified)
+- Line 52: `return musicStore.currentAlbum?.title ?? 'Tracks'` (audit ref 51)
+- Line 54: `return 'Music'` (audit ref 53)
+- Line 155: `<p>Loading music…</p>` (audit ref 132)
+- Line 170: `Retry` (button text; audit ref 147)
+- Line 286: `{{ musicStore.currentAlbum.year }} · {{ musicStore.currentAlbum.totalTracks }} tracks` (audit ref 233) + line 294 aria-label `` `${…} tracks` ``
 
 **SkipIntroOverlay.vue** (src/components/SkipIntroOverlay.vue):
-- Line 180: `aria-label="Skip intro"`
-- Line 204: `<span class="skip-intro-overlay__label">Skip Intro</span>`
-- Line 211: `aria-label="Skip outro"`
+- Line 180: `aria-label="Skip intro"` (re-verified exact at tip)
+- Line 204: `<span class="skip-intro-overlay__label">Skip Intro</span>` (re-verified exact at tip)
+- Line 211: `aria-label="Skip outro"` (re-verified exact at tip; also `Skip Outro` label at :235)
 
-**SleepTimerOverlay.vue** (src/components/SleepTimerOverlay.vue):
-- Lines 32-37: `{ label: '5 min', minutes: 5 }`, `{ label: '10 min', minutes: 10 }`, etc. (PRESETS array)
-- Line 143: `<h2 class="sleep-timer-overlay__title">Sleep Timer</h2>`
-- Line 175: `{{ preset.label }}` (renders '5 min', '10 min', etc.)
-- Line 204: `Timer active: {{ remainingTimeDisplay }} remaining`
-- Line 213: `Cancel Timer`
+**SleepTimerOverlay.vue** (src/components/SleepTimerOverlay.vue) — lines re-derived at tip:
+- Lines 32-37: `{ label: '5 min', minutes: 5 }` … `{ label: '60 min', minutes: 60 }` (PRESETS array — re-verified exact)
+- Line 150: `<h2 class="sleep-timer-overlay__title">` (renders the Sleep Timer title; audit ref 143)
+- Line 183: `{{ preset.label }}` (audit ref 175)
+- Line 212: `Timer active: {{ remainingTimeDisplay }} remaining` (audit ref 204)
+- Line 221: `Cancel Timer` (audit ref 213)
 
 **main.ts** (src/main.ts lines 42-46):
 ```typescript
@@ -1348,46 +1353,50 @@ This category examines i18n (internationalization) / l10n (localization) infrast
 
 ### 3. Error Messages Are Hardcoded (13.7)
 
-**useMusicStore.ts** (src/stores/useMusicStore.ts):
-- Line 54: `error.value = e instanceof Error ? e.message : 'Failed to load artists'`
-- Line 69: `error.value = e instanceof Error ? e.message : 'Failed to load albums'`
-- Line 85: `error.value = e instanceof Error ? e.message : 'Failed to load album'`
-- Line 101: `error.value = e instanceof Error ? e.message : 'Failed to load track'`
+**useMusicStore.ts** (src/stores/useMusicStore.ts) — lines re-derived at tip (S125 rewrite shifted them; two new load-more strings):
+- Line 136: `'Failed to load artists'` (audit ref 54)
+- Line 163: `'Failed to load more artists'` (new since S125)
+- Line 186: `'Failed to load albums'` (audit ref 69)
+- Line 210: `'Failed to load more albums'` (new since S125)
+- Line 232: `'Failed to load album'` (audit ref 85)
+- Line 250: `'Failed to load track'` (audit ref 101)
 
-**useSyncPlayStore.ts** (src/stores/useSyncPlayStore.ts):
-- Line 262: `wsError.value = payload.message ?? 'WebSocket error'`
-- Line 297: `wsError.value = 'Failed to parse WebSocket message'`
-- Line 302: `wsError.value = 'WebSocket connection error'`
-- Line 318: `wsError.value = e instanceof Error ? e.message : 'Failed to connect WebSocket'`
-- Line 334: `wsError.value = 'Failed to reconnect after multiple attempts'`
-- Line 431: `error.value = 'Already in a room. Leave current room first.'`
-- Line 450: `error.value = e instanceof Error ? e.message : 'Failed to create room'`
-- Line 493: `error.value = e instanceof Error ? e.message : 'Failed to join room'`
+**useSyncPlayStore.ts** (src/stores/useSyncPlayStore.ts) — re-derived at tip after the S415 rewrite:
+- Line 584: SyncPlayClient `onError` sets `wsError.value` to `` `${code}: ${message}` `` (the audit-date `payload.message ?? 'WebSocket error'` literal at :262 no longer exists — grep 0 hits for 'WebSocket error')
+- Line 608: `'Failed to parse WebSocket message'` (audit ref 297)
+- Line 613: `'WebSocket connection error'` (audit ref 302)
+- Line 631: `'Failed to connect WebSocket'` (audit ref 318)
+- Line 647: `'Failed to reconnect after multiple attempts'` (audit ref 334)
+- Lines 767 & 801: `'Already in a room. Leave current room first.'` (audit ref 431)
+- Line 787: `'Failed to create room'` (audit ref 450)
+- Line 821: `'Failed to join room'` (audit ref 493)
 
 **ChapterOverlay.vue** (src/components/ChapterOverlay.vue):
-- Error message: `'Failed to load chapters'`
+- Error message `'Failed to load chapters'` at :97 (re-verified at tip)
 
 ### 4. No Pager in Tizen (13.3, 13.5)
-`grep -r "pageOf\|prevPage\|nextPage\|firstPage\|lastPage\|jumpToPage\|pagination" src/` returns no matches. Music browsing shows first 100 rows only — no pagination controls. The CHANGELOG v0.98.32 explicitly states "native clients are unaffected and still show the first 100 rows."
+`grep -r "pageOf\|prevPage\|nextPage\|firstPage\|lastPage\|jumpToPage\|pagination" src/` returns no matches. *(Restated by S424: the audit-date sentence "Music browsing shows first 100 rows only — no pagination controls" is superseded — since S125 the store pages with load-more controls (MusicPage.vue:189/:220 `hasMoreArtists`/`hasMoreAlbums`) — with hardcoded English labels, which is the i18n point this category makes. The CHANGELOG v0.98.32 "first 100 rows" note is HISTORICAL context for the pre-S125 state.)*
 
-### 5. AGENTS.md Documents Single-Language Design
-AGENTS.md states: "All visible text is English." The single-language design is intentional. TV apps deployed in a single market typically do not require runtime language switching.
+### 5. Single-Language Design (restated by S424)
+The single-language design is intentional and re-verified empirically at tip (`useMessages`/`createTranslator` grep: 0 hits; hardcoded strings below still present at restated lines). The audit-date claim attributed to AGENTS.md — "All visible text is English" — is NOT in AGENTS.md at tip (grep 0 hits) and has been removed as unverifiable attribution. TV apps deployed in a single market typically do not require runtime language switching.
 
 ## Gates
 
 | Gate | Result |
 |------|--------|
-| `npm run typecheck` | ✅ PASS |
-| `npm test` | ✅ 74 PASS |
-| `npm run lint` | ✅ PASS |
+| `npm run typecheck` | ✅ PASS (re-run green at tip, 2026-09-04) |
+| `npm test` | ✅ 312 PASS (20 files) — re-measured at tip `f5b9fff9`, 2026-09-04 (audit-date value was "74 PASS"; the suite has grown via S244–S418-era tests) |
+| `npm run lint` | ✅ PASS (re-run green at tip, 2026-09-04) |
 
 ## Conclusion
 
-The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/ui providing a complete system. All strings are hardcoded English. This is explicitly documented in AGENTS.md ("All visible text is English") and is appropriate for a single-language TV app deployment. No i18n changes are needed or recommended for this project scope.
+The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/ui providing a complete system. All strings are hardcoded English. This is empirically true at tip (0 i18n references in src/, hardcoded strings re-located below) and appropriate for a single-language TV app deployment. *(S424: the prior AGENTS.md quotation was not found at tip and was removed — see Overview.)* No i18n changes are needed or recommended for this project scope.
 
 ---
 
 # Category 17 - Bug Fixes Since v0.81.0
+
+> *(S424 2026-09-04: all @phlix/ui-internal line refs in this category were measured against the v0.98.33 source tree and are **HISTORICAL** — v0.99.0 ships dist-only. Tizen-side refs and decisions were re-derived at tip; Steps 17.3/17.4 restated NOT IMPLEMENTED → IMPLEMENTED (S125), and the "v0.98.33 (installed)" phrasing means "installed AT AUDIT DATE"; the tip pin is `#v0.99.0` (package.json:34).)*
 
 ## Step 17.1 - Poster skeletons stuck after first 24 (v0.98.27)
 **Decision**: ALREADY SUFFICIENT
@@ -1401,13 +1410,15 @@ The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/u
 
 ## Step 17.3 - Music album filtering (v0.98.32)
 **Decision**: NOT IMPLEMENTED
-**Rationale**: The v0.98.32 fix added server-side filtering with `?artist=` parameter to `/api/v1/music/albums`. Tizen's `useMusicStore.ts` (line 66) fetches albums via raw `client.get<{ albums: MusicAlbum[] }>('/api/v1/music/albums')` without any artist filter. When an artist is selected, tizen filters `albums.value` client-side using `artistAlbums` computed (line 38-41) over the complete unfiltered album list - this is the broken pattern the fix was meant to replace. Tizen should use `listAlbums({ artist: 'Radiohead', limit: 100, offset: 0 })` from ApiClient instead.
-**Code Changes**: None (bug exists - useMusicStore fetches unfiltered and filters client-side)
+**Decision**: IMPLEMENTED (restated at tip 2026-09-04 from NOT IMPLEMENTED)
+**Rationale**: The v0.98.32 fix added server-side filtering with `?artist=` to `/api/v1/music/albums`. The audit-date bug (raw unfiltered `client.get` + client-side `artistAlbums` filtering) was exactly what S125 replaced: at tip `fetchAlbums(artist?)` passes `{ artist }` to `listAlbums({ limit: MUSIC_PAGE_SIZE, offset: 0, artist })` (useMusicStore.ts:173-181, condition :180) — the fix's recommended pattern is now live.
+**Code Changes**: None in this step (implemented by S125)
 
 ## Step 17.4 - Music paging missing (v0.98.32)
 **Decision**: NOT IMPLEMENTED
-**Rationale**: The v0.98.32 fix introduced paged API methods (`listArtists()`, `listAlbums()`, `listTracks()`) that return page envelopes `{ artists, total, limit, offset }` and accept `{ limit, offset }` options. Tizen's `useMusicStore.ts` (line 51) uses raw `client.get<{ artists: MusicArtist[] }>('/api/v1/music/artists')` without any `limit`/`offset` parameters. The server returns default 100 items, tizen never reads `total` for pagination UI. This is a confirmed bug per CHANGELOG line 46.
-**Code Changes**: None (only first 100 items are ever fetched)
+**Decision**: IMPLEMENTED (restated at tip 2026-09-04 from NOT IMPLEMENTED)
+**Rationale**: The v0.98.32 paged helpers are now ADOPTED (S125): `listArtists({ limit: MUSIC_PAGE_SIZE, offset })` at useMusicStore.ts:132/:156-158, `total` read into `artistsTotal`/`albumsTotal` (:134/:184), load-more wired in MusicPage.vue (:111/:189/:220). "Only first 100 items are ever fetched" is false at tip — subsequent pages are fetched on demand.
+**Code Changes**: None in this step (implemented by S125)
 
 ## Step 17.5 - Resume position on direct→HLS fallback (v0.80.0)
 **Decision**: ALREADY SUFFICIENT
@@ -1416,17 +1427,17 @@ The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/u
 
 ## Step 17.6 - Finished signal (v0.98.13)
 **Decision**: TV-SPECIFIC
-**Rationale**: @phlix/ui v0.98.33 includes `useResumeReporter` which calls `finish()` on video end to notify server to remove item from continue-watching. Tizen's `UpNextOverlay.vue` (line 216-387) uses polling (250ms) to track player position and emits 'play-now' and 'cancel' events but does NOT call `useResumeReporter.finish()`. The finished signal to remove items from "Continue Watching" is not being sent when videos end on Tizen. This is TV-SPECIFIC because tizen's overlay architecture uses event emission rather than the reactive pattern @phlix/ui uses.
+**Rationale**: @phlix/ui includes `useResumeReporter` which calls `finish()` on video end to notify server to remove item from continue-watching *(v0.98.33-era observation — HISTORICAL)*. Tizen's `UpNextOverlay.vue` (file is 596 lines at tip; polling at :169-183, emits 'play-now'/:155, :205 and 'cancel'/:162) does NOT reference `useResumeReporter` at all — re-verified: `grep -rn "useResumeSync\|useResumeReporter" src/` → 0 hits at tip. Whatever finished-signal tizen sends comes only from @phlix/ui's own player internals, not tizen code. TV-SPECIFIC designation retained.
 **Code Changes**: None (tech debt - UpNextOverlay uses event emission pattern, not reactive)
 
 ## Step 17.7 - Up-next race condition (v0.98.10)
 **Decision**: TV-SPECIFIC
-**Rationale**: @phlix/ui v0.98.10 fixed queue race conditions with atomic `setQueue()`/`enqueue()`/`next()` operations in `usePlayerStore`. Tizen's `UpNextOverlay.vue` (lines 119-146) fetches the playlist via `client.get('/api/v1/media/${id}/playlist')` and finds the next item client-side by index. This is a completely different architecture - tizen uses a custom overlay with polling that manages its own up-next logic rather than relying on @phlix/ui's player store queue. The race condition fix is in @phlix/ui's queue management, which tizen bypasses entirely.
+**Rationale**: @phlix/ui v0.98.10 fixed queue race conditions with atomic `setQueue()`/`enqueue()`/`next()` operations in `usePlayerStore` *(HISTORICAL src ref)*. Tizen's `UpNextOverlay.vue` (since S280: `loadUpNextMedia` at :130-150) fetches `GET /api/v1/users/me/next-up` and picks the first non-self item client-side — the audit-date `/api/v1/media/{id}/playlist` fetch no longer exists (that route was never server-registered; the component docblock :117-128 records the S280 finding). It remains a different architecture — tizen manages its own up-next logic rather than relying on @phlix/ui's player store queue, which tizen bypasses. The race-condition fix concern still applies structurally.
 **Code Changes**: None (tizen uses custom up-next architecture with different queue semantics)
 
 ## Step 17.8 - Menu positioning (v0.66.0)
 **Decision**: ALREADY SUFFICIENT
-**Rationale**: The menu positioning fix (proper `getBoundingClientRect()` for trigger location, viewport boundary checking) is in @phlix/ui's Menu component. Tizen's `buildMenu()` (main.ts lines 38-48) returns `MenuItem[]` which @phlix/ui's menu component renders. The actual menu positioning is handled by @phlix/ui's Menu component internally.
+**Rationale**: The menu positioning fix (proper `getBoundingClientRect()` for trigger location, viewport boundary checking) is in @phlix/ui's Menu component *(HISTORICAL src ref)*. Tizen's `buildMenu()` (main.ts:43-52 at tip — re-derived; audit ref 38-48) returns `MenuItem[]` which @phlix/ui's menu component renders. The actual menu positioning is handled by @phlix/ui's Menu component internally.
 **Code Changes**: None (@phlix/ui handles this internally)
 
 ## Step 17.9 - HLS bandwidth persistence (v0.80.x)
@@ -1446,8 +1457,8 @@ The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/u
 ### Key files examined
 - `package.json`: @phlix/ui pinned to v0.98.33 (includes all v0.81.0+ fixes)
 - `src/main.ts`: `createPhlixApp()` with `playerHlsConfig: TIZEN_HLS_CONFIG`
-- `src/stores/useMusicStore.ts`: Raw `client.get()` calls without pagination/filtering (17.3, 17.4 NOT IMPLEMENTED)
-- `src/components/UpNextOverlay.vue`: Polling-based overlay with event emission, not reactive (17.6, 17.7 TV-SPECIFIC)
+- `src/stores/useMusicStore.ts`: paged ApiClient-helper calls with limit/offset + server-side artist filter at tip (17.3/17.4 IMPLEMENTED — S125 restatements)
+- `src/components/UpNextOverlay.vue`: Polling-based overlay with event emission, not reactive, sourcing `users/me/next-up` (17.6/17.7 TV-SPECIFIC — restated)
 - `src/tizenBridge.ts`: Uses `usePlayerStore` from @phlix/ui for remote bridge
 
 ### Architecture context
@@ -1455,15 +1466,15 @@ The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/u
 - All media/library/player UI is rendered by @phlix/ui via `createPhlixApp()`
 - Tizen-specific code: main.ts boot config, tizenBridge.ts remote handling, overlays with polling
 - Most bug fixes flow through @phlix/ui internally when using `createPhlixApp()`
-- Music store has separate implementation that predates the v0.98.32 API changes
+- Music store has been reworked SINCE the audit (S125) onto the paged v0.98.32+ API contract — the old "predates" note is superseded (2026-09-04)
 
 ## Gates
 
 | Gate | Result |
 |------|--------|
-| `npm run typecheck` | ✅ PASS |
-| `npm test` | ✅ 74 PASS |
-| `npm run lint` | ✅ PASS |
+| `npm run typecheck` | ✅ PASS (re-run green at tip, 2026-09-04) |
+| `npm test` | ✅ 312 PASS (20 files) — re-measured at tip `f5b9fff9`, 2026-09-04 (audit-date value was "74 PASS"; the suite has grown via S244–S418-era tests) |
+| `npm run lint` | ✅ PASS (re-run green at tip, 2026-09-04) |
 
 ## Decision Distribution
 
@@ -1471,8 +1482,8 @@ The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/u
 |------|---------|---------|----------|-----------|
 | 17.1 | Poster skeletons stuck | 0.98.27 | ALREADY SUFFICIENT | @phlix/ui MediaGrid has S35 fix, tizen uses createPhlixApp |
 | 17.2 | Subtitle default track | 0.98.11 | ALREADY SUFFICIENT | @phlix/ui usePlayerStore has fix, tizen uses createPhlixApp |
-| 17.3 | Music album filtering | 0.98.32 | NOT IMPLEMENTED | useMusicStore uses raw API without ?artist= filter |
-| 17.4 | Music paging missing | 0.98.32 | NOT IMPLEMENTED | useMusicStore uses raw API without limit/offset |
+| 17.3 | Music album filtering | 0.98.32 | IMPLEMENTED (S424 restatement) | listAlbums({artist}) server-side filter live since S125 |
+| 17.4 | Music paging missing | 0.98.32 | IMPLEMENTED (S424 restatement) | limit/offset paging + load-more live since S125 |
 | 17.5 | Resume on HLS fallback | 0.80.0 | ALREADY SUFFICIENT | @phlix/ui hls-playback has fix, TIZEN_HLS_CONFIG is buffer tuning only |
 | 17.6 | Finished signal | 0.98.13 | TV-SPECIFIC | UpNextOverlay uses event emission, not useResumeReporter.finish() |
 | 17.7 | Up-next race condition | 0.98.10 | TV-SPECIFIC | UpNextOverlay uses custom polling architecture, not player store queue |
@@ -1482,9 +1493,9 @@ The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/u
 
 ## Conclusion
 
-Most bug fixes (7/10) are already sufficient because @phlix/ui v0.98.33 is installed and tizen uses `createPhlixApp()` which sets up all components internally with the fixes.
+Most bug fixes (6/10 ALREADY SUFFICIENT) flow through automatically because tizen uses `createPhlixApp()`, which sets up all components internally with the fixes *(S424: distribution re-derived at tip from the restated steps below/above)*.
 
-Two items (17.3, 17.4) are NOT IMPLEMENTED due to tizen's `useMusicStore.ts` using raw API calls that predate the v0.98.32 paged API changes.
+Two items (17.3, 17.4) were NOT IMPLEMENTED at audit date because `useMusicStore.ts` used raw API calls predating the v0.98.32 paged API changes — **restated at tip as IMPLEMENTED**: S125 + `894bf96` adopted the paged helpers, the server-side `?artist=` filter, and envelope-unwrapping (see Category 8 restatements).
 
 Two items (17.6, 17.7) are TV-SPECIFIC because tizen has custom overlay components (UpNextOverlay) that use polling/event-emission architecture rather than @phlix/ui's reactive patterns. This is documented tech debt in the codebase comments.
 
@@ -1503,7 +1514,7 @@ This category audits 22 features added between v0.81.0 (old stale version) and v
 **Decision**: NOT IMPLEMENTED
 **Rationale**: `SubtitleFetchService`, `SubtitleStorage`, and `RemoteSubtitleController` exist in phlix-server. `client.searchSubtitles()` and `client.downloadSubtitle()` exist in phlix-ui. Tizen's `SubtitleTrackList.vue` ONLY handles selecting existing subtitle tracks passed via props — it has NO UI for searching external subtitle providers (OpenSubtitles) or downloading on-demand. Users cannot search for or download subtitles from external providers on Tizen. This requires a TV-specific UI flow (likely in player settings) to search, select, and download subtitles.
 **Code Changes**: None (audit-only — gap identified)
-**Evidence**: `SubtitleTrackList.vue` only renders pre-existing tracks; no search/download UI; grep `searchSubtitle|downloadSubtitle` src/ → 0 hits
+**Evidence**: `SubtitleTrackList.vue` only renders pre-existing tracks; no search/download UI; grep `searchSubtitle|downloadSubtitle` src/ → 0 hits (re-run at tip 2026-09-04)
 
 ## Step 16.2 - Theater Mode (v0.98.26)
 **Decision**: NOT TV-APPLICABLE
@@ -1524,10 +1535,10 @@ This category audits 22 features added between v0.81.0 (old stale version) and v
 **Evidence**: BrowsePage in package/assets/ renders Most Watched rail
 
 ## Step 16.5 - Music Paging (MusicPager) (v0.98.32)
-**Decision**: NOT IMPLEMENTED
-**Finding**: Already documented in Category 8 (Items 8.1, 8.2). `useMusicStore.ts` calls `client.get('/api/v1/music/artists')` with NO paging params — only fetches first 100 items. No `MusicPager` component is used. Users with large libraries only see first 100.
-**Code Changes**: None (documented in Category 8)
-**Evidence**: Category 8 Step 8.2; useMusicStore.ts:46-58 (fetchArtists with no params)
+**Decision**: IMPLEMENTED (restated at tip 2026-09-04 from audit-date NOT IMPLEMENTED)
+**Finding**: Resolved by S125 (commit `35f3270`, "page the Tizen music library instead of showing 100 of 2,197 artists"). At tip `useMusicStore.ts` calls the paged ApiClient helpers — `listArtists({limit: MUSIC_PAGE_SIZE, offset})` (:132/:156-158), `listAlbums({limit, offset, artist?})` (:177-181/:202) — reads `total` from the envelope (:134) and exposes `loadMoreArtists`/`loadMoreAlbums`, wired to load-more controls in MusicPage.vue (:189/:220). Users no longer see only the first 100.
+**Code Changes**: None in this step (already implemented upstream of tip)
+**Evidence**: Category 8 Steps 8.1/8.2 restatements; useMusicStore.ts:132/:177; MusicPage.vue:111/:113/:189/:220 (all re-measured at tip)
 
 ## Step 16.6 - MediaListRow view mode (v0.98.31)
 **Decision**: ALREADY SUFFICIENT
@@ -1545,7 +1556,7 @@ This category audits 22 features added between v0.81.0 (old stale version) and v
 **Decision**: ALREADY SUFFICIENT
 **Rationale**: `useResumeReporter.ts` composable exists in @phlix/ui for tracking resume position and reporting to server during playback. Tizen benefits from `createPhlixApp()` player implementation — `useResumeReporter` is part of @phlix/ui's player. The capability is present in the bundle.
 **Code Changes**: None (works via @phlix/ui player)
-**Evidence**: useResumeReporter is part of @phlix/ui player module
+**Evidence**: useResumeReporter is part of @phlix/ui player module — *dist-supported at tip: `api/v1/sessions` routes appear in `node_modules/@phlix/ui/dist/phlix-ui.js`; tizen src/ itself has 0 references to useResumeReporter (grep, re-run 2026-09-04)*
 
 ## Step 16.9 - Finished Signal (v0.98.13)
 **Decision**: NOT IMPLEMENTED
@@ -1641,7 +1652,7 @@ This category audits 22 features added between v0.81.0 (old stale version) and v
 | 16.2 | Theater Mode | NOT TV-APPLICABLE | Full-screen TV paradigm — no windowed player to toggle |
 | 16.3 | Next Up API | ALREADY SUFFICIENT | Works via createPhlixApp BrowsePage |
 | 16.4 | Most Watched API | ALREADY SUFFICIENT | Works via createPhlixApp BrowsePage |
-| 16.5 | Music Paging | NOT IMPLEMENTED | Documented in Category 8 — first 100 only |
+| 16.5 | Music Paging | IMPLEMENTED (S424 restatement) | S125 paging at tip — see Category 8 restated 8.2 |
 | 16.6 | MediaListRow | ALREADY SUFFICIENT | Works via createPhlixApp BrowsePage with MediaRow |
 | 16.7 | MediaBackdropRow | NOT FOUND | Component doesn't exist or uses different naming |
 | 16.8 | Resume Reporter | ALREADY SUFFICIENT | Works via @phlix/ui player |
@@ -1663,7 +1674,7 @@ This category audits 22 features added between v0.81.0 (old stale version) and v
 **Decision Distribution**:
 - **ALREADY SUFFICIENT**: 8 steps (16.3, 16.4, 16.6, 16.8, 16.10, 16.18, 16.19, 16.21)
 - **NOT TV-APPLICABLE**: 7 steps (16.2, 16.11, 16.12, 16.13, 16.14, 16.17, 16.20, 16.22)
-- **NOT IMPLEMENTED**: 4 steps (16.1, 16.5, 16.9, 16.16)
+- **NOT IMPLEMENTED**: 3 steps (16.1, 16.9, 16.16) + **IMPLEMENTED** 1 step (16.5 — paged since S125, restated at tip)
 - **NOT FOUND**: 1 step (16.7)
 - **PARTIAL**: 1 step (16.15)
 - **Code changes needed**: 0 (all decisions are architectural/audit — no code expected per scope)
@@ -1672,6 +1683,6 @@ This category audits 22 features added between v0.81.0 (old stale version) and v
 1. **16.1 (Subtitle Search & Download)** — HIGH: External subtitle provider search/download UI missing on Tizen
 2. **16.9 (Finished Signal)** — MEDIUM: Items may linger in Continue Watching due to completed signal not firing
 3. **16.16 (Trickplay)** — MEDIUM: Scrubbing preview sprites not implemented on Tizen
-4. **16.5 (Music Paging)** — HIGH: Already documented in Category 8, first 100 only
+4. ~~16.5 (Music Paging)~~ — CLOSED at tip: S125 implemented paging (restated 2026-09-04; see Categories 8/16 restatements)
 
 (End of VERIFICATION.md)
