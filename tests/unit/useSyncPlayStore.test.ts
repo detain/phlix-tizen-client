@@ -16,6 +16,11 @@ class MockWebSocket {
   readyState = 1; // OPEN
   close = vi.fn();
   send = vi.fn();
+  /** S418: every socket built so far in the current test — the seam that lets a test FIRE `onmessage`. */
+  static instances: MockWebSocket[] = [];
+  constructor() {
+    MockWebSocket.instances.push(this);
+  }
   static CONNECTING = 0;
   static OPEN = 1;
   static CLOSING = 2;
@@ -23,10 +28,18 @@ class MockWebSocket {
 }
 globalThis.WebSocket = MockWebSocket as any;
 
+/** The most recently constructed mock socket. */
+function lastSocket(): MockWebSocket {
+  const s = MockWebSocket.instances.at(-1);
+  if (!s) throw new Error('no socket was constructed');
+  return s;
+}
+
 describe('useSyncPlayStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    MockWebSocket.instances = [];
   });
 
   afterEach(() => {
@@ -498,6 +511,51 @@ describe('useSyncPlayStore', () => {
 
       // This should return early without error
       expect(() => store.connectWs('https://api.example.com', 'room-123', 'token-abc')).not.toThrow();
+    });
+  });
+
+  describe('live dict-shaped group_state over the socket (S416/S418)', () => {
+    it('s418DictMembersSurviveOnMessage: connectWs → onmessage group_state → store members survive', () => {
+      // This is the ONLY seam through which a live WS `syncplay_group_state`
+      // frame reaches the store: `connectWs` → real SyncPlayClient.handleIncoming
+      // (vendored @phlix/syncplay — NOT mocked) → onState → applyGroupState.
+      // The dict spelling is the live wire truth (GroupState::getState() keyed
+      // by member id, S416); fixture shape copied from syncPlayWireShape.test.ts.
+      //
+      // At lib v0.1.2 the dict folded to `[]` before onState fired, so every
+      // live group_state frame WIPED store.members — this assertion was the
+      // planted red. At v0.1.4 the dict normalizes into the array model and
+      // both members survive.
+      const store = useSyncPlayStore();
+      store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+
+      lastSocket().onmessage?.({
+        data: JSON.stringify({
+          type: 'syncplay_group_state',
+          group: {
+            group_id: 'room-1',
+            group_name: 'Movie Night',
+            member_count: 2,
+            members: {
+              member_host: { id: 'member_host', name: 'Host One', is_host: true, joined_at: 1788300111 },
+              member_guest: { id: 'member_guest', name: 'Guest Two', is_host: false, joined_at: 1788300111 },
+            },
+            host_id: 'member_host',
+            current_media_id: null,
+            current_media_duration: 0,
+            playback_position: 0,
+            playback_state: 'playing',
+            queue: [],
+            created_at: 1788300111,
+            last_activity_at: 1788300111,
+          },
+        }),
+      });
+
+      // Store-level user view: both members present, ids folded from the dict.
+      expect(store.members.map((m) => m.id).sort()).toEqual(['member_guest', 'member_host']);
+      // Room view keeps the dict the store folds from.
+      expect(Object.keys(store.currentRoom?.members ?? {}).sort()).toEqual(['member_guest', 'member_host']);
     });
   });
 });
