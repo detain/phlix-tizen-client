@@ -5,6 +5,22 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W34 (cs20retag): ui re-tag to v0.99.1 + route-manifest provenance re-pin — 2026-09-05
+
+- **Combined re-tag + cs#20 currency, two facts, one PR.** (1) `package.json`
+  re-tags `@phlix/ui` `github:detain/phlix-ui#v0.99.0` → `#v0.99.1` (the
+  released v0.99.1 tree; this repo commits no package-lock, as ever). (2)
+  `tests/fixtures/server-route-manifest.json` re-vendored verbatim from
+  `@phlix/contracts` master `f2e284b3` (regen against server master
+  `f35a5742`; previous provenance `2250def2`/`3a253991` — the web-ui ui-tarball
+  re-pin, zero route hunks). All 400 tuples byte-identical — only provenance
+  moves. The gate pins follow in `tests/unit/routeManifest.gate.test.ts`:
+  serverSha `3a253991` → `f35a5742`, vendored md5 `5bc7dd6d` → `05db9e75`, and
+  the docblock regen cites move to server `f35a5742` / contracts `f2e284b3`.
+  The three 400-count pins and the gate id stay; the contracts install pin
+  stays (no grants). Fresh `npm install`; suite 312/20 exact.
+
+
 ### Changed — W33 (cs19): route-manifest provenance re-pin (no route change) — 2026-09-05
 
 - **cs#19 currency cascade.** `tests/fixtures/server-route-manifest.json`
