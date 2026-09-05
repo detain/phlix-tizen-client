@@ -4,7 +4,7 @@
 [![Lint](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml/badge.svg)](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml)
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
 ![Platform](https://img.shields.io/badge/platform-Samsung%20Tizen-1428A0?logo=samsung&logoColor=white)
-[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.99.0-f5a524)](https://github.com/detain/phlix-ui)
+[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.99.1-f5a524)](https://github.com/detain/phlix-ui)
 
 Samsung Smart TV client application for Phlix Media Server, built with Tizen SDK.
 
@@ -37,6 +37,7 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 - **Search**: Search across your media library
 - **Favorites & Watch History**: Mark favorites and track watched items
 - **Player Overlays**: TV-specific chapter/marker ticks, Skip Intro & Skip Outro, sleep timer, picture-in-picture, and an end-of-video "Up next" card
+- **Parental Controls**: Per-profile viewing schedules, tag restrictions, and stream limits
 - **Theming**: Ships the `nocturne` theme by default
 
 > Provided by `@phlix/ui`. To add or change a feature/screen, edit `phlix-ui`.
@@ -44,8 +45,9 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 ## Tech Stack
 
 - **Vue 3** + **Pinia** + **vue-router** (peer dependencies)
-- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.99.0` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
-- **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.4.3` — `buildPhlixHeaders` (device headers)
+- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.99.1` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
+- **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.4.6` — `buildPhlixHeaders` (device headers)
+- **[`@phlix/syncplay`](https://github.com/detain/phlix-syncplay)** `v0.1.4` — SyncPlay frame client used by `src/stores/useSyncPlayStore.ts`
 - **Vite** + `@vitejs/plugin-vue` (build target `chrome100`, `base: './'`)
 - **Vitest** + jsdom + `@vue/test-utils` (tests)
 - **TypeScript** + `vue-tsc` (typecheck)
@@ -106,7 +108,15 @@ The client resolves which server to talk to in this order (see `src/resolveConfi
 
 1. `localStorage['phlix.serverUrl']` (set at runtime in the app)
 2. `import.meta.env.VITE_PHLIX_SERVER_URL` (build/dev-time env)
-3. `http://localhost:8096` (default)
+3. **empty** — with `requireConnection: true`, `@phlix/ui` shows its first-run
+   Connect screen instead of guessing `localhost`; the URL you enter is mirrored
+   back to `localStorage['phlix.serverUrl']` and re-seeds the next launch
+
+The hub-relay consumer (`src/api/hubRelay.ts`, the "Alexa, play X" path) resolves
+its own context from `localStorage['phlix.hubUrl']`, `['phlix.hubServerId']` and
+`['phlix.hubAccessToken']`, with the build-time overrides `VITE_PHLIX_HUB_URL`
+and `VITE_PHLIX_HUB_SERVER_ID` (all env vars are declared in `vite-env.d.ts`).
+Without a hub context nothing opens.
 
 The client sends `X-Phlix-Device-Type: samsung-tizen` and a stable
 `X-Phlix-Device-ID` (persisted as `phlix.deviceId`). **The server** maps the
@@ -177,6 +187,7 @@ npm run test:watch
 ```bash
 npx vitest run tests/unit/tizenBridge.test.ts
 npx vitest run tests/unit/UpNextOverlay.test.ts
+npx vitest run tests/unit/routeManifest.gate.test.ts
 npx vitest run -t "BACK"
 ```
 
@@ -278,15 +289,19 @@ briefly suppressed) so the D-pad can select a rung.
 ```
 phlix-tizen-client/
 ├── index.html               # Vite entry (repo root); mounts #phlix-app, #phlix-spatial-host + 5 overlay hosts
+├── vite-env.d.ts            # VITE_PHLIX_SERVER_URL / VITE_PHLIX_HUB_URL / VITE_PHLIX_HUB_SERVER_ID
 ├── src/
-│   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host + 5 overlay apps; TIZEN_HLS_CONFIG
+│   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host + 5 overlay apps; TIZEN_HLS_CONFIG, buildMenu, buildExtraRoutes
 │   ├── polyfills.ts         # structuredClone fallback (imported first)
 │   ├── resolveConfig.ts     # pure resolveAppConfig({serverUrl, envUrl})
 │   ├── deviceId.ts          # pure resolveDeviceId(storage) → persisted phlix.deviceId
+│   ├── syncplayDispatch.ts  # pending_command → resolve media id → @phlix/ui player store
 │   ├── SpatialNavHost.vue   # renderless useSpatialNav gate (off on player route)
 │   ├── tizenBridge.ts       # RemoteManager 'action' → usePlayerStore + router; Yellow/Back drive the QualityMenu
+│   ├── api/
+│   │   └── hubRelay.ts      # hub-relay pending_command WebSocket consumer (ws://<hub>:8804)
 │   ├── components/          # TV overlays (ChapterOverlay, SleepTimerOverlay, SkipIntroOverlay, PiPController, UpNextOverlay) + D-pad lists/cards
-│   ├── pages/               # ChaptersPage, AudioTracksPage, MusicPage, ParentalControlsPage
+│   ├── pages/               # ChaptersPage, AudioTracksPage, SubtitleTracksPage, MusicPage, ParentalControlsPage
 │   ├── screens/             # RecommendationsScreen
 │   ├── stores/              # useMusicStore, useSyncPlayStore (Pinia)
 │   └── remote/
@@ -298,6 +313,8 @@ phlix-tizen-client/
 │   └── package.js           # assembles package/ from dist/ + config.xml (ESM)
 ├── tests/
 │   ├── test-setup.ts        # in-memory localStorage mock
+│   ├── fixtures/
+│   │   └── server-route-manifest.json  # vendored @phlix/contracts route manifest (route gate)
 │   └── unit/
 │       ├── resolveConfig.test.ts
 │       ├── deviceId.test.ts
@@ -305,6 +322,9 @@ phlix-tizen-client/
 │       ├── SpatialNavHost.test.ts
 │       ├── RemoteManager.test.ts
 │       ├── UpNextOverlay.test.ts
+│       ├── hubRelay.test.ts
+│       ├── syncplayDispatch.test.ts
+│       ├── routeManifest.gate.test.ts
 │       └── main.test.ts
 ├── docs/
 │   └── signing.md           # certificate + .wgt signing guide
@@ -338,7 +358,7 @@ phlix-tizen-client/
 ### Overlay Missing (chapters, skip intro, sleep timer, PiP, up next)
 
 1. Each overlay is its own mounted app — confirm its host `<div>` exists in `index.html` and the matching `createApp(...).mount(...)` call is present in `src/main.ts`
-2. Marker/chapter/playlist overlays need their endpoints (`GET /api/v1/media/{id}/chapters`, `/markers`, `/playlist`) to return data for the current media id
+2. Marker/chapter/up-next overlays need their endpoints (`GET /api/v1/media/{id}/chapters`, `/markers`, and `GET /api/v1/users/me/next-up`) to return data for the current media id
 
 ### Remote Not Working
 

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phlix/ui`** — TypeScript → Vite (`@vitejs/plugin-vue`, target `chrome100`, `base:'./'`) → Tizen Chromium TV webview, packaged as a signed `.wgt`. All UI is rendered by `@phlix/ui`'s `createPhlixApp()`; this repo is boot glue + the Tizen remote/spatial-nav bridge (mirrors the Windows client). HLS comes from `@phlix/ui`'s player, RAM-tuned via `playerHlsConfig`. Pinned `@phlix/ui#v0.99.0`, `@phlix/contracts#v0.4.3`; peer deps Vue 3 + Pinia + vue-router.
+Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phlix/ui`** — TypeScript → Vite (`@vitejs/plugin-vue`, target `chrome100`, `base:'./'`) → Tizen Chromium TV webview, packaged as a signed `.wgt`. All UI is rendered by `@phlix/ui`'s `createPhlixApp()`; this repo is boot glue + the Tizen remote/spatial-nav bridge (mirrors the Windows client). HLS comes from `@phlix/ui`'s player, RAM-tuned via `playerHlsConfig`. Pinned `@phlix/ui#v0.99.1`, `@phlix/contracts#v0.4.6`, `@phlix/syncplay#v0.1.4`; peer deps Vue 3 + Pinia + vue-router.
 
 ## Commands
 
@@ -25,10 +25,15 @@ No webpack, no Babel, no Jest.
 
 **Entry**: `index.html` (repo root = Vite root) → `/src/main.ts`, mounting `#phlix-app` + `#phlix-spatial-host` + `#phlix-chapter-overlay` + `#phlix-sleep-timer-overlay` + `#phlix-skip-intro-overlay` + `#phlix-pip-overlay` + `#phlix-up-next-overlay`.
 
-`main.ts` `boot()`: import `./polyfills` first → resolve server URL (`localStorage['phlix.serverUrl']` → `VITE_PHLIX_SERVER_URL` → **empty**, via `resolveConfig.ts`; an empty base + `requireConnection: true` shows `@phlix/ui`'s first-run Connect screen instead of guessing `localhost`, and the chosen URL is mirrored back to `localStorage['phlix.serverUrl']` via `onConnectionChange`) → `resolveDeviceId` (`deviceId.ts`) → `buildPhlixHeaders({deviceType:'samsung-tizen'})` → `createPhlixApp({app, apiBase, deviceHeaders, defaultTv:true, defaultTheme:'nocturne', branding:{wordmark:'Phlix'}, playerHlsConfig:TIZEN_HLS_CONFIG}).mount('#phlix-app')` → `installTizenBridge(app)` → mount a 2nd `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')` plus 3rd–7th overlay apps (`ChapterOverlay` → `#phlix-chapter-overlay`, `SleepTimerOverlay` → `#phlix-sleep-timer-overlay`, `SkipIntroOverlay` → `#phlix-skip-intro-overlay`, `PiPController` → `#phlix-pip-overlay`, `UpNextOverlay` → `#phlix-up-next-overlay`), all reusing the main app's pinia + router.
+`main.ts` `boot()`: import `./polyfills` first → resolve server URL (`localStorage['phlix.serverUrl']` → `VITE_PHLIX_SERVER_URL` → **empty**, via `resolveConfig.ts`; an empty base + `requireConnection: true` shows `@phlix/ui`'s first-run Connect screen instead of guessing `localhost`, and the chosen URL is mirrored back to `localStorage['phlix.serverUrl']` via `onConnectionChange`) → `resolveDeviceId` (`deviceId.ts`) → `buildPhlixHeaders({deviceType:'samsung-tizen'})` → `createPhlixApp({app, apiBase, deviceHeaders, defaultTv:true, defaultTheme:'nocturne', branding:{wordmark:'Phlix'}, playerHlsConfig:TIZEN_HLS_CONFIG, menu:buildMenu(), extraRoutes:buildExtraRoutes()}).mount('#phlix-app')` → `installTizenBridge(app)` → mount a 2nd `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')` plus 3rd–7th overlay apps (`ChapterOverlay` → `#phlix-chapter-overlay`, `SleepTimerOverlay` → `#phlix-sleep-timer-overlay`, `SkipIntroOverlay` → `#phlix-skip-intro-overlay`, `PiPController` → `#phlix-pip-overlay`, `UpNextOverlay` → `#phlix-up-next-overlay`), all reusing the main app's pinia + router → `wireHubRelayConsumer(pinia, apiBase, storage, deviceHeaders)`.
 
-- **`src/main.ts`**: boot + `createPhlixApp` config + `TIZEN_HLS_CONFIG` + 2nd-app SpatialNavHost mount + 3rd–7th overlay app mounts.
-- **`src/components/*.vue`**: TV-specific overlays + D-pad lists — `ChapterOverlay` (`GET /api/v1/media/{id}/chapters` + `GET /api/v1/media/{id}/markers`), `SleepTimerOverlay`, `SkipIntroOverlay` (`GET /api/v1/media/{id}/markers`), `PiPController`, `UpNextOverlay` (`GET /api/v1/media/{id}/playlist`), plus the track/rating/music cards used by `src/pages/` + `src/screens/` and backed by `src/stores/`. Each carries a `@category TV-Specific Component` / `@duplicate` docblock recording why it is kept instead of `@phlix/ui`'s version — keep that note current when editing one.
+- **`src/main.ts`**: boot + `createPhlixApp` config + `TIZEN_HLS_CONFIG` + `buildMenu()` (top-bar nav, incl. the `requiresAdmin` Admin entry and `Parental Controls`) + `buildExtraRoutes()` (`buildAdminRoutes()`, `LibraryScanPage`, chapters / audio-tracks / subtitle-tracks / recommendations / parental-controls) + 2nd-app SpatialNavHost mount + 3rd–7th overlay app mounts + the hub-relay consumer wiring.
+- **`src/api/hubRelay.ts`**: S298 hub-relay `pending_command` consumer — `ws(s)://<hub>:8804/syncplay/<server_id>`, token carried on the `Sec-WebSocket-Protocol: bearer, <token>` subprotocol (a TV webview cannot set request headers), minted via `POST /api/v1/me/servers/{server_id}/relay-token`. Exports `resolveHubRelayConfig`, `openHubRelayConnection`, `closeHubRelayConnection`, `parsePendingCommandFrame`. The socket opens whenever the app is open with a hub context — not inside a SyncPlay room.
+- **`src/syncplayDispatch.ts`**: `wirePendingPlayMediaDispatcher(store, deps)` — watches the store's `pendingPlayMedia` slot, resolves the bare media id via `GET /api/v1/media/{id}`, then `player.setCurrent()` + `player.play()`. Unresolved commands are NOT consumed; a stale-resolution guard drops results superseded by a newer command.
+- **`src/components/*.vue`**: TV-specific overlays + D-pad lists — `ChapterOverlay` (`GET /api/v1/media/{id}/chapters` + `GET /api/v1/media/{id}/markers`), `SleepTimerOverlay`, `SkipIntroOverlay` (`GET /api/v1/media/{id}/markers`), `PiPController`, `UpNextOverlay` (`GET /api/v1/users/me/next-up`), plus the track/rating/music cards used by `src/pages/` + `src/screens/` and backed by `src/stores/`. Each carries a `@category TV-Specific Component` / `@duplicate` docblock recording why it is kept instead of `@phlix/ui`'s version — keep that note current when editing one.
+- **`src/pages/AudioTracksPage.vue`** / **`src/pages/SubtitleTracksPage.vue`**: both read the single `GET /api/v1/media/{id}/playback-info` rail (`audio_tracks` / `subtitle_tracks`). Subtitles are dispatched by `track.language` (`setSubtitle`), not by wire id.
+- **`src/pages/ParentalControlsPage.vue`**: profile schedules / tags / stream-limits over `GET|POST|DELETE /api/v1/profiles/{id}/schedules`, `GET|POST|DELETE /api/v1/profiles/{id}/tags`, `GET|PUT /api/v1/profiles/{id}/stream-limits`.
+- **`src/stores/useSyncPlayStore.ts`**: SyncPlay store — REST over its local `SyncPlayApiClient` (`/api/v1/syncplay/groups`), frames via `@phlix/syncplay`'s `SyncPlayClient`. Also the hub-relay consumer surface: `applyPendingPlayMedia` adopts a delivered frame into `pendingPlayMedia`, `consumePendingPlayMedia` clears it.
 - **`src/polyfills.ts`**: `structuredClone` fallback — imported FIRST (older Tizen lacks it; `@phlix/ui` needs it).
 - **`src/resolveConfig.ts`**: pure `resolveAppConfig` → `{app:'server', apiBase}` (server-mode only).
 - **`src/deviceId.ts`**: pure `resolveDeviceId(storage)`, persisted `phlix.deviceId`.
@@ -37,7 +42,7 @@ No webpack, no Babel, no Jest.
 - **`src/remote/RemoteManager.ts`**: singleton source of TV-remote events; captures `keydown`/`keyup` on `document`, emits `'keydown'`/`'keyup'`/`'action'`, held-key repeat (FF/REW accel); `on()` returns an unsubscribe fn.
 - **`src/remote/KeyMapping.ts`**: Samsung key codes → actions (`10009` BACK, `415` PLAY, `413` STOP, `19` PAUSE, `417` FF, `412` REW, `403`–`406` color). Arrows/ENTER stay in `KEY_MAP` for logging but are removed from `isRepeatable`/`isImmediate`/`isHandled` — spatial-nav + native focus own them.
 
-**Rule**: this repo writes no media/library/auth UI — that lives in `@phlix/ui`. Edit boot config (`main.ts`), the remote bridge (`tizenBridge.ts` / `remote/*`), spatial-nav gating (`SpatialNavHost.vue`), the TV overlays/pages (`src/components/`, `src/pages/`, `src/screens/`, `src/stores/`), or the Tizen manifest (`app/config.xml`).
+**Rule**: this repo writes no media/library/auth UI — that lives in `@phlix/ui`. Edit boot config (`main.ts`), the remote bridge (`tizenBridge.ts` / `remote/*`), spatial-nav gating (`SpatialNavHost.vue`), the TV overlays/pages (`src/components/`, `src/pages/`, `src/screens/`, `src/stores/`), the hub-relay glue (`src/api/hubRelay.ts`, `src/syncplayDispatch.ts`), or the Tizen manifest (`app/config.xml`).
 
 ## Tizen constraints
 
@@ -47,13 +52,15 @@ No webpack, no Babel, no Jest.
 - `base: './'` in `vite.config.ts` is MANDATORY — `.wgt` runs from `file://`, so absolute `/assets` 404.
 - `app/config.xml` is the `.wgt` manifest (app id `phlix.app.phlixtizen`, `required_version` `6.5`); `scripts/package.js` copies it to `package/`.
 - Device→quality is server-side: the client sends `X-Phlix-Device-Type: samsung-tizen`; the server maps it. Don't reintroduce a client device profile.
+- Build-time env vars are declared in `vite-env.d.ts`: `VITE_PHLIX_SERVER_URL`, plus `VITE_PHLIX_HUB_URL` / `VITE_PHLIX_HUB_SERVER_ID` for the hub relay.
 
 ## Tests
 
-Vitest + jsdom + `@vue/test-utils` (`tests/unit/*.test.ts`, flat `src/` tree). Suites: `resolveConfig`, `deviceId`, `tizenBridge`, `SpatialNavHost`, `RemoteManager`, `UpNextOverlay`, `main`. SFC suites mock `@phlix/ui` (`ApiClient`, `useApiBase`, `usePlayerStore`) and `vue-router` via `vi.hoisted`:
+Vitest + jsdom + `@vue/test-utils` (`tests/unit/*.test.ts`, flat `src/` tree). Suites: `resolveConfig`, `deviceId`, `polyfills`, `tizenBridge`, `SpatialNavHost`, `RemoteManager`, `KeyMapping`, `UpNextOverlay`, `SubtitleTrackList`, `useMusicStore`, `useSyncPlayStore`, `syncPlayWireShape`, `hubRelay`, `syncplayDispatch`, `RouteWireShape`, `TrackWireShape`, `TrackApplyBoundary`, `ParentalControlsWireShape`, `routeManifest.gate`, `main`. SFC suites mock `@phlix/ui` (`ApiClient`, `useApiBase`, `usePlayerStore`) and `vue-router` via `vi.hoisted`. `routeManifest.gate` pins every client request URL tuple-exact against the vendored `tests/fixtures/server-route-manifest.json` — adding or moving a request site means updating its per-file coverage count there.
 
 ```bash
 npx vitest run tests/unit/UpNextOverlay.test.ts
+npx vitest run tests/unit/routeManifest.gate.test.ts
 ```
 
 <!-- caliber:managed:pre-commit -->
