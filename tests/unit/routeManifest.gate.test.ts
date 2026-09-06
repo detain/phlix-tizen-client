@@ -14,7 +14,7 @@
  * `@phlix/contracts` at #v0.4.5, but the manifest shipped IN that tag is
  * stale for this pin's purpose — it embeds server `8f72faec…` (md5
  * cca4660d…), while the estate-wide canonical copy is the untagged master
-   * regen at server `e4853f0f` (md5 pinned below, contracts 876d0ea) — and the
+   * regen at server `bab33ff2` (md5 pinned below, contracts bcd27df) — and the
  * package `exports` map blocks JSON subpath imports anyway. Vendoring this
  * one artifact is the sanctioned interim pattern — identical to mobile
  * (dc45e5c3) and roku (1da0910e). Re-adoption of the contracts export
@@ -236,7 +236,7 @@ const TOTAL_SITES = Object.values(PER_FILE_COVERAGE).reduce((a, b) => a + b, 0);
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
-    expect(manifest.provenance.serverSha).toBe('e4853f0f1f1fdaea228dae640710ff6a939e5a21');
+    expect(manifest.provenance.serverSha).toBe('bab33ff2707bd74f94b95d8a781908d634583b87');
     expect(manifest.provenance.total).toBe(400);
     expect(manifest.routes).toHaveLength(400);
     expect(manifest.provenance.generator).toBe('scripts/generate-server-route-manifest.mjs');
@@ -249,7 +249,7 @@ describe(`${GATE_ID} — vendored manifest integrity`, () => {
     // any drift here means this copy was edited (the artifact says "do not").
     const raw = readFileSync(MANIFEST_PATH);
     const md5 = createHash('md5').update(raw).digest('hex');
-    expect(md5).toBe('791235d4b9dde49dfc3b85853238446a');
+    expect(md5).toBe('e8b23b9b9e277c8ed0048ceb44662d1a');
     const unique = new Set(manifest.routes.map(([m, r]) => `${m} ${r}`));
     expect(unique.size).toBe(400);
   });
