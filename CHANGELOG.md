@@ -5,6 +5,19 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W40 (cs24): route-manifest provenance re-pin (no route change) — 2026-09-07
+
+- **cs#24 currency cascade.** `tests/fixtures/server-route-manifest.json`
+  re-vendored verbatim from `@phlix/contracts` master `59fd9b02` (regen against
+  server master `df6aa8e5`; previous provenance `bcd27df`/`bab33ff2` — the
+  cs#23 leg, zero route hunks). All 400 tuples byte-identical — only
+  provenance moves. The gate pins follow in
+  `tests/unit/routeManifest.gate.test.ts`: serverSha `bab33ff2` → `df6aa8e5`,
+  vendored md5 `e8b23b9b` → `b6acafdf`, and the docblock regen cite moves to
+  server `df6aa8e5` / contracts `59fd9b02`. The three 400-count pins and the
+  gate id stay; the `#v0.4.6` install pin stays (untagged wave, no grants).
+  Suite 312/20 exact.
+
 ### Changed — W37 (cs23): route-manifest provenance re-pin (no route change) — 2026-09-06
 
 - **cs#23 currency cascade.** `tests/fixtures/server-route-manifest.json`
