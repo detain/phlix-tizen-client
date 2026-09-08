@@ -5,6 +5,21 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W43 (cs26): route-manifest re-pin — REAL route add, non-pure, 401 tuples — 2026-09-08
+
+- **cs#26 currency cascade.** `tests/fixtures/server-route-manifest.json`
+  re-vendored verbatim from `@phlix/contracts` master `97c87f27` (regen against
+  server master `1e14b539`; previous provenance `e837e31c`/`2746677e` — the
+  cs#25 leg). Unlike cs#23–25 this leg is NON-PURE: the tuple set moves
+  400 → 401 — exactly one REAL route added, `POST /api/v1/admin/updates/check`
+  (S273), nothing removed. The gate pins follow in
+  `tests/unit/routeManifest.gate.test.ts`: serverSha `2746677e` → `1e14b539`,
+  vendored md5 `4f4dc687` → `e3647899`, the three route-count pins move to 401,
+  and the docblock regen cite moves to server `1e14b539` / contracts `97c87f27`.
+  The added admin route is never called from this client, so the 23-site/19-tuple
+  per-file coverage pins and the gate id stay; the `#v0.4.6` install pin stays
+  (untagged wave, no grants). Suite 312/20 exact.
+
 ### Changed — W41 (cs25): route-manifest provenance re-pin (no route change) — 2026-09-08
 
 - **cs#25 currency cascade.** `tests/fixtures/server-route-manifest.json`
