@@ -5,6 +5,10 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W47 (cs28): route-manifest provenance re-pin — PURE, 401 tuples unchanged — 2026-09-09
+
+- **cs#28 currency re-pin.** `tests/fixtures/server-route-manifest.json` re-vendored byte-for-byte from `@phlix/contracts` master `a1ca39d8` (server provenance `a5cde27e`). Pure re-pin: the 401 route tuples and route bytes are unmoved — the stripped route-content md5 measures equal old-vs-new (`508a6415…`), only provenance (serverSha + full-file md5) moves. `tests/unit/routeManifest.gate.test.ts` serverSha/md5 pins re-pinned to match; all three route-count pins stay 401.
+
 ### Changed — W46 (cs27): route-manifest provenance re-pin — PURE, 401 tuples unchanged — 2026-09-09
 
 - **cs#27 currency cascade.** `tests/fixtures/server-route-manifest.json`
