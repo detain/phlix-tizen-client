@@ -5,6 +5,15 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W50 (cs30 era-2): route-manifest provenance re-pin — PURE, 401 tuples unchanged — 2026-09-09
+
+- Server moved mid-wave (`32183f5b` → `5986b61d`, S210 #749 — docker boot-gate bounds only,
+  route-zero re-proven: Router/Application/guard blobs and Routes/+FastPath/ trees byte-identical).
+  Vendored `server-route-manifest.json` re-vendored byte-identical from `@phlix/contracts` master
+  `57a8528a` (era-2 regen; full-file md5 `cb53d53f` → `045c0984`, blob identity `dd0cbaca` verified
+  against the contracts dist artifact; stripped route-content md5 `508a…` holds — 401 tuples).
+  Gate pins advance in the same commit; counts unchanged.
+
 ### Changed — W49 (cs30): route-manifest provenance re-pin — PURE, 401 tuples unchanged — 2026-09-09
 
 - **cs#30 currency re-pin.** `tests/fixtures/server-route-manifest.json` re-vendored byte-for-byte from `@phlix/contracts` master `767146a8` (server provenance `32183f5b`; span `e15d9543`→`32183f5b` re-proven route-zero at the contracts leg — S266 #747 + S171 #748). Pure re-pin: the 401 route tuples and route bytes are unmoved — the stripped route-content md5 measures equal old-vs-new (`508a6415…`), only provenance (serverSha + full-file md5) moves. `tests/unit/routeManifest.gate.test.ts` serverSha/md5 pins and docblock regen cites re-pinned to match; all three route-count pins stay 401. Deviation recorded: `npm ci` is broken here pre-existing (package.json demands `#v0.4.6`, the uncommitted lockfile resolves `#v0.3.12`, and `package-lock.json` is gitignored) — deps installed with `npm install` in the sandbox; the installed `@phlix/contracts` resolves the `#v0.4.6` peel `97bcda06`, verified; no lockfile committed.
