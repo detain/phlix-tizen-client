@@ -5,6 +5,23 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W46 (cs27): route-manifest provenance re-pin — PURE, 401 tuples unchanged — 2026-09-09
+
+- **cs#27 currency cascade.** `tests/fixtures/server-route-manifest.json`
+  re-vendored verbatim from `@phlix/contracts` master `28000fa4` (regen against
+  server master `afe54c7c`; previous provenance `97c87f27`/`1e14b539` — the
+  cs#26 leg). Seven server merges since `1e14b539`, all route-zero: the tuple
+  set is byte-identical (stripped route-set md5 `508a6415` old = new, 401 both
+  sides) — only provenance moves. Gate pins in
+  `tests/unit/routeManifest.gate.test.ts`: serverSha `1e14b539` → `afe54c7c`,
+  vendored full-file md5 `e3647899` → `5c06306c`; docblock regen cite moves to
+  server `afe54c7c` / contracts `28000fa4`. The three route-count pins stay 401;
+  the `#v0.4.6` install pin stays (untagged wave). `npm ci` still fails at this
+  tip's committed lock desync (pre-existing `0.3.12` pins vs `#v0.4.6` spec);
+  `npm install` re-resolves cleanly — lockfile is gitignored here, so the
+  re-vendor carries no lock delta; the installed `@phlix/contracts` moves
+  `0.3.12` → `0.4.6` per the tag. Suite 312/20 exact.
+
 ### Changed — W43 (cs26): route-manifest re-pin — REAL route add, non-pure, 401 tuples — 2026-09-08
 
 - **cs#26 currency cascade.** `tests/fixtures/server-route-manifest.json`
