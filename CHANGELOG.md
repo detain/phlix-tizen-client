@@ -5,6 +5,19 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W53 (cs31): PURE route-manifest provenance re-pin (401 tuples unchanged) — 2026-09-10
+
+- **cs#31 currency re-pin cascade (lane cs31).** Vendored
+  `tests/fixtures/server-route-manifest.json` re-vendored byte-identical from
+  `@phlix/contracts` master (untagged regen #18 against the current
+  phlix-server master tip; purity re-proven before regenerating — server
+  route-relevant span empty, generator-input guard blobs identical). 401
+  `[method, path]` tuples unchanged; only provenance bytes move, so the
+  full-file byte-freeze md5 advances while the stripped route-content md5
+  measures equal old-vs-new. Gate pins (provenance sha, byte-freeze md5,
+  docblock cites) advance in the same commit; counts untouched. Untagged wave:
+  the `#v0.4.6` dependency pin stays put.
+
 ### Changed — W52 (S353): tizen SyncPlay re-pin to contracts v0.4.6 / ui v0.99.1 + migration pin — 2026-09-10
 
 - **S353 re-pin.** The 2026-08-24 step block named `@phlix/contracts` v0.4.3 +
