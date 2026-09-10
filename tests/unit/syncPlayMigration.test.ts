@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 // Value import: the real runtime key list the package ships (NOT re-derived here).
 import { SYNC_PLAY_GROUP_KEYS } from '@phlix/contracts';
-// Type import: both spellings are imported deliberately — `SyncPlayRoom` is the
-// @deprecated alias of `SyncPlayGroup` at @phlix/contracts v0.4.6 (the S353 rename).
-import type { SyncPlayGroup, SyncPlayRoom } from '@phlix/contracts';
+// Type import: the canonical migrated spelling. `SyncPlayRoom` is a TYPE-ONLY
+// @deprecated alias of `SyncPlayGroup` at contracts v0.4.6 (it ships no runtime
+// value), so the rename is pinned by the runtime vocabulary the store emits, not
+// by a phantom import of the old spelling.
+import type { SyncPlayGroup } from '@phlix/contracts';
 import { useSyncPlayStore } from '@/stores/useSyncPlayStore';
 
 /**
@@ -20,10 +22,11 @@ import { useSyncPlayStore } from '@/stores/useSyncPlayStore';
  *   1. the store's room view key-set is EXACTLY the contract's live key list,
  *   2. the vocabulary is snake_case — `current_media_id` present, the old
  *      camelCase/`current_media` state spellings absent,
- *   3. `SyncPlayRoom` is a structural alias of `SyncPlayGroup` (the rename),
- *   4. `joinRoom` yields BOTH the room AND the session from one `{group}`
- *      envelope (the v0.99.0 join contract),
- *   5. the whole create→join→send lifecycle speaks only `/syncplay/groups` —
+ *   3. `joinRoom` answers BOTH views from a SINGLE request (v0.99.0 join
+ *      contract) with the migration's vocabulary split held: the room view
+ *      carries the wire snake_case keys, the session view the store's local
+ *      camelCase model, and neither spelling leaks into the other.
+ *   4. the whole create→join→send lifecycle speaks only `/syncplay/groups` —
  *      no `/rooms`, no REST `/command` route (v0.99.0 removed `sendCommand`).
  *
  * Payloads are copied verbatim from the join envelope in
@@ -121,25 +124,7 @@ describe('syncPlayMigration (S353 re-pin)', () => {
     expect(SYNC_PLAY_GROUP_KEYS).not.toContain('issuedBy');
   });
 
-  it('`SyncPlayRoom` is a structural alias of `SyncPlayGroup` (the S353 rename)', async () => {
-    const store = useSyncPlayStore();
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      text: async () => JSON.stringify(joinEnvelope('sp_cca927fbf4ba11f9')),
-    });
-    await store.joinRoom('https://api.example.com', 'token', 'sp_cca927fbf4ba11f9');
-
-    // These assignments only compile because `SyncPlayRoom` and `SyncPlayGroup`
-    // are the SAME type in contracts v0.4.6 (`SyncPlayRoom` is @deprecated).
-    const group: SyncPlayGroup = store.currentRoom!;
-    const aliased: SyncPlayRoom = group;
-    const roundTrip: SyncPlayGroup = aliased;
-
-    expect(roundTrip.group_id).toBe('sp_cca927fbf4ba11f9');
-    expect('current_media_id' in roundTrip).toBe(true);
-  });
-
-  it('joinRoom yields BOTH the room (SyncPlayGroup) and the session from one envelope', async () => {
+  it('joinRoom answers both views from ONE request with the room(wire,snake_case) vs session(local,camelCase) vocabulary split', async () => {
     const store = useSyncPlayStore();
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -148,11 +133,26 @@ describe('syncPlayMigration (S353 re-pin)', () => {
 
     await store.joinRoom('https://api.example.com', 'token', 'sp_cca927fbf4ba11f9');
 
-    expect(store.currentRoom).not.toBeNull(); // the room view
-    expect(store.currentSession).not.toBeNull(); // the session view
-    // The group IS the session — both views share the same id.
-    expect(store.currentSession!.id).toBe(store.currentRoom!.group_id);
-    expect(store.currentSession!.createdBy).toBe('member_host');
+    // v0.99.0 join contract: a single {group} envelope answers BOTH views — one
+    // request, no follow-up member/state fetch (S276: the group IS the session).
+    // (syncPlayWireShape pins the room's field VALUES; the distinct claim here is
+    // the request count + the two-vocabulary split, which neither existing suite
+    // asserts together.)
+    expect(mockFetch, 'join must be a single request').toHaveBeenCalledTimes(1);
+
+    // Room view = the wire (contracts) vocabulary: snake_case state keys.
+    const room: SyncPlayGroup = store.currentRoom!;
+    expect('current_media_id' in room).toBe(true);
+    expect('playback_position' in room).toBe(true);
+    expect('currentMediaId' in room).toBe(false); // the local spelling must not leak to the wire view
+
+    // Session view = the store's LOCAL camelCase model — the migration's other
+    // half. session.id IS the group id; the wire spelling must not leak here.
+    const session = store.currentSession!;
+    expect(session.id).toBe(room.group_id);
+    expect('currentMediaId' in session).toBe(true);
+    expect('playbackPosition' in session).toBe(true);
+    expect('current_media_id' in session).toBe(false);
   });
 
   it('the create→join→send lifecycle speaks only /syncplay/groups (no /rooms, no REST /command)', async () => {
