@@ -5,6 +5,33 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W52 (S353): tizen SyncPlay re-pin to contracts v0.4.6 / ui v0.99.1 + migration pin — 2026-09-10
+
+- **S353 re-pin.** The 2026-08-24 step block named `@phlix/contracts` v0.4.3 +
+  `@phlix/ui` v0.99.0; the estate moved past that. Re-derived the live tags from
+  the remotes (`git ls-remote --tags`): contracts latest `v0.4.6` (annotated peel
+  `97bcda06`), ui latest `v0.99.1`, `@phlix/syncplay` `v0.1.4` — exactly the pins
+  master already carries at `472ff6bf` (`#v0.4.6` / `#v0.99.1` / `#v0.1.4`); code
+  wins over the block's dated prose. The staged re-pin branch `tagtizen-repin-v0990`
+  is an obsolete stray (unmigrated `useSyncPlayStore`, cannot typecheck at any
+  v0.4.x); the re-pin itself already landed via the S404/S415 waves, so this lane
+  branched off current master and PINS the migration rather than re-applying it.
+- **`src/stores/useSyncPlayStore.ts` is already migrated** to the Group vocabulary
+  (`SyncPlayGroup` / `SyncPlayGroupListItem`, snake_case `current_media_id`, dict
+  `members`, REST only under `/api/v1/syncplay/groups`, playback over the
+  `@phlix/syncplay` WebSocket — v0.99.0 removed the REST `sendCommand`; the join
+  envelope answers both the room and the session from one request). No production
+  change in this PR.
+- **New `tests/unit/syncPlayMigration.test.ts`** (5 tests, `54b209ff`/`aa23b07d`)
+  pins the mapping against the REAL runtime contracts export: the store's room-view
+  key-set equals `SYNC_PLAY_GROUP_KEYS`; the room(wire, snake_case) vs
+  session(local, camelCase) vocabulary split with a single-request join; and a full
+  create→join→send route census forbidding `/rooms` and any REST `/command` path.
+  Lane token `S353MIGRATEX7M8` embedded as a code-resident string literal. Existing
+  SyncPlay suites untouched (syncPlayWireShape 22 / useSyncPlayStore 61 /
+  syncplayDispatch 15 / hubRelay 89); suite 312 → 317, typecheck clean. `npm ci`
+  remains broken pre-existing — deps installed with `npm install`, no lockfile.
+
 ### Changed — W50 (cs30 era-2): route-manifest provenance re-pin — PURE, 401 tuples unchanged — 2026-09-09
 
 - Server moved mid-wave (`32183f5b` → `5986b61d`, S210 #749 — docker boot-gate bounds only,
