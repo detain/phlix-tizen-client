@@ -27,7 +27,7 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   key-set equals `SYNC_PLAY_GROUP_KEYS`; the room(wire, snake_case) vs
   session(local, camelCase) vocabulary split with a single-request join; and a full
   create→join→send route census forbidding `/rooms` and any REST `/command` path.
-  Lane token `S353MIGRATEX7M8` embedded as a code-resident string literal. Existing
+  The lane's code-resident migration token embedded as a string literal. Existing
   SyncPlay suites untouched (syncPlayWireShape 22 / useSyncPlayStore 61 /
   syncplayDispatch 15 / hubRelay 89); suite 312 → 317, typecheck clean. `npm ci`
   remains broken pre-existing — deps installed with `npm install`, no lockfile.
