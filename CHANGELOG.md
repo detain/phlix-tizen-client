@@ -5,6 +5,23 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W59 (cs35): route-manifest full regen (401 → 402 tuples) — 2026-09-11
+
+- **cs#35 currency re-pin cascade (lane cs35).** Vendored
+  `tests/fixtures/server-route-manifest.json` re-vendored byte-identical from
+  `@phlix/contracts` master (untagged regen against the current phlix-server
+  master tip). This is a genuine full regen, not a provenance-only re-pin: the
+  server gained one WebPortal route, so the manifest moves from 401 to 402
+  `[method, path]` tuples (Application source count holds; WebPortal source
+  count rises by one; shared overlap unchanged). The gate's provenance sha,
+  byte-freeze md5, total/length/uniqueness tuple counts, and docblock cites all
+  advance in the same commit. The new route is server-side only, so no Tizen
+  request site calls it — the manifest simply becomes a superset and the
+  client-scan counts (sites/tuples the gate derives from this repo's own code)
+  stay exactly as pinned. Untagged wave: the `#v0.4.6` dependency pin stays put.
+
+### Prior era snapshot — W58 (cs34): PURE provenance re-pin (401 tuples)
+
 ### Changed — W58 (cs34): PURE route-manifest provenance re-pin (401 tuples unchanged) — 2026-09-10
 
 - **cs#34 currency re-pin cascade (lane cs34).** Vendored
