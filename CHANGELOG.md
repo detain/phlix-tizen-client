@@ -5,6 +5,22 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W79 (cs42): PURE route-manifest provenance re-pin (402 tuples unchanged) — 2026-09-12
+
+- **cs#42 currency re-pin cascade (lane cs42).** Vendored
+  `tests/fixtures/server-route-manifest.json` re-vendored byte-identical from
+  `@phlix/contracts` master (untagged regen #29 against the current
+  phlix-server master tip; purity re-proven before regenerating — the
+  server span since the previous pin is four commits of SyncPlay
+  bridge/worker/room and WebSocket plumbing work, a catalog-pin bump and an
+  AGENTS.md theming paragraph, with an empty diff on the two route-bearing
+  guard-constant files, so the stripped route-content digest measures equal
+  old-vs-new and only provenance bytes move). 402
+  `[method, path]` tuples unchanged; the full-file byte-freeze md5 advances
+  while the route content is invariant. Gate pins (provenance sha,
+  byte-freeze md5, docblock cites) advance in the same commit; client-scan
+  counts untouched. Untagged wave: the `#v0.4.6` dependency pin stays put.
+
 ### Changed — W75 (cs41): PURE route-manifest provenance re-pin (402 tuples unchanged) — 2026-09-12
 
 - **cs#41 currency re-pin cascade (lane cs41).** Vendored
