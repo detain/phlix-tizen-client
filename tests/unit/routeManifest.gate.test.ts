@@ -14,7 +14,7 @@
  * `@phlix/contracts` at #v0.4.5, but the manifest shipped IN that tag is
  * stale for this pin's purpose — it embeds server `8f72faec…` (md5
  * cca4660d…), while the estate-wide canonical copy is the untagged master
-       * regen at server `ae401e7f` (md5 pinned below, contracts a8e7f40b) — and the
+ * regen at server `e96f586d` (md5 pinned below, contracts 42f866f) — and the
  * package `exports` map blocks JSON subpath imports anyway. Vendoring this
  * one artifact is the sanctioned interim pattern — identical to mobile
  * (dc45e5c3) and roku (1da0910e). Re-adoption of the contracts export
@@ -236,9 +236,9 @@ const TOTAL_SITES = Object.values(PER_FILE_COVERAGE).reduce((a, b) => a + b, 0);
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
-    expect(manifest.provenance.serverSha).toBe('ae401e7f244366d8a1396397258acafe113240e6');
-    expect(manifest.provenance.total).toBe(402);
-    expect(manifest.routes).toHaveLength(402);
+    expect(manifest.provenance.serverSha).toBe('e96f586da884b45b06df10492fdc3f48919b47bb');
+    expect(manifest.provenance.total).toBe(404);
+    expect(manifest.routes).toHaveLength(404);
     expect(manifest.provenance.generator).toBe('scripts/generate-server-route-manifest.mjs');
   });
 
@@ -249,9 +249,9 @@ describe(`${GATE_ID} — vendored manifest integrity`, () => {
     // any drift here means this copy was edited (the artifact says "do not").
     const raw = readFileSync(MANIFEST_PATH);
     const md5 = createHash('md5').update(raw).digest('hex');
-    expect(md5).toBe('6d184ef45018691c7529616dbd281748');
+    expect(md5).toBe('86aa1f61bc9d6b0f277c57585b3ee1fa');
     const unique = new Set(manifest.routes.map(([m, r]) => `${m} ${r}`));
-    expect(unique.size).toBe(402);
+    expect(unique.size).toBe(404);
   });
 });
 
@@ -274,7 +274,7 @@ describe(`${GATE_ID} — every URL tizen issues is tuple-exact served`, () => {
     console.log(
       `[${GATE_ID}] tizen: ${sites.length} request sites / ${uniqueTuples.size} distinct ` +
         `[method, pathTemplate] tuples across ${perFile.size} modules — all tuple-exact against ` +
-        `the vendored 402-route manifest @ ${manifest.provenance.serverSha}`,
+        `the vendored 404-route manifest @ ${manifest.provenance.serverSha}`,
     );
     for (const [file, count] of [...perFile.entries()].sort()) {
       console.log(`  ${file}: ${count}`);

@@ -5,6 +5,25 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W81 (cs43): route-manifest CONTENT regen (402 → 404 tuples — S240 adds music query rails) — 2026-09-12
+
+- **cs#43 currency cascade (lane cs43).** Vendored
+  `tests/fixtures/server-route-manifest.json` re-vendored byte-identical from
+  `@phlix/contracts` master (untagged regen #30). Unlike the pure re-pin waves
+  this is a CONTENT regen: S240 added two additive music query-param GET rails
+  (`GET /api/v1/music/artist?name=` and `GET /api/v1/music/album?name=`), so the
+  union rises from 402 to 404 tuples and the Application router's guard-constant
+  count rises by the two new rails. The `routeManifest.gate.test.ts` serverSha,
+  provenance.total, routes length, unique-tuple size and the vendored-file md5
+  advance in the same commit. This leg is PURE CURRENCY — `@phlix/ui` stays pinned
+  at `#v0.99.1` and the tizen music builder is NOT migrated: it still issues the
+  legacy `/music/artists/{mbid}` / `/music/albums/{mbid}` paths, which S240 keeps
+  serving (additive law), so every per-file coverage count and request site stays
+  tuple-exact against the widened 404-route set. The tizen builder migration
+  rides the future `@phlix/ui#v0.99.2` pin-bump wave (tag authority is
+  coordinator-only). Suite 21 files / 317 tests pass; test- and fixture-only
+  change, `dist/` untouched. No survival-token home in this repo.
+
 ### Changed — W79 (cs42): PURE route-manifest provenance re-pin (402 tuples unchanged) — 2026-09-12
 
 - **cs#42 currency re-pin cascade (lane cs42).** Vendored
