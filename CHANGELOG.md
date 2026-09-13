@@ -5,6 +5,27 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W83 (cs44): route-manifest PROVENANCE re-pin (404 tuples — route bytes unmoved) — 2026-09-13
+
+- **cs#44 currency cascade (lane cs44).** Vendored
+  `tests/fixtures/server-route-manifest.json` re-vendored byte-identical from the
+  `@phlix/contracts` canonical master export, and the currency pins in
+  `tests/unit/routeManifest.gate.test.ts` advance to the current phlix-server
+  master tip in the same commit (server sha, the byte-identity md5, and the
+  header's contracts-tip cite). The server span since the previous pin is
+  bundle-only: no route-registration file and nothing under `include/` or `src/`
+  moved, so the `[method, path]` tuples are byte-for-byte identical and the count
+  holds at 404; only the embedded provenance moves, which is enough to rotate the
+  md5 and the vendored blob while the described route surface is unchanged. The
+  404 size/total/unique-count pins and the per-file coverage counts are HELD
+  (this wave adds/removes no client request site). The header's stale "pins at
+  #v0.4.5" vendoring rationale is corrected to the `#v0.4.6` tag the manifest is
+  actually pinned to and that tag's measured embed shas (comment-only, zero
+  behavior). The post-S240 `useMusicStore` migration and its pin are untouched.
+  No survival-token home in this repo — the wave token lives in its two verified
+  code homes. `package-lock.json` is gitignored here; the change is the fixture +
+  the gate test only.
+
 ### Changed — W82 (s240tizen): `@phlix/ui` pin-bump v0.99.1 → v0.99.2 — music album-detail migrated to the S240 query-param rail
 
 - **S240 client leg (lane s240tizen).** `package.json` moves its `@phlix/ui`
@@ -22,8 +43,8 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   is gitignored in this repo and CI installs with `npm install`, so the refreshed
   resolution (`#a7530e8b…`) lives on the working tree and is re-derived by CI from
   the pin — the pin line itself is the committed deliverable. The vendored
-  route-manifest gate and fixture are byte-unchanged (self-contained against the
-  `e96f586d` regen; S240's two additive rails were already folded in by the W81
+   route-manifest gate and fixture are byte-unchanged (self-contained against the
+   prior-era regen; S240's two additive rails were already folded in by the W81
   cs#43 content regen). No tag, no version bump, no contracts/syncplay pin move.
 
 ### Changed — W81 (cs43): route-manifest CONTENT regen (402 → 404 tuples — S240 adds music query rails) — 2026-09-12
