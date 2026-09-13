@@ -11,17 +11,20 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.4.6, but the manifest shipped IN that tag is
- * stale for this pin's purpose — it embeds server `01340633…` (md5
- * 6ea0eac9…), while the estate-wide canonical copy is the untagged master
- * regen at server `2f1d2ee6` (md5 pinned below, contracts 8f8a8c7) — and the
+ * `@phlix/contracts` at #v0.4.7, but the manifest shipped IN that tag is
+ * stale for this pin's purpose — it embeds server `2f1d2ee6…` (md5
+ * 4f03cb2e…), while the estate-wide canonical copy is the untagged master
+ * regen at server `694752cd` (md5 pinned below, contracts c5ac10d) — and the
  * package `exports` map blocks JSON subpath imports anyway. Vendoring this
  * one artifact is the sanctioned interim pattern — identical to mobile
  * (dc45e5c3) and roku (1da0910e). Re-adoption of the contracts export
  * replaces the copies when the next contracts tag ships (tracked W19,
  * phlix-ui #349 lane). (S412: this cite named the superseded #v0.4.4 pin;
  * comment-only, zero behavior. cs#44: advanced the pin cite to the #v0.4.6
- * tag it now names and that tag's measured embed shas; comment-only, 0 behavior.)
+ * tag it now names and that tag's measured embed shas; comment-only, 0 behavior.
+ * cs#45: advanced the pin cite to the #v0.4.7 tag it now names and that tag's
+ * measured embed shas — tag peels to contracts 625a5625, embed verified
+ * server `2f1d2ee6…`/md5 `4f03cb2e…` at this leg; comment-only, 0 behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
@@ -237,7 +240,7 @@ const TOTAL_SITES = Object.values(PER_FILE_COVERAGE).reduce((a, b) => a + b, 0);
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
-    expect(manifest.provenance.serverSha).toBe('2f1d2ee6a9c97addaea12cd3377b88dd9d8c6ad7');
+    expect(manifest.provenance.serverSha).toBe('694752cd2050c8688f99aa6e12539226d19c2540');
     expect(manifest.provenance.total).toBe(404);
     expect(manifest.routes).toHaveLength(404);
     expect(manifest.provenance.generator).toBe('scripts/generate-server-route-manifest.mjs');
@@ -250,7 +253,7 @@ describe(`${GATE_ID} — vendored manifest integrity`, () => {
     // any drift here means this copy was edited (the artifact says "do not").
     const raw = readFileSync(MANIFEST_PATH);
     const md5 = createHash('md5').update(raw).digest('hex');
-    expect(md5).toBe('4f03cb2ea263425273665eb465b0b313');
+    expect(md5).toBe('1b9012f8f74d7df1abb6447edfa81566');
     const unique = new Set(manifest.routes.map(([m, r]) => `${m} ${r}`));
     expect(unique.size).toBe(404);
   });
