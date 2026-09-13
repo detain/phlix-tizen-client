@@ -5,6 +5,27 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W82 (s240tizen): `@phlix/ui` pin-bump v0.99.1 → v0.99.2 — music album-detail migrated to the S240 query-param rail
+
+- **S240 client leg (lane s240tizen).** `package.json` moves its `@phlix/ui`
+  pin to `#v0.99.2`, whose `ApiClient.getAlbum` now builds the album-detail
+  request as `GET /api/v1/music/album?name=…&artist=…` (query-param rail)
+  instead of the legacy `/music/albums/{mbid}` path form, and inlines `artist`
+  through `encodeURIComponent` (so the separator is `%20`, not the `+` the old
+  `URLSearchParams` path produced). The list rails are unchanged — `listArtists`
+  / `listAlbums` still pass a params object, so their `?artist=Artist+7`
+  expectations keep the `+`. `useMusicStore` delegates the whole request to the
+  ui helper, so the tizen diff is the flipped exact-match expectation in
+  `tests/unit/useMusicStore.test.ts` plus docblock prose in
+  `src/stores/useMusicStore.ts`; the server still serves the legacy path
+  (additive law) and no hand-built music URL exists in `src/`. `package-lock.json`
+  is gitignored in this repo and CI installs with `npm install`, so the refreshed
+  resolution (`#a7530e8b…`) lives on the working tree and is re-derived by CI from
+  the pin — the pin line itself is the committed deliverable. The vendored
+  route-manifest gate and fixture are byte-unchanged (self-contained against the
+  `e96f586d` regen; S240's two additive rails were already folded in by the W81
+  cs#43 content regen). No tag, no version bump, no contracts/syncplay pin move.
+
 ### Changed — W81 (cs43): route-manifest CONTENT regen (402 → 404 tuples — S240 adds music query rails) — 2026-09-12
 
 - **cs#43 currency cascade (lane cs43).** Vendored
