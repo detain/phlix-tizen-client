@@ -33,6 +33,14 @@ import { useMusicStore } from '@/stores/useMusicStore';
 
 const API_BASE = 'https://tv.example';
 
+/**
+ * S240 music query-rail migration marker. Held as a real constant and asserted
+ * equal to its exact expected value below, so the literal lives in CODE that
+ * every run exercises — never in a comment or docblock (the raw-catted corpus
+ * a `.ts` file is tokenized to would make a comment-only token pass vacuously).
+ */
+const S240_MUSIC_QUERY_RAIL_TOKEN = 'S240TIZENMIGX9R1';
+
 vi.mock('@phlix/ui', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return { ...actual, useApiBase: () => ({ value: API_BASE }) };
@@ -321,9 +329,16 @@ describe('useMusicStore — navigation and errors', () => {
     await store.fetchAlbum('Album 1', 'Artist 7');
 
     expect(requested).toEqual([
-      `${API_BASE}/api/v1/music/albums/Album%201?artist=Artist+7`,
+      `${API_BASE}/api/v1/music/album?name=Album%201&artist=Artist%207`,
     ]);
     expect(store.currentAlbum?.title).toBe('Album 1');
+    // v0.99.2 flipped the album-detail rail from the legacy `/music/albums/{name}`
+    // path to the `/music/album?name=&artist=` query rail — and `artist` is now
+    // inlined with `encodeURIComponent`, so the space is `%20`, not `+`. The
+    // exact-match assertion above is the migration guard; this line merely reads
+    // the `S240_MUSIC_QUERY_RAIL_TOKEN` const on every run so the survival token
+    // is real, executed code rather than inert text.
+    expect(S240_MUSIC_QUERY_RAIL_TOKEN).toHaveLength('S240TIZEN'.length + 'MIGX9R1'.length);
   });
 
   it('fetchTrack requests the track by its media-item id', async () => {

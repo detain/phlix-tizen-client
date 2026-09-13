@@ -1,8 +1,8 @@
 /**
  * Music library store — artist, album, and track data with navigation state.
  *
- * Fetches from `GET /api/v1/music/artists`, `/api/v1/music/albums`,
- * `GET /api/v1/music/albums/{name}`, and `GET /api/v1/music/tracks/{id}`.
+ * Fetches from `GET /api/v1/music/artists`, `GET /api/v1/music/albums`,
+ * `GET /api/v1/music/album?name=…&artist=…`, and `GET /api/v1/music/tracks/{id}`.
  *
  * ## Paging (S125)
  *
@@ -33,9 +33,13 @@
  * `@phlix/contracts` types it claimed to return.
  *
  * ⚠ Artists and albums have NO client-visible numeric primary key. The server
- * keys both by DISPLAY NAME (`MusicController::getArtist`/`getAlbum` take the
- * name as the `{mbid}` route param), so `MusicArtist.id`/`MusicAlbum.id` are
- * the name/title STRING. Selection state is therefore keyed by string.
+ * keys both by DISPLAY NAME, so `MusicArtist.id`/`MusicAlbum.id` are the
+ * name/title STRING and selection state is keyed by string. Since `@phlix/ui`
+ * v0.99.2 the `getAlbum()` helper reaches that name over the query-param rail
+ * (`GET /api/v1/music/album?name=…&artist=…`) rather than the legacy
+ * `/music/albums/{mbid}` path — the name is still the key, only its transport
+ * changed (S240 keeps serving the legacy path server-side; this client no
+ * longer emits it).
  *
  * ⚠ Album drill-down filters SERVER-SIDE via `?artist=`. `/albums` is ordered
  * globally by artist then title, so page 1's 100 rows span only ~23 of the
