@@ -5,6 +5,27 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W85 (cs45): route-manifest PROVENANCE re-pin (404 tuples — route bytes unmoved) — 2026-09-13
+
+- **cs#45 currency cascade (lane cs45).** Vendored
+  `tests/fixtures/server-route-manifest.json` re-vendored byte-identical from the
+  `@phlix/contracts` canonical master export (untagged regen #32), and the
+  currency pins in `tests/unit/routeManifest.gate.test.ts` advance to the current
+  phlix-server master tip in the same commit (server sha, the byte-identity md5,
+  and the header's contracts-tip cite). The server span since the previous pin is
+  bundle-only: no route-registration file and nothing under `include/` or `src/`
+  moved, so the `[method, path]` tuples are byte-for-byte identical and the count
+  holds at 404; only the embedded provenance moves, which is enough to rotate the
+  md5 and the vendored blob while the described route surface is unchanged. The
+  404 size/total/unique-count pins and the per-file coverage counts are HELD
+  (this wave adds/removes no client request site). The header's vendoring
+  rationale is corrected again to the `#v0.4.7` tag the manifest is now pinned to
+  and that tag's measured embed shas, verified by peeling the tag at this leg
+  (comment-only, zero behavior). The post-S240 `useMusicStore` migration and its
+  pin are untouched. No survival-token home in this repo — the wave token lives
+  in its two verified code homes. `package-lock.json` is gitignored here; the
+  change is the fixture + the gate test only.
+
 ### Changed — W83 (cs44): route-manifest PROVENANCE re-pin (404 tuples — route bytes unmoved) — 2026-09-13
 
 - **cs#44 currency cascade (lane cs44).** Vendored
