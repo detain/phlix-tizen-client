@@ -5,6 +5,27 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W93 (cs46a): route-manifest PROVENANCE re-vendor (404 tuples — route bytes unmoved) — 2026-09-15
+
+- **cs#46 currency re-vendor (lane cs46a).** Vendored
+  `tests/fixtures/server-route-manifest.json` re-vendored byte-identical from the
+  `@phlix/contracts` canonical master export (untagged regen #33), and the
+  currency pins in `tests/unit/routeManifest.gate.test.ts` advance to the current
+  phlix-server master tip in the same commit (server sha, the byte-identity md5,
+  and the header's canonical-regen/contracts-tip cites). The diff against the
+  previous vendored bytes is provenance-only: no route-registration change
+  upstream, so the `[method, path]` tuples are byte-for-byte identical and the
+  count holds at 404 — only the embedded provenance moves, which is enough to
+  rotate the md5 and the vendored blob while the described route surface is
+  unchanged. The size/total/unique-count pins and the per-file coverage counts
+  are HELD (23 request sites / 19 distinct tuples re-measured green; no client
+  request site moved this wave). The header's vendoring rationale gains the
+  cs#46 chain note; the `#v0.4.7` tag-embed measurement stands (the tag never
+  moved — only the untagged canonical advanced). This leg additionally plants the
+  lane ritual token as an exported string constant beside the pins (cs#46
+  ceremony; no behavior change). `package-lock.json` is gitignored here; the
+  change is the fixture + the gate test only.
+
 ### Changed — W85 (cs45): route-manifest PROVENANCE re-pin (404 tuples — route bytes unmoved) — 2026-09-13
 
 - **cs#45 currency cascade (lane cs45).** Vendored
