@@ -129,7 +129,8 @@ client does not post a device profile.
 
 - App ID (`phlix.app.phlixtizen`) and version
 - `required_version` (`6.5`)
-- Network access (`<access origin="*">`) and TV privileges (`internet`, `tv.inputdevice`, `tv.window`, `tv.audio`, `network.get`, `application.launch`, `filesystem.read`)
+- Network access (`<access origin="*">`) and TV privileges (`internet`, `tv.inputdevice` — S503 keeps only what the code actually exercises)
+- `<tizen:profile name="tv-samsung"/>` and `hwkey-event="enable"` (S503)
 - Landscape / maximized viewmode
 
 ### HLS Tuning
