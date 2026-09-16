@@ -313,6 +313,10 @@ describe('boot (Tizen renderer entry)', () => {
 
 describe('buildMenu', () => {
   it('supplies Browse (libraryLinks) + For You + Settings + admin-gated Admin', async () => {
+    // S517 T-10: the admin ENTRY is flag-gated — this pin runs it ON so the
+    // admin-present coverage stands EXACTLY as before (strengthened, never
+    // weakened); a separate case below pins the default-off table.
+    vi.stubEnv('VITE_PHLIX_TV_ADMIN', '1');
     const { buildMenu } = await import('@/main');
     const menu = buildMenu();
     expect(menu.map((m) => m.id)).toEqual(['browse', 'for-you', 'settings', 'parental-controls', 'admin']);
@@ -325,15 +329,51 @@ describe('buildMenu', () => {
       to: '/app/admin/dashboard',
       requiresAdmin: true
     });
+    vi.unstubAllEnvs();
+  });
+
+  it('S517 T-10 default (flag OFF): the admin ENTRY is omitted entirely', async () => {
+    vi.stubEnv('VITE_PHLIX_TV_ADMIN', '');
+    const { buildMenu } = await import('@/main');
+    const menu = buildMenu();
+    expect(menu.map((m) => m.id)).toEqual(['browse', 'for-you', 'settings', 'parental-controls']);
+    expect(menu.some((m) => m.requiresAdmin)).toBe(false);
+    // Non-destructive: everything else is byte-identical.
+    expect(menu.find((m) => m.id === 'browse')?.libraryLinks).toBe(true);
+    vi.unstubAllEnvs();
   });
 });
 
 describe('buildExtraRoutes', () => {
   it('registers the admin section + the library-scan route', async () => {
+    // S517 T-10: admin routes are flag-gated; run ON to preserve this pin.
+    vi.stubEnv('VITE_PHLIX_TV_ADMIN', '1');
     const { buildExtraRoutes } = await import('@/main');
     const names = buildExtraRoutes().map((r) => r.name);
     expect(names).toContain('admin-dashboard');
     expect(names).toContain('library-scan');
+    vi.unstubAllEnvs();
+  });
+
+  it('S517 T-10 default (flag OFF): buildAdminRoutes() is omitted from the table', async () => {
+    vi.stubEnv('VITE_PHLIX_TV_ADMIN', '');
+    const { buildExtraRoutes } = await import('@/main');
+    const routes = buildExtraRoutes();
+    const names = routes.map((r) => r.name);
+    expect(names).not.toContain('admin-dashboard');
+    expect(routes.some((r) => String(r.path).startsWith('/app/admin'))).toBe(false);
+    // Non-destructive: every non-admin route of the table survives.
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'library-scan',
+        'chapters',
+        'audio-tracks',
+        'subtitle-tracks',
+        'recommendations',
+        'parental-controls'
+      ])
+    );
+    vi.unstubAllEnvs();
   });
 
   it('S407: registers BOTH track-picker pages — audio AND the new subtitle consumer', async () => {
@@ -349,6 +389,9 @@ describe('buildExtraRoutes', () => {
 
 describe('boot wires the nav menu + admin routes', () => {
   it('passes menu (incl. admin) + extraRoutes to createPhlixApp', async () => {
+    // S517 T-10: run with the admin flag ON — the admin-present wiring pin
+    // stands exactly as before.
+    vi.stubEnv('VITE_PHLIX_TV_ADMIN', '1');
     globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
     const mod = await import('@/main');
     await mod.boot();
@@ -358,6 +401,24 @@ describe('boot wires the nav menu + admin routes', () => {
     };
     expect(cfg.menu.some((m) => m.id === 'admin')).toBe(true);
     expect(cfg.extraRoutes.some((r) => r.name === 'admin-dashboard')).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
+  it('S517 T-10 default (flag OFF): boots the FULL app with no admin surface at all', async () => {
+    vi.stubEnv('VITE_PHLIX_TV_ADMIN', '');
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
+    const mod = await import('@/main');
+    await mod.boot();
+    const cfg = createPhlixApp.mock.calls.at(-1)?.[0] as {
+      menu: Array<{ id: string }>;
+      extraRoutes: Array<{ name?: string }>;
+    };
+    expect(cfg.menu.some((m) => m.id === 'admin')).toBe(false);
+    expect(cfg.extraRoutes.some((r) => String(r.name).startsWith('admin'))).toBe(false);
+    // Non-destructive: the rest of the boot is today's boot.
+    expect(mountSpy).toHaveBeenCalledWith('#phlix-app');
+    expect(secondMount).toHaveBeenCalledWith('#phlix-action-toast-overlay');
+    vi.unstubAllEnvs();
   });
 });
 

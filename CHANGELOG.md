@@ -5,6 +5,21 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W111 (S517): admin console behind a default-off build flag (T-10)
+
+- **No admin on the TV unless you build it in.** `buildMenu()` and
+  `buildExtraRoutes()` now consult a default-off flag
+  (`VITE_PHLIX_TV_ADMIN === '1'`): unset, the `admin` nav entry is omitted and
+  the shared admin route section is never spread into the table, so
+  `/app/admin/*` has no matching route on the TV. Measured honest scope: the
+  flag drops the admin-layout chunk from the widget; the admin PAGE chunks
+  still link because `@phlix/ui`'s shell statically imports its admin registry
+  for label lookup, so full bundle exclusion — like the merged design-system
+  CSS split — is an `@phlix/ui` cross-repo follow-up, not a claim of this gate
+  (the pages were already lazy and never boot-parsed). Default builds change
+  behavior only by making admin unreachable; every other route and menu entry
+  is byte-identical.
+
 ### Added — W111 (S516): transient "active control" action toast (AD-13)
 
 - **The remote now echoes.** A TV has no hover, so the viewer gets a

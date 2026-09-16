@@ -277,6 +277,10 @@ export const S515_BOOT_PROBE_TOKEN = 'S515BOOTPROBEX9P7';
 // (1 code home / 0 .md).
 export const S516_ACTION_TOAST_TOKEN = 'S516TOASTX9P7';
 
+// S517 admin-console default-off build flag ritual token — its ONLY code home is
+// this line (1 code home / 0 .md).
+export const S517_ADMIN_FLAG_TOKEN = 'S517ADMINFLAGX9P7';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('c9c551e0506a742220c17a34022d4a2f497e6989');

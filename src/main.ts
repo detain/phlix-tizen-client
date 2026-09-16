@@ -33,33 +33,63 @@ import ParentalControlsPage from './pages/ParentalControlsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
 
 /**
+ * S517 T-10 — the admin console is a DEFAULT-OFF build flag. A TV should not
+ * ship (or reach) an admin console: any value other than '1' (including unset)
+ * omits BOTH the `buildAdminRoutes()` spread from {@link buildExtraRoutes} AND
+ * the `admin` entry from {@link buildMenu}, so the route table has no admin at
+ * all — `/app/admin/*` is unreachable on TV.
+ * Honest scope (survey-c ruling + measured at this commit, no overclaim): the
+ * admin PAGES were always lazy separate chunks (never boot-parsed), and the one
+ * always-parsed admin cost — the ~454 KB merged `@phlix/ui` `index.css` design
+ * system — is NOT reducible client-side. The flag DOES drop the admin-layout
+ * chunk from the .wgt (measured here); it does NOT drop the page chunks,
+ * because `@phlix/ui`'s shell statically imports its admin registry for label
+ * lookup, keeping those lazy-import closures alive in the graph for Rollup.
+ * Full admin-bundle exclusion (and the CSS-split) are therefore @phlix/ui
+ * cross-repo follow-ups, not claims of this gate. `routeManifest.gate` is
+ * unaffected: admin tuples come from ui. Read INSIDE the builders (not at
+ * module scope) so `vi.stubEnv` can re-decide per boot, mirroring how
+ * `VITE_PHLIX_SERVER_URL` is read.
+ */
+function tvAdminEnabled(): boolean {
+  return import.meta.env.VITE_PHLIX_TV_ADMIN === '1';
+}
+
+/**
  * Top-bar nav, mirroring the server web-ui. Without a supplied `menu` the shell
  * renders NO nav at all — including the admin-gated "Admin" entry — so this is
  * what makes Browse/Settings and the admin section reachable on the TV. "Admin"
- * is `requiresAdmin`, so the shell shows it only for an authenticated admin
- * (`useAuthStore().isAdmin`); the admin API is gated server-side regardless.
- * Tizen is server-mode only (see resolveConfig), so there is no hub branch.
+ * is `requiresAdmin` — the shell would show it only for an authenticated admin
+ * (`useAuthStore().isAdmin`; the admin API is gated server-side regardless) —
+ * AND, since S517 T-10, omitted from the table entirely unless the default-off
+ * admin build flag is on. Tizen is server-mode only (see resolveConfig), so
+ * there is no hub branch.
  */
 export function buildMenu(): MenuItem[] {
-  return [
+  const items: MenuItem[] = [
     // `libraryLinks` expands Browse into one nav link per library (fetched from
     // /api/v1/libraries), matching the per-library Browse sections.
     { id: 'browse', label: 'Browse', to: '/app', libraryLinks: true },
     { id: 'for-you', label: 'For You', to: '/app/recommendations' },
     { id: 'settings', label: 'Settings', to: '/app/settings' },
-    { id: 'parental-controls', label: 'Parental Controls', to: '/app/parental-controls' },
-    { id: 'admin', label: 'Admin', to: '/app/admin/dashboard', requiresAdmin: true }
+    { id: 'parental-controls', label: 'Parental Controls', to: '/app/parental-controls' }
   ];
+  if (tvAdminEnabled()) {
+    items.push({ id: 'admin', label: 'Admin', to: '/app/admin/dashboard', requiresAdmin: true });
+  }
+  return items;
 }
 
 /**
  * Routes: the shared Vue admin section (`/app/admin/*`, reachable via the gated
  * "Admin" nav entry) plus the library-scan page, mirroring the server web-ui.
  * Routes carry the full `/app` prefix (the router's history base is '/').
+ * S517 T-10: the admin spread is omitted entirely unless the flag is on —
+ * with it off, `/app/admin/*` has NO matching route on the TV.
  */
 export function buildExtraRoutes(): RouteRecordRaw[] {
   return [
-    ...buildAdminRoutes(),
+    ...(tvAdminEnabled() ? buildAdminRoutes() : []),
     { path: '/app/library/scan', name: 'library-scan', component: LibraryScanPage },
     { path: '/app/chapters/:id', name: 'chapters', component: ChaptersPage },
     { path: '/app/audio-tracks/:id', name: 'audio-tracks', component: AudioTracksPage },

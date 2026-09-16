@@ -71,6 +71,7 @@ style="display:none">`); its only job is to call `useSpatialNav` with an
 3b. (S515 AD-3) `probeBootBase(apiBase, fetchImpl?)` from `src/bootProbe.ts` — empty base skips the probe; a set base is probed via `@phlix/ui`'s `probeServer` (GET `{base}/health`, 6s abort). On `'unreachable'` boot keeps the real apiBase + persisted URL and registers a ONE-SHOT pre-mount `beforeEach` that routes the first navigation to the Connect screen, then deregisters (non-fatal by design).
 4. `buildPhlixHeaders({ deviceId, deviceName: 'Phlix for Samsung TV', deviceType: 'samsung-tizen' })`.
 5. `createPhlixApp({ app, apiBase, deviceHeaders, defaultTv: true, defaultTheme: 'nocturne', branding: { wordmark: 'Phlix' }, playerHlsConfig: TIZEN_HLS_CONFIG })`.
+   - S517 T-10: `menu: buildMenu()` / `extraRoutes: buildExtraRoutes()` carry the admin section only when `VITE_PHLIX_TV_ADMIN === '1'` (default-off; omitting it drops the admin nav entry and every `/app/admin/*` route — admin is unreachable on TV — plus the admin-layout chunk; admin page chunks stay linked via @phlix/ui's static registry import, a ui-side follow-up).
 6. `.mount('#phlix-app')`, then `installTizenBridge(application)`.
 7. Mount `SpatialNavHost` as the second app (plus the 3rd–6th overlay apps; S516 AD-13 adds `ActionToastOverlay` → `#phlix-action-toast-overlay` as the 6th — the transient focus/action caption, focus-safe by construction).
 
