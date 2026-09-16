@@ -28,15 +28,31 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '24.x'
-          # No `cache: npm` — package-lock.json is gitignored here (CI uses
-          # `npm install`, not `npm ci`), and the cache action errors without a
-          # lock file.
+          cache: 'npm'
+          # package-lock.json is committed (audit W105 T-01) — the dependency
+          # resolution is pinned to exact git-dep commit SHAs, so `npm ci` gives a
+          # reproducible install and the setup-node cache works off the lock file.
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci --allow-git=all
 
       - name: Build + assemble package/
         run: npm run package
+
+      - name: Assert committed package/ is fresh
+        # shipped == audited (audit W105 T-02). `npm run package` rebuilt package/
+        # from the current source; if the committed copy matches, the working tree
+        # is clean under package/. Any modification / deletion / untracked file here
+        # means the widget that ships to TVs drifted from src — rebuild and commit.
+        run: |
+          status="$(git status --porcelain -- package/)"
+          if [ -n "$status" ]; then
+            echo "::error::package/ is stale vs a fresh build (audit W105 T-02). Run \`npm run package\` and commit the result."
+            echo "$status"
+            exit 1
+          fi
+          echo "package/ is fresh (matches a clean build of this commit)."
+
 
       - name: Zip the widget (UNSIGNED .wgt)
         # A .wgt is a zip of the widget root (config.xml + index.html + assets).

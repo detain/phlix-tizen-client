@@ -34,15 +34,19 @@ function packageApp() {
   // Copy the Vite output (index.html + assets/ at the widget root).
   execSync(`cp -r ${distDir}/* ${pkgDir}/`, { stdio: 'inherit' });
 
-  // Copy the Tizen widget manifest to the package root.
+  // Copy the Tizen widget manifest + declared icon to the package root. The
+  // manifest references `<icon src="icon.png"/>`, so that resource must ship
+  // beside config.xml or Tizen Studio drops a broken-icon tile (audit W105 T-03).
   execSync(`cp ${path.join(root, 'app/config.xml')} ${pkgDir}/`, { stdio: 'inherit' });
+  execSync(`cp ${path.join(root, 'app/icon.png')} ${pkgDir}/`, { stdio: 'inherit' });
 
-  // Sanity-check: the widget entry + manifest must be at the package root.
-  const indexAtRoot = fs.existsSync(path.join(pkgDir, 'index.html'));
-  const configAtRoot = fs.existsSync(path.join(pkgDir, 'config.xml'));
-  if (!indexAtRoot || !configAtRoot) {
+  // Sanity-check: the widget entry, manifest and declared icon must exist at the
+  // package root. Fail loud rather than emit a .wgt the SDK will reject.
+  const required = ['index.html', 'config.xml', 'icon.png'];
+  const missing = required.filter((f) => !fs.existsSync(path.join(pkgDir, f)));
+  if (missing.length > 0) {
     console.error(
-      `Packaging incomplete: index.html=${indexAtRoot}, config.xml=${configAtRoot} at ${pkgDir}`
+      `Packaging incomplete: missing [${missing.join(', ')}] at ${pkgDir}`
     );
     process.exit(1);
   }

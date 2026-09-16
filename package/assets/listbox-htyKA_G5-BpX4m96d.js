@@ -1,0 +1,1 @@
+function l(r){return r.map(t=>typeof t=="object"?t:{value:t,label:String(t)})}function u(r,t,f){let n=r.length;if(n===0)return-1;let e=t;for(let i=0;i<n;i++)if(e=(e+f+n)%n,!r[e]?.disabled)return e;return t}function o(r,t){return t==="first"?u(r,-1,1):u(r,0,-1)}export{l as e,o as n,u as t};
