@@ -5,6 +5,21 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W110 (S511): per-item audio/subtitle language preference memory (AD-18)
+
+- **The track pages now remember.** Both `AudioTracksPage` and `SubtitleTracksPage`
+  resolve a preferred language through a strict ladder — this title's stored choice
+  first, then the account's `preferred_{audio,subtitle}_language`, then nothing — in a
+  new pure `src/tracks/languageLadder.ts`. Subtitles adopt that default once when the
+  viewer has no current selection and persist every pick; audio still cannot be
+  switched live by the vendored player store, so it marks the remembered row while
+  keeping its named "unsupported in this build" refusal honest. A new Pinia store
+  (`src/stores/useTrackPreferenceStore.ts`) keeps each per-item choice in
+  `localStorage` and writes the account field back through the **existing**
+  `PUT /api/v1/users/me/settings` (single-field partial merge) — no new server route.
+  A missing, empty, or unmatched preference leaves today's selection behaviour
+  byte-identical, and a failed settings fetch degrades silently to that fallback.
+
 ### Added — W110 (S510): hub-relay visible-window retry ladder (T-14)
 
 - **The relay no longer dies silently after five tries.** The hub-relay socket

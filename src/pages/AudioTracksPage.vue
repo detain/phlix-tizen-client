@@ -59,6 +59,16 @@ export const AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE =
  * not a silent no-op — the vendored store has no audio surface. The viewer
  * stays on the page and sees the reason.
  *
+ * S511 (AD-18) — LANGUAGE PREFERENCE MEMORY. Live audio switching is still out
+ * of reach (the named refusal above stands untouched), but a choice is NOT
+ * wasted: this page records it through `useTrackPreferenceStore` — per-item
+ * memory now and pushed to the account's `preferred_audio_language` through the
+ * existing settings endpoint — so the selection survives and is honoured on any
+ * surface that can apply it (and by the server's own defaulting). On load the
+ * currently preferred language is resolved from the same ladder and shown as a
+ * marker, without pretending a row is actively playing (AC2: with no preference
+ * nothing is marked and the refusal is the only message, exactly as before).
+ *
  * Route: /app/audio-tracks/:id  (registered via buildExtraRoutes in main.ts)
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
@@ -72,23 +82,30 @@ import { useApiBase } from '@phlix/ui';
 // <script> block above — both blocks compile into ONE module scope, so they
 // are deliberately NOT re-imported here.
 import AudioTrackList from '../components/AudioTrackList.vue';
+import { useTrackPreferenceStore } from '../stores/useTrackPreferenceStore';
 
 const route = useRoute();
 const router = useRouter();
 const apiBase = useApiBase();
+const trackPreference = useTrackPreferenceStore();
 
 const audioTracks = ref<AudioTrack[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 /** S407: the visible named refusal, set when the viewer picks a row. */
 const refusal = ref<string | null>(null);
+/** S511: the remembered audio language for this title (ladder result), if any. */
+const preferredLanguage = ref<string | null>(null);
+/** S511: transient confirmation that a pick was remembered. */
+const savedConfirmation = ref<string | null>(null);
 
 const mediaId = computed(() => String(route.params.id ?? ''));
 
 /**
  * S407 honest active-row state: null — the vendored store carries no
  * current-audio-track, so no row may claim to be active (a duck-probe of
- * absent fields pretended otherwise).
+ * absent fields pretended otherwise). S511 keeps this null: a STORED
+ * preference is shown as `preferredLanguage` text, never faked as "playing".
  */
 const activeTrackId = computed<string | null>(() => null);
 
@@ -111,9 +128,21 @@ async function loadAudioTracks(): Promise<void> {
     // fetch is simply THE source.
     const response = await fetchPlaybackInfoTracks(apiBase.value, id);
     audioTracks.value = response.audio_tracks ?? [];
+
+    // S511: surface the remembered language (per-item memory → account pref).
+    if (!trackPreference.loaded) {
+      await trackPreference.load(apiBase.value);
+    }
+    const resolved = trackPreference.resolveDefault(
+      id,
+      'audio',
+      audioTracks.value.map((t) => t.language),
+    );
+    preferredLanguage.value = resolved.language;
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load audio tracks';
     audioTracks.value = [];
+    preferredLanguage.value = null;
   } finally {
     loading.value = false;
   }
@@ -125,9 +154,19 @@ async function loadAudioTracks(): Promise<void> {
  * vendored store; every branch silently missed and the page `router.back()`d
  * as if something applied). The viewer sees the exact boundary instead and
  * keeps the list open.
+ *
+ * S511: alongside the honest refusal, the choice is RECALLED to memory (per-item
+ * + account) and a saved-confirmation shown — the pick is not lost even though it
+ * cannot be applied live on this store today.
  */
-function onSelectTrack(_track: AudioTrack): void {
+function onSelectTrack(track: AudioTrack): void {
   refusal.value = AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE;
+  const language = track.language;
+  if (language) {
+    preferredLanguage.value = language;
+    savedConfirmation.value = `Remembered ${language} as your preferred audio language for this title.`;
+    void trackPreference.persist(apiBase.value, mediaId.value, 'audio', language);
+  }
 }
 
 function goBack(): void {
@@ -205,6 +244,20 @@ watch(mediaId, loadAudioTracks);
     </div>
 
     <template v-else>
+      <p
+        v-if="preferredLanguage && !savedConfirmation"
+        class="audio-tracks-page__preferred"
+        role="status"
+      >
+        Preferred for this title: {{ preferredLanguage }}
+      </p>
+      <p
+        v-if="savedConfirmation"
+        class="audio-tracks-page__saved"
+        role="status"
+      >
+        {{ savedConfirmation }}
+      </p>
       <p
         v-if="refusal"
         class="audio-tracks-page__refusal"
@@ -321,6 +374,17 @@ watch(mediaId, loadAudioTracks);
   background: var(--surface-2, #1f1f23);
   color: var(--accent, #f59e0b);
   font-size: var(--text-sm, 0.875rem);
+}
+
+.audio-tracks-page__preferred,
+.audio-tracks-page__saved {
+  margin: 0 0 var(--space-3, 0.75rem);
+  color: var(--text-muted, #a1a1aa);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.audio-tracks-page__saved {
+  color: var(--accent, #f59e0b);
 }
 
 @media (prefers-reduced-motion: reduce) {

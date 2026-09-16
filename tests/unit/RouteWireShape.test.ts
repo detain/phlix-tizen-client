@@ -22,6 +22,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
+import { createPinia, setActivePinia } from 'pinia';
 
 // All mutable harness state is hoisted so the vi.mock factories (hoisted
 // above imports by vitest) can close over it. Plain objects (not `reactive`)
@@ -74,6 +75,11 @@ beforeEach(() => {
   for (const k of Object.keys(h.player)) delete h.player[k];
   h.routerBack.mockReset();
   h.routerPush.mockReset();
+  globalThis.localStorage.clear();
+  // S511: both track pages now reach for useTrackPreferenceStore() at setup,
+  // so an active pinia is required for the mount (the store is created but its
+  // account read is fail-soft — these tests exercise the S407 rails, not prefs).
+  setActivePinia(createPinia());
 });
 
 // ── S407 golden rails ───────────────────────────────────────────────────────
@@ -126,7 +132,11 @@ describe('AudioTracksPage — playback-info wire shape (S280)', () => {
     };
     const wrapper = mountPage('m7');
     await flushPromises();
-    expect(h.calls).toEqual(['/api/v1/media/m7/playback-info']);
+    // S407 pin: EXACTLY ONE playback-info call (the shared loader). S511 adds a
+    // fail-soft account-settings read on load, so filter to the rail under test.
+    expect(h.calls.filter((c) => c.includes('/playback-info'))).toEqual([
+      '/api/v1/media/m7/playback-info',
+    ]);
     const tracks = wrapper.findComponent(AudioTrackList).props('tracks');
     // S404: the page types the rows as the playback-info WIRE AudioTrack
     // (contracts v0.4.5), so all nine StreamTrackShaper keys pass through —
@@ -203,7 +213,11 @@ describe('SubtitleTracksPage — S407 playback-info consumer (observable effect)
     const wrapper = mountPage('m1');
     await flushPromises();
     // Same literal the audio page uses — ONE shared loader, no second copy.
-    expect(h.calls).toEqual(['/api/v1/media/m1/playback-info']);
+    // (S511's fail-soft settings read is filtered out; the pin is that the
+    // playback-info rail is called exactly once, not that it is the ONLY GET.)
+    expect(h.calls.filter((c) => c.includes('/playback-info'))).toEqual([
+      '/api/v1/media/m1/playback-info',
+    ]);
     const tracks = wrapper.findComponent(SubtitleTrackList).props('tracks');
     expect(tracks).toEqual(S407_SUBTITLE_TRACKS);
     wrapper.unmount();
