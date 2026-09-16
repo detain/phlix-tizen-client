@@ -302,7 +302,30 @@ stray `BACK`/`YELLOW` press.
   /`unregisterKey`. `installRemoteKeyRegistration(tizenLike?)` declares `REMOTE_KEYS`
   at app-ready and returns a paired teardown releasing exactly what it acquired;
   absent `tizen` (browser dev) = silent no-op. Called from `installTizenBridge`, so
-  key registration follows the same install/teardown lifecycle — no second pipeline.
+   key registration follows the same install/teardown lifecycle — no second pipeline.
+
+### Track language preference memory (`src/tracks/`, `src/stores/useTrackPreferenceStore.ts`)
+
+S511 (AD-18) gives the two track pages a memory of the viewer's audio/subtitle
+language, resolved by a strict ladder and stored on the existing account settings
+endpoint — **no new route** (era law):
+
+- **`src/tracks/languageLadder.ts`** — pure `resolvePreferredLanguage({ perItem,
+  server, availableLanguages })`. Order: per-item `localStorage` → account
+  `preferred_{audio,subtitle}_language` → none. Values are matched against the
+  title's own wire languages by exact (case/whitespace-normalised) code, so an
+  absent or unmatched preference leaves today's behaviour byte-identical.
+- **`src/stores/useTrackPreferenceStore.ts`** — Pinia store bridging the ladder to
+  the network. `load(baseUrl)` GETs `…/users/me/settings` (fail-soft),
+  `getPerItem`/`setPerItem` use `phlix.trackPref.<kind>.<itemId>`, and
+  `persist(...)` writes per-item locally then best-effort PUTs the single language
+  field. Methods take an explicit `baseUrl` (mirrors `fetchPlaybackInfoTracks`) so
+  the two request sites stay `client.get`/`client.put` literals the route gate counts.
+- **Pages**: subtitles adopt the ladder default once when the user has no current
+  choice, then persist each pick; audio cannot be live-applied by the vendored store,
+  so it marks the remembered row while keeping its
+  `AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE` refusal — memory of a preference is kept
+  distinct from an impossible live switch.
 
 ## Streaming and device profile
 

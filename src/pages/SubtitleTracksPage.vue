@@ -25,6 +25,15 @@
  * That is the @phlix/ui boundary; extending it is a ui/contracts conversation,
  * not this client's call.
  *
+ * S511 (AD-18) — LANGUAGE PREFERENCE MEMORY. Because subtitle choice is a real
+ * observable effect here, this page both READS and WRITES the ladder: on load
+ * it adopts the per-item→server preferred subtitle language as the default (via
+ * `setSubtitle`, ONLY when the viewer has not already chosen this session, so
+ * absent preference stays byte-identical — AC2), and on select it persists the
+ * choice through `useTrackPreferenceStore` (existing settings endpoint, AC3).
+ * The account language rides `GET/PUT /api/v1/users/me/settings`; the literals
+ * live in the store, so this page's route-gate census stays untouched.
+ *
  * Route: /app/subtitle-tracks/:id  (registered via buildExtraRoutes in main.ts)
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
@@ -37,11 +46,13 @@ import { useApiBase, usePlayerStore } from '@phlix/ui';
 import type { SubtitleTrack } from '@phlix/contracts';
 import SubtitleTrackList from '../components/SubtitleTrackList.vue';
 import { fetchPlaybackInfoTracks } from './AudioTracksPage.vue';
+import { useTrackPreferenceStore } from '../stores/useTrackPreferenceStore';
 
 const route = useRoute();
 const router = useRouter();
 const apiBase = useApiBase();
 const playerStore = usePlayerStore();
+const trackPreference = useTrackPreferenceStore();
 
 const subtitleTracks = ref<SubtitleTrack[]>([]);
 const loading = ref(true);
@@ -77,6 +88,25 @@ async function loadSubtitleTracks(): Promise<void> {
     // no hand-map (S404 ruling; same shape discipline as the audio page).
     const response = await fetchPlaybackInfoTracks(apiBase.value, id);
     subtitleTracks.value = response.subtitle_tracks ?? [];
+
+    // S511: adopt the remembered language as the DEFAULT, but only when the
+    // viewer has not already chosen this session (`subtitleLang === null`).
+    // resolveDefault reads per-item memory + the account preference; when
+    // neither names an available row it returns null and we change nothing —
+    // AC2's byte-identical absent-preference path.
+    if (playerStore.subtitleLang === null) {
+      if (!trackPreference.loaded) {
+        await trackPreference.load(apiBase.value);
+      }
+      const resolved = trackPreference.resolveDefault(
+        id,
+        'subtitle',
+        subtitleTracks.value.map((t) => t.language),
+      );
+      if (resolved.language !== null) {
+        playerStore.setSubtitle(resolved.language);
+      }
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Failed to load subtitle tracks';
     subtitleTracks.value = [];
@@ -89,9 +119,18 @@ async function loadSubtitleTracks(): Promise<void> {
  * Dispatch the OBSERVABLE effect: hand the store the selected row's LANGUAGE
  * (the ui Player matches textTracks on it). `null` (the picker's "Off" row)
  * turns subtitles off. Then return to the player, where the change applies.
+ *
+ * S511: a real (non-off) choice is also remembered — per-item immediately and
+ * pushed to the account via the existing settings endpoint. Turning subtitles
+ * OFF is a session action, not a stored preference, so only a positive language
+ * is persisted.
  */
 function onSelectTrack(track: SubtitleTrack | null): void {
-  playerStore.setSubtitle(track?.language ?? null);
+  const language = track?.language ?? null;
+  playerStore.setSubtitle(language);
+  if (language !== null) {
+    void trackPreference.persist(apiBase.value, mediaId.value, 'subtitle', language);
+  }
   void router.back();
 }
 

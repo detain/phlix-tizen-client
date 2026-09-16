@@ -237,6 +237,7 @@ const PER_FILE_COVERAGE: Record<string, number> = {
   'src/pages/ChaptersPage.vue': 1,
   'src/pages/ParentalControlsPage.vue': 9,
   'src/screens/RecommendationsScreen.vue': 1,
+  'src/stores/useTrackPreferenceStore.ts': 2,
   'src/stores/useSyncPlayStore.ts': 6,
 };
 const TOTAL_SITES = Object.values(PER_FILE_COVERAGE).reduce((a, b) => a + b, 0);
@@ -263,6 +264,10 @@ export const S509_KEY_SEAM_TOKEN = 'S509KEYSEAMX9P5';
 // S510 hubRelay visible-window retry ladder ritual token — its ONLY code home is
 // this line (1 code home / 0 .md).
 export const S510_HUB_RETRY_TOKEN = 'S510HUBRETRYX9P5';
+
+// S511 per-item audio/subtitle language preference memory ritual token — its ONLY
+// code home is this line (1 code home / 0 .md).
+export const S511_LANG_MEMORY_TOKEN = 'S511LANGMEMX9P5';
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
