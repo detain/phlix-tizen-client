@@ -5,6 +5,23 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W110 (S509): global key handling — media keys + digit-key groundwork (AD-1)
+
+- **Tizen media keys now register.** On 2020+ Samsung TVs the webview silently
+  drops media-transport / channel / colour / Info keys unless the app declares
+  them through `tizen.tvinputdevice`. A new pure, fakeable seam
+  (`src/remote/registerKeys.ts`) registers that key set once at app-ready and
+  releases exactly those keys on teardown, and `installTizenBridge` drives it so
+  registration shares the bridge's install/cleanup pairing — no listener leak, no
+  parallel key pipeline. `KeyMapping` gains the codes the registration makes
+  reachable (`10252` → `PLAY_PAUSE`, `427`/`428` → `CHANNEL_UP`/`CHANNEL_DOWN`).
+  On a non-Tizen webview (browser dev) the `tizen` global is absent and
+  registration is a silent no-op, so the DOM keydown fallback stays authoritative.
+- **Digit-key routing groundwork.** The digit codes (`48`–`57`) are named
+  `DIGIT_0`–`DIGIT_9` and exposed via `KeyMapping.isDigit()`, giving a later
+  timed-commit buffer a stable token to route on. They are deliberately left out
+  of the immediate/handled sets, so typing into a search field is byte-identical.
+
 ### Changed — W105 (S500): vitest 3 → 5 test-runner migration (#83) — 2026-09-16
 
 - **Test-runner major bump, taken over by hand.** `vitest` and

@@ -8,6 +8,10 @@
  * owns D-pad navigation via its own `document` listener, and ENTER/click
  * is native focus activation. If RemoteManager also emitted/handled arrows
  * its key-repeat would fire phantom navigation actions on top of spatial-nav.
+ *
+ * S509 (AD-1) adds the 2020+ media-key codes the `tvinputdevice` registration
+ * now makes reachable (10252 → PLAY_PAUSE, 427/428 → CHANNEL_UP/DOWN) and names
+ * the digit keys DIGIT_0..9 as routing groundwork for a later commit buffer.
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
@@ -50,21 +54,33 @@ const KEY_MAP: Record<number, ActionName> = {
   18: 'INFO',
   113: 'TOOLS',
 
-  // Misc digits
-  48: '0',
-  49: '1',
-  50: '2',
-  51: '3',
-  52: '4',
-  53: '5',
-  54: '6',
-  55: '7',
-  56: '8',
-  57: '9',
+  // Digit keys (S509 groundwork): named DIGIT_0..DIGIT_9 so they route through the
+  // seam as stable, non-ambiguous tokens a consumer (the AD-22 timed commit buffer)
+  // can key on. Deliberately NOT in IMMEDIATE / HANDLED, so RemoteManager never
+  // preventDefaults them — a text input keeps typing "1984" byte-identically. They
+  // surface only via the keydown/keyup event's mappedKey, which is the groundwork.
+  48: 'DIGIT_0',
+  49: 'DIGIT_1',
+  50: 'DIGIT_2',
+  51: 'DIGIT_3',
+  52: 'DIGIT_4',
+  53: 'DIGIT_5',
+  54: 'DIGIT_6',
+  55: 'DIGIT_7',
+  56: 'DIGIT_8',
+  57: 'DIGIT_9',
 
   // Tizen specific
   66: 'PLAY_PAUSE',
-  79: 'OPTIONS'
+  79: 'OPTIONS',
+
+  // Media-transport / channel keys registered via `tvinputdevice` (S509): 10252 is
+  // the dedicated MediaPlayPause toggle (aliased onto PLAY_PAUSE); 427/428 are the
+  // NextChannel/PreviousChannel codes. PLAY/STOP/PAUSE/FF/REWIND/NEXT/PREVIOUS
+  // already resolve via the classic codes above, so only these two gaps are added.
+  10252: 'PLAY_PAUSE',
+  427: 'CHANNEL_UP',
+  428: 'CHANNEL_DOWN'
 };
 
 // Held-key repeat: FAST_FORWARD/REWIND accelerate seek when held. Arrow keys
@@ -94,7 +110,25 @@ const IMMEDIATE_ACTIONS: ReadonlySet<ActionName> = new Set([
   'MUTE',
   'MENU',
   'INFO',
-  'TOOLS'
+  'TOOLS',
+  'CHANNEL_UP',
+  'CHANNEL_DOWN'
+]);
+
+// Digit actions (S509 groundwork). Named + predicate-exposed so a consumer can
+// recognise them, but kept OUT of IMMEDIATE/HANDLED on purpose — they must not be
+// preventDefaulted while a text field has focus (see KEY_MAP digits note).
+const DIGIT_ACTIONS: ReadonlySet<ActionName> = new Set([
+  'DIGIT_0',
+  'DIGIT_1',
+  'DIGIT_2',
+  'DIGIT_3',
+  'DIGIT_4',
+  'DIGIT_5',
+  'DIGIT_6',
+  'DIGIT_7',
+  'DIGIT_8',
+  'DIGIT_9'
 ]);
 
 // Keys for which RemoteManager calls preventDefault. Arrows + ENTER are NOT
@@ -129,7 +163,19 @@ const DISPLAY_NAMES: Record<string, string> = {
   MENU: 'Menu',
   INFO: 'Info',
   TOOLS: 'Tools',
-  PLAY_PAUSE: 'Play/Pause'
+  PLAY_PAUSE: 'Play/Pause',
+  CHANNEL_UP: 'Channel Up',
+  CHANNEL_DOWN: 'Channel Down',
+  DIGIT_0: '0',
+  DIGIT_1: '1',
+  DIGIT_2: '2',
+  DIGIT_3: '3',
+  DIGIT_4: '4',
+  DIGIT_5: '5',
+  DIGIT_6: '6',
+  DIGIT_7: '7',
+  DIGIT_8: '8',
+  DIGIT_9: '9'
 };
 
 const KeyMapping = {
@@ -148,6 +194,11 @@ const KeyMapping = {
   /** Whether the action fires immediately on keydown. */
   isImmediate(action: ActionName): boolean {
     return IMMEDIATE_ACTIONS.has(action);
+  },
+
+  /** Whether the action is one of the named digit keys (S509 routing groundwork). */
+  isDigit(action: ActionName): boolean {
+    return DIGIT_ACTIONS.has(action);
   },
 
   /** Whether RemoteManager should preventDefault for this action. */

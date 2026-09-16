@@ -10,6 +10,7 @@ import { ref, type App as VueApp, type Ref } from 'vue';
 import remoteManager from './remote/RemoteManager';
 import type { ActionEvent } from './remote/RemoteManager';
 import type { ActionName } from './remote/KeyMapping';
+import { installRemoteKeyRegistration, type TizenLike } from './remote/registerKeys';
 
 // Minimal structural types for the pieces of the RemoteManager singleton, the
 // phlix-ui player store, the vue-router instance, and the current route that
@@ -266,8 +267,16 @@ export function wireTizenBridge(
  * the active pinia + router off the app's global properties, resolves the
  * player store, and delegates to the pure wiring helper. No-op safe if the
  * RemoteManager singleton is unavailable.
+ *
+ * S509 (AD-1): registers the 2020+ `tvinputdevice` media / channel / colour keys
+ * once here — at app-ready, alongside the rest of the bridge — and releases
+ * exactly those keys in the returned teardown (the same install/teardown pairing
+ * the route guard uses, so there is no listener leak). On a non-Tizen webview the
+ * ambient `tizen` global is absent and registration is a silent no-op; a
+ * `tizenLike` may be injected for tests. RemoteManager's DOM keydown fallback
+ * still handles every code that reaches it.
  */
-export function installTizenBridge(app: VueApp): () => void {
+export function installTizenBridge(app: VueApp, tizenLike?: TizenLike | null): () => void {
   const pinia = app.config.globalProperties.$pinia;
   const router = app.config.globalProperties.$router as unknown as {
     push: (to: string) => unknown;
@@ -315,9 +324,16 @@ export function installTizenBridge(app: VueApp): () => void {
         })
       : undefined;
 
+  // S509 — declare the 2020+ media / channel / colour keys with the platform now
+  // (app-ready). Returns a teardown releasing only what it acquired; a no-op when
+  // the `tizen` global is absent. Registered keys arrive as DOM keydowns that
+  // RemoteManager + KeyMapping already dispatch — no second pipeline.
+  const releaseRemoteKeys = installRemoteKeyRegistration(tizenLike);
+
   return () => {
     unwire();
     removeRouteGuard?.();
+    releaseRemoteKeys();
     // Never let the shared flag / suppression outlive the bridge itself.
     quality.deactivate();
     remoteManager.suppressPropagation = null;
