@@ -5,6 +5,20 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W110 (S510): hub-relay visible-window retry ladder (T-14)
+
+- **The relay no longer dies silently after five tries.** The hub-relay socket
+  (`src/api/hubRelay.ts`) previously gave up with a bare `closed` once its capped
+  reconnect ladder was spent — and a token whose mint was still in flight would
+  stay dead until the app was relaunched. Now, on exhaustion the module stops
+  background hammering entirely (no timer left armed) and waits for a single
+  edge back into the foreground: the next `visibilitychange` to `visible` re-asks
+  once, bounded again by the same capped ladder, so a wedged mint can never spin
+  an unbounded loop. A new transient `waiting-visible` status drives a single,
+  auto-dismissing, non-modal notice wired at boot, cleared the moment the socket
+  recovers. Hosts with no page-visibility signal (explicit `visibilitySource:
+  null`) keep the classic silent give-up byte-for-byte.
+
 ### Added — W110 (S509): global key handling — media keys + digit-key groundwork (AD-1)
 
 - **Tizen media keys now register.** On 2020+ Samsung TVs the webview silently

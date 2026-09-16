@@ -15,6 +15,19 @@ const fakeApp = {
   config: { globalProperties: { $pinia: fakePinia, $router: fakeRouter } }
 };
 const createPhlixApp = vi.fn(() => fakeApp);
+// S510 — the hub-relay transient status surface uses the shared @phlix/ui toast
+// store; fake it so we can assert the single, non-modal notice lifecycle.
+const toastWarning = vi.fn(() => 4242);
+const toastDismiss = vi.fn();
+const fakeToast = {
+  warning: toastWarning,
+  dismiss: toastDismiss,
+  info: vi.fn(() => 4242),
+  error: vi.fn(() => 4242),
+  success: vi.fn(() => 4242),
+  show: vi.fn(() => 4242),
+  clear: vi.fn()
+};
 // Stub the admin route builder + page main.ts pulls from @phlix/ui to assemble
 // its menu + extraRoutes; the builder returns a marker route so tests can assert it.
 const ADMIN_ROUTE = { path: '/app/admin/dashboard', name: 'admin-dashboard' };
@@ -25,6 +38,7 @@ vi.mock('@phlix/ui', () => ({
   usePlayerStore: vi.fn(() => ({})),
   useSpatialNav: vi.fn(),
   usePreferencesStore: vi.fn(() => ({ tv: true })),
+  useToastStore: () => fakeToast,
   // S500 vitest 3→5: vi.fn() mock is `new`-constructed by src/main.ts, and v4/v5
   // requires a function/class impl (an arrow impl is not a constructor).
   ApiClient: vi.fn(function () {
@@ -97,6 +111,8 @@ describe('boot (Tizen renderer entry)', () => {
     secondUse.mockClear().mockReturnValue(secondApp);
     resolveHubRelayConfigMock.mockClear().mockReturnValue(null);
     openHubRelayConnectionMock.mockClear();
+    toastWarning.mockClear().mockReturnValue(4242);
+    toastDismiss.mockClear();
     wirePendingPlayMediaDispatcherMock.mockClear().mockReturnValue(() => {});
     applyPendingPlayMediaMock.mockClear();
     vi.unstubAllEnvs();
@@ -242,6 +258,35 @@ describe('boot (Tizen renderer entry)', () => {
         resolveMedia: expect.any(Function)
       })
     );
+  });
+
+  it('S510: surfaces ONE transient, non-modal notice on waiting-visible and clears it on recovery', async () => {
+    const resolved = {
+      serverId: 'srv-abc123',
+      hubBaseUrl: 'http://hub-tv:8800',
+      tokenProvider: () => 'relay-tok'
+    };
+    resolveHubRelayConfigMock.mockReturnValue(resolved);
+
+    const mod = await import('@/main');
+    await mod.boot();
+
+    const openCfg = openHubRelayConnectionMock.mock.calls[0][0] as {
+      onStatusChange: (status: string) => void;
+    };
+    // Ladder exhausted → waiting-visible: exactly one auto-dismissing warning.
+    openCfg.onStatusChange('waiting-visible');
+    expect(toastWarning).toHaveBeenCalledTimes(1);
+    expect(toastWarning.mock.calls[0][1]).toEqual(expect.objectContaining({ duration: 6000 }));
+    // A repeat waiting-visible must NOT stack a second notice (single surface).
+    openCfg.onStatusChange('waiting-visible');
+    expect(toastWarning).toHaveBeenCalledTimes(1);
+    // Any live status clears the transient notice (it never persists as a modal).
+    openCfg.onStatusChange('open');
+    expect(toastDismiss).toHaveBeenCalledWith(4242);
+    // A fresh exhaustion starts one new notice.
+    openCfg.onStatusChange('waiting-visible');
+    expect(toastWarning).toHaveBeenCalledTimes(2);
   });
 
   it('S298: opens NOTHING when no hub context resolves (honest no-app-open state)', async () => {

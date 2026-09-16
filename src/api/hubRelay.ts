@@ -36,6 +36,15 @@
  *   attempt because relay tokens expire (1h default); the ladder is capped and
  *   self-terminating.
  *
+ * - **Visible-window retry (S510 / T-14)** — when the capped ladder is spent the
+ *   module STOPS background hammering entirely (no timer left armed) and instead
+ *   awaits a single edge back into the foreground: on the next `visibilitychange`
+ *   where the page becomes `visible` it re-asks once, bounded again by the same
+ *   capped ladder (so a wedged mint can never spin an unbounded loop). During
+ *   that dormant wait it surfaces the transient `'waiting-visible'` status for a
+ *   non-blocking indicator — never a modal. An explicit `visibilitySource: null`
+ *   (no DOM, e.g. a headless host) preserves the old silent-`'closed'` give-up.
+ *
  * The module holds its connection in module-level state, mirroring
  * `src/api/syncplay.ts` and the ui's `hubRelay.ts`, so the app boots it once
  * via `openHubRelayConnection()` and the store/player react to delivered
@@ -48,8 +57,28 @@
 /** The hub relay's SyncPlay WebSocket port (SyncPlayRelayWorker::DEFAULT_PORT). */
 export const HUB_SYNC_PLAY_PORT = 8804;
 
-/** Connection states surfaced via `onStatusChange`. */
-export type HubRelayStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
+/**
+ * Connection states surfaced via `onStatusChange`.
+ *
+ * `'waiting-visible'` (S510) is the dormant state reached when the capped
+ * reconnect ladder is spent: no background attempt is armed, and the next
+ * foreground edge (`visibilitychange` → `visible`) re-asks once under the same
+ * bounded ladder. Treat it as "paused, will resume when you look again".
+ */
+export type HubRelayStatus = 'connecting' | 'open' | 'reconnecting' | 'closed' | 'waiting-visible';
+
+/**
+ * The minimal `document` surface the S510 visible-window retry listens on.
+ *
+ * Structural (not `Document`) so a unit test can hand in a fake emitter with a
+ * settable `visibilityState` and a `dispatch()` — the same fake-injection
+ * doctrine as {@link installRemoteKeyRegistration}'s `tizenLike`.
+ */
+export interface HubRelayVisibilitySource {
+  readonly visibilityState: string;
+  addEventListener(type: 'visibilitychange', listener: () => void): void;
+  removeEventListener(type: 'visibilitychange', listener: () => void): void;
+}
 
 /**
  * One delivered `pending_command` / `play_media` frame (S93's shape, emitted by
@@ -92,6 +121,13 @@ export interface HubRelayConfig {
   tokenProvider: () => string | null;
   /** Tizen extension — see {@link HubRelayConfig.tokenProvider}. */
   canRetryToken?: () => boolean;
+  /**
+   * S510 — the visibility source for the visible-window retry, defaulted to the
+   * global `document`. Pass a fake in tests; pass `null` to opt out entirely
+   * (a headless host with no page-visibility signal) and get the classic
+   * silent-`'closed'` give-up when the ladder is spent.
+   */
+  visibilitySource?: HubRelayVisibilitySource | null;
   /**
    * Hub base origin, e.g. `http://192.168.1.50:8800`. The relay listens on port
    * 8804 regardless of this origin's own port. Tizen has no same-origin layout
@@ -335,6 +371,12 @@ let hubWs: WebSocket | null = null;
 let hubConfig: HubRelayConfig | null = null;
 let hubReconnectAttempts = 0;
 let hubReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+/**
+ * S510 — the teardown that removes the armed `visibilitychange` listener, or
+ * `null` when no visible-window retry is waiting. Its mere presence is the
+ * "already armed" latch: {@link armVisibleWindowRetry} never double-listens.
+ */
+let hubVisibilityCleanup: (() => void) | null = null;
 
 function setStatus(status: HubRelayStatus): void {
   hubConfig?.onStatusChange?.(status);
@@ -367,6 +409,9 @@ export function openHubRelayConnection(config: HubRelayConfig): void {
     hubWs = null;
   }
   hubConfig = config;
+  // A caller-initiated open (boot, or re-pointing at another server) supersedes
+  // any dormant S510 wait — release that listener before starting fresh.
+  disarmVisibleWindowRetry();
   if (hubReconnectTimer !== null) {
     clearTimeout(hubReconnectTimer);
     hubReconnectTimer = null;
@@ -416,6 +461,7 @@ function connectHubRelaySocket(): void {
 
   socket.onopen = () => {
     hubReconnectAttempts = 0;
+    disarmVisibleWindowRetry(); // recovered — drop any dormant wait (defensive; S510)
     setStatus('open');
   };
 
@@ -447,11 +493,61 @@ function connectHubRelaySocket(): void {
   };
 }
 
+/**
+ * Resolve the S510 visibility source: an explicit config value wins (including
+ * `null` = opted out); otherwise the global `document` when one exists, else
+ * `null`. Read at arm-time so a fake handed to the config is honored per-call.
+ */
+function resolveVisibilitySource(): HubRelayVisibilitySource | null {
+  const configured = hubConfig?.visibilitySource;
+  if (configured !== undefined) return configured;
+  return typeof document !== 'undefined' ? (document as unknown as HubRelayVisibilitySource) : null;
+}
+
+/**
+ * Release the armed `visibilitychange` listener, if any. Idempotent — safe to
+ * call from every reset point (open, open-on-success, close, and the handler
+ * itself) so a listener can never outlive the wait it was armed for (house
+ * listener-paired law).
+ */
+function disarmVisibleWindowRetry(): void {
+  hubVisibilityCleanup?.();
+  hubVisibilityCleanup = null;
+}
+
+/**
+ * S510 — after the capped ladder is spent, stop background hammering and wait
+ * for ONE edge back into the foreground, then re-ask under the same bounded
+ * ladder. Surfaces the transient `'waiting-visible'` status; with no visibility
+ * source available it falls back to the classic silent `'closed'` give-up.
+ */
+function armVisibleWindowRetry(): void {
+  if (hubVisibilityCleanup !== null) return; // already waiting — never double-listen
+  const source = resolveVisibilitySource();
+  if (!source) {
+    setStatus('closed');
+    return;
+  }
+  setStatus('waiting-visible');
+  const onVisibilityChange = () => {
+    if (source.visibilityState !== 'visible') return; // only a hidden→visible edge re-asks
+    disarmVisibleWindowRetry();
+    if (!hubConfig || hubWs !== null) return; // a newer connection superseded this wait
+    connectHubRelaySocket(); // one bounded ladder per visible window
+  };
+  source.addEventListener('visibilitychange', onVisibilityChange);
+  hubVisibilityCleanup = () => source.removeEventListener('visibilitychange', onVisibilityChange);
+}
+
 function scheduleHubReconnect(): void {
   if (!hubConfig || hubWs !== null) return;
   if (hubReconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    setStatus('closed');
+    // S510 — the ladder is spent. Stop hammering in the background entirely and
+    // wait for one edge back into the foreground to re-ask (bounded again). The
+    // attempt budget is replenished so the next visible window gets a fresh
+    // capped ladder; if no visibility source exists this is the old silent close.
     hubReconnectAttempts = 0;
+    armVisibleWindowRetry();
     return;
   }
   const delay = RECONNECT_BASE_DELAY_MS * 2 ** hubReconnectAttempts;
@@ -467,6 +563,7 @@ function scheduleHubReconnect(): void {
  * Close the hub relay socket and stop the reconnect ladder.
  */
 export function closeHubRelayConnection(): void {
+  disarmVisibleWindowRetry(); // S510 — release any dormant foreground wait
   if (hubReconnectTimer !== null) {
     clearTimeout(hubReconnectTimer);
     hubReconnectTimer = null;
