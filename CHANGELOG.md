@@ -99,6 +99,23 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   case, an edit→PUT verb+URL+body tuple pin, and a tripwire that reddens if the
   edit ever regresses to POST. Suite stands at 338 tests across 25 files.
 
+### Changed — W109 (S503): config.xml privilege/feature hygiene bundle (AD-5 + T-20) — 2026-09-16
+
+- **Manifest over-claims pruned to what the code uses.** `app/config.xml` drops
+  the five privileges with zero backing `tizen.*`/`webapis` usage anywhere in
+  the repo (`tv.window`, `tv.audio`, `network.get`, `application.launch`,
+  `filesystem.read`) and keeps the two the widget actually needs
+  (`internet`; `tv.inputdevice`, retained on the AD-1 expectation).
+- **Adopted features added.** `<tizen:profile name="tv-samsung"/>` (the TV
+  profile this app already builds for — `deviceType: 'samsung-tizen'`) and
+  `hwkey-event="enable"` on `<tizen:setting>`, which is what delivers the
+  hardware BACK key as a key event to the `KeyMapping`/`RemoteManager` bridge
+  that already maps key code 10009 to BACK. One PR, net diff justified
+  line-by-line; no future privileges pre-added — those arrive with their
+  features.
+- Docs re-derived from the manifest (CLAUDE.md/README privilege lists). The
+  change flows into `package/config.xml` via `scripts/package.js` (T-02).
+
 ### Changed — W93 (cs46a): route-manifest PROVENANCE re-vendor (404 tuples — route bytes unmoved) — 2026-09-15
 
 - **cs#46 currency re-vendor (lane cs46a).** Vendored
