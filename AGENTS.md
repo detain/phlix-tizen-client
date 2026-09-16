@@ -56,7 +56,7 @@ No webpack, no Babel, no Jest.
 
 ## Tests
 
-Vitest + jsdom + `@vue/test-utils` (`tests/unit/*.test.ts`, flat `src/` tree). Suites: `resolveConfig`, `deviceId`, `polyfills`, `tizenBridge`, `SpatialNavHost`, `RemoteManager`, `KeyMapping`, `ChapterOverlay`, `SkipIntroOverlay`, `SubtitleTrackList`, `useMusicStore`, `useSyncPlayStore`, `syncPlayWireShape`, `hubRelay`, `syncplayDispatch`, `RouteWireShape`, `TrackWireShape`, `TrackApplyBoundary`, `ParentalControlsWireShape`, `routeManifest.gate`, `main`. SFC suites mock `@phlix/ui` (`ApiClient`, `useApiBase`, `usePlayerStore`) and `vue-router` via `vi.hoisted`. `routeManifest.gate` pins every client request URL tuple-exact against the vendored `tests/fixtures/server-route-manifest.json` — adding or moving a request site means updating its per-file coverage count there.
+Vitest + jsdom + `@vue/test-utils` (`tests/unit/*.test.ts`, flat `src/` tree). Suites (25 files): `resolveConfig`, `deviceId`, `polyfills`, `tizenBridge`, `SpatialNavHost`, `RemoteManager`, `KeyMapping`, `ChapterOverlay`, `SkipIntroOverlay`, `SubtitleTrackList`, `useMusicStore`, `RatingBadge`, `RatingModal`, `UserRatingPicker`, `useSyncPlayStore`, `syncPlayWireShape`, `syncPlayMigration`, `hubRelay`, `syncplayDispatch`, `RouteWireShape`, `TrackWireShape`, `TrackApplyBoundary`, `ParentalControlsWireShape`, `routeManifest.gate`, `main`. SFC suites mock `@phlix/ui` (`ApiClient`, `useApiBase`, `usePlayerStore`) and `vue-router` via `vi.hoisted`. `routeManifest.gate` pins every client request URL tuple-exact against the vendored `tests/fixtures/server-route-manifest.json` — adding or moving a request site means updating its per-file coverage count there.
 
 ```bash
 npx vitest run tests/unit/ChapterOverlay.test.ts
