@@ -10,7 +10,7 @@ import { createApp } from 'vue';
 import type { Pinia } from 'pinia';
 import type { MenuItem, MediaItem } from '@phlix/ui';
 import type { RouteRecordRaw } from 'vue-router';
-import { createPhlixApp, buildAdminRoutes, LibraryScanPage, ApiClient, LocalStorageTokenStore, usePlayerStore } from '@phlix/ui';
+import { createPhlixApp, buildAdminRoutes, LibraryScanPage, ApiClient, LocalStorageTokenStore, usePlayerStore, useToastStore } from '@phlix/ui';
 import { buildPhlixHeaders } from '@phlix/contracts';
 import '@phlix/ui/style.css';
 import '@phlix/ui/fonts.css';
@@ -193,9 +193,29 @@ function wireHubRelayConsumer(
   if (!hubRelay) return;
 
   const syncPlay = useSyncPlayStore(pinia);
+  const toast = useToastStore(pinia);
+  // S510 — the hub-relay ladder can exhaust while the TV is backgrounded. The
+  // module then sleeps (no hammering) and surfaces the transient 'waiting-visible'
+  // status; we reflect that as a SINGLE auto-dismissing, non-modal notice and drop
+  // it the moment the socket recovers to any live state. Never a modal.
+  let hubPausedNoticeId: number | null = null;
   openHubRelayConnection({
     ...hubRelay,
     onPendingCommand: (command) => syncPlay.applyPendingPlayMedia(command),
+    onStatusChange: (status) => {
+      if (status === 'waiting-visible') {
+        if (hubPausedNoticeId === null) {
+          hubPausedNoticeId = toast.warning('Hub connection paused — resumes when you open the app again', {
+            duration: 6000,
+          });
+        }
+        return;
+      }
+      if (hubPausedNoticeId !== null) {
+        toast.dismiss(hubPausedNoticeId);
+        hubPausedNoticeId = null;
+      }
+    },
   });
 
   const client = new ApiClient({

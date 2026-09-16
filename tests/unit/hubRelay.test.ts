@@ -94,6 +94,43 @@ function socket(): FakeWebSocket {
   return s;
 }
 
+// ── the fake visibility source (S510) ─────────────────────────────────────────
+
+/**
+ * Fake `document` page-visibility emitter for the S510 visible-window retry —
+ * settable `visibilityState`, a `dispatch()` that fires the registered
+ * `visibilitychange` listeners, and an `addCount`/`removeCount` to prove the
+ * listener is paired (armed once, released on every reset point).
+ */
+class FakeVisibilitySource {
+  visibilityState = 'hidden';
+  listeners: Array<() => void> = [];
+  addCount = 0;
+  removeCount = 0;
+
+  addEventListener(type: 'visibilitychange', listener: () => void): void {
+    this.listeners.push(listener);
+    this.addCount++;
+  }
+
+  removeEventListener(type: 'visibilitychange', listener: () => void): void {
+    this.listeners = this.listeners.filter((l) => l !== listener);
+    this.removeCount++;
+  }
+
+  /** Simulate a hidden→visible foreground edge. */
+  becomeVisible(): void {
+    this.visibilityState = 'visible';
+    for (const l of [...this.listeners]) l();
+  }
+}
+
+function visSource(over: Partial<FakeVisibilitySource> = {}): FakeVisibilitySource {
+  const s = new FakeVisibilitySource();
+  Object.assign(s, over);
+  return s;
+}
+
 function pendingCommand(over: Partial<PendingPlayMediaCommand> = {}): PendingPlayMediaCommand {
   return {
     type: 'pending_command',
@@ -556,13 +593,14 @@ describe('openHubRelayConnection — the open-whenever lifecycle', () => {
     expect(onStatusChange).toHaveBeenLastCalledWith('closed');
   });
 
-  it('a mint that NEVER lands exhausts the capped ladder, then stays closed (no 6th attempt)', () => {
+  it('a mint that NEVER lands exhausts the capped ladder, then waits for a visible window (no 6th background attempt)', () => {
     vi.useFakeTimers();
     // Mint in flight forever: every provider call returns null (canRetry true).
     const tokenProvider = vi.fn(() => null);
     const canRetryToken = () => true;
     const onStatusChange = vi.fn();
-    openHubRelayConnection(config({ tokenProvider, canRetryToken, onStatusChange }));
+    const source = visSource();
+    openHubRelayConnection(config({ tokenProvider, canRetryToken, onStatusChange, visibilitySource: source }));
     expect(FakeWebSocket.instances).toHaveLength(0);
 
     // Rungs 1..5 at 1s,2s,4s,8s,16s — exactly 5 re-asks (the initial + 5).
@@ -573,20 +611,23 @@ describe('openHubRelayConnection — the open-whenever lifecycle', () => {
     vi.advanceTimersByTime(16000);
     expect(tokenProvider).toHaveBeenCalledTimes(6); // 1 initial + 5 rungs
 
-    // Ladder spent — status closed, no further re-asks.
+    // Ladder spent — S510: no BACKGROUND hammering, transient wait surfaced,
+    // exactly one foreground listener armed (re-ask happens only on a visible edge).
     vi.advanceTimersByTime(60_000);
     expect(tokenProvider).toHaveBeenCalledTimes(6);
     expect(FakeWebSocket.instances).toHaveLength(0);
-    expect(onStatusChange).toHaveBeenLastCalledWith('closed');
+    expect(onStatusChange).toHaveBeenLastCalledWith('waiting-visible');
+    expect(source.addCount).toBe(1);
   });
 
-  it('a malformed hub URL with a valid token never throws — laddered, bounded, ends closed', () => {
+  it('a malformed hub URL with a valid token never throws — laddered, bounded, ends in the visible-window wait', () => {
     vi.useFakeTimers();
     // A hand-built config (bypassing resolveHubRelayConfig's boundary parse)
     // with garbage hubBaseUrl: `new URL()` inside connect throws → ladder.
     const onStatusChange = vi.fn();
+    const source = visSource();
     openHubRelayConnection(
-      config({ hubBaseUrl: 'not a url', tokenProvider: () => 'tok-123', onStatusChange }),
+      config({ hubBaseUrl: 'not a url', tokenProvider: () => 'tok-123', onStatusChange, visibilitySource: source }),
     );
     expect(FakeWebSocket.instances).toHaveLength(0); // constructor never reached
 
@@ -598,7 +639,7 @@ describe('openHubRelayConnection — the open-whenever lifecycle', () => {
     vi.advanceTimersByTime(60_000);
 
     expect(FakeWebSocket.instances).toHaveLength(0);
-    expect(onStatusChange).toHaveBeenLastCalledWith('closed');
+    expect(onStatusChange).toHaveBeenLastCalledWith('waiting-visible');
     expect(getHubRelaySocket()).toBeNull();
   });
 
@@ -678,5 +719,102 @@ describe('openHubRelayConnection — the open-whenever lifecycle', () => {
     closeHubRelayConnection();
     vi.advanceTimersByTime(60_000);
     expect(FakeWebSocket.instances).toHaveLength(2); // only the two opens
+  });
+});
+
+// ── S510 — visible-window retry (T-14) ────────────────────────────────────────
+
+describe('openHubRelayConnection — S510 visible-window retry', () => {
+  /** Drive a never-landing mint to ladder exhaustion (initial + 5 rungs). */
+  function exhaust(source: FakeVisibilitySource, over: Record<string, unknown> = {}) {
+    const tokenProvider = vi.fn(() => null);
+    const canRetryToken = () => true;
+    const onStatusChange = vi.fn();
+    openHubRelayConnection(config({ tokenProvider, canRetryToken, onStatusChange, visibilitySource: source, ...over }));
+    for (const ms of [1000, 2000, 4000, 8000, 16000]) vi.advanceTimersByTime(ms);
+    return { tokenProvider, canRetryToken, onStatusChange };
+  }
+
+  it('exhaustion arms exactly ONE foreground listener and stops background hammering', () => {
+    vi.useFakeTimers();
+    const source = visSource();
+    const { tokenProvider, onStatusChange } = exhaust(source);
+    expect(onStatusChange).toHaveBeenLastCalledWith('waiting-visible');
+    expect(source.addCount).toBe(1);
+    expect(source.listeners).toHaveLength(1);
+    // Spending far more background time re-asks nothing — the wait is passive.
+    vi.advanceTimersByTime(600_000);
+    expect(tokenProvider).toHaveBeenCalledTimes(6); // still 1 initial + 5 rungs
+    expect(FakeWebSocket.instances).toHaveLength(0);
+  });
+
+  it('a foreground edge re-asks once and opens when the token finally lands', () => {
+    vi.useFakeTimers();
+    let foreground = false;
+    const source = visSource();
+    const tokenProvider = vi.fn(() => (foreground ? 'tok-live' : null));
+    const onStatusChange = vi.fn();
+    openHubRelayConnection(config({ tokenProvider, canRetryToken: () => true, onStatusChange, visibilitySource: source }));
+    for (const ms of [1000, 2000, 4000, 8000, 16000]) vi.advanceTimersByTime(ms);
+    expect(onStatusChange).toHaveBeenLastCalledWith('waiting-visible');
+
+    foreground = true;
+    source.becomeVisible();
+    expect(tokenProvider).toHaveBeenCalledTimes(7); // +1 re-ask on the visible edge
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(source.removeCount).toBe(1); // the listener is released as it fires
+    socket().connect();
+    expect(onStatusChange).toHaveBeenLastCalledWith('open');
+  });
+
+  it('a visibilitychange while still hidden does NOT re-ask', () => {
+    vi.useFakeTimers();
+    const source = visSource();
+    const { tokenProvider } = exhaust(source);
+    const before = tokenProvider.mock.calls.length;
+    source.visibilityState = 'hidden';
+    for (const l of [...source.listeners]) l(); // fire the event with state still hidden
+    expect(tokenProvider).toHaveBeenCalledTimes(before);
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(source.removeCount).toBe(0); // still waiting
+  });
+
+  it('a visible re-ask that still cannot connect re-arms ONE bounded wait (no infinite loop)', () => {
+    vi.useFakeTimers();
+    const source = visSource();
+    exhaust(source); // waiting-visible, addCount 1
+    source.becomeVisible(); // re-ask → token still null → schedules a fresh bounded ladder
+    for (const ms of [1000, 2000, 4000, 8000, 16000]) vi.advanceTimersByTime(ms);
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(source.addCount).toBe(2); // armed a second single listener
+    expect(source.listeners).toHaveLength(1); // the first was removed → never two live
+    expect(source.removeCount).toBe(1);
+  });
+
+  it('closing during the wait releases the listener; a later foreground never resurrects it', () => {
+    vi.useFakeTimers();
+    const source = visSource();
+    const { tokenProvider } = exhaust(source);
+    closeHubRelayConnection();
+    expect(source.removeCount).toBe(1);
+    const before = tokenProvider.mock.calls.length;
+    source.becomeVisible();
+    expect(tokenProvider).toHaveBeenCalledTimes(before); // no resurrection after close
+  });
+
+  it('a fresh open supersedes a dormant wait (listener released)', () => {
+    vi.useFakeTimers();
+    const source = visSource();
+    exhaust(source);
+    openHubRelayConnection(config({ visibilitySource: source })); // hubWs null → proceeds
+    expect(source.removeCount).toBe(1);
+  });
+
+  it("visibilitySource:null opts out → exhaustion is the classic silent 'closed'", () => {
+    vi.useFakeTimers();
+    const source = visSource(); // unused — proving null wins over the default
+    const { onStatusChange } = exhaust(source, { visibilitySource: null });
+    expect(onStatusChange).toHaveBeenLastCalledWith('closed');
+    expect(source.addCount).toBe(0);
   });
 });

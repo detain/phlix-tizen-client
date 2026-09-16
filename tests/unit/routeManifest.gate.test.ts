@@ -260,6 +260,10 @@ export const S503_CONFIG_HYGIENE_TOKEN = 'S503CONFMASKX9P2';
 // code home is this line (1 code home / 0 .md).
 export const S509_KEY_SEAM_TOKEN = 'S509KEYSEAMX9P5';
 
+// S510 hubRelay visible-window retry ladder ritual token — its ONLY code home is
+// this line (1 code home / 0 .md).
+export const S510_HUB_RETRY_TOKEN = 'S510HUBRETRYX9P5';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('c9c551e0506a742220c17a34022d4a2f497e6989');
