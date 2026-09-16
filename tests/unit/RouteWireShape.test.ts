@@ -132,10 +132,12 @@ describe('AudioTracksPage — playback-info wire shape (S280)', () => {
     };
     const wrapper = mountPage('m7');
     await flushPromises();
-    // S407 pin: EXACTLY ONE playback-info call (the shared loader). S511 adds a
-    // fail-soft account-settings read on load, so filter to the rail under test.
-    expect(h.calls.filter((c) => c.includes('/playback-info'))).toEqual([
+    // S407 pin: the shared playback-info loader fires exactly once. S511 adds a
+    // fail-soft account-preference read, so pin the FULL call list in await order
+    // (playback-info first, then settings) — no other GET may slip in unnoticed.
+    expect(h.calls).toEqual([
       '/api/v1/media/m7/playback-info',
+      '/api/v1/users/me/settings',
     ]);
     const tracks = wrapper.findComponent(AudioTrackList).props('tracks');
     // S404: the page types the rows as the playback-info WIRE AudioTrack
@@ -213,10 +215,13 @@ describe('SubtitleTracksPage — S407 playback-info consumer (observable effect)
     const wrapper = mountPage('m1');
     await flushPromises();
     // Same literal the audio page uses — ONE shared loader, no second copy.
-    // (S511's fail-soft settings read is filtered out; the pin is that the
-    // playback-info rail is called exactly once, not that it is the ONLY GET.)
-    expect(h.calls.filter((c) => c.includes('/playback-info'))).toEqual([
+    // S511's fail-soft account-preference read is the ONLY other GET on load
+    // (subtitleLang is null here, so the default ladder runs). Pin the FULL call
+    // list in await order — playback-info first, then settings — so the local
+    // "no other request happens" bite stays sharp.
+    expect(h.calls).toEqual([
       '/api/v1/media/m1/playback-info',
+      '/api/v1/users/me/settings',
     ]);
     const tracks = wrapper.findComponent(SubtitleTrackList).props('tracks');
     expect(tracks).toEqual(S407_SUBTITLE_TRACKS);
