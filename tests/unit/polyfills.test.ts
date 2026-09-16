@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // The polyfills module must be imported first before any @phlix/ui code
 // Since structuredClone exists in Node.js 22+ / jsdom, the fallback branch
@@ -150,6 +150,59 @@ describe('polyfills', () => {
         expect(cloned).not.toBe(original);
         expect(cloned.b).not.toBe(original.b);
       }
+    });
+  });
+
+  // S501 T-11: exercise the REAL @/polyfills module (the suites above re-implement
+  // the fallback inline, so they never import src/polyfills.ts → it sat at 0% coverage).
+  describe('src/polyfills.ts module wiring', () => {
+    const nativeStructuredClone = globalThis.structuredClone;
+
+    afterEach(() => {
+      // Restore the native implementation + a clean registry so no other suite is affected.
+      Object.defineProperty(globalThis, 'structuredClone', {
+        value: nativeStructuredClone,
+        configurable: true,
+        writable: true,
+      });
+      vi.resetModules();
+    });
+
+    it('installs the JSON fallback when native structuredClone is absent', async () => {
+      vi.resetModules();
+      Object.defineProperty(globalThis, 'structuredClone', {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      });
+
+      await import('@/polyfills');
+
+      expect(typeof globalThis.structuredClone).toBe('function');
+
+      const original = { a: 1, b: { c: [1, 2, 3] } };
+      const cloned = globalThis.structuredClone(original);
+      expect(cloned).toEqual(original);
+      // Deep-cloned, not the same reference.
+      expect(cloned.b).not.toBe(original.b);
+      expect(cloned.b.c).not.toBe(original.b.c);
+    });
+
+    it('does not overwrite an already-present native structuredClone', async () => {
+      vi.resetModules();
+      const sentinel = function sentinelStructuredClone() {
+        /* marker */
+      } as unknown as typeof globalThis.structuredClone;
+      Object.defineProperty(globalThis, 'structuredClone', {
+        value: sentinel,
+        configurable: true,
+        writable: true,
+      });
+
+      await import('@/polyfills');
+
+      // Guard is `typeof !== 'function'`; a function is present → no-op.
+      expect(globalThis.structuredClone).toBe(sentinel);
     });
   });
 });

@@ -31,8 +31,8 @@ jobs:
       - name: Install dependencies
         run: npm ci --allow-git=all
 
-      - name: Run unit tests
-        run: npm run test
+      - name: Run unit tests (with coverage floor gate — S501 T-13)
+        run: npx vitest run --coverage
 
       - name: Upload test results
         if: always()
