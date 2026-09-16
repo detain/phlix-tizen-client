@@ -5,6 +5,25 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W111 (S515): boot-reachability probe + branded CSS splash (AD-3)
+
+- **A set-but-unreachable server no longer boots into silence.** The
+  first-run Connect screen only appeared when NO server base was configured; a
+  stale or dead one now gets probed before the app commits: a new pure
+  `src/bootProbe.ts` wraps `@phlix/ui`'s exported `probeServer` (public
+  unauthenticated `GET {base}/health`, 6 s abort, loose body rule — the server
+  response shape is not hard-asserted and the server stays untouched). On a
+  failed probe the app boots NON-fatally: the persisted URL and the resolved
+  base are kept for a retry, and a one-shot pre-mount route intercept lands
+  the viewer on the existing D-pad-operable Connect screen, whose "Connect
+  anyway" keeps CORS-restricted back ends fully usable. An empty base skips
+  the probe entirely — first-run behavior is byte-identical. The root
+  `index.html` now inlines a CSS-only branded splash (nocturne-dark field,
+  amber accent, breathing "Booting" hint) that paints before any JS and
+  retires declaratively the moment Vue mounts — or when the T-09 boot-failure
+  guard writes its message — so the TV never shows a white screen during the
+  probe window.
+
 ### Added — W110 (S511): per-item audio/subtitle language preference memory (AD-18)
 
 - **The track pages now remember.** Both `AudioTracksPage` and `SubtitleTracksPage`
