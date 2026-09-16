@@ -25,8 +25,14 @@ vi.mock('@phlix/ui', () => ({
   usePlayerStore: vi.fn(() => ({})),
   useSpatialNav: vi.fn(),
   usePreferencesStore: vi.fn(() => ({ tv: true })),
-  ApiClient: vi.fn(() => ({ get: vi.fn() })),
-  LocalStorageTokenStore: vi.fn(() => ({}))
+  // S500 vitest 3→5: vi.fn() mock is `new`-constructed by src/main.ts, and v4/v5
+  // requires a function/class impl (an arrow impl is not a constructor).
+  ApiClient: vi.fn(function () {
+    return { get: vi.fn() };
+  }),
+  LocalStorageTokenStore: vi.fn(function () {
+    return {};
+  })
 }));
 
 const FAKE_HEADERS = { 'X-Phlix-Device-ID': 'dev', 'X-Phlix-Device-Type': 'samsung-tizen' };

@@ -43,12 +43,17 @@ vi.mock('vue-router', () => ({
 vi.mock('@phlix/ui', () => ({
   useApiBase: () => ({ value: 'https://api.example.com' }),
   usePlayerStore: () => h.player,
-  ApiClient: vi.fn().mockImplementation(() => ({
-    get: vi.fn(async (url: string) => {
-      h.calls.push(url);
-      return h.responses[url] ?? {};
-    }),
-  })),
+  // S500 vitest 3→5: components `new ApiClient(...)`, and v4/v5 requires a
+  // function/class mock impl (an arrow impl is not a constructor). The inner
+  // `get` stays an arrow — it is called as a method, never constructed.
+  ApiClient: vi.fn(function () {
+    return {
+      get: vi.fn(async (url: string) => {
+        h.calls.push(url);
+        return h.responses[url] ?? {};
+      }),
+    };
+  }),
 }));
 
 import UpNextOverlay from '@/components/UpNextOverlay.vue';
