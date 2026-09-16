@@ -19,9 +19,10 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24.x
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci --allow-git=all
 
       - name: Run ESLint
         run: npm run lint
@@ -41,14 +42,15 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24.x
+          cache: 'npm'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci --allow-git=all
 
       - name: Build project
         run: npm run build
 
-      - name: Build sideload package (dist + config.xml → package/)
+      - name: Build sideload package (dist + config.xml + icon.png → package/)
         run: node scripts/package.js
 
       - name: Upload sideload package

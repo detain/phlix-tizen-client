@@ -5,7 +5,7 @@ Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phl
 ## Commands
 
 ```bash
-npm install              # package-lock.json gitignored — CI uses `npm install`
+npm ci --allow-git=all   # reproducible install from the committed package-lock.json (W105 T-01); CI uses this
 npm run dev              # vite dev server :8080
 npm run build            # vue-tsc --noEmit && vite build → dist/
 npm run typecheck        # vue-tsc --noEmit

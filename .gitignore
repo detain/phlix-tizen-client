@@ -1,5 +1,4 @@
 .logs
-package-lock.json
 node_modules
 dist
 
@@ -9,3 +8,11 @@ dist
 # Test coverage output (S409: build artifacts must not be tracked — a
 # stale committed copy actively poisoned greps with pre-S404 renderings)
 coverage/
+
+# package-lock.json is TRACKED (audit W105 T-01). It is dependency *resolution
+# metadata*, not a build artifact, so the S409 "no committed artifacts" policy
+# above does not apply to it. Committing it is what makes `npm ci` possible from
+# a clean clone and pins the `github:detain/*` git-deps to exact commit SHAs —
+# without it every CI install is a floating resolve that a tag retag could shift.
+# The lockfile MUST be regenerated (`npm install`) whenever a pin in package.json
+# changes, then committed alongside it.
