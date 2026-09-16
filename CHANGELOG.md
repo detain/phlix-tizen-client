@@ -5,6 +5,84 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W105 (S500): vitest 3 → 5 test-runner migration (#83) — 2026-09-16
+
+- **Test-runner major bump, taken over by hand.** `vitest` and
+  `@vitest/coverage-v8` advance to the 5 line, superseding a Dependabot vitest-5
+  PR that had sat open across the wave — the migration is done manually so the
+  suite is proven green rather than the automation rubber-stamped, and the
+  vitest-locked peers are realigned in the same change. The one genuine breakage
+  is mock-factory constructibility: vitest 4/5 no longer treats a `vi.fn()` given
+  an arrow implementation as constructible, yet `src/main.ts` and the wire-shape
+  components do `new ApiClient(…)` / `new LocalStorageTokenStore(…)` against
+  exactly those stubs — so the two mock factories in `tests/unit/main.test.ts`
+  and `tests/unit/RouteWireShape.test.ts` are re-authored as `function()` impls
+  that stay newable. Zero behavior change; the suite passes identically across
+  the bump.
+
+### Changed — W105 (S501 PR1): reproducible installs & truthful widget artifact (#84) — 2026-09-16
+
+- **T-01 lockfile tracked and commit-pinned.** `package-lock.json` is committed
+  and dropped from `.gitignore` — it is dependency-resolution metadata, not a
+  build artifact, so the "no committed artifacts" policy does not reach it. The
+  lock pins the three `github:detain/*` git-deps to the exact commits of their
+  release tags, so `npm ci` reproduces a clean-clone install and a tag retag can
+  no longer silently shift a build; the `resolved` URLs are rewritten from
+  `git+ssh` to `git+https` for CI portability (public repos; runners hold no SSH
+  key). Build/Lint/Test workflows switch from `npm install` to
+  `npm ci --allow-git=all` with the setup-node cache enabled.
+- **T-02 `package/` freshness gate.** The committed `package/` is rebuilt from
+  current source (closing a 116-file drift so what ships equals what was
+  audited), and Build CI runs `npm run package` then asserts
+  `git status --porcelain package/` is empty — the build is byte-deterministic
+  across clean rebuilds, so the gate is stable.
+- **T-03 real app icon.** `app/icon.png` (128×128) added via a deterministic,
+  canvas-less generator (`scripts/make-icon.js`); `config.xml` already declared
+  an `<icon src="icon.png"/>` that had resolved to nothing. `package.js` copies
+  it into `package/` and its sanity check now requires it.
+- **T-12 dead env file removed.** `tizen.env` deleted — zero references, no
+  `--mode tizen` script, and its keys lacked the `VITE_` prefix the code reads.
+
+### Fixed — W105 (S501 PR2): runtime — dead overlays removed, polling bounded, races/boot guarded (#87) — 2026-09-16
+
+- **T-04 / T-06 dead duplicate overlays deleted.** `UpNextOverlay.vue` and
+  `SleepTimerOverlay.vue` were mounted as root apps but could never render — the
+  former's `counting` prop stayed false forever, the latter's
+  `defineExpose({show,toggle})` had zero callers — while `@phlix/ui`'s PlayerPage
+  already ships a working UpNext and sleep timer. Both components are removed with
+  their mounts, `index.html` divs, and the orphaned tests and route-coverage
+  entries; this also ends their 250 ms player-position polls running for the whole
+  app lifetime on a TV that never unmounts them.
+- **T-05 poll bounded to the player route.** In the two long-lived overlays that
+  remain (`ChapterOverlay`, `SkipIntroOverlay`) the position poll now starts only
+  while a player route is active and stops the instant it clears; the
+  never-firing `onUnmounted` cleanup becomes `onBeforeUnmount` and the poll
+  starter is idempotent.
+- **T-07 stale-response guards.** `loadChapters` / `loadMarkers` gain per-endpoint
+  generation counters, so a slow reply for the previous title can no longer clobber
+  the current title's chapters/markers; the loading/error writes are guarded too.
+- **T-09 boot white-screen guard.** `probeStorage()` reads `localStorage` inside a
+  try/catch and falls back to an in-memory `StorageLike` (privacy-mode webviews
+  throw on the getter), and the top-level `boot()` now catches to render a boot
+  failure instead of a blank screen; a redundant `await Promise.resolve()` no-op is
+  gone.
+- **T-15 unknown-frame accounting.** `@phlix/syncplay`'s `onUnknownFrame` hook
+  (supported since v0.1.5) is wired — unknown/future frame types are counted and
+  warned once rather than dropped silently.
+
+### Added — W105 (S501 test leg): rating/polyfill coverage + enforced coverage floor (#88) — 2026-09-16
+
+- **T-11 inverted coverage corrected.** `polyfills.test.ts` now exercises the real
+  `@/polyfills` module (it had re-implemented the fallback inline and left the
+  module at zero), and three new suites — `RatingBadge`, `RatingModal`,
+  `UserRatingPicker` — cover the reachable rating components that carried no
+  coverage while the just-deleted dead overlays had held the best numbers.
+- **T-13 coverage floor pinned and enforced.** `vitest.config.ts` gains
+  `coverage.thresholds` set just below the measured post-T-11 floor with a
+  ratchet-up policy noted in the config, and the Test job switches to
+  `npx vitest run --coverage` so the floor is enforced on every PR. Additions
+  only — no test weakened; the suite stands at 335 tests across 25 files.
+
 ### Changed — W93 (cs46a): route-manifest PROVENANCE re-vendor (404 tuples — route bytes unmoved) — 2026-09-15
 
 - **cs#46 currency re-vendor (lane cs46a).** Vendored
