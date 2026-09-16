@@ -5,6 +5,21 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W111 (S516): transient "active control" action toast (AD-13)
+
+- **The remote now echoes.** A TV has no hover, so the viewer gets a
+  glanceable ~1-second caption for what just happened: each transport key
+  (Play, Pause, Fast Forward, Rewind, Stop…) captions through the repo's own
+  key display names, and every D-pad focus landing captions the newly focused
+  control. Implemented as a single-slot Pinia store
+  (`src/stores/useActionToastStore.ts`) plus one always-mounted overlay app
+  (`src/components/ActionToastOverlay.vue`, mounted as the sixth root app) —
+  the same replace-never-stack discipline the hub-relay notice introduced.
+  Non-blocking by construction: the next remote key dismisses the current
+  caption, showing one never moves D-pad focus (no tabindex, `aria-hidden`,
+  never focused), and the terminal boot-failure surface stays a separate,
+  single surface — the two can never double-stack.
+
 ### Added — W111 (S515): boot-reachability probe + branded CSS splash (AD-3)
 
 - **A set-but-unreachable server no longer boots into silence.** The
