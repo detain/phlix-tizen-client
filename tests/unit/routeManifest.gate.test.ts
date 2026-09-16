@@ -273,6 +273,10 @@ export const S511_LANG_MEMORY_TOKEN = 'S511LANGMEMX9P5';
 // this line (1 code home / 0 .md).
 export const S515_BOOT_PROBE_TOKEN = 'S515BOOTPROBEX9P7';
 
+// S516 transient action-toast ritual token — its ONLY code home is this line
+// (1 code home / 0 .md).
+export const S516_ACTION_TOAST_TOKEN = 'S516TOASTX9P7';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('c9c551e0506a742220c17a34022d4a2f497e6989');

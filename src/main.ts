@@ -25,6 +25,7 @@ import SpatialNavHost from './SpatialNavHost.vue';
 import ChapterOverlay from './components/ChapterOverlay.vue';
 import SkipIntroOverlay from './components/SkipIntroOverlay.vue';
 import PiPController from './components/PiPController.vue';
+import ActionToastOverlay from './components/ActionToastOverlay.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
 import AudioTracksPage from './pages/AudioTracksPage.vue';
 import SubtitleTracksPage from './pages/SubtitleTracksPage.vue';
@@ -340,6 +341,12 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   // Mount the PiP controller overlay as a FIFTH app sharing the main app's pinia
   // + router, so it observes the same route state and can toggle picture-in-picture.
   createApp(PiPController).use(pinia).use(router).mount('#phlix-pip-overlay');
+
+  // S516 AD-13 — mount the transient action-toast overlay as a SIXTH app sharing
+  // the main app's pinia (one caption store, one slot), so every remote key and
+  // D-pad landing gets its ~1 s glanceable echo. Presentational only: it never
+  // takes focus (no tabindex, aria-hidden) and dismisses on the next key press.
+  createApp(ActionToastOverlay).use(pinia).mount('#phlix-action-toast-overlay');
 }
 
 void boot().catch(renderBootFailure);

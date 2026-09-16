@@ -516,3 +516,24 @@ describe('S515 boot probe (AD-3)', () => {
     expect(mountSpy).toHaveBeenCalledWith('#phlix-app');
   });
 });
+
+// S516 AD-13 — the transient action-toast mounts as the SIXTH root app, and the
+// terminal boot-failure surface (S515/T-09) stays a DIFFERENT single slot:
+// renderBootFailure writes only #phlix-app/body and can never stack a toast
+// under the error (the overlay only ever exists on a fully-successful boot).
+describe('S516 action-toast overlay (AD-13)', () => {
+  it('boots the action-toast overlay as a sixth root app', async () => {
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(secondMount).toHaveBeenCalledWith('#phlix-action-toast-overlay');
+  });
+
+  it('renderBootFailure never touches the toast host (no double-stacked boot errors)', async () => {
+    document.body.innerHTML =
+      '<div id="phlix-app"></div><div id="phlix-action-toast-overlay"></div>';
+    const mod = await import('@/main');
+    mod.renderBootFailure(new Error('dead boot'));
+    expect(document.getElementById('phlix-app')?.textContent).toContain('dead boot');
+    expect(document.getElementById('phlix-action-toast-overlay')?.textContent).toBe('');
+  });
+});

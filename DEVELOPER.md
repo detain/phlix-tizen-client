@@ -72,7 +72,7 @@ style="display:none">`); its only job is to call `useSpatialNav` with an
 4. `buildPhlixHeaders({ deviceId, deviceName: 'Phlix for Samsung TV', deviceType: 'samsung-tizen' })`.
 5. `createPhlixApp({ app, apiBase, deviceHeaders, defaultTv: true, defaultTheme: 'nocturne', branding: { wordmark: 'Phlix' }, playerHlsConfig: TIZEN_HLS_CONFIG })`.
 6. `.mount('#phlix-app')`, then `installTizenBridge(application)`.
-7. Mount `SpatialNavHost` as the second app.
+7. Mount `SpatialNavHost` as the second app (plus the 3rd–6th overlay apps; S516 AD-13 adds `ActionToastOverlay` → `#phlix-action-toast-overlay` as the 6th — the transient focus/action caption, focus-safe by construction).
 
 `TIZEN_HLS_CONFIG` lives at the top of `main.ts`:
 
