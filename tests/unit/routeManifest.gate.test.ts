@@ -250,6 +250,9 @@ export const S500_VITEST5_TOKEN = 'S500VITEST5X9P6';
 // S501 tizen-audit fix-wave ritual token (code-resident survival assertion target).
 export const S501_TIZENFIX_TOKEN = 'S501TIZENFIXX9P7';
 
+// S502 parental-schedule edit→PUT ritual token (code-resident survival assertion target).
+export const S502_SCHEDULE_PUT_TOKEN = 'S502PARENTPUTX9P1';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('c9c551e0506a742220c17a34022d4a2f497e6989');

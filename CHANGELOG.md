@@ -83,6 +83,22 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `npx vitest run --coverage` so the floor is enforced on every PR. Additions
   only — no test weakened; the suite stands at 335 tests across 25 files.
 
+### Fixed — W109 (S502): parental-schedule EDIT issues PUT, not a duplicate POST — 2026-09-16
+
+- **T-08 duplicate-row defect.** The schedule edit path POSTed to the create
+  collection (`/api/v1/profiles/{pid}/schedules`) with an `id` in the body —
+  but `createForProfile` always INSERTs via `createSchedule` and never reads an
+  id, so every "edit" silently created another row. The edit path now issues
+  `PUT /api/v1/profiles/{pid}/schedules/{scheduleId}` (the server's existing
+  `updateSchedule`: AuthMiddleware-gated, ownership-404) with the snake_case
+  body that handler reads — camelCase there is a 400 "No valid fields to
+  update". Zero server change; create stays POST.
+- **T-16 verb-blind mock fixed.** `ParentalControlsWireShape.test.ts` now
+  records the HTTP VERB on every call (the old capture kept only url+body —
+  precisely why the wrong-verb edit sailed through), plus a create-stays-POST
+  case, an edit→PUT verb+URL+body tuple pin, and a tripwire that reddens if the
+  edit ever regresses to POST. Suite stands at 338 tests across 25 files.
+
 ### Changed — W93 (cs46a): route-manifest PROVENANCE re-vendor (404 tuples — route bytes unmoved) — 2026-09-15
 
 - **cs#46 currency re-vendor (lane cs46a).** Vendored
