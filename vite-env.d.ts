@@ -7,6 +7,10 @@ interface ImportMetaEnv {
   readonly VITE_PHLIX_HUB_URL?: string;
   /** Hub server UUID override for the S298 hub-relay consumer. */
   readonly VITE_PHLIX_HUB_SERVER_ID?: string;
+  /** S517 T-10 — admin console build flag. Set to '1' to ship the admin
+   *  section (routes + nav entry) in the .wgt; ANY other value (including
+   *  unset) means admin is omitted. Default-off. */
+  readonly VITE_PHLIX_TV_ADMIN?: string;
 }
 
 interface ImportMeta {
