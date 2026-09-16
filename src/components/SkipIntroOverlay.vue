@@ -22,7 +22,7 @@
  * @license   MIT
  */
 
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ApiClient } from '@phlix/ui';
 import { useApiBase, usePlayerStore } from '@phlix/ui';
@@ -44,6 +44,11 @@ const outroMarker = ref<Marker | null>(null);
 const loading = ref(false);
 
 let positionInterval: ReturnType<typeof setInterval> | null = null;
+
+// T-07: a rapid media change can leave an older markers request in flight; its
+// reply is applied only while its generation is still current, so the previous
+// title's intro/outro can never drive this title's skip buttons.
+let markerLoadGen = 0;
 
 /** Current media item ID from the player route */
 const mediaId = computed(() => String(route.params.id ?? ''));
@@ -81,6 +86,7 @@ async function loadMarkers(): Promise<void> {
   const id = mediaId.value;
   if (!id) return;
 
+  const gen = ++markerLoadGen;
   loading.value = true;
 
   try {
@@ -88,13 +94,15 @@ async function loadMarkers(): Promise<void> {
     const response = await client.get<MarkersApiResponse>(
       `/api/v1/media/${encodeURIComponent(id)}/markers`,
     );
+    if (gen !== markerLoadGen) return; // superseded by a newer load — drop stale reply
     introMarker.value = response.introMarker ?? null;
     outroMarker.value = response.outroMarker ?? null;
   } catch {
+    if (gen !== markerLoadGen) return;
     introMarker.value = null;
     outroMarker.value = null;
   } finally {
-    loading.value = false;
+    if (gen === markerLoadGen) loading.value = false;
   }
 }
 
@@ -124,6 +132,9 @@ function skipOutro(): void {
  * Poll player position and duration.
  */
 function startPositionPolling(): void {
+  // T-05: idempotent — the poll runs ONLY while a player route is active (driven
+  // by the mediaId watch below), never for the whole (unmounted-never) app life.
+  if (positionInterval) return;
   positionInterval = setInterval(() => {
     const state = playerStore;
     if (!state) return;
@@ -148,21 +159,34 @@ function stopPositionPolling(): void {
   }
 }
 
-// Watch for media item changes and reload markers
+// The overlay is a long-lived root app (never unmounted on a TV), so the
+// position poll is driven entirely by this route signal: start on entering a
+// player route, stop the moment we leave one — zero background work while
+// browsing. (ChapterOverlay mirrors this exact window.)
 watch(mediaId, (newId) => {
   if (newId) {
     void loadMarkers();
+    currentPosition.value = 0;
+    currentDuration.value = 0;
+    startPositionPolling();
+  } else {
+    stopPositionPolling();
+    introMarker.value = null;
+    outroMarker.value = null;
     currentPosition.value = 0;
     currentDuration.value = 0;
   }
 });
 
 onMounted(() => {
-  void loadMarkers();
-  startPositionPolling();
+  // Deep-link into a player route → mediaId is already set; otherwise stay idle.
+  if (mediaId.value) {
+    void loadMarkers();
+    startPositionPolling();
+  }
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   stopPositionPolling();
 });
 </script>

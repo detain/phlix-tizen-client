@@ -1,16 +1,20 @@
 /**
- * RouteWireShape.test — S280 pins the two production fixes' WIRE handling.
+ * RouteWireShape.test — pins the WIRE handling of the shared playback-info rails.
  *
  * The route gate (routeManifest.gate.test.ts) proves the tizen client calls
- * SERVED rails. This file pins the harder half: that the two rails it moved
- * ONTO are READ with the shape the SERVER actually emits —
- *   - UpNextOverlay   → GET /api/v1/users/me/next-up       ({items:[…]} — WebPortalRouter::getNextUp)
- *   - AudioTracksPage → GET /api/v1/media/{id}/playback-info ({audio_tracks:[…]} — StreamTrackShaper)
- * Both components previously fetched never-registered routes, so this
- * envelope handling is newly-live code. A future re-widening (wrong key, a
- * self-item shown as its own "up next", a null `bitrate`/`title` shipped onto
- * a StreamAudioTrack) reddens HERE instead of shipping a silently-empty TV
- * overlay — mirroring the S325b ParentalControlsWireShape precedent.
+ * SERVED rails. This file pins the harder half: that the rails it reads are
+ * consumed with the shape the SERVER actually emits —
+ *   - AudioTracksPage    → GET /api/v1/media/{id}/playback-info ({audio_tracks:[…]} — StreamTrackShaper)
+ *   - SubtitleTracksPage → GET /api/v1/media/{id}/playback-info ({subtitle_tracks:[…]} — StreamTrackShaper)
+ * Both previously fetched never-registered routes, so this envelope handling is
+ * live code. A future re-widening (wrong key, a null `bitrate`/`title` shipped
+ * onto a StreamAudioTrack, an id-vs-language mismatch on the subtitle picker)
+ * reddens HERE instead of shipping a silently-empty TV overlay — mirroring the
+ * S325b ParentalControlsWireShape precedent.
+ *
+ * (S501 T-04: the UpNextOverlay next-up describe that lived here is gone — the
+ * dead duplicate overlay it mounted is deleted; @phlix/ui's PlayerPage UpNext is
+ * the only live "up next" path.)
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license MIT
@@ -56,7 +60,6 @@ vi.mock('@phlix/ui', () => ({
   }),
 }));
 
-import UpNextOverlay from '@/components/UpNextOverlay.vue';
 import AudioTracksPage, {
   AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE,
 } from '@/pages/AudioTracksPage.vue';
@@ -104,62 +107,6 @@ const S407_SUBTITLE_TRACKS = [
     url: '/api/v1/media/11111111-2222-3333-4444-555555555555/subtitles/2?exp=1800000000&sig=dGVzdC1zaWc',
   },
 ];
-
-// ── UpNextOverlay: /api/v1/users/me/next-up head-selection ──────────────────
-
-describe('UpNextOverlay — next-up rail wire shape (S280)', () => {
-  /** Route at the 8-seconds-from-end window so a set upNextMedia renders. */
-  const mountNearEnd = (currentId: string) => {
-    h.route.params = { id: currentId };
-    h.player.position = 352;
-    h.player.duration = 360;
-    return mount(UpNextOverlay, {
-      props: { counting: true, remaining: 8, total: 8 },
-      attachTo: document.body,
-    });
-  };
-
-  it('fetches the registered /api/v1/users/me/next-up rail', async () => {
-    h.responses['/api/v1/users/me/next-up'] = { items: [] };
-    const wrapper = mountNearEnd('media-123');
-    await flushPromises();
-    expect(h.calls).toEqual(['/api/v1/users/me/next-up']);
-    // Nothing up next → the overlay never renders (no fabricated card).
-    expect(wrapper.html()).toBe('<!--v-if-->');
-    wrapper.unmount();
-  });
-
-  it('selects the first NON-current item, skipping a self pick', async () => {
-    // Defensive against a not-yet-positioned self-entry (NextUpSelector can
-    // classify a zero-position started episode as fresh): it must never be
-    // shown as its own "up next".
-    h.responses['/api/v1/users/me/next-up'] = {
-      items: [
-        { id: 'media-123', name: 'Self' },
-        { id: 'next-a', name: 'Next A' },
-        { id: 'next-b', name: 'Next B' },
-      ],
-    };
-    const wrapper = mountNearEnd('media-123');
-    await flushPromises();
-    // Visibility is driven by the component's 250ms player-position poll
-    // (initial duration is 0 → hidden); cross one real tick.
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    await wrapper.vm.$nextTick();
-    expect(wrapper.text()).toContain('Next A');
-    expect(wrapper.text()).not.toContain('Self');
-    expect(wrapper.text()).not.toContain('Next B');
-    wrapper.unmount();
-  });
-
-  it('renders nothing when the envelope omits items (older server)', async () => {
-    h.responses['/api/v1/users/me/next-up'] = {};
-    const wrapper = mountNearEnd('media-123');
-    await flushPromises();
-    expect(wrapper.html()).toBe('<!--v-if-->');
-    wrapper.unmount();
-  });
-});
 
 // ── AudioTracksPage: playback-info audio_tracks[] mapping ───────────────────
 

@@ -513,6 +513,14 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   // so the server sees the same member come back (mirrors @phlix/ui).
   let memberId: string | null = null;
 
+  // T-15: forward-compat observability. `@phlix/syncplay` v0.1.5 surfaces frames
+  // outside its 19 canonical `syncplay_*` types via `onUnknownFrame`; before this
+  // wiring they were dropped silently. Count every one (a cumulative "has the
+  // protocol outgrown us" signal, exposed for a metrics sink) and warn on the
+  // FIRST so a hub shipping a new frame type is debuggable instead of a no-op.
+  const unknownFrameCount = ref(0);
+  let unknownFrameWarned = false;
+
   // ---- Computed ------------------------------------------------------------
 
   const isInRoom = computed(() => currentSession.value !== null);
@@ -582,6 +590,20 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
           onRemoteCommand({ type: isPlaying ? 'play' : 'pause', position }),
         onError: (code, message) => {
           wsError.value = `${code}: ${message}`;
+        },
+        // T-15: a frame the library does not recognize is counted (never silently
+        // dropped) and warned once. Non-canonical vocabulary — the hub relay's
+        // `pending_command` — is consumed on a SEPARATE socket (src/api/hubRelay),
+        // so anything reaching here is genuinely an unknown/future frame type.
+        onUnknownFrame: (frame) => {
+          unknownFrameCount.value += 1;
+          if (!unknownFrameWarned) {
+            unknownFrameWarned = true;
+            console.warn(
+              `[SyncPlay] Unrecognized frame type '${frame.type}' — ignoring ` +
+                `it (further unknown frames are counted, not re-logged).`,
+            );
+          }
         },
       });
       syncPlayClient = client;
@@ -970,6 +992,9 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     wsConnected,
     wsReconnecting,
     wsError,
+    // T-15: cumulative count of frames outside the canonical syncplay_* set
+    // (forward-compat signal; 0 means the hub only speaks known vocabulary).
+    unknownFrameCount,
     // Computed
     isInRoom,
     isSynced,
