@@ -115,6 +115,11 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   features.
 - Docs re-derived from the manifest (CLAUDE.md/README privilege lists). The
   change flows into `package/config.xml` via `scripts/package.js` (T-02).
+- **Fix-lane marker (W109 review):** `app/config.xml` now carries an S503 XML comment
+  at the privilege/feature change site recording the T-20 posture — surface masked to
+  runtime need, five unused privileges pruned after zero-use grep, `hwkey-event` and
+  the `tv-samsung` profile added. Comment-only; `package/config.xml` (T-02) mirrors
+  the manifest byte-identically in the same commit.
 
 ### Changed — W93 (cs46a): route-manifest PROVENANCE re-vendor (404 tuples — route bytes unmoved) — 2026-09-15
 

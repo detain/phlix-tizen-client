@@ -13,6 +13,12 @@
     <content src="index.html"/>
     <icon src="icon.png"/>
     <name>Phlix</name>
+    <!-- S503 (W109, T-20 posture): privilege surface masked to runtime need — five
+         unused privileges (tv.window, tv.audio, network.get, application.launch,
+         filesystem.read) pruned after repo-wide zero-use grep; internet and
+         tv.inputdevice kept. hwkey-event="enable" on <tizen:setting> and the
+         tv-samsung profile below are the adopted-feature adds (KeyMapping 10009→BACK,
+         deviceType 'samsung-tizen'). Mirror: package/config.xml (T-02). -->
     <tizen:privilege name="http://tizen.org/privilege/internet"/>
     <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
 
