@@ -7,7 +7,7 @@ Pinned: `@phlix/ui` `github:detain/phlix-ui#v0.99.4`, `@phlix/contracts` `#v0.4.
 ## Commands
 
 ```bash
-npm install              # package-lock.json is gitignored — CI uses `npm install`, not `npm ci`
+npm ci --allow-git=all # reproducible install from the TRACKED, commit-pinned package-lock.json (audit W105 T-01); CI uses this
 npm run dev              # vite dev server at :8080
 npm run build            # vue-tsc --noEmit && vite build → dist/
 npm run typecheck        # vue-tsc --noEmit (no emit)
@@ -21,11 +21,11 @@ npm run lint:fix         # eslint . --fix
 npm run package          # npm run build + node scripts/package.js → package/
 ```
 
-There is no webpack, no Babel, no Jest. `npm run package` builds then assembles `package/` (vite `dist/` + `app/config.xml` at the widget root). Tizen `.wgt` signing still happens in Tizen Studio (or the `tizen` CLI) against the `package/` output — no npm script produces a signed widget.
+There is no webpack, no Babel, no Jest. `npm run package` builds then assembles `package/` (vite `dist/` + `app/config.xml` + `app/icon.png` at the widget root — the manifest declares `<icon src="icon.png"/>`; audit W105 T-03). Tizen `.wgt` signing still happens in Tizen Studio (or the `tizen` CLI) against the `package/` output — no npm script produces a signed widget.
 
 ## Architecture
 
-**Entry**: `index.html` (repo root, the Vite root) loads `/src/main.ts`, which mounts into `#phlix-app`, `#phlix-spatial-host`, `#phlix-chapter-overlay`, `#phlix-sleep-timer-overlay`, `#phlix-skip-intro-overlay`, `#phlix-pip-overlay`, and `#phlix-up-next-overlay`.
+**Entry**: `index.html` (repo root, the Vite root) loads `/src/main.ts`, which mounts into `#phlix-app`, `#phlix-spatial-host`, `#phlix-chapter-overlay`, `#phlix-skip-intro-overlay`, and `#phlix-pip-overlay`.
 
 `src/main.ts` `boot()` flow:
 1. `import './polyfills'` FIRST (installs a `structuredClone` fallback for older Tizen webviews — `@phlix/ui`'s SettingsForm needs it).
@@ -35,15 +35,15 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 5. `createPhlixApp({ app, apiBase, deviceHeaders, defaultTv: true, defaultTheme: 'nocturne', branding: { wordmark: 'Phlix' }, playerHlsConfig: TIZEN_HLS_CONFIG, menu: buildMenu(), extraRoutes: buildExtraRoutes() })` → `.mount('#phlix-app')`. Without a supplied `menu` the shell renders NO top-bar nav at all; `buildExtraRoutes()` carries the full `/app` prefix (the router's history base is `/`).
 6. `installTizenBridge(application)` wires the remote.
 7. Mount a SECOND tiny app `createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host')`, reusing the main app's pinia + router (read off `application.config.globalProperties.$pinia` / `$router`) so it observes the same prefs + route.
-8. Mount FIVE more tiny apps the same way, each reusing that same pinia + router so they observe the same route: `ChapterOverlay` → `#phlix-chapter-overlay` (3rd), `SleepTimerOverlay` → `#phlix-sleep-timer-overlay` (4th), `SkipIntroOverlay` → `#phlix-skip-intro-overlay` (5th), `PiPController` → `#phlix-pip-overlay` (6th), `UpNextOverlay` → `#phlix-up-next-overlay` (7th).
+8. Mount THREE more tiny apps the same way, each reusing that same pinia + router so they observe the same route: `ChapterOverlay` → `#phlix-chapter-overlay` (3rd), `SkipIntroOverlay` → `#phlix-skip-intro-overlay` (4th), `PiPController` → `#phlix-pip-overlay` (5th). (S501 T-04/T-06: the former 4th/7th apps `SleepTimerOverlay` + `UpNextOverlay` are DELETED — unreachable root-mounted duplicates of `@phlix/ui`'s PlayerPage-bundled Up Next + sleep-timer, whose 250 ms player-position polls ran for the whole app lifetime.)
 9. `wireHubRelayConsumer(pinia, apiBase, storage, deviceHeaders)` — opens the S298 hub-relay socket and the pending-command dispatcher (see `api/hubRelay.ts` / `syncplayDispatch.ts` below). No hub context resolved ⇒ nothing opens.
 
 **`src/` files** (all the code this repo owns):
-- **`main.ts`** — boot, `createPhlixApp` config, `TIZEN_HLS_CONFIG` (bounded buffers, `capLevelToPlayerSize`, `enableSoftwareAES`), `buildMenu()` / `buildExtraRoutes()`, 2nd-app SpatialNavHost mount, 3rd–7th-app overlay mounts (`ChapterOverlay`, `SleepTimerOverlay`, `SkipIntroOverlay`, `PiPController`, `UpNextOverlay`), and `wireHubRelayConsumer`.
+- **`main.ts`** — boot, `createPhlixApp` config, `TIZEN_HLS_CONFIG` (bounded buffers, `capLevelToPlayerSize`, `enableSoftwareAES`), `buildMenu()` / `buildExtraRoutes()`, 2nd-app SpatialNavHost mount, 3rd–5th-app overlay mounts (`ChapterOverlay`, `SkipIntroOverlay`, `PiPController`), and `wireHubRelayConsumer`.
 - **`api/hubRelay.ts`** — the S298 hub-relay `pending_command` consumer ("Alexa, play X"). Connects to `ws(s)://<hub>:8804/syncplay/<server_id>` and carries the relay token on the `Sec-WebSocket-Protocol: bearer, <token>` subprotocol — a TV webview cannot set request headers, and query-string tokens are refused by design. The token is minted from `POST /api/v1/me/servers/{server_id}/relay-token` and re-read on every reconnect (relay tokens expire). Exports `resolveHubRelayConfig`, `openHubRelayConnection`, `closeHubRelayConnection`, `getHubRelaySocket`, `parsePendingCommandFrame`, `HUB_SYNC_PLAY_PORT`. Only `pending_command` / `play_media` frames are consumed; everything else is ignored. The socket opens whenever the app is open with a hub context — it is NOT tied to a SyncPlay room join.
 - **`syncplayDispatch.ts`** — `wirePendingPlayMediaDispatcher(store, deps)`: watches the store's `pendingPlayMedia` slot, resolves the bare media id through the app's real `ApiClient` (`GET /api/v1/media/{id}`), then `player.setCurrent()` + `player.play()` and consumes the slot. An unresolved id is NOT consumed (the command stays in the slot); a stale-resolution guard drops a result superseded by a newer command. Structurally-typed deps so tests inject fakes; returns an unwatch.
 - **`components/ChapterOverlay.vue`** — portal-rendered overlay (mounted as the 3rd app into `#phlix-chapter-overlay`); fetches chapters from `GET /api/v1/media/{id}/chapters` and markers from `GET /api/v1/media/{id}/markers`, then renders gold chapter tick marks, colored intro/outro/credits/ad ticks, a chapter title label, and an "Ad" badge on the player seekbar. Position is tracked by 250 ms polling.
-- **`components/SleepTimerOverlay.vue`** / **`components/SkipIntroOverlay.vue`** / **`components/PiPController.vue`** / **`components/UpNextOverlay.vue`** — the 4th–7th mounted overlay apps: sleep-timer presets (5/10/15/30/45/60 min + a custom 1–180 min input) that pause playback on expiry, `GET /api/v1/media/{id}/markers`-driven Skip Intro/Skip Outro buttons, a Samsung Tizen picture-in-picture toggle gated on `document.pictureInPictureEnabled`, and the end-of-video "Up next" card (countdown ring + Play now/Cancel) fed by `GET /api/v1/users/me/next-up` (the old `/media/{id}/playlist` is a route phlix-server never registered).
+- **`components/SkipIntroOverlay.vue`** / **`components/PiPController.vue`** — the 4th/5th mounted overlay apps: `GET /api/v1/media/{id}/markers`-driven Skip Intro/Skip Outro buttons (poll bounded to the player route — S501 T-05), and a Samsung Tizen picture-in-picture toggle gated on `document.pictureInPictureEnabled`. (S501 T-04/T-06 deleted `SleepTimerOverlay.vue` and `UpNextOverlay.vue` — see the boot-flow note above.)
 - **`components/AudioTrackList.vue`** / **`components/SubtitleTrackList.vue`** / **`components/ChapterList.vue`** / **`components/RecommendationCard.vue`** / **`components/RatingBadge.vue`** / **`components/RatingModal.vue`** / **`components/UserRatingPicker.vue`** — D-pad-optimised TV lists/cards consumed by `pages/ChaptersPage.vue`, `pages/AudioTracksPage.vue`, `pages/SubtitleTracksPage.vue`, and `screens/RecommendationsScreen.vue`. Every locally-kept component carries a `@category TV-Specific Component` (plus `@duplicate`) docblock recording why it is not `@phlix/ui`'s version — keep that note current when editing one.
 - **`pages/AudioTracksPage.vue`** / **`pages/SubtitleTracksPage.vue`** — routes `/app/audio-tracks/:id` and `/app/subtitle-tracks/:id`; both read the SINGLE `GET /api/v1/media/{id}/playback-info` rail (`audio_tracks` / `subtitle_tracks`). Subtitles dispatch by `track.language` (`player.setSubtitle`), not by the wire `track.id`, because the store and HTML5 textTracks key on language.
 - **`pages/ParentalControlsPage.vue`** — route `/app/parental-controls` (reachable from the `buildMenu()` nav entry); profile schedules, tags and stream limits over `GET|POST|DELETE /api/v1/profiles/{id}/schedules`, `GET|POST|DELETE /api/v1/profiles/{id}/tags`, and `GET|PUT /api/v1/profiles/{id}/stream-limits`.
@@ -63,7 +63,7 @@ There is no webpack, no Babel, no Jest. `npm run package` builds then assembles 
 
 ## Tizen runtime constraints
 
-- **No pointer/mouse** — keyboard/D-pad only. D-pad navigation is `@phlix/ui`'s `useSpatialNav` (gated by `SpatialNavHost.vue`); transport keys come through `RemoteManager` → `tizenBridge`. There is no manual focus code in this repo anymore.
+- **No pointer/mouse** — keyboard/D-pad only. D-pad navigation is `@phlix/ui`'s `useSpatialNav` (gated by `SpatialNavHost.vue`); transport keys come through `RemoteManager` → `tizenBridge`. There is no manual D-pad focus-traversal code in this repo — the only direct focus manipulation is the quality-menu trigger handoff (`focus()`/`blur()` in `tizenBridge.ts`).
 - **Fixed `1920x1080` viewport** (`index.html` meta viewport).
 - **HLS RAM tuning** — Samsung TV webviews are memory-constrained; `TIZEN_HLS_CONFIG` in `main.ts` is passed via `playerHlsConfig` to bound buffers, cap level to player size, and enable software AES. Tune HLS here, not in `phlix-ui`.
 - **`app/config.xml`** is the Tizen widget manifest (`.wgt`): app id `phlix.app.phlixtizen`, `required_version` `6.5`, `<content src="index.html"/>`, `<access origin="*">`, privileges (`internet`, `tv.inputdevice`, `tv.window`, `tv.audio`, `network.get`, `application.launch`, `filesystem.read`), landscape/maximized. New TV capability usually means editing this file. `scripts/package.js` copies it to the `package/` root.
@@ -82,26 +82,26 @@ Flat ESLint (`eslint.config.mjs`, `eslint .`, CI-enforced): `@eslint/js` recomme
 
 ## Tests
 
-Vitest + `jsdom` + `@vue/test-utils` (`vitest.config.ts`, `npm test`). Tests live in `tests/unit/*.test.ts` and are co-located by module name (the `src/` tree is flat). Setup `tests/test-setup.ts` provides an in-memory localStorage mock. Coverage (v8) excludes `app/**`, `tests/`, `dist/`, configs. Current suites: `resolveConfig`, `deviceId`, `polyfills`, `tizenBridge` (pure `wireTizenBridge` exercised with fakes), `SpatialNavHost`, `RemoteManager`, `KeyMapping`, `UpNextOverlay` / `SubtitleTrackList` (mount the SFC with `@phlix/ui`'s `ApiClient`/`useApiBase`/`usePlayerStore` and `vue-router` stubbed via `vi.hoisted` + `vi.mock`), `useMusicStore`, `useSyncPlayStore`, `syncPlayWireShape`, `hubRelay`, `syncplayDispatch`, `RouteWireShape`, `TrackWireShape`, `TrackApplyBoundary`, `ParentalControlsWireShape`, `routeManifest.gate`, and `main` (mocks `@phlix/ui`/`@phlix/contracts`/`vue` and asserts the boot wiring).
+Vitest + `jsdom` + `@vue/test-utils` (`vitest.config.ts`, `npm test`). Tests live in `tests/unit/*.test.ts` and are co-located by module name (the `src/` tree is flat). Setup `tests/test-setup.ts` provides an in-memory localStorage mock. Coverage (v8) excludes `app/**`, `tests/`, `dist/`, configs and is threshold-enforced in CI (statements 72 / branches 61 / functions 68 / lines 73 — pinned at the measured floor after the T-11 suites landed, S501 T-13; ratchet up, never down). Current suites (25 files): `resolveConfig`, `deviceId`, `polyfills`, `tizenBridge` (pure `wireTizenBridge` exercised with fakes), `SpatialNavHost`, `RemoteManager`, `KeyMapping`, `ChapterOverlay`, `SkipIntroOverlay`, `SubtitleTrackList`, `useMusicStore`, `RatingBadge`, `RatingModal`, `UserRatingPicker`, `useSyncPlayStore`, `syncPlayWireShape`, `syncPlayMigration`, `hubRelay`, `syncplayDispatch`, `RouteWireShape`, `TrackWireShape`, `TrackApplyBoundary`, `ParentalControlsWireShape`, `routeManifest.gate`, and `main` (mocks `@phlix/ui`/`@phlix/contracts`/`vue` and asserts the boot wiring). SFC suites mount the component with `@phlix/ui`'s `ApiClient`/`useApiBase`/`usePlayerStore` and `vue-router` stubbed via `vi.hoisted` + `vi.mock`.
 
 `tests/unit/routeManifest.gate.test.ts` pins every URL this client can put on the wire tuple-exact against the vendored `tests/fixtures/server-route-manifest.json` (a byte-for-byte copy of `@phlix/contracts`' `dist/server-route-manifest.json`, provenance sha + md5 asserted inside). Its per-file site counts are a pin, not a promise — adding, moving or removing a request site means updating that file's count there.
 
 ```bash
-npx vitest run tests/unit/UpNextOverlay.test.ts       # the overlay SFC suite
+npx vitest run tests/unit/ChapterOverlay.test.ts       # the overlay SFC suite
 npx vitest run tests/unit/routeManifest.gate.test.ts  # the client route gate
 ```
 
 ## Quirks
 
-- **`package-lock.json` gitignored** — CI uses `npm install`, not `npm ci`. Don't switch without coordinating.
+- **`package-lock.json` is TRACKED** (audit W105 T-01) — every git-dep resolution is pinned to an exact commit SHA, so CI installs reproducibly with `npm ci --allow-git=all`. Regenerate (`npm install`) and commit the lock whenever a pin in `package.json` changes.
 - **`base: './'` in `vite.config.ts` is MANDATORY.** A `.wgt` loads from a `file://` origin on the TV, so absolute `/assets` paths 404. Relative base keeps every asset URL relative to `index.html`.
 - **`structuredClone` polyfill** (`src/polyfills.ts`) must be imported first in `main.ts` — older Tizen Chromium lacks it and `@phlix/ui` needs it.
 - **Server-side device→profile mapping** replaces the old client-posted device profile (see Tizen runtime constraints). Don't reintroduce a client profile.
 - **`scripts/package.js` is ESM** (the repo is `"type": "module"`); run it via `npm run package`. It assembles `package/` from vite `dist/` + `app/config.xml`.
 - **Tizen app id**: `app/config.xml` uses `phlix.app.phlixtizen`. `config.xml` is authoritative — the README CLI examples use it too.
-- **Each overlay needs a host `<div>`** — adding an 8th mounted app means adding its container to `index.html` as well as the `createApp(...).mount(...)` call in `main.ts`.
+- **Each overlay needs a host `<div>`** — adding a 6th mounted app means adding its container to `index.html` as well as the `createApp(...).mount(...)` call in `main.ts`.
 - **Env vars are declared in `vite-env.d.ts`** — `VITE_PHLIX_SERVER_URL` plus the hub-relay overrides `VITE_PHLIX_HUB_URL` / `VITE_PHLIX_HUB_SERVER_ID`. The hub context otherwise comes from `localStorage` (`phlix.hubUrl`, `phlix.hubServerId`, `phlix.hubAccessToken`).
-- `.github/workflows/test.yml` (runs `npm test`) and `.github/workflows/lint.yml` (`npm run lint` + `npm run build`) run on push — keep them green.
+- `.github/workflows/test.yml` (`npx vitest run --coverage` — the coverage floor gate), `lint.yml` (`npm run lint` + `npm run build`) and `build.yml` (`npm run package` + a check that the committed `package/` matches a fresh build, audit W105 T-02) run on push — keep them green.
 
 ## Before Committing
 
