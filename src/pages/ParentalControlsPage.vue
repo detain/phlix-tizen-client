@@ -4,7 +4,7 @@
  *
  * Provides TV-friendly D-pad navigation for parental control settings.
  * Integrates with the server's profile-scoped endpoints:
- *   GET/POST/DELETE /api/v1/profiles/{id}/schedules
+ *   GET/POST/PUT/DELETE /api/v1/profiles/{id}/schedules
  *   GET/POST/DELETE /api/v1/profiles/{id}/tags
  *   GET/PUT    /api/v1/profiles/{id}/stream-limits
  *
@@ -116,11 +116,16 @@ async function saveSchedule(): Promise<void> {
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
     if (editingSchedule.value) {
-      // Update via DELETE + POST or PUT - using POST to update
-      await client.post(
-        `/api/v1/profiles/${pid}/schedules`,
+      // S502: an edit is an update, not a second create. The POST collection
+      // route (AccessScheduleController::createForProfile) always INSERTs via
+      // createSchedule and never reads an id from the body — the pre-S502
+      // POST-with-id shipped a duplicate row on every save. PUT
+      // /schedules/{scheduleId} (updateSchedule) is the matching verb; its id
+      // travels in the URL, and it reads ONLY the snake_case keys below
+      // (camelCase would arrive as "No valid fields to update" → 400).
+      await client.put(
+        `/api/v1/profiles/${pid}/schedules/${editingSchedule.value.id}`,
         {
-          id: editingSchedule.value.id,
           name: scheduleForm.value.name,
           start_time: scheduleForm.value.startTime,
           end_time: scheduleForm.value.endTime,
