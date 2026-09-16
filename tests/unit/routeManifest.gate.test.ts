@@ -244,6 +244,9 @@ const TOTAL_SITES = Object.values(PER_FILE_COVERAGE).reduce((a, b) => a + b, 0);
 // cs#46 currency re-vendor ritual token (code-resident survival assertion target).
 export const CS46_CURRENCY_TOKEN = 'CS46CURRENCYPINX9X1';
 
+// S500 vitest 3→5 migration ritual token (code-resident survival assertion target).
+export const S500_VITEST5_TOKEN = 'S500VITEST5X9P6';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('c9c551e0506a742220c17a34022d4a2f497e6989');
