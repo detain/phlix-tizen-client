@@ -22,9 +22,7 @@ import { useSyncPlayStore } from './stores/useSyncPlayStore';
 import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
 import SpatialNavHost from './SpatialNavHost.vue';
 import ChapterOverlay from './components/ChapterOverlay.vue';
-import SleepTimerOverlay from './components/SleepTimerOverlay.vue';
 import SkipIntroOverlay from './components/SkipIntroOverlay.vue';
-import UpNextOverlay from './components/UpNextOverlay.vue';
 import PiPController from './components/PiPController.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
 import AudioTracksPage from './pages/AudioTracksPage.vue';
@@ -88,6 +86,78 @@ const HUB_SERVER_ID_KEY = 'phlix.hubServerId';
 const HUB_ACCESS_TOKEN_KEY = 'phlix.hubAccessToken';
 
 /**
+ * The minimal storage surface boot() actually depends on. Declaring it here
+ * (rather than the DOM `Storage`) lets the in-memory fallback below satisfy the
+ * exact same contract, so every consumer sees a trusted, always-present object
+ * instead of a nullable one it must re-guard at each call (Law 2: parse at the
+ * boundary, trust internally).
+ */
+export interface StorageLike {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+/**
+ * A Map-backed `StorageLike` used when `globalThis.localStorage` is unavailable
+ * (a privacy-mode Tizen webview throws `SecurityError` on the mere property
+ * getter) or unwritable (quota). Session-scoped: reads/writes work for the
+ * lifetime of the boot, persistence across launches is honestly lost — which
+ * beats the alternative, a white screen.
+ */
+export function inMemoryStorage(): StorageLike {
+  const map = new Map<string, string>();
+  return {
+    getItem: (key) => map.get(key) ?? null,
+    setItem: (key, value) => {
+      map.set(key, value);
+    },
+    removeItem: (key) => {
+      map.delete(key);
+    },
+  };
+}
+
+/**
+ * T-09: resolve the boot storage exactly once, never throwing. A `SecurityError`
+ * from the `localStorage` getter or a quota failure on the write probe degrades
+ * to the in-memory fallback instead of rejecting `boot()` into a blank screen.
+ */
+export function probeStorage(): StorageLike {
+  try {
+    const real = globalThis.localStorage;
+    if (!real) return inMemoryStorage();
+    const probeKey = '__phlix_storage_probe__';
+    real.setItem(probeKey, '1');
+    real.removeItem(probeKey);
+    return real;
+  } catch {
+    // Getter threw / quota exceeded → in-memory fallback keeps the app alive.
+    return inMemoryStorage();
+  }
+}
+
+/**
+ * T-09 white-screen guard: the terminal `.catch` for `boot()`. Any throw past
+ * the storage probe (config resolution, app creation, mount) surfaces here as a
+ * minimal readable message in the mount point instead of an unhandled rejection
+ * behind a blank `#phlix-app`.
+ */
+export function renderBootFailure(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error('[phlix] Fatal boot failure:', error);
+  try {
+    const host = document.getElementById('phlix-app');
+    const text = `Phlix failed to start: ${message}`;
+    if (host) host.textContent = text;
+    else document.body.textContent = text;
+  } catch {
+    // The DOM itself is unavailable — there is nothing left to render into.
+  }
+}
+
+
+/**
  * S298 — wire the hub-relay `pending_command` consumer at boot.
  *
  * "Alexa, play X" lands on the hub's SyncPlay relay (`ws://<hub>:8804`), which
@@ -109,16 +179,16 @@ const HUB_ACCESS_TOKEN_KEY = 'phlix.hubAccessToken';
 function wireHubRelayConsumer(
   pinia: Pinia,
   apiBase: string,
-  storage: Storage | null,
+  storage: StorageLike,
   deviceHeaders: Record<string, string>,
 ): void {
   const hubRelay = resolveHubRelayConfig({
     serverUrl: apiBase,
-    hubUrl: storage ? storage.getItem(HUB_URL_KEY) : null,
-    serverId: storage ? storage.getItem(HUB_SERVER_ID_KEY) : null,
+    hubUrl: storage.getItem(HUB_URL_KEY),
+    serverId: storage.getItem(HUB_SERVER_ID_KEY),
     envHubUrl: import.meta.env.VITE_PHLIX_HUB_URL ?? null,
     envHubServerId: import.meta.env.VITE_PHLIX_HUB_SERVER_ID ?? null,
-    accessTokenProvider: () => (storage ? storage.getItem(HUB_ACCESS_TOKEN_KEY) : null),
+    accessTokenProvider: () => storage.getItem(HUB_ACCESS_TOKEN_KEY),
   });
   if (!hubRelay) return;
 
@@ -151,10 +221,9 @@ function wireHubRelayConsumer(
 }
 
 export async function boot(): Promise<void> {
-  await Promise.resolve();
-  const storage = globalThis.localStorage;
+  const storage = probeStorage();
 
-  const serverUrl = storage ? storage.getItem(SERVER_URL_KEY) : null;
+  const serverUrl = storage.getItem(SERVER_URL_KEY);
   const envUrl = import.meta.env.VITE_PHLIX_SERVER_URL ?? null;
   const deviceId = resolveDeviceId(storage);
 
@@ -176,12 +245,17 @@ export async function boot(): Promise<void> {
     // The TV ships with no server baked in. When `apiBase` is empty (nothing
     // persisted/seeded yet) @phlix/ui routes to its first-run Connect screen
     // instead of showing a login form aimed at nothing. Mirror the chosen URL
-    // back into localStorage so resolveAppConfig re-seeds it on the next launch.
+    // back into storage so resolveAppConfig re-seeds it on the next launch —
+    // guarded because a quota/SecurityError here must not reject out of a
+    // callback @phlix/ui invokes mid-interaction (T-09).
     requireConnection: true,
     onConnectionChange: (url) => {
-      if (!storage) return;
-      if (url) storage.setItem(SERVER_URL_KEY, url);
-      else storage.removeItem(SERVER_URL_KEY);
+      try {
+        if (url) storage.setItem(SERVER_URL_KEY, url);
+        else storage.removeItem(SERVER_URL_KEY);
+      } catch {
+        // Persistence failed; the in-memory session value still drives this run.
+      }
     },
     // Top-bar nav (incl. the admin-gated "Admin" entry) + the admin section,
     // mirroring the server web-ui. Without these the shell shows no nav at all.
@@ -212,21 +286,14 @@ export async function boot(): Promise<void> {
   // tick marks and labels on the player seekbar.
   createApp(ChapterOverlay).use(pinia).use(router).mount('#phlix-chapter-overlay');
 
-  // Mount the sleep timer overlay as a FOURTH app sharing the main app's pinia +
-  // router, so it observes the same route state and can display sleep timer controls.
-  createApp(SleepTimerOverlay).use(pinia).use(router).mount('#phlix-sleep-timer-overlay');
-
-  // Mount the skip intro/outro overlay as a FIFTH app sharing the main app's pinia +
-  // router, so it observes the same route state and can display skip markers.
+  // Mount the skip intro/outro overlay as a FOURTH app sharing the main app's
+  // pinia + router, so it observes the same route state and can display skip
+  // markers.
   createApp(SkipIntroOverlay).use(pinia).use(router).mount('#phlix-skip-intro-overlay');
 
-  // Mount the PiP controller overlay as a SIXTH app sharing the main app's pinia +
-  // router, so it observes the same route state and can toggle picture-in-picture.
+  // Mount the PiP controller overlay as a FIFTH app sharing the main app's pinia
+  // + router, so it observes the same route state and can toggle picture-in-picture.
   createApp(PiPController).use(pinia).use(router).mount('#phlix-pip-overlay');
-
-  // Mount the up next overlay as a SEVENTH app sharing the main app's pinia +
-  // router, so it observes the same route state and can display up next card.
-  createApp(UpNextOverlay).use(pinia).use(router).mount('#phlix-up-next-overlay');
 }
 
-void boot();
+void boot().catch(renderBootFailure);

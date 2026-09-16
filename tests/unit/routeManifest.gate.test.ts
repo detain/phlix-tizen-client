@@ -225,13 +225,13 @@ function scan(): Site[] {
  *
  * S280 findings fixed en route (the gate's first catches — see PR body):
  * AudioTracksPage moved OFF the never-registered /media/{id}/audio-tracks
- * onto /media/{id}/playback-info; UpNextOverlay moved OFF the
- * never-registered /media/{id}/playlist onto /users/me/next-up.
+ * onto /media/{id}/playback-info. (S501 T-04: UpNextOverlay — which had moved to
+ * /users/me/next-up — is deleted as a dead duplicate of @phlix/ui's PlayerPage
+ * UpNext, so its single request site no longer belongs in this map.)
  */
 const PER_FILE_COVERAGE: Record<string, number> = {
   'src/components/ChapterOverlay.vue': 2,
   'src/components/SkipIntroOverlay.vue': 1,
-  'src/components/UpNextOverlay.vue': 1,
   'src/main.ts': 1,
   'src/pages/AudioTracksPage.vue': 1,
   'src/pages/ChaptersPage.vue': 1,
@@ -246,6 +246,9 @@ export const CS46_CURRENCY_TOKEN = 'CS46CURRENCYPINX9X1';
 
 // S500 vitest 3→5 migration ritual token (code-resident survival assertion target).
 export const S500_VITEST5_TOKEN = 'S500VITEST5X9P6';
+
+// S501 tizen-audit fix-wave ritual token (code-resident survival assertion target).
+export const S501_TIZENFIX_TOKEN = 'S501TIZENFIXX9P7';
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {

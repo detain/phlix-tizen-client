@@ -28,7 +28,7 @@
  * @license   MIT
  */
 
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ApiClient } from '@phlix/ui';
 import { useApiBase, usePlayerStore } from '@phlix/ui';
@@ -71,6 +71,14 @@ const showChapterLabel = ref(false);
 let labelTimeout: ReturnType<typeof setTimeout> | null = null;
 let positionInterval: ReturnType<typeof setInterval> | null = null;
 
+// T-07: monotonically-increasing load generations. A rapid media change
+// starts a newer load while an older request is still in flight; the response
+// is written only if its generation is still the latest, so a stale reply can
+// never clobber the current title's chapters/markers. Separate counters per
+// endpoint because they resolve independently.
+let chapterLoadGen = 0;
+let markerLoadGen = 0;
+
 /** Current media item ID from the player route */
 const mediaId = computed(() => String(route.params.id ?? ''));
 
@@ -84,6 +92,7 @@ async function loadChapters(): Promise<void> {
   const id = mediaId.value;
   if (!id) return;
 
+  const gen = ++chapterLoadGen;
   loading.value = true;
   error.value = null;
 
@@ -92,12 +101,14 @@ async function loadChapters(): Promise<void> {
     const response = await client.get<ChapterApiResponse>(
       `/api/v1/media/${encodeURIComponent(id)}/chapters`,
     );
+    if (gen !== chapterLoadGen) return; // superseded by a newer load — drop stale reply
     chapters.value = response.chapters ?? [];
   } catch (e) {
+    if (gen !== chapterLoadGen) return;
     error.value = e instanceof Error ? e.message : 'Failed to load chapters';
     chapters.value = [];
   } finally {
-    loading.value = false;
+    if (gen === chapterLoadGen) loading.value = false;
   }
 }
 
@@ -105,13 +116,17 @@ async function loadMarkers(): Promise<void> {
   const id = mediaId.value;
   if (!id) return;
 
+  const gen = ++markerLoadGen;
+
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
     const response = await client.get<MarkersApiResponse>(
       `/api/v1/media/${encodeURIComponent(id)}/markers`,
     );
+    if (gen !== markerLoadGen) return; // superseded by a newer load — drop stale reply
     markers.value = response.markers ?? [];
   } catch (e) {
+    if (gen !== markerLoadGen) return;
     console.warn('Failed to load markers:', e instanceof Error ? e.message : e);
     markers.value = [];
   }
@@ -293,6 +308,10 @@ function hideChapterLabel(): void {
  * The player store from @phlix/ui has a reactive state we can access.
  */
 function startPositionPolling(): void {
+  // T-05: idempotent. The poll is the overlay's only per-tick work; it must run
+  // ONLY while a player route is up (see the mediaId watch below), never for the
+  // whole app lifetime. A second call while already running is a no-op.
+  if (positionInterval) return;
   // Poll every 250ms to get smooth chapter label updates
   positionInterval = setInterval(() => {
     // Access player store state - the exact property names depend on @phlix/ui's implementation
@@ -324,7 +343,10 @@ function stopPositionPolling(): void {
   hideChapterLabel();
 }
 
-// Watch for media item changes and reload chapters and markers
+// Watch for media item changes. The overlay is a long-lived root app (it is
+// never unmounted on a TV), so the player-position poll is driven entirely by
+// this route signal: start when a player route is entered, stop the instant we
+// leave one — a TV webview then does zero background work while browsing.
 watch(mediaId, (newId) => {
   if (newId) {
     void loadChapters();
@@ -332,16 +354,27 @@ watch(mediaId, (newId) => {
     // Reset position when media changes
     currentPosition.value = 0;
     currentDuration.value = 0;
+    startPositionPolling();
+  } else {
+    stopPositionPolling();
+    chapters.value = [];
+    markers.value = [];
+    currentPosition.value = 0;
+    currentDuration.value = 0;
   }
 });
 
 onMounted(() => {
-  void loadChapters();
-  void loadMarkers();
-  startPositionPolling();
+  // A deep-link into a player route means mediaId is already set at mount;
+  // otherwise (browse/home) the overlay stays fully idle until the watch fires.
+  if (mediaId.value) {
+    void loadChapters();
+    void loadMarkers();
+    startPositionPolling();
+  }
 });
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   stopPositionPolling();
 });
 </script>

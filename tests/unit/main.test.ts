@@ -304,3 +304,66 @@ describe('boot wires the nav menu + admin routes', () => {
     expect(cfg.extraRoutes.some((r) => r.name === 'admin-dashboard')).toBe(true);
   });
 });
+
+// S501 T-09 — the boot white-screen guards. On a privacy-mode Tizen webview the
+// very first `globalThis.localStorage` read can throw `SecurityError`, and any
+// throw past it used to reject the top-level `void boot()` unhandled → a blank
+// screen. These pins prove the storage probe degrades gracefully and that boot()
+// SURFACES failures so the `.catch(renderBootFailure)` guard can act on them.
+describe('boot fallbacks (S501 T-09)', () => {
+  it('probeStorage() degrades to an in-memory shim when the localStorage getter throws', async () => {
+    const mod = await import('@/main');
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('SecurityError: storage disabled');
+      },
+    });
+    try {
+      const storage = mod.probeStorage();
+      // Never throws; behaves like Storage for the lifetime of the session.
+      storage.setItem('phlix.serverUrl', 'http://in-mem:8096');
+      expect(storage.getItem('phlix.serverUrl')).toBe('http://in-mem:8096');
+      storage.removeItem('phlix.serverUrl');
+      expect(storage.getItem('phlix.serverUrl')).toBeNull();
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'localStorage', original);
+    }
+  });
+
+  it('boot() runs to completion on a throwing localStorage (falls back, mounts the app)', async () => {
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      get() {
+        throw new Error('SecurityError: storage disabled');
+      },
+    });
+    try {
+      const mod = await import('@/main');
+      // No rejection despite storage being unavailable.
+      await expect(mod.boot()).resolves.toBeUndefined();
+      expect(createPhlixApp).toHaveBeenCalled();
+      expect(mountSpy).toHaveBeenCalledWith('#phlix-app');
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'localStorage', original);
+    }
+  });
+
+  it('boot() surfaces (rejects) when app creation throws — the guard the .catch needs', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
+    const mod = await import('@/main');
+    createPhlixApp.mockImplementationOnce(() => {
+      throw new Error('boom');
+    });
+    await expect(mod.boot()).rejects.toThrow('boom');
+  });
+
+  it('renderBootFailure() writes a readable message into the mount point (no blank screen)', async () => {
+    const mod = await import('@/main');
+    document.body.innerHTML = '<div id="phlix-app"></div>';
+    mod.renderBootFailure(new Error('kaboom'));
+    expect(document.getElementById('phlix-app')?.textContent).toContain('kaboom');
+  });
+});
