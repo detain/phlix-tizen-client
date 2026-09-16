@@ -302,7 +302,7 @@ stray `BACK`/`YELLOW` press.
   /`unregisterKey`. `installRemoteKeyRegistration(tizenLike?)` declares `REMOTE_KEYS`
   at app-ready and returns a paired teardown releasing exactly what it acquired;
   absent `tizen` (browser dev) = silent no-op. Called from `installTizenBridge`, so
-   key registration follows the same install/teardown lifecycle — no second pipeline.
+  key registration follows the same install/teardown lifecycle — no second pipeline.
 
 ### Track language preference memory (`src/tracks/`, `src/stores/useTrackPreferenceStore.ts`)
 
