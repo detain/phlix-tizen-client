@@ -12,6 +12,7 @@ import {
 } from '@/tizenBridge';
 import remoteManager from '@/remote/RemoteManager';
 import type { ActionEvent } from '@/remote/RemoteManager';
+import { REMOTE_KEYS } from '@/remote/registerKeys';
 import type { App as VueApp } from 'vue';
 
 // usePlayerStore is only touched by installTizenBridge, not the pure helper;
@@ -524,5 +525,36 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
     // Teardown still clears the shared flag + suppression even with no route guard.
     expect(qualityMenuActive.value).toBe(false);
     expect(remoteManager.suppressPropagation).toBeNull();
+  });
+
+  it('S509: registers the platform keys at install and releases them on teardown', () => {
+    const registerKey = vi.fn(() => true);
+    const unregisterKey = vi.fn(() => true);
+    const tizenLike = { tvinputdevice: { registerKey, unregisterKey } };
+
+    const sink: RouteGuardSink = { remove: vi.fn() };
+    const teardown = installTizenBridge(makeApp('player', sink), tizenLike);
+
+    // Registered once, at app-ready, at install time.
+    expect(registerKey).toHaveBeenCalledTimes(REMOTE_KEYS.length);
+    expect(registerKey).toHaveBeenCalledWith('MediaPlayPause');
+    expect(unregisterKey).not.toHaveBeenCalled();
+
+    teardown();
+    cleanup = null; // already torn down
+
+    // Released exactly once each on teardown — the paired, leak-free lifecycle.
+    expect(unregisterKey).toHaveBeenCalledTimes(REMOTE_KEYS.length);
+    expect(unregisterKey).toHaveBeenCalledWith('MediaPlayPause');
+  });
+
+  it('S509: is inert (no throw) when no `tizen` global is present', () => {
+    // jsdom has no ambient tizen → registration is a silent no-op; teardown safe.
+    const sink: RouteGuardSink = { remove: vi.fn() };
+    let teardown: (() => void) | undefined;
+    expect(() => {
+      teardown = installTizenBridge(makeApp('player', sink));
+    }).not.toThrow();
+    expect(() => teardown!()).not.toThrow();
   });
 });

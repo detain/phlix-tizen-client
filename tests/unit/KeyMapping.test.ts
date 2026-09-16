@@ -174,4 +174,58 @@ describe('KeyMapping', () => {
       expect(keys).toContain('79'); // OPTIONS
     });
   });
+
+  // S509 (AD-1) — the media-transport / channel codes now reachable via
+  // tvinputdevice registration, and the named digit-key routing groundwork.
+  describe('S509 media + channel + digit seams', () => {
+    it('maps the 2020+ media / channel key codes', () => {
+      expect(KeyMapping.mapKeyCode(10252)).toBe('PLAY_PAUSE');
+      expect(KeyMapping.mapKeyCode(427)).toBe('CHANNEL_UP');
+      expect(KeyMapping.mapKeyCode(428)).toBe('CHANNEL_DOWN');
+    });
+
+    it('treats channel keys as immediate (fire on keydown)', () => {
+      expect(KeyMapping.isImmediate('CHANNEL_UP')).toBe(true);
+      expect(KeyMapping.isImmediate('CHANNEL_DOWN')).toBe(true);
+      expect(KeyMapping.isHandled('CHANNEL_UP')).toBe(true);
+    });
+
+    it('gives channel keys display names', () => {
+      expect(KeyMapping.getDisplayName('CHANNEL_UP')).toBe('Channel Up');
+      expect(KeyMapping.getDisplayName('CHANNEL_DOWN')).toBe('Channel Down');
+    });
+
+    it('names digit codes DIGIT_0..DIGIT_9 (routing groundwork)', () => {
+      expect(KeyMapping.mapKeyCode(48)).toBe('DIGIT_0');
+      expect(KeyMapping.mapKeyCode(49)).toBe('DIGIT_1');
+      expect(KeyMapping.mapKeyCode(57)).toBe('DIGIT_9');
+    });
+
+    it('recognises digit actions via isDigit, and NOT digit actions otherwise', () => {
+      expect(KeyMapping.isDigit('DIGIT_0')).toBe(true);
+      expect(KeyMapping.isDigit('DIGIT_9')).toBe(true);
+      for (const other of ['PLAY', 'ENTER', 'BACK', 'UNKNOWN_1', '0']) {
+        expect(KeyMapping.isDigit(other)).toBe(false);
+      }
+    });
+
+    it('keeps digits OUT of immediate/handled so text-input typing is untouched', () => {
+      // The groundwork routes the token; it must not swallow the key (AD-22's
+      // commit buffer would add handling — not this step).
+      expect(KeyMapping.isImmediate('DIGIT_1')).toBe(false);
+      expect(KeyMapping.isHandled('DIGIT_1')).toBe(false);
+      expect(KeyMapping.isRepeatable('DIGIT_1')).toBe(false);
+    });
+
+    it('displays digits as their numeral', () => {
+      expect(KeyMapping.getDisplayName('DIGIT_7')).toBe('7');
+    });
+
+    it('KEY_MAP contains the new S509 codes', () => {
+      const keys = Object.keys(KeyMapping.KEY_MAP);
+      expect(keys).toContain('10252');
+      expect(keys).toContain('427');
+      expect(keys).toContain('428');
+    });
+  });
 });

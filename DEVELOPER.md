@@ -162,15 +162,30 @@ Two exports:
   fake `BridgeQualityMenu`. Returns a cleanup function that unsubscribes (it
   prefers the unsubscribe returned by `on()`, and falls back to `off()`). No-op
   safe when `remote` is null/undefined.
-- **`installTizenBridge(app)`** — pulls `$pinia` / `$router` off
+- **`installTizenBridge(app, tizenLike?)`** — pulls `$pinia` / `$router` off
   `app.config.globalProperties`, resolves `usePlayerStore(pinia)`, sets
   `getRoute = () => router.currentRoute.value`, wires
   `remoteManager.suppressPropagation` for the quality-mode D-pad passthrough
   (see below), registers a `router.afterEach` guard for quality-mode teardown,
-  and delegates to `wireTizenBridge` with the `RemoteManager` singleton. Its
-  returned cleanup unwires the action handler, removes the route guard, forces
-  quality mode off, and nulls `suppressPropagation` — so nothing from this
-  bridge can outlive it.
+  registers the 2020+ `tvinputdevice` media/channel/colour keys (S509 — see
+  `remote/registerKeys.ts` below), and delegates to `wireTizenBridge` with the
+  `RemoteManager` singleton. Its returned cleanup unwires the action handler,
+  removes the route guard, **releases the registered keys**, forces quality mode
+  off, and nulls `suppressPropagation` — so nothing from this bridge (or its key
+  registrations) can outlive it.
+- **`remote/registerKeys.ts`** (S509) — the 2020+ key-registration doctrine. A
+  Samsung webview will not deliver media-transport / channel / colour / Info
+  `keydown`s unless the app first declares them via `tizen.tvinputdevice.registerKey`.
+  `installRemoteKeyRegistration(tizenLike?)` registers `REMOTE_KEYS` once,
+  fail-soft per key (some profiles reject a name — it is skipped, the rest still
+  land), and returns a teardown that unregisters exactly what was acquired. It is
+  a pure, `deviceId.ts`-style seam: pass a fake `tizenLike` in tests, and on a
+  non-Tizen webview the ambient global is absent so it is a silent no-op. It opens
+  NO parallel pipeline — the keys still arrive as ordinary DOM `keydown`s that
+  `RemoteManager` + `KeyMapping` dispatch. (`KeyMapping` gained `10252`→`PLAY_PAUSE`
+  and `427`/`428`→`CHANNEL_UP`/`CHANNEL_DOWN` for them; claiming the channel keys
+  as immediate also stops a registered channel press from zapping the app to
+  live TV.)
 
 Action map:
 
@@ -277,7 +292,17 @@ stray `BACK`/`YELLOW` press.
   `preventDefault`s nor emits actions for them — `@phlix/ui`'s `useSpatialNav`
   owns D-pad navigation directly on `document`, and ENTER is native focus
   activation. If RemoteManager also handled arrows, its key-repeat would fire
-  phantom navigation on top of spatial-nav.
+  phantom navigation on top of spatial-nav. **S509 (AD-1)** added the media /
+  channel codes reachable only after `tvinputdevice` registration — `10252`
+  `PLAY_PAUSE` and `427`/`428` `CHANNEL_UP`/`CHANNEL_DOWN` (immediate + displayed)
+  — and named the digit codes `48`–`57` `DIGIT_0`–`DIGIT_9` (+ `isDigit()`) as
+  routing groundwork; digits stay OUT of immediate/handled so text inputs keep
+  receiving them.
+- **`registerKeys.ts`** (S509) — pure seam over `tizen.tvinputdevice.registerKey`
+  /`unregisterKey`. `installRemoteKeyRegistration(tizenLike?)` declares `REMOTE_KEYS`
+  at app-ready and returns a paired teardown releasing exactly what it acquired;
+  absent `tizen` (browser dev) = silent no-op. Called from `installTizenBridge`, so
+  key registration follows the same install/teardown lifecycle — no second pipeline.
 
 ## Streaming and device profile
 
@@ -380,16 +405,24 @@ router or view layer to edit here.
 
 ### Map a new remote key to an action
 
+0. **2020+ only:** if the key is a media-transport / channel / colour / Info key,
+   the TV will not deliver it as a DOM `keydown` until it is declared through the
+   platform. Add its `tvinputdevice` name to `REMOTE_KEYS` in
+   `src/remote/registerKeys.ts` (registration + teardown are already wired through
+   `installTizenBridge`, so no new lifecycle code is needed). Classic codes (415/413/…)
+   already arrive without this step.
 1. Add or confirm the Samsung key code → action name in `src/remote/KeyMapping.ts`'s
    `KEY_MAP`.
 2. Add the action to `IMMEDIATE_ACTIONS` (fires on keydown) or `REPEATABLE_ACTIONS`
    (fires repeatedly while held) — both feed `HANDLED_ACTIONS`, which controls
    `preventDefault`. Do NOT add arrows/ENTER here (spatial-nav + native focus
-   own them).
+   own them). (Digits are named `DIGIT_0`–`DIGIT_9` but intentionally left out of
+   these sets so text fields still receive them — see S509.)
 3. Handle the new action in `wireTizenBridge`'s `switch` in `src/tizenBridge.ts`,
    acting on the `BridgePlayer` / `BridgeRouter` deps. Extend the `BridgePlayer` /
    `BridgeRouter` interfaces if you need a new player/router method.
-4. Add a case to `tests/unit/tizenBridge.test.ts`.
+4. Add a case to `tests/unit/tizenBridge.test.ts` (and, for a newly registered key,
+   extend `tests/unit/registerKeys.test.ts` / `KeyMapping.test.ts`).
 
 ### Tune HLS for the TV
 
