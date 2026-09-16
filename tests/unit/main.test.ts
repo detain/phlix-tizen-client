@@ -8,7 +8,11 @@ vi.mock('@phlix/ui/fonts.css', () => ({}));
 vi.mock('@/polyfills', () => ({}));
 
 const fakePinia = { __pinia: true };
-const fakeRouter = { __router: true };
+// S515 — boot() installs a ONE-SHOT pre-mount `beforeEach` (→ Connect) only when
+// the probe verdict is 'unreachable'; the fake exposes the hook + unregister spy.
+const routerUnregister = vi.fn();
+const routerBeforeEach = vi.fn(() => routerUnregister);
+const fakeRouter = { __router: true, beforeEach: routerBeforeEach };
 const mountSpy = vi.fn();
 const fakeApp = {
   mount: mountSpy,
@@ -31,9 +35,13 @@ const fakeToast = {
 // Stub the admin route builder + page main.ts pulls from @phlix/ui to assemble
 // its menu + extraRoutes; the builder returns a marker route so tests can assert it.
 const ADMIN_ROUTE = { path: '/app/admin/dashboard', name: 'admin-dashboard' };
+// S515 — src/bootProbe.ts reuses the exported @phlix/ui probeServer; mock it so
+// boot() paths (reachable / unreachable / empty-skip) are pinned without network.
+const probeServerMock = vi.fn(async (..._args: unknown[]) => true);
 vi.mock('@phlix/ui', () => ({
   createPhlixApp: (...args: unknown[]) => createPhlixApp(...args),
   buildAdminRoutes: () => [ADMIN_ROUTE],
+  probeServer: (...args: unknown[]) => probeServerMock(...args),
   LibraryScanPage: { template: '<div />' },
   usePlayerStore: vi.fn(() => ({})),
   useSpatialNav: vi.fn(),
@@ -115,6 +123,9 @@ describe('boot (Tizen renderer entry)', () => {
     toastDismiss.mockClear();
     wirePendingPlayMediaDispatcherMock.mockClear().mockReturnValue(() => {});
     applyPendingPlayMediaMock.mockClear();
+    probeServerMock.mockReset().mockImplementation(async () => true);
+    routerBeforeEach.mockClear().mockReturnValue(routerUnregister);
+    routerUnregister.mockClear();
     vi.unstubAllEnvs();
     globalThis.localStorage.clear();
   });
@@ -410,5 +421,98 @@ describe('boot fallbacks (S501 T-09)', () => {
     document.body.innerHTML = '<div id="phlix-app"></div>';
     mod.renderBootFailure(new Error('kaboom'));
     expect(document.getElementById('phlix-app')?.textContent).toContain('kaboom');
+  });
+});
+
+// S515 AD-3 — the boot probe. A SET-but-UNREACHABLE base must reach the ui's
+// D-pad-operable Connect screen NON-fatally (real apiBase + persisted URL kept
+// for retry; "Connect anyway" stays one keystream away); the EMPTY base must
+// behave byte-identically to before (connect-gate owns it — no probe fires).
+describe('S515 boot probe (AD-3)', () => {
+  beforeEach(() => {
+    // Same isolation the boot suite uses: fresh module graph + empty storage,
+    // so probe-intercept counts are per-test.
+    vi.resetModules();
+    createPhlixApp.mockClear().mockReturnValue(fakeApp);
+    mountSpy.mockClear();
+    secondMount.mockClear();
+    secondUse.mockClear().mockReturnValue(secondApp);
+    resolveHubRelayConfigMock.mockClear().mockReturnValue(null);
+    openHubRelayConnectionMock.mockClear();
+    probeServerMock.mockReset().mockImplementation(async () => true);
+    routerBeforeEach.mockClear().mockReturnValue(routerUnregister);
+    routerUnregister.mockClear();
+    globalThis.localStorage.clear();
+  });
+
+  it('probes a set base at boot with the resolved base + a fetch impl', async () => {
+    // Import first: main.ts fires an implicit `void boot()` at module load
+    // (against the empty storage cleared above → probe-less 'empty' path). The
+    // explicit boot() below is the one under test.
+    const mod = await import('@/main');
+    probeServerMock.mockClear();
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://probe-me:8096');
+    await mod.boot();
+    expect(probeServerMock).toHaveBeenCalledTimes(1);
+    expect(probeServerMock.mock.calls[0][0]).toBe('http://probe-me:8096');
+    expect(typeof probeServerMock.mock.calls[0][1]).toBe('function');
+  });
+
+  it('reachable base → boots exactly as before, NO connect intercept installed', async () => {
+    const mod = await import('@/main');
+    routerBeforeEach.mockClear();
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://alive:8096');
+    await mod.boot();
+    expect(routerBeforeEach).not.toHaveBeenCalled();
+    expect(mountSpy).toHaveBeenCalledWith('#phlix-app');
+  });
+
+  it('set-but-unreachable → real apiBase kept + ONE-SHOT connect intercept installed before mount', async () => {
+    probeServerMock.mockImplementationOnce(async () => false);
+    const mod = await import('@/main');
+    // The implementationOnce above is consumed by the import-time boot; give
+    // the boot under test its own failing probe, then clear the noise.
+    probeServerMock.mockClear();
+    routerBeforeEach.mockClear();
+    probeServerMock.mockImplementationOnce(async () => false);
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://dead:8096');
+    await mod.boot();
+
+    // Non-destructive: config keeps the set base, storage keeps it for the retry.
+    const cfg = createPhlixApp.mock.calls.at(-1)?.[0] as { apiBase: string };
+    expect(cfg.apiBase).toBe('http://dead:8096');
+    expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBe('http://dead:8096');
+
+    expect(routerBeforeEach).toHaveBeenCalledTimes(1);
+    const guard = routerBeforeEach.mock.calls[0][0] as (to: { name?: string }) => unknown;
+    // Any landing route is steered to Connect ONCE, then the guard deregisters.
+    expect(guard({ name: 'app' })).toEqual({ name: 'connect' });
+    expect(routerUnregister).toHaveBeenCalledTimes(1);
+    // Still asked about the connect route itself? Let it render — no redirect loop.
+    expect(guard({ name: 'connect' })).toBe(true);
+    expect(mountSpy).toHaveBeenCalledWith('#phlix-app');
+  });
+
+  it('empty base skips the probe entirely (connect-gate path byte-identical)', async () => {
+    vi.stubEnv('VITE_PHLIX_SERVER_URL', '');
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(probeServerMock).not.toHaveBeenCalled();
+    expect(routerBeforeEach).not.toHaveBeenCalled();
+    expect(createPhlixApp).toHaveBeenLastCalledWith(
+      expect.objectContaining({ apiBase: '', requireConnection: true })
+    );
+  });
+
+  it('T-09 NOT regressed: a throwing probe impl degrades to the offline route, boot resolves', async () => {
+    const mod = await import('@/main');
+    routerBeforeEach.mockClear();
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://weird:8096');
+    probeServerMock.mockImplementationOnce(async () => {
+      throw new Error('probe must never sink boot');
+    });
+    await expect(mod.boot()).resolves.toBeUndefined();
+    expect(routerBeforeEach).toHaveBeenCalledTimes(1);
+    expect(mountSpy).toHaveBeenCalledWith('#phlix-app');
   });
 });

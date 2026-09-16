@@ -15,6 +15,7 @@ import { buildPhlixHeaders } from '@phlix/contracts';
 import '@phlix/ui/style.css';
 import '@phlix/ui/fonts.css';
 import { resolveAppConfig } from './resolveConfig';
+import { probeBootBase } from './bootProbe';
 import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import { resolveHubRelayConfig, openHubRelayConnection } from './api/hubRelay';
@@ -240,7 +241,7 @@ function wireHubRelayConsumer(
   });
 }
 
-export async function boot(): Promise<void> {
+export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   const storage = probeStorage();
 
   const serverUrl = storage.getItem(SERVER_URL_KEY);
@@ -248,6 +249,11 @@ export async function boot(): Promise<void> {
   const deviceId = resolveDeviceId(storage);
 
   const { app, apiBase } = resolveAppConfig({ serverUrl, envUrl });
+
+  // S515 AD-3 — classify a SET-but-UNREACHABLE base before committing to it
+  // (the connect-gate alone only catches the EMPTY one). Skipped for an empty
+  // base, so first-run behavior is byte-identical; never rejects.
+  const bootProbe = await probeBootBase(apiBase, fetchImpl);
 
   const deviceHeaders = buildPhlixHeaders({
     deviceId,
@@ -283,6 +289,26 @@ export async function boot(): Promise<void> {
     extraRoutes: buildExtraRoutes(),
     playerHlsConfig: TIZEN_HLS_CONFIG
   });
+
+  // S515 AD-3 — probe said unreachable: land the user on @phlix/ui's existing
+  // D-pad-operable Connect screen instead of a live but silently-failing app.
+  // ONE-SHOT, pre-mount `beforeEach`: the first navigation is steered to
+  // `connect`, then the guard deregisters itself so a "Connect anyway" commit
+  // (or any later navigation) boots normally — the probe is advisory, never a
+  // permanent jail. An empty-base boot never reaches this (the connect-gate
+  // already routes there), and the persisted `phlix.serverUrl` is deliberately
+  // LEFT INTACT for the retry. Why not pass `apiBase: ''` instead: `@phlix/ui`
+  // persists its own chosen base (`phlix.connection.apiBase`) and
+  // `effectiveBase()` prefers it, so an empty config base would NOT fire the
+  // gate after any past Connect commit — the router intercept works in both
+  // storage states.
+  if (bootProbe === 'unreachable') {
+    const interceptRouter = application.config.globalProperties.$router;
+    const stopIntercept = interceptRouter.beforeEach((to: { name?: unknown }) => {
+      stopIntercept();
+      return to.name === 'connect' ? true : { name: 'connect' };
+    });
+  }
 
   application.mount('#phlix-app');
 

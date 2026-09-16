@@ -68,6 +68,7 @@ style="display:none">`); its only job is to call `useSpatialNav` with an
 1. `import './polyfills'` is the very first line so `structuredClone` exists before any `@phlix/ui` module loads.
 2. Reads the persisted server URL from `localStorage['phlix.serverUrl']`, the build-time `import.meta.env.VITE_PHLIX_SERVER_URL`, and the device id.
 3. `resolveAppConfig({ serverUrl, envUrl })` decides `{ app, apiBase }`.
+3b. (S515 AD-3) `probeBootBase(apiBase, fetchImpl?)` from `src/bootProbe.ts` — empty base skips the probe; a set base is probed via `@phlix/ui`'s `probeServer` (GET `{base}/health`, 6s abort). On `'unreachable'` boot keeps the real apiBase + persisted URL and registers a ONE-SHOT pre-mount `beforeEach` that routes the first navigation to the Connect screen, then deregisters (non-fatal by design).
 4. `buildPhlixHeaders({ deviceId, deviceName: 'Phlix for Samsung TV', deviceType: 'samsung-tizen' })`.
 5. `createPhlixApp({ app, apiBase, deviceHeaders, defaultTv: true, defaultTheme: 'nocturne', branding: { wordmark: 'Phlix' }, playerHlsConfig: TIZEN_HLS_CONFIG })`.
 6. `.mount('#phlix-app')`, then `installTizenBridge(application)`.
