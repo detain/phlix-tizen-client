@@ -3,7 +3,10 @@
  * ActionToastOverlay — the single always-mounted caption surface (S516 / AD-13).
  *
  * Echoes, for ~1 s, what the remote just did or where the D-pad just landed:
- * a glance that replaces the hover a TV will never have. Three wires, one slot:
+ * a glance that replaces the hover a TV will never have. Three wires, one
+ * visible slot — since S526 the SLOT stays single (ordered render) while the
+ * store behind it is a bounded FIFO, so a burst of rapid actions announces IN
+ * ORDER instead of clobbering:
  *
  *   - `RemoteManager 'action'` → caption via the repo's own `KeyMapping.getDisplayName`
  *     (PLAY_PAUSE → "Play/Pause", held-key repeats simply refresh the window);
@@ -11,7 +14,8 @@
  *     placeholder → trimmed text, length-capped) — the "focus-landed" echo;
  *   - document `keydown` → dismiss immediately (key-activatable dismissal: the
  *     NEXT press always clears the CURRENT caption; a press that also acts
- *     re-shows its own caption right after, so the slot never double-stacks).
+ *     enqueues its own caption right after — the queue keeps BOTH, shown one
+ *     at a time).
  *
  * FOCUS-SAFE (S512 blur/`tabindex=-1` containment doctrine, honored): the root
  * is `aria-hidden`, has NO `tabindex`, is `pointer-events: none`, and this

@@ -317,6 +317,16 @@ export const S522_GAMEPAD_BRIDGE_TOKEN = 'S522GAMEPADX9P8';
 // vendored manifest stays byte-identical (md5 06ce7ec9…).
 export const S523_IDLE_SCREENSAVER_TOKEN = 'S523IDLEX9P8';
 
+// S526 transient-action TOAST queue + BACK layer-stack ladder ritual token
+// (AD-10; the pure `src/remote/backPolicy.ts` rung decider + the bounded-FIFO
+// action-toast queue) — its ONLY code home is this line (1 code home /
+// 0 .md). Both halves are client-side only: the queue never touches the wire
+// and the BACK ladder routes keys/history/`tizen.application` exits, so it
+// introduces ZERO new request sites, the per-file pin above is UNCHANGED, the
+// scan stays 27, and the vendored manifest stays byte-identical (md5
+// 06ce7ec9…). Era law kept: no new routes, no contracts change.
+export const S526_BACK_LAYER_TOAST_QUEUE_TOKEN = 'S526LAYERX9P9';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('730e55b7d3ad44a155f6b46374a9f6c463792840');

@@ -5,6 +5,35 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W113 (S526): BACK layer-stack ladder + ordered toast queue (AD-10) — 2026-09-17
+
+- **BACK is now a four-rung ladder, not a one-liner.** On a phone BACK is one
+  thing; on a TV it means the NEAREST control that can absorb the press. New pure
+  module `src/remote/backPolicy.ts` decides the rung as data-in/data-out in strict
+  order — **row-snap** (a horizontally-panned shelf returns to its start before the
+  page leaves) → **modal-close** (the topmost closable layer, the quality flyout,
+  dismisses; nothing beneath moves) → **history-back** → **exit-app** (an EXPLICIT
+  `tizen.application.getCurrentApplication().exit()` at the browse root instead of a
+  blind `history.back()` against an empty stack — the zombie-webview class where the
+  panel sits awake having done nothing). `tizenBridge.ts` wires it with every effect
+  behind injectable seams (`layers` / `exit` / `row probe+executor` / `focusMemory`),
+  so each rung is unit-pinned against fakes and no test or browser session can trip a
+  real platform call; the exit resolves lazily via optional chaining, so a non-Tizen
+  webview is a silent no-op and the module never touches `tizen.*` at import. YELLOW
+  now remembers where the viewer stood (a LIFO focus stack) and BACK returns them there.
+  The same pure ladder + `createLayerFocusStack` is written to be **imported by the
+  AD-9 `@phlix/ui` focus-memory leg** (AD-10 before AD-9 — the policy is authored first,
+  adopted second).
+- **A burst of captions now announces in order instead of clobbering.** S516 shipped a
+  single toast slot; rapid transient actions overwrote each other and only the last
+  survived. `useActionToastStore` generalises it into a **bounded FIFO** (cap on the
+  waiting room, oldest evicted) drained by **exactly one** timer — the S510 no-stack
+  rule stands in the way that matters: the renderer still shows ONE caption at a time,
+  ordering simply lives in the store. Held-key repeats still refresh the one window,
+  blank captions are refused, and the NEXT keypress skips forward (S516 dismissal
+  preserved). Both halves are pure client-side — ZERO new request sites, the
+  `routeManifest.gate` scan stays 27, and the vendored manifest is byte-identical.
+
 ### Added — W112 (S523): idle screensaver overlay (zero-privilege half) — 2026-09-17
 
 - **The TV now rests behind a designed idle surface.** `src/screensaver.ts`

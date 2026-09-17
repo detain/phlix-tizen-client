@@ -5,7 +5,11 @@
  *      path pinned); non-blocking while shown.
  * AC2: focus-safe — showing a caption never moves/creates DOM focus, the root
  *      carries no tabindex + is aria-hidden, and dismissal is key-reachable.
- * AC3: never stacks — the single slot replaces (also across held-key repeats).
+ * AC3: the RENDER never stacks — one visible slot at a time. S526/AD-10 keeps
+ *      that guarantee while generalising the store behind it into a bounded
+ *      FIFO: a burst of DISTINCT actions now queues in order (the single armed
+ *      timer drains head→next) instead of clobbering; a held-key repeat of the
+ *      SAME caption still just refreshes the one window (S516 pin).
  *
  * The REAL `remoteManager` singleton is used: the component wires to the live
  * event bus, so emits + one legacy-dispatched document keydown pin the actual
@@ -72,13 +76,23 @@ describe('useActionToastStore (S516 AD-13)', () => {
     expect(toast.visible).toBe(false);
   });
 
-  it('a re-show REPLACES the caption and keeps exactly ONE armed timer (S510 no-stack rule)', () => {
+  it('a burst of distinct actions QUEUES in order yet keeps exactly ONE armed timer (S510 no-stack, S526 FIFO)', () => {
     vi.useFakeTimers();
     const toast = useActionToastStore();
     toast.show('Play');
     toast.show('Pause');
-    expect(toast.caption).toBe('Pause');
+    // The first announcement is on screen; the second waits its turn — the
+    // render slot never stacks, but nothing is silently clobbered either.
+    expect(toast.caption).toBe('Play');
+    expect(toast.pending).toBe(1);
     expect(vi.getTimerCount()).toBe(1);
+    // One window elapses: Play clears, the queue drains Pause into the slot
+    // (re-arming the SAME single window), still exactly one timer live.
+    vi.advanceTimersByTime(ACTION_TOAST_AUTO_CLEAR_MS);
+    expect(toast.caption).toBe('Pause');
+    expect(toast.pending).toBe(0);
+    expect(vi.getTimerCount()).toBe(1);
+    // The drained caption then self-clears to an empty feed with no timer left.
     vi.advanceTimersByTime(ACTION_TOAST_AUTO_CLEAR_MS);
     expect(toast.caption).toBeNull();
     expect(vi.getTimerCount()).toBe(0);
