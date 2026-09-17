@@ -5,6 +5,30 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W114 (S531): guarded VoiceControl registration (AD-23)
+
+- **Spoken transport, only where the platform already offers it.** New module
+  `src/voiceControl.ts` feature-detects the `tizen.voicecontrol` platform API and,
+  while the player route is mounted, registers a small transport command list at
+  foreground service level; it unregisters when the player unmounts. Absent or
+  throwing `voicecontrol` — the common TV-profile case — is a silent no-op, so app
+  behaviour is byte-identical without voice, and a non-Tizen (browser / jsdom) run
+  never calls into the platform.
+- **Reuses the existing action vocabulary and pipeline.** The default command set is
+  a transport subset mapped onto ActionNames the remote already knows, with phrases
+  taken from the shared display-name source (no forked label table). A recognised
+  phrase is delivered through the single existing action bus rather than a second
+  dispatcher. Numeric voice commands are intentionally withheld: the timed
+  digit-commit buffer they must share is not present yet, so numerics coordinate on
+  arrival instead of becoming a blocking dependency.
+- **Manifest honesty (the mask is honored).** `app/config.xml` is UNCHANGED — no
+  `voicecontrol` `<feature>` was pre-added. On profiles where the voice API only
+  materialises once such a feature is declared, this module simply no-ops, and the
+  feature decision is deferred to the batched, line-justified manifest change
+  (a guarded no-op ship is preferred to a speculative privilege/feature add).
+  Introduces ZERO new request sites, changes NO route / contract / server surface,
+  and leaves the vendored manifest byte-identical.
+
 ### Added — W114 (S530): ref-counted request-dedup store (AD-15)
 
 - **One in-flight call per logical request.** New composable
