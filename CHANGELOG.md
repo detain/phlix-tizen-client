@@ -5,6 +5,35 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W114 (S530): ref-counted request-dedup store (AD-15)
+
+- **One in-flight call per logical request.** New composable
+  `src/api/useRequestsStore.ts` keys concurrent requests on their arguments and
+  collapses every simultaneous identical call onto a single underlying fetch whose
+  result fans out to all callers. It keeps a live reference count per key, evicts
+  the entry automatically once the last caller leaves (unless flagged persistent),
+  coalesces repeated refresh triggers fired inside a `refreshIn(ms)` window into
+  one refetch, and exposes an `isReady` initialization gate so boot code can tell
+  "the first reply has not landed yet" apart from "it resolved empty". This is
+  request **dedup / coalescing, not a cache** — nothing survives its last
+  subscriber, and the shared UI's single-item cache is deliberately not forked.
+- **Reuses the already-landed race-defense idiom (no second mechanism).** Superseded
+  replies are dropped with the very same generation guard proven in the chapter and
+  skip-intro overlays (`++gen` on start, publish only while the captured generation
+  is still current), so the two patterns cannot drift apart. The store's suite greps
+  its own source to keep an `AbortController` race or a parallel version counter from
+  quietly reappearing.
+- **Wired to the keyed surfaces that actually ship today.** `useMusicStore.fetchAlbum`
+  and `fetchTrack` had no in-flight guard — a double ENTER fired two parallel
+  identical GETs and every re-drill refetched; both now key through the store, so the
+  duplicate press and the overlapping re-drill collapse to one call and a genuine
+  later re-drill still re-fetches honestly. `RecommendationsScreen` built a fresh API
+  client on every load and now shares one for its lifetime with its request riding the
+  store, so a double-mount or a spammed Retry issues one GET. Prop-fed cards are
+  untouched and no speculative consumer was invented. Adds ZERO new request sites,
+  changes NO route / contract / server / shared-library surface, and leaves the vendored
+  manifest and `app/config.xml` byte-identical.
+
 ### Added — W113 (S529): mDNS-less LAN server discovery (AD-24) — 2026-09-17
 
 - **A TV can now lean on servers it already knows, without hand-typing a URL.**

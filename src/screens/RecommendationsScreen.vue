@@ -18,6 +18,7 @@ import { ApiClient } from '@phlix/ui';
 import { useApiBase } from '@phlix/ui';
 import type { UserRecommendation } from '@phlix/contracts';
 import RecommendationCard from '../components/RecommendationCard.vue';
+import { useRequestsStore } from '../api/useRequestsStore';
 
 interface RecommendationApiResponse {
   recommendations: UserRecommendation[];
@@ -25,6 +26,12 @@ interface RecommendationApiResponse {
 
 const router = useRouter();
 const apiBase = useApiBase();
+// S530 (AD-15): a single client for the screen's lifetime (this used to build a
+// fresh `ApiClient` on every `load()`), plus the shared request-dedup store so a
+// double-mount or a spammed Retry collapses to one GET. The recommendation list is
+// a fixed query (`?limit=20`), so it keys on a stable shape.
+const client = new ApiClient({ baseUrl: apiBase.value });
+const requests = useRequestsStore();
 
 const items = ref<UserRecommendation[]>([]);
 const loading = ref(true);
@@ -35,10 +42,12 @@ async function load(): Promise<void> {
   error.value = null;
 
   try {
-    const client = new ApiClient({ baseUrl: apiBase.value });
-    const data = await client.get<RecommendationApiResponse>(
-      '/api/v1/me/recommendations',
-      { limit: '20' },
+    const data = await requests.request(
+      { kind: 'recommendations', limit: 20 },
+      () =>
+        client.get<RecommendationApiResponse>('/api/v1/me/recommendations', {
+          limit: '20',
+        }),
     );
     items.value = data.recommendations ?? [];
   } catch (e) {

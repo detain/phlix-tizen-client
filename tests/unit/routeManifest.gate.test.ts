@@ -340,6 +340,19 @@ export const S526_BACK_LAYER_TOAST_QUEUE_TOKEN = 'S526LAYERX9P9';
 // `systeminfo` privilege re-added). Era law kept: no new routes, no contracts change.
 export const S529_LAN_DISCOVERY_TOKEN = 'S529LANDISCX9P9';
 
+// S530 ref-counted request-dedup store ritual token (AD-15; the shared
+// `src/api/useRequestsStore.ts` coalescer reused by `useMusicStore.fetchAlbum/
+// fetchTrack` and `RecommendationsScreen.load`) — its ONLY code home is this line
+// (1 code home / 0 .md). The store is transport-agnostic over an injected
+// `fetcher` thunk and mints ZERO new request sites: the two keyed music reads ride
+// `@phlix/ui` helpers (out of scan scope here) and the recommendation GET keeps its
+// single existing `client.get('/api/v1/me/recommendations', …)` literal, so the
+// per-file pin above is UNCHANGED, the scan stays 27, and the vendored manifest
+// stays byte-identical (md5 06ce7ec9…). It reuses the landed T-07 `++gen`/`gen!==cur`
+// idiom rather than a second race-defense mechanism (TN-8). Era law kept: no new
+// routes, no contracts change, zero `phlix-shared` delta (that lib is PHP).
+export const S530_REQUESTS_DEDUP_TOKEN = 'S530REQDEDUPX9P10';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('730e55b7d3ad44a155f6b46374a9f6c463792840');

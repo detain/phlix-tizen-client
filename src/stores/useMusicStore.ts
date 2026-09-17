@@ -22,6 +22,16 @@
  * `artistsTotal`/`albumsTotal` so the UI can display the TRUE library size
  * rather than the size of page 1.
  *
+ * ## Request dedup (S530 / AD-15)
+ *
+ * `fetchAlbum` and `fetchTrack` are keyed reads (album by `title`+`artist`,
+ * track by media-item id) that previously had NO in-flight guard: a double ENTER
+ * fired two parallel identical GETs and every re-drill refetched. They now ride
+ * the shared ref-counted `src/api/useRequestsStore.ts` store, which coalesces
+ * concurrent identical keys onto one call (reusing the T-07 `++gen` idiom, per
+ * TN-8) and re-fetches cleanly once a key has no live subscriber. List paging
+ * stays on the plain client — it is offset-driven, not a keyed identity.
+ *
  * ## Why the `@phlix/ui` `ApiClient` helpers rather than raw `client.get`
  *
  * `listArtists()` / `listAlbums()` / `getAlbum()` / `getTrack()` send the
@@ -55,6 +65,7 @@ import { ref, computed } from 'vue';
 import { ApiClient, MUSIC_PAGE_SIZE } from '@phlix/ui';
 import { useApiBase } from '@phlix/ui';
 import type { MusicArtistsResult, MusicAlbumsResult } from '@phlix/ui';
+import { useRequestsStore } from '../api/useRequestsStore';
 
 /**
  * The normalized music row shapes, derived from `@phlix/ui`'s PUBLIC result
@@ -81,6 +92,11 @@ export const useMusicStore = defineStore('phlix-music', () => {
   // ── API client ────────────────────────────────────────────────────────────
   const apiBase = useApiBase();
   const getClient = () => new ApiClient({ baseUrl: apiBase.value });
+  // S530 (AD-15): keyed album/track reads ride the shared ref-counted dedup store
+  // so a double ENTER (or a re-drill while a fetch is still in flight) collapses
+  // to ONE GET. List paging stays on the plain client — it is offset-driven, not
+  // a keyed identity, so there is nothing to coalesce.
+  const requests = useRequestsStore();
 
   // ── Data state ────────────────────────────────────────────────────────────
   const artists = ref<MusicArtist[]>([]);
@@ -231,7 +247,13 @@ export const useMusicStore = defineStore('phlix-music', () => {
     error.value = null;
     currentAlbum.value = null;
     try {
-      currentAlbum.value = await getClient().getAlbum(title, artist ?? undefined);
+      // Keyed by (title, artist) — the album's server-side identity. Concurrent
+      // identical lookups coalesce to one GET (S530); a later, non-overlapping one
+      // re-fetches, because the store evicts the entry at zero subscribers.
+      currentAlbum.value = await requests.request(
+        { kind: 'music.album', title, artist: artist ?? null },
+        () => getClient().getAlbum(title, artist ?? undefined),
+      );
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load album';
       currentAlbum.value = null;
@@ -249,7 +271,11 @@ export const useMusicStore = defineStore('phlix-music', () => {
     error.value = null;
     currentTrack.value = null;
     try {
-      currentTrack.value = await getClient().getTrack(id);
+      // Keyed by the track's media-item id — a double press on a track coalesces
+      // to one GET (S530).
+      currentTrack.value = await requests.request({ kind: 'music.track', id }, () =>
+        getClient().getTrack(id),
+      );
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to load track';
       currentTrack.value = null;
