@@ -207,15 +207,25 @@ describe('voiceControl — default commands reuse existing ActionNames (AC#1)', 
     }
   });
 
-  it('is a small transport-only set with no numeric / new-vocabulary commands', () => {
+  it('is the transport set PLUS the ten digit phrases — committed, not withheld (S535)', () => {
+    // S531's WITHHELD-numeric posture discharged with the AD-22 buffer's arrival:
+    // the digits are registered because they now land on the SAME commit handler.
     expect(DEFAULT_VOICE_COMMANDS.length).toBeGreaterThan(0);
-    // Transport set only — nothing outside the playback-control vocabulary.
-    const transport = new Set(['PLAY', 'PAUSE', 'STOP', 'REWIND', 'FAST_FORWARD', 'NEXT', 'PREVIOUS']);
-    for (const { action } of DEFAULT_VOICE_COMMANDS) {
-      expect(transport.has(action)).toBe(true);
+    const transport = ['PLAY', 'PAUSE', 'STOP', 'REWIND', 'FAST_FORWARD', 'NEXT', 'PREVIOUS'];
+    const digits = Array.from({ length: 10 }, (_, n) => `DIGIT_${n}`);
+    expect(DEFAULT_VOICE_COMMANDS.map((c) => c.action)).toEqual([...transport, ...digits]);
+    // Every digit action is still a KEY_MAP-existing name and its phrase is the
+    // action's OWN display name (the numeral) — no forked label table.
+    for (const action of digits) {
+      expect(KNOWN_ACTIONS.has(action)).toBe(true);
+      expect(KeyMapping.isDigit(action)).toBe(true);
     }
-    // Numerics are withheld pending the AD-22 digit-commit buffer (coordinate-on-arrival).
-    expect(DEFAULT_VOICE_COMMANDS.some((c) => c.action.startsWith('DIGIT_'))).toBe(false);
+    expect(phraseToAction('4')).toBe('DIGIT_4');
+    expect(phraseToAction('0')).toBe('DIGIT_0');
+    // Nothing outside transport + digits creeps in (vocabulary stays closed).
+    for (const { action } of DEFAULT_VOICE_COMMANDS) {
+      expect(transport.includes(action) || digits.includes(action)).toBe(true);
+    }
   });
 
   it('recognised phrase → mapped ActionName reaches onAction; unknown phrase is dropped', () => {
@@ -237,6 +247,27 @@ describe('voiceControl — default commands reuse existing ActionNames (AC#1)', 
     onAction.mockClear();
     voice.listener?.('some phrase we never registered');
     expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it('a recognised DIGIT phrase is delivered as its DIGIT_* action to the SAME seam (S535)', () => {
+    // Same-handler law: voice numerics exit through the one onAction seam as
+    // digit action names — production routes them into the shared buffer
+    // (tizenBridge.test pins the end-to-end DIGIT_COMMIT; this pins the module).
+    const voice = fakeVoiceControl();
+    const onAction = vi.fn();
+    installVoiceControlRegistration({
+      getRoute: () => ({ name: 'player' }),
+      router: fakeRouter({ name: 'player' }),
+      tizenLike: { voicecontrol: voice.svc },
+      onAction
+    });
+    // The registered phrase list itself contains the ten numerals.
+    expect(voice.commandsArg()).toEqual(expect.arrayContaining(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']));
+
+    voice.listener?.('7');
+    expect(onAction).toHaveBeenCalledWith('DIGIT_7');
+    voice.listener?.('not-a-digit');
+    expect(onAction).toHaveBeenCalledTimes(1);
   });
 
   it('phraseToAction round-trips every default command and returns null for junk', () => {

@@ -2,8 +2,8 @@
  * Guarded VoiceControl registration (S531 — AD-23).
  *
  * Feature-detects the `tizen.voicecontrol` platform API and, ONLY while the
- * player route is mounted, registers a small transport command list at
- * `FOREGROUND` service level so a spoken "play"/"pause"/… drives the SAME
+ * player route is mounted, registers a transport + digit command list at
+ * `FOREGROUND` service level so a spoken "play"/"pause"/"7"/… drives the SAME
  * actions the remote keys already do. Every touch is guarded (a missing API)
  * and wrapped (a throwing API), so an absent or broken `voicecontrol` — the
  * common case across TV profiles — is a SILENT NO-OP and app behaviour is
@@ -17,14 +17,18 @@
  * The default command list is mapped onto EXISTING `KeyMapping` action names —
  * phrases come from `KeyMapping.getDisplayName`, so there is no parallel label
  * table (AC#1). A recognised command is delivered to an injected `onAction`
- * seam; in production the bridge wires that seam to `RemoteManager.emit('action',
- * …)` so the result re-enters the SINGLE existing action pipeline that
- * `wireTizenBridge` already consumes — voice never becomes a second dispatcher.
+ * seam; in production the bridge wires that seam to `RemoteManager` — non-digit
+ * actions re-enter the SINGLE existing action pipeline via `emit('action', …)`
+ * that `wireTizenBridge` already consumes, and digit actions enter the same
+ * digit-commit buffer the physical keys use (S535) — voice never becomes a
+ * second dispatcher.
  *
- * Numeric voice phrases are deliberately NOT registered: the AD-22 digit-commit
- * buffer they must share (`DIGIT_*` → the same handler) is not on disk yet, so
- * numerics coordinate on arrival rather than becoming a blocking dependency
- * (findings §AD-23). Transport-only for now.
+ * Since S535 the numeric phrases are registered too: digit names ride the SAME
+ * `onAction` seam, and production routes them into the single digit-commit
+ * buffer (`remote/DigitBuffer.ts` via `RemoteManager.pressDigit`) exactly like
+ * physical digit keys — a spoken burst drains as the SAME DIGIT_COMMIT action.
+ * ONE buffer, one handler, never a forked digit path (findings §AD-22/§AD-23:
+ * "numeric voice commands land in the same handler as AD-22").
  *
  * ## Manifest honesty (TN-2 / S503)
  *
@@ -82,14 +86,33 @@ export interface VoiceCommand {
 export const SERVICE_LEVEL = 'FOREGROUND';
 
 /**
- * The DEFAULT command list: a small transport subset drawn ONLY from existing
- * `KeyMapping` action names. Each phrase is the action's own display name
- * (`KeyMapping.getDisplayName`) — no forked label table. The set is transport,
- * never numeric (see the docblock: digit commands wait for AD-22).
+ * The DEFAULT command list: the transport subset plus the ten digit names, all
+ * drawn ONLY from existing `KeyMapping` action names. Each phrase is the
+ * action's own display name (`KeyMapping.getDisplayName`) — no forked label
+ * table; for digits that display name IS the spoken numeral. Since S535 the
+ * digit entries are live: a recognised DIGIT_* lands on the shared
+ * digit-commit buffer through the same seam as physical keys (ONE handler).
  */
-export const DEFAULT_VOICE_COMMANDS: readonly VoiceCommand[] = (
-  ['PLAY', 'PAUSE', 'STOP', 'REWIND', 'FAST_FORWARD', 'NEXT', 'PREVIOUS'] as ActionName[]
-).map((action) => ({ phrase: KeyMapping.getDisplayName(action), action }));
+const VOICE_TRANSPORT_ACTIONS: readonly ActionName[] = [
+  'PLAY',
+  'PAUSE',
+  'STOP',
+  'REWIND',
+  'FAST_FORWARD',
+  'NEXT',
+  'PREVIOUS'
+];
+
+/** DIGIT_0 … DIGIT_9 — the numeral phrases, from the ONE digit vocabulary. */
+const VOICE_DIGIT_ACTIONS: readonly ActionName[] = Array.from(
+  { length: 10 },
+  (_, n) => `DIGIT_${n}`
+);
+
+export const DEFAULT_VOICE_COMMANDS: readonly VoiceCommand[] = [
+  ...VOICE_TRANSPORT_ACTIONS,
+  ...VOICE_DIGIT_ACTIONS
+].map((action) => ({ phrase: KeyMapping.getDisplayName(action), action }));
 
 /** Route a recognised spoken phrase back to its existing ActionName, or null. */
 export function phraseToAction(

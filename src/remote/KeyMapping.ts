@@ -12,6 +12,12 @@
  * S509 (AD-1) adds the 2020+ media-key codes the `tvinputdevice` registration
  * now makes reachable (10252 → PLAY_PAUSE, 427/428 → CHANNEL_UP/DOWN) and names
  * the digit keys DIGIT_0..9 as routing groundwork for a later commit buffer.
+ *
+ * S535 (AD-22) makes that groundwork live: digits route through the shared
+ * digit-commit buffer (`remote/DigitBuffer.ts`) and drain as the new
+ * DIGIT_COMMIT action on the existing action channel. Digits stay OUT of
+ * IMMEDIATE/HANDLED — while a typing target holds focus they must remain the
+ * byte-identical passthrough (search inputs keep typing "1984").
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
@@ -54,11 +60,12 @@ const KEY_MAP: Record<number, ActionName> = {
   18: 'INFO',
   113: 'TOOLS',
 
-  // Digit keys (S509 groundwork): named DIGIT_0..DIGIT_9 so they route through the
-  // seam as stable, non-ambiguous tokens a consumer (the AD-22 timed commit buffer)
-  // can key on. Deliberately NOT in IMMEDIATE / HANDLED, so RemoteManager never
-  // preventDefaults them — a text input keeps typing "1984" byte-identically. They
-  // surface only via the keydown/keyup event's mappedKey, which is the groundwork.
+  // Digit keys (S509 groundwork, LIVE since S535/AD-22): named DIGIT_0..DIGIT_9,
+  // RemoteManager feeds them to the shared digit-commit buffer when the event
+  // target is NOT a typing target; the buffer drains as ONE DIGIT_COMMIT action.
+  // Still deliberately NOT in IMMEDIATE / HANDLED, so RemoteManager never
+  // preventDefaults them — while an INPUT/TEXTAREA/contenteditable holds focus a
+  // text input keeps typing "1984" byte-identically (the bypass is hard law).
   48: 'DIGIT_0',
   49: 'DIGIT_1',
   50: 'DIGIT_2',
@@ -115,9 +122,12 @@ const IMMEDIATE_ACTIONS: ReadonlySet<ActionName> = new Set([
   'CHANNEL_DOWN'
 ]);
 
-// Digit actions (S509 groundwork). Named + predicate-exposed so a consumer can
-// recognise them, but kept OUT of IMMEDIATE/HANDLED on purpose — they must not be
-// preventDefaulted while a text field has focus (see KEY_MAP digits note).
+// Digit actions (S509 naming; since S535 routed into the shared digit-commit
+// buffer). Predicate-exposed; kept OUT of IMMEDIATE/HANDLED on purpose — they
+// must not be preventDefaulted while a text field has focus (see KEY_MAP digits
+// note). The digit names are the ONE vocabulary: key codes 48–57 map to these,
+// voice digit phrases resolve to these, and RemoteManager.pressDigit accepts
+// these; the joined burst commits as the DIGIT_COMMIT action below.
 const DIGIT_ACTIONS: ReadonlySet<ActionName> = new Set([
   'DIGIT_0',
   'DIGIT_1',
@@ -130,6 +140,11 @@ const DIGIT_ACTIONS: ReadonlySet<ActionName> = new Set([
   'DIGIT_8',
   'DIGIT_9'
 ]);
+
+// S535 (AD-22): the single action a digit-burst drain emits on the existing
+// action channel. Not a key code — a named vocabulary entry like DIGIT_* was
+// (one vocabulary, no forked names).
+const DIGIT_COMMIT_ACTION: ActionName = 'DIGIT_COMMIT';
 
 // Keys for which RemoteManager calls preventDefault. Arrows + ENTER are NOT
 // here, so the browser/spatial-nav receive them unimpeded.
@@ -175,11 +190,19 @@ const DISPLAY_NAMES: Record<string, string> = {
   DIGIT_6: '6',
   DIGIT_7: '7',
   DIGIT_8: '8',
-  DIGIT_9: '9'
+  DIGIT_9: '9',
+  // S535 display need (re-derived: ActionToastOverlay captions EVERY action via
+  // getDisplayName, and the buffer's drain is an action): one honest label for
+  // the joined-digit commit. The digit rows above double as the voice phrase
+  // source, so digits keep their plain numerals here.
+  DIGIT_COMMIT: 'Digits'
 };
 
 const KeyMapping = {
   KEY_MAP,
+
+  /** The single digit-burst drain action (S535) — part of the ONE vocabulary. */
+  DIGIT_COMMIT: DIGIT_COMMIT_ACTION,
 
   /** Map Tizen key code to action name. */
   mapKeyCode(keyCode: number): ActionName {
@@ -199,6 +222,12 @@ const KeyMapping = {
   /** Whether the action is one of the named digit keys (S509 routing groundwork). */
   isDigit(action: ActionName): boolean {
     return DIGIT_ACTIONS.has(action);
+  },
+
+  /** The digit char ('0'..'9') a DIGIT_* action carries, or null (S535 buffer feed). */
+  digitValue(action: ActionName): string | null {
+    if (!DIGIT_ACTIONS.has(action)) return null;
+    return action.slice('DIGIT_'.length);
   },
 
   /** Whether RemoteManager should preventDefault for this action. */
