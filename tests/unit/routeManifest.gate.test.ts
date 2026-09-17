@@ -14,7 +14,7 @@
  * `@phlix/contracts` at #v0.4.7, but the manifest shipped IN that tag is
  * stale for this pin's purpose — it embeds server `2f1d2ee6…` (md5
  * 4f03cb2e…), while the estate-wide canonical copy is the untagged master
- * regen at server `c9c551e0` (md5 pinned below, contracts 29b8310) — and the
+ * regen at server `730e55b7` (md5 pinned below, contracts b34651d) — and the
  * package `exports` map blocks JSON subpath imports anyway. Vendoring this
  * one artifact is the sanctioned interim pattern — identical to mobile
  * (dc45e5c3) and roku (1da0910e). Re-adoption of the contracts export
@@ -27,7 +27,10 @@
  * server `2f1d2ee6…`/md5 `4f03cb2e…` at this leg; comment-only, 0 behavior.
  * cs#46: re-vendor to the untagged master regen at server `c9c551e0`
  * (contracts 29b8310, regen #33); the #v0.4.7 tag-embed measurement above
- * stands — the tag was never moved, only the untagged canonical advanced.)
+ * stands — the tag was never moved, only the untagged canonical advanced.
+ * cs#47: re-vendor to the untagged master regen at server `730e55b7`
+ * (contracts b34651d, regen #34) — CONTENT regen, 404→410 tuples
+ * (quick-connect pairing + consent-gated telemetry).)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
@@ -283,9 +286,9 @@ export const S517_ADMIN_FLAG_TOKEN = 'S517ADMINFLAGX9P7';
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
-    expect(manifest.provenance.serverSha).toBe('c9c551e0506a742220c17a34022d4a2f497e6989');
-    expect(manifest.provenance.total).toBe(404);
-    expect(manifest.routes).toHaveLength(404);
+    expect(manifest.provenance.serverSha).toBe('730e55b7d3ad44a155f6b46374a9f6c463792840');
+    expect(manifest.provenance.total).toBe(410);
+    expect(manifest.routes).toHaveLength(410);
     expect(manifest.provenance.generator).toBe('scripts/generate-server-route-manifest.mjs');
   });
 
@@ -296,9 +299,9 @@ describe(`${GATE_ID} — vendored manifest integrity`, () => {
     // any drift here means this copy was edited (the artifact says "do not").
     const raw = readFileSync(MANIFEST_PATH);
     const md5 = createHash('md5').update(raw).digest('hex');
-    expect(md5).toBe('56eb7052069a56cd95f7b2558f151f63');
+    expect(md5).toBe('06ce7ec95bc064cc0f13b94389af9a82');
     const unique = new Set(manifest.routes.map(([m, r]) => `${m} ${r}`));
-    expect(unique.size).toBe(404);
+    expect(unique.size).toBe(410);
   });
 });
 
@@ -321,7 +324,7 @@ describe(`${GATE_ID} — every URL tizen issues is tuple-exact served`, () => {
     console.log(
       `[${GATE_ID}] tizen: ${sites.length} request sites / ${uniqueTuples.size} distinct ` +
         `[method, pathTemplate] tuples across ${perFile.size} modules — all tuple-exact against ` +
-        `the vendored 404-route manifest @ ${manifest.provenance.serverSha}`,
+        `the vendored 410-route manifest @ ${manifest.provenance.serverSha}`,
     );
     for (const [file, count] of [...perFile.entries()].sort()) {
       console.log(`  ${file}: ${count}`);
