@@ -31,6 +31,7 @@ import AudioTracksPage from './pages/AudioTracksPage.vue';
 import SubtitleTracksPage from './pages/SubtitleTracksPage.vue';
 import ParentalControlsPage from './pages/ParentalControlsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
+import QuickConnectPanel from './quickconnect/QuickConnectPanel.vue';
 
 /**
  * S517 T-10 — the admin console is a DEFAULT-OFF build flag. A TV should not
@@ -377,6 +378,15 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   // D-pad landing gets its ~1 s glanceable echo. Presentational only: it never
   // takes focus (no tabindex, aria-hidden) and dismisses on the next key press.
   createApp(ActionToastOverlay).use(pinia).mount('#phlix-action-toast-overlay');
+
+  // S520 AD-25 — mount the quick-connect pairing surface as a SEVENTH root app
+  // sharing the main app's pinia (one auth store), so it observes the SAME
+  // logged-in/server state the shell does. It self-gates: it renders and polls
+  // ONLY when a server base exists but no session does, retires itself the
+  // instant `useAuthStore().setTokens` lands a pairing, and issues zero requests
+  // while hidden. The redeemed tokens hand back through that EXISTING seam — no
+  // second token store is introduced anywhere in the flow.
+  createApp(QuickConnectPanel).use(pinia).mount('#phlix-quick-connect');
 }
 
 void boot().catch(renderBootFailure);
