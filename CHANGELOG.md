@@ -5,6 +5,31 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W112 (S521): consent-gated telemetry heartbeat client (TV half) — 2026-09-17
+
+- **Opt-in-only usage telemetry, off by default.** `src/telemetry.ts` adds the
+  client half of anonymous usage reporting with a hard privacy gate: nothing is
+  ever sent until the user explicitly consents (`getConsent` is strictly
+  `=== 'true'` — unset, empty, garbage and an explicit decline all mean OFF), and
+  withdrawing stops the sender and clears the local throttle stamp so a re-consent
+  inherits no stale window. When consented, a single coarse hourly tick sends at
+  most one bounded heartbeat per 24 h to the EXISTING served
+  `POST /api/v1/telemetry/heartbeat` route. The payload is the server's bounded,
+  zero-PII field set — `instance_id` (the stable install id from the existing
+  `deviceId.ts` seam, so no second device identity), client type, platform and
+  build version — and deliberately does NOT reuse the richer server→hub
+  `HeartbeatDto`. Every failure (network reject, timeout, 5xx) is swallowed on the
+  spot with no throw and no app-facing effect, and only a success advances the
+  throttle stamp so the next tick retries. `TelemetryConsent.vue` mounts as the
+  eighth always-on root app and shows a one-time, D-pad-operable card ONLY to a
+  never-decided install that already has a server; Enable persists consent and
+  arms the sender, Not-now records an explicit decline and stops it. `main.ts`
+  starts the sender at boot only when consent was already granted and a base
+  exists (start-when-opted-in). No new server route or contracts change (era law)
+  — the vendored 410-route manifest is byte-identical; `routeManifest.gate`
+  advances its per-file pin to count `src/telemetry.ts` (scan 26 → 27 request
+  sites, one module).
+
 ### Added — W112 (S520): quick-connect pairing client (TV half) — 2026-09-17
 
 - **Sign in on the TV without a keyboard.** A no-keyboard device should never

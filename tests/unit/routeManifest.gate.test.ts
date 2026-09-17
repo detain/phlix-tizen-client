@@ -243,6 +243,7 @@ const PER_FILE_COVERAGE: Record<string, number> = {
   'src/screens/RecommendationsScreen.vue': 1,
   'src/stores/useTrackPreferenceStore.ts': 2,
   'src/stores/useSyncPlayStore.ts': 6,
+  'src/telemetry.ts': 1,
 };
 const TOTAL_SITES = Object.values(PER_FILE_COVERAGE).reduce((a, b) => a + b, 0);
 
@@ -291,6 +292,13 @@ export const S517_ADMIN_FLAG_TOKEN = 'S517ADMINFLAGX9P7';
 // `src/quickconnect/quickConnectClient.ts` on EXISTING served routes (manifest
 // unchanged, md5 06ce7ec9…), which is exactly why the per-file pin above moved.
 export const S520_QUICKCONNECT_CLIENT_TOKEN = 'S520QCLIENTX9P8';
+
+// S521 consent-gated telemetry heartbeat CLIENT ritual token (opt-in default-off;
+// one bounded POST to the existing telemetry route) — its ONLY code home is this
+// line (1 code home / 0 .md). Its single request site lives in `src/telemetry.ts`
+// on the EXISTING served `POST /api/v1/telemetry/heartbeat` route (manifest
+// unchanged, md5 06ce7ec9…), which is why the per-file pin above moved to 27.
+export const S521_TELEMETRY_CONSENT_TOKEN = 'S521TELEMX9P8';
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {

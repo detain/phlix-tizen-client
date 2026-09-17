@@ -93,6 +93,17 @@ vi.mock('@/stores/useSyncPlayStore', () => ({
 
 vi.mock('@/SpatialNavHost.vue', () => ({ default: { name: 'SpatialNavHost' } }));
 
+// S521 — boot starts the heartbeat ONLY when consent was already granted, so the
+// telemetry module is faked with controllable consent + spies. buildTelemetryDeps
+// echoes its input so the start call is observable without real timers/network.
+const getConsentMock = vi.fn(() => false);
+const startTelemetryMock = vi.fn();
+vi.mock('@/telemetry', () => ({
+  getConsent: (...a: unknown[]) => getConsentMock(...(a as [])),
+  startTelemetry: (...a: unknown[]) => startTelemetryMock(...(a as [])),
+  buildTelemetryDeps: vi.fn((x: unknown) => x),
+}));
+
 // Second-app (createApp) mock — chainable use().use().mount().
 const secondMount = vi.fn();
 const secondUse = vi.fn();
@@ -623,5 +634,62 @@ describe('S520 quick-connect overlay (AD-25)', () => {
     expect(secondMount).toHaveBeenCalledWith('#phlix-quick-connect');
     // shares the SAME pinia instance as every other overlay app.
     expect(secondUse).toHaveBeenCalledWith(fakePinia);
+  });
+});
+
+// S521 AD-27 — consent-gated telemetry. Boot mounts the one-time consent card as
+// the EIGHTH root app (shares pinia), and arms the heartbeat sender ONLY when a
+// prior launch already granted consent AND a server base exists. Default is OFF:
+// unset consent never starts a sender, so "no consent → zero network" holds at
+// the boot seam exactly as it does inside ./telemetry.
+describe('S521 telemetry consent gate (AD-27)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    createPhlixApp.mockClear().mockReturnValue(fakeApp);
+    mountSpy.mockClear();
+    secondMount.mockClear();
+    secondUse.mockClear().mockReturnValue(secondApp);
+    resolveHubRelayConfigMock.mockClear().mockReturnValue(null);
+    openHubRelayConnectionMock.mockClear();
+    probeServerMock.mockReset().mockImplementation(async () => true);
+    getConsentMock.mockReset().mockReturnValue(false);
+    startTelemetryMock.mockClear();
+    globalThis.localStorage.clear();
+  });
+
+  it('mounts the telemetry consent card as an eighth root app sharing pinia', async () => {
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(secondMount).toHaveBeenCalledWith('#phlix-telemetry-consent');
+  });
+
+  it('default-OFF: does NOT start the heartbeat when consent is unset', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
+    getConsentMock.mockReturnValue(false);
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(startTelemetryMock).not.toHaveBeenCalled();
+  });
+
+  it('starts the heartbeat only when already opted-in AND a server base exists', async () => {
+    // Import FIRST, against the storage cleared above, so the module-scope
+    // `void boot()` runs on an EMPTY base (apiBase '' short-circuits before
+    // getConsent) and never arms a sender. THEN set consent + a base and boot
+    // once — the single start under test.
+    const mod = await import('@/main');
+    startTelemetryMock.mockClear();
+    getConsentMock.mockReturnValue(true);
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
+    await mod.boot();
+    expect(startTelemetryMock).toHaveBeenCalledTimes(1);
+    const arg = startTelemetryMock.mock.calls[0][0] as { baseUrl: string };
+    expect(arg.baseUrl).toBe('http://tv:8096');
+  });
+
+  it('opted-in but no server base → does not start (nothing to report to)', async () => {
+    getConsentMock.mockReturnValue(true);
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(startTelemetryMock).not.toHaveBeenCalled();
   });
 });
