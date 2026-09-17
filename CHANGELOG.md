@@ -5,6 +5,42 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W113 (S529): mDNS-less LAN server discovery (AD-24) — 2026-09-17
+
+- **A TV can now lean on servers it already knows, without hand-typing a URL.**
+  New pure module `src/discovery/lanDiscovery.ts` finds a phlix server with a
+  plain `fetch` GET of the EXISTING unauthenticated health endpoint — the same
+  root health path the boot probe already reaches — under a ~400 ms
+  `AbortController` budget, a bounded number of parallel probes (sequenced in
+  groups so peak in-flight stays capped), host de-duplication, and a per-sweep
+  ceiling so a runaway candidate list can never turn into a request storm. Body
+  acceptance is deliberately LOOSE (`status === 'ok'` OR a present `version`), so
+  a valid server whose health payload grows new fields is still recognized — the
+  same never-hard-assert-against-a-server-tuple posture as the boot probe. Every
+  failure (non-OK, unrecognized body, timeout, opaque network/CORS) resolves to a
+  structured verdict — a sweep of unreachable hosts is the NORMAL LAN case, never
+  an exception.
+- **Privilege-honest (the S503 mask is honored byte-for-byte).** Discovery lives
+  ENTIRELY inside the already-granted `internet` privilege: `app/config.xml` is
+  UNCHANGED and no `tizen.systeminfo` / `webapis` call appears anywhere. A blind
+  full-subnet sweep is therefore NOT run automatically — from a TV webview a
+  foreign host that omits a readable CORS header answers an opaque network error,
+  so `internet`-alone enumeration cannot RELIABLY identify servers, and spraying
+  hundreds of cross-origin requests from a living-room TV would be dishonest
+  engineering. Following the "withheld + reported" precedent, the shipped close is
+  a BOUNDED connect-flow suggestion list assembled from the addresses THIS TV has
+  already connected to: `resolveConfig` gains pure, storage-injected
+  `readAddressHistory` / `pushAddressHistory` / `buildConnectSuggestions` (bounded,
+  most-recent-first, host-deduped; corrupt/absent history parses to empty rather
+  than throwing), and `main.ts` records each committed Connect choice into that
+  history. A bounded same-subnet candidate generator ships for an EXPLICIT,
+  user-initiated scan; the Connect-screen "Scan" affordance that surfaces live
+  results is the matching surfacing leg in the shared UI layer (a separate train
+  slot) — named honestly, never silently dropped. Introduces ZERO new request sites
+  (a plain `fetch` is neither an API-client nor a SyncPlay call and never emits a
+  contiguous versioned prefix), so the route manifest stays byte-identical and no
+  new server route or contracts change is required.
+
 ### Added — W113 (S526): BACK layer-stack ladder + ordered toast queue (AD-10) — 2026-09-17
 
 - **BACK is now a four-rung ladder, not a one-liner.** On a phone BACK is one

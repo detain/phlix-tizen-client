@@ -238,8 +238,18 @@ describe('boot (Tizen renderer entry)', () => {
     };
     cfg.onConnectionChange('http://chosen-tv:8096');
     expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBe('http://chosen-tv:8096');
+    // S529 / AD-24 — a Connect choice is also recorded into the bounded
+    // address-history that seeds the first-run connect suggestions (privilege-
+    // honest: this data source replaces a blind subnet sweep under `internet`).
+    expect(JSON.parse(globalThis.localStorage.getItem('phlix.serverHistory') ?? '[]')).toEqual([
+      'http://chosen-tv:8096',
+    ]);
     cfg.onConnectionChange(null);
     expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBeNull();
+    // A null (disconnect) clears the active URL but keeps history for re-onboarding.
+    expect(JSON.parse(globalThis.localStorage.getItem('phlix.serverHistory') ?? '[]')).toEqual([
+      'http://chosen-tv:8096',
+    ]);
   });
 
   it('S298: resolves the hub context from the persisted slots at boot', async () => {

@@ -14,7 +14,7 @@ import { createPhlixApp, buildAdminRoutes, LibraryScanPage, ApiClient, LocalStor
 import { buildPhlixHeaders } from '@phlix/contracts';
 import '@phlix/ui/style.css';
 import '@phlix/ui/fonts.css';
-import { resolveAppConfig } from './resolveConfig';
+import { resolveAppConfig, pushAddressHistory } from './resolveConfig';
 import { probeBootBase } from './bootProbe';
 import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
@@ -313,8 +313,13 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
     requireConnection: true,
     onConnectionChange: (url) => {
       try {
-        if (url) storage.setItem(SERVER_URL_KEY, url);
-        else storage.removeItem(SERVER_URL_KEY);
+        if (url) {
+          storage.setItem(SERVER_URL_KEY, url);
+          // S529 / AD-24 — record the address in the bounded history that seeds
+          // the first-run connect suggestions (privilege-honest: this is the
+          // data source that replaces a blind subnet sweep — see resolveConfig).
+          pushAddressHistory(storage, url);
+        } else storage.removeItem(SERVER_URL_KEY);
       } catch {
         // Persistence failed; the in-memory session value still drives this run.
       }
