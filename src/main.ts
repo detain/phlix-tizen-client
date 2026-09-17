@@ -35,6 +35,7 @@ import ParentalControlsPage from './pages/ParentalControlsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
 import QuickConnectPanel from './quickconnect/QuickConnectPanel.vue';
 import TelemetryConsent from './components/TelemetryConsent.vue';
+import ScreenSaverOverlay from './components/ScreenSaverOverlay.vue';
 
 /**
  * S517 T-10 — the admin console is a DEFAULT-OFF build flag. A TV should not
@@ -408,6 +409,15 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   if (apiBase && getConsent(storage)) {
     startTelemetry(buildTelemetryDeps({ storage, baseUrl: apiBase }));
   }
+
+  // S523 AD-21 — mount the idle screensaver overlay as a NINTH root app sharing
+  // the main app's pinia, so its 1 s tick reads the SAME usePlayerStore().playing
+  // signal the shell does and the overlay can never engage during active
+  // playback. Any key routed through the RemoteManager seam wakes it. Zero
+  // privilege change: the keep-awake leg is WITHHELD (the as-shipped manifest
+  // grants no privilege/display — TN-2/S503 forbids pre-adding; see
+  // ./screensaver's privilege verdict), and the overlay half needs no grant.
+  createApp(ScreenSaverOverlay).use(pinia).mount('#phlix-screensaver');
 }
 
 void boot().catch(renderBootFailure);

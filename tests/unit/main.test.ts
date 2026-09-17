@@ -709,3 +709,28 @@ describe('S521 telemetry consent gate (AD-27)', () => {
     expect(startTelemetryMock).not.toHaveBeenCalled();
   });
 });
+
+// S523 AD-21 — the idle screensaver overlay mounts as the NINTH root app
+// (shares pinia so its tick reads the same usePlayerStore().playing signal as
+// the shell). Pin the mount seam only; the policy itself is pure in
+// ./screensaver and lives-tested in ScreenSaverOverlay.test.ts.
+describe('S523 idle screensaver overlay (AD-21)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    createPhlixApp.mockClear().mockReturnValue(fakeApp);
+    mountSpy.mockClear();
+    secondMount.mockClear();
+    secondUse.mockClear().mockReturnValue(secondApp);
+    resolveHubRelayConfigMock.mockClear().mockReturnValue(null);
+    openHubRelayConnectionMock.mockClear();
+    probeServerMock.mockReset().mockImplementation(async () => true);
+    globalThis.localStorage.clear();
+  });
+
+  it('boots the screensaver overlay as a ninth root app sharing pinia', async () => {
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(secondMount).toHaveBeenCalledWith('#phlix-screensaver');
+    expect(secondUse).toHaveBeenCalledWith(fakePinia);
+  });
+});

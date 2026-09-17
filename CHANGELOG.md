@@ -5,6 +5,36 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W112 (S523): idle screensaver overlay (zero-privilege half) — 2026-09-17
+
+- **The TV now rests behind a designed idle surface.** `src/screensaver.ts`
+  holds the entire WHEN policy as pure functions: the jellyfin-convention
+  **180 s idle window** (localStorage-overridable via `phlix.screensaver.idleMs`
+  — positive-integer parse; garbage falls back to the default) engages the
+  screensaver **only when playback is NOT active** and the window has fully
+  elapsed. `src/components/ScreenSaverOverlay.vue` mounts as the ninth
+  always-mounted root app: a 1 s tick reads the SAME `usePlayerStore().playing`
+  signal the shell does — active playback counts as continuous activity, so the
+  overlay never dims over a film and the post-pause window starts from the
+  pause — and **any key routed through the existing RemoteManager `keydown`
+  seam wakes it instantly** (arrows included; the waking key keeps its normal
+  action — the overlay never preventDefaults and is never a focus target:
+  `aria-hidden`, no tabindex, S512/S516 focus discipline honored). Engagement
+  stamps the `screensaver-active` body class; the artwork is the house
+  nocturne/amber language with a slow 42 s drift + 7 s breathing halo, so no
+  pixel sits static while idle (burn-in risk class, adopted honestly).
+- **Keep-awake during playback: deliberately NOT shipped (privilege-honest).**
+  The as-shipped `app/config.xml` (and its `package/` mirror) grants exactly
+  two privileges — `internet` and `tv.inputdevice` (the S503 prune) — while
+  Samsung Tizen screen-state / keep-awake APIs require
+  `http://tizen.org/privilege/display`, which the manifest does not grant and
+  which no in-tree seam uses. TN-2/S503 law says privileges fold in only WITH
+  their feature and are never pre-added, so **this step changes the manifest
+  ZERO** and withholds the keep-awake leg instead of smuggling a speculative
+  grant; a test pins the two-privilege surface, and a real playing video remains
+  the one thing that always keeps the panel awake. Zero new request sites
+  (`routeManifest.gate` scan unchanged at 27); fixture byte-identical.
+
 ### Added — W112 (S522): gamepad→synthetic-keyboard input bridge (dev / manual-QA) — 2026-09-17
 
 - **A controller now drives the TV build.** `src/remote/gamepadBridge.ts` reads
