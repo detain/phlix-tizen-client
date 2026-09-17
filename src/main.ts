@@ -21,6 +21,7 @@ import { installTizenBridge } from './tizenBridge';
 import { resolveHubRelayConfig, openHubRelayConnection } from './api/hubRelay';
 import { useSyncPlayStore } from './stores/useSyncPlayStore';
 import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
+import { buildTelemetryDeps, getConsent, startTelemetry } from './telemetry';
 import SpatialNavHost from './SpatialNavHost.vue';
 import ChapterOverlay from './components/ChapterOverlay.vue';
 import SkipIntroOverlay from './components/SkipIntroOverlay.vue';
@@ -32,6 +33,7 @@ import SubtitleTracksPage from './pages/SubtitleTracksPage.vue';
 import ParentalControlsPage from './pages/ParentalControlsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
 import QuickConnectPanel from './quickconnect/QuickConnectPanel.vue';
+import TelemetryConsent from './components/TelemetryConsent.vue';
 
 /**
  * S517 T-10 — the admin console is a DEFAULT-OFF build flag. A TV should not
@@ -387,6 +389,17 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   // while hidden. The redeemed tokens hand back through that EXISTING seam — no
   // second token store is introduced anywhere in the flow.
   createApp(QuickConnectPanel).use(pinia).mount('#phlix-quick-connect');
+
+  // S521 AD-27 — mount the one-time telemetry consent card as an EIGHTH root app
+  // sharing the main app's pinia. It self-gates on "never decided && a server is
+  // set", so a decided install renders nothing. Telemetry is OFF by default: the
+  // heartbeat sender is only armed here when consent was ALREADY granted on a
+  // prior launch (start-when-opted-in); a fresh opt-in is armed by the card
+  // itself. The bounded payload + swallow-all live entirely in ./telemetry.
+  createApp(TelemetryConsent).use(pinia).mount('#phlix-telemetry-consent');
+  if (apiBase && getConsent(storage)) {
+    startTelemetry(buildTelemetryDeps({ storage, baseUrl: apiBase }));
+  }
 }
 
 void boot().catch(renderBootFailure);
