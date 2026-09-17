@@ -5,6 +5,25 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — W111 (cs47b): route-manifest CONTENT re-vendor (404→410 tuples) — 2026-09-16
+
+- **cs#47 currency re-vendor (lane cs47b).** Vendored
+  `tests/fixtures/server-route-manifest.json` re-vendored byte-identical from the
+  `@phlix/contracts` canonical master export (untagged regen #34 against the
+  current phlix-server master tip — the quick-connect device-pairing endpoints and
+  consent-gated client telemetry). NOT pure: the union rises from 404 to 410
+  tuples (Application guard count 367→373; WebPortal 48 and shared 11 hold), so
+  route-content bytes move alongside the provenance lines. The currency pins in
+  `tests/unit/routeManifest.gate.test.ts` advance in the same commit (full server
+  sha, byte-identity md5, total/length/unique-count pins, the log line's tuple
+  wording, and the header's canonical-regen/contracts-tip cites), and the header's
+  chain note gains the cs#47 lineage. Client-side counts HELD: this wave added
+  server surface only — tizen issues no request against the new tuples, so the
+  scan stays 23 request sites / 19 distinct tuples across the same modules. No new
+  token home in this repo — the cs#47 token keeps its contracts code home and this
+  repo's cs#46 lane constant holds. Gate files are not bundled; the widget
+  `package/` rebuild check (T-02) ran with zero drift.
+
 ### Changed — W111 (S517): admin console behind a default-off build flag (T-10)
 
 - **No admin on the TV unless you build it in.** `buildMenu()` and
