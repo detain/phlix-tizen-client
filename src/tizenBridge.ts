@@ -11,6 +11,7 @@ import remoteManager from './remote/RemoteManager';
 import type { ActionEvent } from './remote/RemoteManager';
 import type { ActionName } from './remote/KeyMapping';
 import { installRemoteKeyRegistration, type TizenLike } from './remote/registerKeys';
+import { installVoiceControlRegistration, type TizenLike as VoiceTizenLike } from './voiceControl';
 import {
   createLayerFocusStack,
   decideBackRung,
@@ -485,10 +486,30 @@ export function installTizenBridge(
   // RemoteManager + KeyMapping already dispatch — no second pipeline.
   const releaseRemoteKeys = installRemoteKeyRegistration(tizenLike);
 
+  // S531 (AD-23) — guarded VoiceControl. Register the transport command list ONLY
+  // while the player route is mounted and release on unmount, riding the same
+  // route seam the quality guard uses (single-writer B-seam: this is the mount
+  // hook, nothing more). A recognised phrase re-enters the EXISTING action
+  // pipeline through `remoteManager.emit('action', …)` so voice is never a second
+  // dispatcher; a `tizen.voicecontrol` that is absent or throws (the common TV
+  // case) makes this a silent no-op — app behaviour stays byte-identical.
+  const releaseVoiceControl = installVoiceControlRegistration({
+    getRoute,
+    router,
+    // The ambient `tizen` object is the same for both subsystems; each module
+    // reads only its own structural slice (`tvinputdevice` / `voicecontrol`), so
+    // the injected fake is passed through and feature-detected independently.
+    tizenLike: tizenLike as unknown as VoiceTizenLike | null | undefined,
+    onAction: (action) => {
+      remoteManager.emit('action', { key: action });
+    }
+  });
+
   return () => {
     unwire();
     removeRouteGuard?.();
     releaseRemoteKeys();
+    releaseVoiceControl();
     // Never let the shared flag / suppression outlive the bridge itself.
     quality.deactivate();
     remoteManager.suppressPropagation = null;

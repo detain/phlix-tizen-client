@@ -353,6 +353,18 @@ export const S529_LAN_DISCOVERY_TOKEN = 'S529LANDISCX9P9';
 // routes, no contracts change, zero `phlix-shared` delta (that lib is PHP).
 export const S530_REQUESTS_DEDUP_TOKEN = 'S530REQDEDUPX9P10';
 
+// S531 guarded VoiceControl registration ritual token (AD-23; `src/voiceControl.ts`
+// feature-detects `tizen.voicecontrol` + a player-route mount hook riding the
+// single-writer B-seam `tizenBridge.ts`) — its ONLY code home is this line (1 code
+// home / 0 .md). The module is client-side only and introduces ZERO new request
+// sites (it never touches the wire or a `/api/v1` literal), so the per-file pin
+// above is UNCHANGED, the scan stays 27, and the vendored manifest stays
+// byte-identical (md5 06ce7ec9…). `app/config.xml` is BYTE-IDENTICAL — no `voicecontrol`
+// `<feature>` was pre-added (the TN-2 "add only with the named feature" adjudication
+// is deferred to the batched C-seam manifest PR; a guarded no-op ship was chosen).
+// Era law kept: no new routes, no contracts change, zero server change.
+export const S531_VOICE_CONTROL_TOKEN = 'S531VOICECTRLX9P10';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('730e55b7d3ad44a155f6b46374a9f6c463792840');

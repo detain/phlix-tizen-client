@@ -482,8 +482,9 @@ describe('createDomQualityMenu (DOM-backed QualityMenu controller)', () => {
 
 describe('installTizenBridge (composed lifecycle teardown)', () => {
   interface RouteGuardSink {
-    guard?: (to: BridgeRoute) => void;
-    remove: ReturnType<typeof vi.fn>;
+    guard?: (to: BridgeRoute) => void; // the FIRST (quality) afterEach guard these tests drive
+    removes: ReturnType<typeof vi.fn>[]; // one remove fn per afterEach registration (S531 added a 2nd)
+    seen: boolean; // internal: first guard captured?
   }
 
   function makeApp(routeName: string, sink: RouteGuardSink): VueApp {
@@ -496,8 +497,16 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
             back: vi.fn(),
             currentRoute: { value: { name: routeName } as BridgeRoute },
             afterEach: (guard: (to: BridgeRoute) => void) => {
-              sink.guard = guard;
-              return sink.remove;
+              // A real router supports N afterEach guards; the bridge now registers
+              // two (S526 quality + S531 voice). Record every remove and keep the
+              // FIRST guard in `sink.guard` so the quality-teardown tests drive it.
+              const remove = vi.fn();
+              sink.removes.push(remove);
+              if (!sink.seen) {
+                sink.seen = true;
+                sink.guard = guard;
+              }
+              return remove;
             }
           }
         }
@@ -519,7 +528,7 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
   });
 
   it('tears down quality mode when navigation LEAVES the player route (HOME/STOP)', () => {
-    const sink: RouteGuardSink = { remove: vi.fn() };
+    const sink: RouteGuardSink = { removes: [], seen: false };
     cleanup = installTizenBridge(makeApp('player', sink));
     qualityMenuActive.value = true; // menu open on the player
 
@@ -530,7 +539,7 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
   });
 
   it('does NOT tear down quality mode on same-route (player→player) navigation', () => {
-    const sink: RouteGuardSink = { remove: vi.fn() };
+    const sink: RouteGuardSink = { removes: [], seen: false };
     cleanup = installTizenBridge(makeApp('player', sink));
     qualityMenuActive.value = true;
 
@@ -540,7 +549,7 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
   });
 
   it('cleanup nulls the suppression guard, removes the route guard, and clears the flag', () => {
-    const sink: RouteGuardSink = { remove: vi.fn() };
+    const sink: RouteGuardSink = { removes: [], seen: false };
     const teardown = installTizenBridge(makeApp('player', sink));
     expect(remoteManager.suppressPropagation).toBeTypeOf('function');
     qualityMenuActive.value = true; // menu still open when the bridge is torn down
@@ -549,12 +558,15 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
     cleanup = null; // already torn down
 
     expect(remoteManager.suppressPropagation).toBeNull();
-    expect(sink.remove).toHaveBeenCalledTimes(1);
+    // Every afterEach guard the bridge registered (S526 quality + S531 voice) is
+    // released EXACTLY once on teardown — no leaked route guard, no double-remove.
+    expect(sink.removes.length).toBeGreaterThanOrEqual(1);
+    for (const remove of sink.removes) expect(remove).toHaveBeenCalledTimes(1);
     expect(qualityMenuActive.value).toBe(false);
   });
 
   it('the wired suppressPropagation stops ONLY the D-pad nav keys, and only while quality mode is active', () => {
-    const sink: RouteGuardSink = { remove: vi.fn() };
+    const sink: RouteGuardSink = { removes: [], seen: false };
     cleanup = installTizenBridge(makeApp('player', sink));
     const guard = remoteManager.suppressPropagation;
     expect(guard).toBeTypeOf('function');
@@ -624,7 +636,7 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
     const unregisterKey = vi.fn(() => true);
     const tizenLike = { tvinputdevice: { registerKey, unregisterKey } };
 
-    const sink: RouteGuardSink = { remove: vi.fn() };
+    const sink: RouteGuardSink = { removes: [], seen: false };
     const teardown = installTizenBridge(makeApp('player', sink), tizenLike);
 
     // Registered once, at app-ready, at install time.
@@ -642,7 +654,7 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
 
   it('S509: is inert (no throw) when no `tizen` global is present', () => {
     // jsdom has no ambient tizen → registration is a silent no-op; teardown safe.
-    const sink: RouteGuardSink = { remove: vi.fn() };
+    const sink: RouteGuardSink = { removes: [], seen: false };
     let teardown: (() => void) | undefined;
     expect(() => {
       teardown = installTizenBridge(makeApp('player', sink));
