@@ -308,6 +308,15 @@ export const S521_TELEMETRY_CONSENT_TOKEN = 'S521TELEMX9P8';
 // byte-identical (md5 06ce7ec9…).
 export const S522_GAMEPAD_BRIDGE_TOKEN = 'S522GAMEPADX9P8';
 
+// S523 idle screensaver ritual token (AD-21; PRIVILEGE-HONEST — the keep-awake
+// leg is withheld for want of privilege/display, the manifest stays UNTOUCHED) —
+// its ONLY code home is this line (1 code home / 0 .md). The shipped half is the
+// zero-privilege idle overlay (`src/screensaver.ts` + `ScreenSaverOverlay.vue`):
+// pure client-side policy on two in-tree signals, introducing ZERO new request
+// sites, so the per-file pin above is UNCHANGED, the scan stays 27, and the
+// vendored manifest stays byte-identical (md5 06ce7ec9…).
+export const S523_IDLE_SCREENSAVER_TOKEN = 'S523IDLEX9P8';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('730e55b7d3ad44a155f6b46374a9f6c463792840');
