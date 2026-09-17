@@ -5,6 +5,28 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W112 (S522): gamepad→synthetic-keyboard input bridge (dev / manual-QA) — 2026-09-17
+
+- **A controller now drives the TV build.** `src/remote/gamepadBridge.ts` reads
+  the Gamepad API each animation frame and synthesises the SAME `document`
+  keydown/keyup events the Samsung remote produces, so it rides the existing
+  input seam with **zero change to `KeyMapping`/`RemoteManager` and `@phlix/ui`'s
+  `useSpatialNav`**: the D-pad and left stick (0.5 deadzone, dominant axis) map to
+  the arrow keys with 400 ms initial / 150 ms hold auto-repeat, **A → `Enter`**
+  (native selection activation) and **B → the Samsung back code `10009`** (which
+  already resolves to the immediate `BACK` action). The polling logic is a pure
+  `pollGamepad(getGamepads, dispatch, now, state)` over injected fakes; the
+  impure `installGamepadBridge()` edge runs an injectable rAF loop, installs
+  **idempotently**, wraps each frame fail-soft, and — where there is no Gamepad
+  API (a real TV, and every existing test) — **installs nothing**, so a TV boot is
+  byte-identical. It is a dev / QA-grade surface (a TV has no controller) and is
+  **focus-safe by construction**: it calls no `focus()`/DOM mutation, only
+  `document.dispatchEvent`, so the S512/S516 focus-containment discipline is
+  untouched (grep-pinned). `main.ts` installs it once at boot after the remote
+  bridge. **Zero new server route and zero contracts change** — it never touches
+  the wire, so `routeManifest.gate`'s scan is unchanged at 27 and the vendored
+  manifest is byte-identical.
+
 ### Added — W112 (S521): consent-gated telemetry heartbeat client (TV half) — 2026-09-17
 
 - **Opt-in-only usage telemetry, off by default.** `src/telemetry.ts` adds the

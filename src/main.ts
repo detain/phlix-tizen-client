@@ -18,6 +18,7 @@ import { resolveAppConfig } from './resolveConfig';
 import { probeBootBase } from './bootProbe';
 import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
+import { installGamepadBridge } from './remote/gamepadBridge';
 import { resolveHubRelayConfig, openHubRelayConnection } from './api/hubRelay';
 import { useSyncPlayStore } from './stores/useSyncPlayStore';
 import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
@@ -347,6 +348,13 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   application.mount('#phlix-app');
 
   installTizenBridge(application);
+
+  // S522 AD-20 — the gamepad→synthetic-keyboard bridge (dev / manual-QA input).
+  // It feeds the SAME `document` key seam RemoteManager + @phlix/ui's spatial-nav
+  // already read, so it needs no other wiring and touches no key table. It
+  // installs idempotently and is a silent no-op where there is no Gamepad API
+  // (a real TV, and every existing test) — so boot stays byte-identical there.
+  installGamepadBridge();
 
   // The main app's pinia/router, shared with the overlay apps below.
   const pinia = application.config.globalProperties.$pinia;
