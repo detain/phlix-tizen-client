@@ -3,10 +3,13 @@ import { RemoteManager } from '@/remote/RemoteManager';
 
 // The keyCode → action mapping is exercised via KeyMapping elsewhere; here we
 // drive `onKeyDown` with a minimal fake event (jsdom does not reliably surface
-// a synthesized `keyCode`) to assert the generic suppression hook.
-function fakeKeyEvent(keyCode: number): KeyboardEvent {
+// a synthesized `keyCode`) to assert the generic suppression hook. An absent
+// `target` means "no typing target" — the S535 digit branch treats it like
+// normal focus (which is exactly what the buffer pins below rely on).
+function fakeKeyEvent(keyCode: number, target?: EventTarget): KeyboardEvent {
   return {
     keyCode,
+    target,
     preventDefault: vi.fn(),
     stopImmediatePropagation: vi.fn()
   } as unknown as KeyboardEvent;
@@ -316,6 +319,167 @@ describe('RemoteManager lifecycle', () => {
       rm.destroy();
       rm.destroy();
     }).not.toThrow();
+  });
+});
+
+// S535 (AD-22) — the digit channel goes LIVE: the dead DIGIT_* passthrough is
+// replaced by the shared digit-commit buffer. AC#2 pins: digits on normal focus
+// yield ONE DIGIT_COMMIT action on the existing `action` channel (joined and
+// single cases), while typing-target digits behave EXACTLY like the old
+// passthrough (nothing but keydown — the "1984" law, zero preventDefault).
+describe('RemoteManager digit-commit buffer (S535)', () => {
+  let rm: RemoteManager;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    rm = new RemoteManager();
+  });
+  afterEach(() => {
+    rm.destroy();
+    vi.useRealTimers();
+  });
+
+  function actions(handler: ReturnType<typeof vi.fn>): Array<Record<string, unknown>> {
+    return handler.mock.calls.map((call) => call[0] as Record<string, unknown>);
+  }
+
+  it('a lone digit on normal focus commits as ONE {key: DIGIT_COMMIT, value} action', () => {
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    rm.onKeyDown(fakeKeyEvent(55)); // 55 → DIGIT_7 ('7')
+    expect(handler).not.toHaveBeenCalled(); // buffered, not immediate
+
+    vi.advanceTimersByTime(2000); // findings' 2 s window
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({ key: 'DIGIT_COMMIT', value: '7' });
+  });
+
+  it('"1-2-3 fast" joins into a SINGLE commit — "1 2 3" slow would be three', () => {
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    rm.onKeyDown(fakeKeyEvent(49)); // '1'
+    rm.onKeyDown(fakeKeyEvent(50)); // '2'
+    rm.onKeyDown(fakeKeyEvent(51)); // '3'
+    vi.advanceTimersByTime(2000);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({ key: 'DIGIT_COMMIT', value: '123' });
+
+    // Slow entry: each digit arrives after the window → three separate commits.
+    handler.mockClear();
+    for (const keyCode of [49, 50, 51]) {
+      rm.onKeyDown(fakeKeyEvent(keyCode));
+      vi.advanceTimersByTime(2000);
+    }
+    expect(actions(handler)).toEqual([
+      { key: 'DIGIT_COMMIT', value: '1' },
+      { key: 'DIGIT_COMMIT', value: '2' },
+      { key: 'DIGIT_COMMIT', value: '3' }
+    ]);
+  });
+
+  it('keeps emitting keydown for digits and never preventDefaults them (passthrough preserved)', () => {
+    const keydown = vi.fn();
+    rm.on('keydown', keydown);
+
+    const e = fakeKeyEvent(52); // DIGIT_4
+    rm.onKeyDown(e);
+    expect(keydown).toHaveBeenCalledWith({ keyCode: 52, mappedKey: 'DIGIT_4' });
+    expect(e.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('HARD LAW — typing-target digits stay byte-identical passthrough ("1984")', () => {
+    const input = document.createElement('input');
+    input.type = 'search';
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    const events = [49, 50, 56, 52].map((keyCode) => {
+      const e = fakeKeyEvent(keyCode, input); // 1, 9, 8, 4
+      rm.onKeyDown(e);
+      return e;
+    });
+    vi.advanceTimersByTime(10_000);
+
+    expect(handler).not.toHaveBeenCalled(); // no buffer, no commit while typing
+    for (const e of events) expect(e.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it('leaving the typing target resumes buffering: same instance, one buffer', () => {
+    const input = document.createElement('input');
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    rm.onKeyDown(fakeKeyEvent(49, input)); // typed — dropped like today
+    rm.onKeyDown(fakeKeyEvent(53)); // normal focus — buffered
+    vi.advanceTimersByTime(2000);
+    expect(actions(handler)).toEqual([{ key: 'DIGIT_COMMIT', value: '5' }]);
+  });
+
+  it('pressDigit is the shared entry voice numerics use — same buffer, same commit', () => {
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    // Voice seam hands over DIGIT_* action names (S531 → S535 same-handler wiring).
+    rm.pressDigit('DIGIT_6');
+    rm.pressDigit('DIGIT_5');
+    // Key-routed digit joins with the voice digits — ONE queue proves it: the
+    // very same buffer instance drains '65' plus the key's '4' as ONE commit.
+    rm.onKeyDown(fakeKeyEvent(52)); // DIGIT_4
+    vi.advanceTimersByTime(2000);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({ key: 'DIGIT_COMMIT', value: '654' });
+  });
+
+  it('pressDigit refuses non-digit action names without touching the queue', () => {
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    rm.pressDigit('PLAY');
+    rm.pressDigit('DIGIT_COMMIT');
+    rm.pressDigit('UNKNOWN_9');
+    vi.advanceTimersByTime(5000);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('disabling drops a pending burst WITHOUT emitting (same posture as key repeat)', () => {
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    rm.onKeyDown(fakeKeyEvent(49));
+    rm.setEnabled(false);
+    vi.advanceTimersByTime(5000);
+    expect(handler).not.toHaveBeenCalled();
+
+    rm.setEnabled(true);
+    rm.onKeyDown(fakeKeyEvent(50));
+    vi.advanceTimersByTime(2000);
+    expect(actions(handler)).toEqual([{ key: 'DIGIT_COMMIT', value: '2' }]);
+  });
+
+  it('destroy drops a pending burst WITHOUT a ghost commit', () => {
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    rm.onKeyDown(fakeKeyEvent(57));
+    rm.destroy();
+    vi.advanceTimersByTime(5000);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('keyup of a digit changes nothing — the one-shot still drains the burst', () => {
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    rm.onKeyDown(fakeKeyEvent(49));
+    rm.onKeyUp(fakeKeyEvent(49));
+    rm.onKeyDown(fakeKeyEvent(50));
+    rm.onKeyUp(fakeKeyEvent(50));
+    vi.advanceTimersByTime(2000);
+    expect(actions(handler)).toEqual([{ key: 'DIGIT_COMMIT', value: '12' }]);
   });
 });
 

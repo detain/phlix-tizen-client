@@ -299,7 +299,11 @@ stray `BACK`/`YELLOW` press.
   `PLAY_PAUSE` and `427`/`428` `CHANNEL_UP`/`CHANNEL_DOWN` (immediate + displayed)
   — and named the digit codes `48`–`57` `DIGIT_0`–`DIGIT_9` (+ `isDigit()`) as
   routing groundwork; digits stay OUT of immediate/handled so text inputs keep
-  receiving them.
+  receiving them. **S535 (AD-22) made that groundwork live:** outside typing
+  targets, digits feed the ONE shared `src/remote/DigitBuffer.ts` queue and drain
+  after 2 s as a single `{key:'DIGIT_COMMIT', value}` action (voice numerics join
+  the same buffer through the same entry point); typing-target digits remain the
+  byte-identical passthrough.
 - **`registerKeys.ts`** (S509) — pure seam over `tizen.tvinputdevice.registerKey`
   /`unregisterKey`. `installRemoteKeyRegistration(tizenLike?)` declares `REMOTE_KEYS`
   at app-ready and returns a paired teardown releasing exactly what it acquired;
@@ -442,10 +446,15 @@ router or view layer to edit here.
    (fires repeatedly while held) — both feed `HANDLED_ACTIONS`, which controls
    `preventDefault`. Do NOT add arrows/ENTER here (spatial-nav + native focus
    own them). (Digits are named `DIGIT_0`–`DIGIT_9` but intentionally left out of
-   these sets so text fields still receive them — see S509.)
+   these sets so text fields still receive them — see S509; since S535 their LIVE
+   routing is the separate digit-buffer branch in `RemoteManager`, which drains
+   to ONE `DIGIT_COMMIT` action outside typing targets.)
 3. Handle the new action in `wireTizenBridge`'s `switch` in `src/tizenBridge.ts`,
    acting on the `BridgePlayer` / `BridgeRouter` deps. Extend the `BridgePlayer` /
-   `BridgeRouter` interfaces if you need a new player/router method.
+   `BridgeRouter` interfaces if you need a new player/router method. (Digit
+   numerics arrive as the buffer's `DIGIT_COMMIT` action carrying `value` — the
+   per-key `switch` never sees `DIGIT_*`; consuming `DIGIT_COMMIT` — go-to-time,
+   search — is a deliberate follow-on, not part of this flow.)
 4. Add a case to `tests/unit/tizenBridge.test.ts` (and, for a newly registered key,
    extend `tests/unit/registerKeys.test.ts` / `KeyMapping.test.ts`).
 

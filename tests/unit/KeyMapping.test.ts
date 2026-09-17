@@ -210,8 +210,11 @@ describe('KeyMapping', () => {
     });
 
     it('keeps digits OUT of immediate/handled so text-input typing is untouched', () => {
-      // The groundwork routes the token; it must not swallow the key (AD-22's
-      // commit buffer would add handling — not this step).
+      // S535 UPDATE-ASSERTS (never weakens) this pin to the live contract: the
+      // commit buffer is a SEPARATE digit branch in RemoteManager, so digits
+      // STILL never reach IMMEDIATE/HANDLED — that is precisely why typing-target
+      // digits stay the byte-identical passthrough ("1984") and are never
+      // preventDefaulted, on any focus.
       expect(KeyMapping.isImmediate('DIGIT_1')).toBe(false);
       expect(KeyMapping.isHandled('DIGIT_1')).toBe(false);
       expect(KeyMapping.isRepeatable('DIGIT_1')).toBe(false);
@@ -226,6 +229,37 @@ describe('KeyMapping', () => {
       expect(keys).toContain('10252');
       expect(keys).toContain('427');
       expect(keys).toContain('428');
+    });
+  });
+
+  // S535 (AD-22) — the drain action joins the ONE vocabulary; digitValue is the
+  // digit-char parse the buffer feed uses (keys and voice share it).
+  describe('S535 digit-commit vocabulary', () => {
+    it('exposes DIGIT_COMMIT as a named action (not a key code)', () => {
+      expect(KeyMapping.DIGIT_COMMIT).toBe('DIGIT_COMMIT');
+      expect(Object.values(KeyMapping.KEY_MAP)).not.toContain('DIGIT_COMMIT');
+      // The drain is still not an immediate/handled key — it is emitted by the
+      // buffer, never routed through those sets.
+      expect(KeyMapping.isImmediate('DIGIT_COMMIT')).toBe(false);
+      expect(KeyMapping.isHandled('DIGIT_COMMIT')).toBe(false);
+      expect(KeyMapping.isDigit('DIGIT_COMMIT')).toBe(false);
+    });
+
+    it('digitValue parses DIGIT_0..9 to its numeral and refuses everything else', () => {
+      for (let n = 0; n <= 9; n++) {
+        expect(KeyMapping.digitValue(`DIGIT_${n}`)).toBe(String(n));
+      }
+      expect(KeyMapping.digitValue('PLAY')).toBeNull();
+      expect(KeyMapping.digitValue('DIGIT_10')).toBeNull();
+      expect(KeyMapping.digitValue('DIGIT_COMMIT')).toBeNull();
+      expect(KeyMapping.digitValue('')).toBeNull();
+    });
+
+    it('captions the commit action with a real display name (toast surface need)', () => {
+      // ActionToastOverlay captions EVERY action via getDisplayName — an unmapped
+      // DIGIT_COMMIT would flash the raw token, so the display need is pinned.
+      expect(KeyMapping.getDisplayName('DIGIT_COMMIT')).toBe('Digits');
+      expect(KeyMapping.getDisplayName('DIGIT_COMMIT')).not.toBe('DIGIT_COMMIT');
     });
   });
 });

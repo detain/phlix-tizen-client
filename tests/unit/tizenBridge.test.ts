@@ -663,6 +663,104 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
   });
 });
 
+// S535 (AD-22 + S531's coordinate-on-arrival discharge) — voice numerics land
+// on the SAME digit-commit buffer the physical keys feed. The bridge's voice
+// seam branches: DIGIT_* → remoteManager.pressDigit (the one queue), everything
+// else keeps the pre-S535 direct emit. Pinned end-to-end on the REAL singleton.
+describe('S535 voice digits share the ONE digit buffer (same handler)', () => {
+  function fakeVoice() {
+    let id = 10;
+    let listener: ((command: string) => void) | undefined;
+    const svc = {
+      setCommandList: vi.fn(() => ++id),
+      removeCommandList: vi.fn(),
+      addResultListener: vi.fn((l: (command: string) => void) => {
+        listener = l;
+        return ++id;
+      }),
+      removeResultListener: vi.fn()
+    };
+    return { svc, speak: (phrase: string) => listener?.(phrase) };
+  }
+
+  function makePlayerApp(): VueApp {
+    return {
+      config: {
+        globalProperties: {
+          $pinia: {},
+          $router: {
+            push: vi.fn(),
+            back: vi.fn(),
+            currentRoute: { value: { name: 'player' } as BridgeRoute },
+            afterEach: (_guard: (to: BridgeRoute) => void) => () => { /* removed below */ }
+          }
+        }
+      }
+    } as unknown as VueApp;
+  }
+
+  const fakeKeydown = (keyCode: number): KeyboardEvent =>
+    ({ keyCode, preventDefault: () => { /* noop */ }, stopImmediatePropagation: () => { /* noop */ } }) as unknown as KeyboardEvent;
+
+  let teardown: (() => void) | null = null;
+  let unsubscribe: (() => void) | null = null;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    document.body.innerHTML = '';
+    qualityMenuActive.value = false;
+  });
+
+  afterEach(() => {
+    teardown?.();
+    teardown = null;
+    unsubscribe?.();
+    unsubscribe = null;
+    remoteManager.suppressPropagation = null;
+    vi.useRealTimers();
+  });
+
+  it('a spoken digit burst drains as ONE DIGIT_COMMIT on the existing action channel', () => {
+    const voice = fakeVoice();
+    const actions: ActionEvent[] = [];
+    unsubscribe = remoteManager.on('action', (data) => actions.push(data as ActionEvent));
+
+    teardown = installTizenBridge(makePlayerApp(), { voicecontrol: voice.svc } as never);
+    expect(voice.svc.setCommandList).toHaveBeenCalledTimes(1); // player route → voice mounted
+
+    voice.speak('7');
+    voice.speak('2');
+    expect(actions).toEqual([]); // buffered exactly like key digits — no early action
+    vi.advanceTimersByTime(2000);
+    expect(actions).toEqual([{ key: 'DIGIT_COMMIT', value: '72' }]);
+  });
+
+  it('voice digits join KEY digits in the same queue — never a forked path', () => {
+    const voice = fakeVoice();
+    const actions: ActionEvent[] = [];
+    unsubscribe = remoteManager.on('action', (data) => actions.push(data as ActionEvent));
+
+    teardown = installTizenBridge(makePlayerApp(), { voicecontrol: voice.svc } as never);
+
+    voice.speak('1'); // spoken '1'
+    remoteManager.onKeyDown(fakeKeydown(50)); // pressed '2' — same singleton, same buffer
+    vi.advanceTimersByTime(2000);
+
+    expect(actions).toEqual([{ key: 'DIGIT_COMMIT', value: '12' }]); // ONE joined commit
+  });
+
+  it('non-digit voice actions keep the pre-S535 immediate emit (one dispatcher)', () => {
+    const voice = fakeVoice();
+    const actions: ActionEvent[] = [];
+    unsubscribe = remoteManager.on('action', (data) => actions.push(data as ActionEvent));
+
+    teardown = installTizenBridge(makePlayerApp(), { voicecontrol: voice.svc } as never);
+
+    voice.speak('Next'); // a DEFAULT transport phrase → immediate action event
+    expect(actions).toEqual([{ key: 'NEXT' }]);
+  });
+});
+
 describe('S526 defaultExitApplication — the zombie-webview exit behind a lazy seam', () => {
   afterEach(() => {
     delete (globalThis as { tizen?: unknown }).tizen;

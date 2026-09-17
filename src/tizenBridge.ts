@@ -9,7 +9,7 @@ import { usePlayerStore } from '@phlix/ui';
 import { ref, type App as VueApp, type Ref } from 'vue';
 import remoteManager from './remote/RemoteManager';
 import type { ActionEvent } from './remote/RemoteManager';
-import type { ActionName } from './remote/KeyMapping';
+import KeyMapping, { type ActionName } from './remote/KeyMapping';
 import { installRemoteKeyRegistration, type TizenLike } from './remote/registerKeys';
 import { installVoiceControlRegistration, type TizenLike as VoiceTizenLike } from './voiceControl';
 import {
@@ -486,13 +486,16 @@ export function installTizenBridge(
   // RemoteManager + KeyMapping already dispatch — no second pipeline.
   const releaseRemoteKeys = installRemoteKeyRegistration(tizenLike);
 
-  // S531 (AD-23) — guarded VoiceControl. Register the transport command list ONLY
-  // while the player route is mounted and release on unmount, riding the same
-  // route seam the quality guard uses (single-writer B-seam: this is the mount
-  // hook, nothing more). A recognised phrase re-enters the EXISTING action
-  // pipeline through `remoteManager.emit('action', …)` so voice is never a second
-  // dispatcher; a `tizen.voicecontrol` that is absent or throws (the common TV
-  // case) makes this a silent no-op — app behaviour stays byte-identical.
+  // S531 (AD-23) — guarded VoiceControl. Register the transport + digit command
+  // list ONLY while the player route is mounted and release on unmount, riding
+  // the same route seam the quality guard uses (single-writer B-seam: this is the
+  // mount hook, nothing more). A recognised non-digit phrase re-enters the
+  // EXISTING action pipeline through `remoteManager.emit('action', …)` so voice
+  // is never a second dispatcher; since S535 a recognised DIGIT phrase enters the
+  // ONE shared digit-commit buffer through `remoteManager.pressDigit` — the same
+  // handler physical digit keys use, so a spoken "1-2-3" drains as the same
+  // DIGIT_COMMIT action. A `tizen.voicecontrol` that is absent or throws (the
+  // common TV case) makes this a silent no-op — app behaviour byte-identical.
   const releaseVoiceControl = installVoiceControlRegistration({
     getRoute,
     router,
@@ -501,7 +504,10 @@ export function installTizenBridge(
     // the injected fake is passed through and feature-detected independently.
     tizenLike: tizenLike as unknown as VoiceTizenLike | null | undefined,
     onAction: (action) => {
-      remoteManager.emit('action', { key: action });
+      // ONE-buffer law (S535): digits join the routed-key queue, everything
+      // else keeps the pre-S535 direct emit. No forked digit path.
+      if (KeyMapping.isDigit(action)) remoteManager.pressDigit(action);
+      else remoteManager.emit('action', { key: action });
     }
   });
 

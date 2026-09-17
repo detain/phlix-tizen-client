@@ -5,6 +5,36 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W115 (S535): digit-commit buffer — the digit channel goes LIVE (AD-22)
+
+- **One shared buffer replaces the dead passthrough.** New pure module
+  `src/remote/DigitBuffer.ts` queues typed/pressed digit input and drains after a
+  2 s inactivity window as ONE joined commit — "1-2-3 fast" commits `123`, three
+  slow presses commit `1`, `2`, `3`; every digit re-arms the single timer, a lone
+  digit flushes alone, and `clear()` cancels a pending burst without emitting.
+  `RemoteManager` feeds it on digit keydowns (outside typing targets) and drains
+  onto the existing action channel as `{key: 'DIGIT_COMMIT', value}` — a named
+  action in the shared `KeyMapping` vocabulary (displayed caption included), never
+  a second dispatcher.
+- **Typing targets are untouched (hard law).** While an `INPUT`, `TEXTAREA`, or
+  contenteditable owns focus, digit keys behave exactly as before this change —
+  no buffering, no `preventDefault`, the character lands where the user is typing
+  ("1984" stays typeable). Recognition is structural (element/ancestor walk;
+  readonly, disabled, and non-typing input types never intercept), and the buffer
+  module itself never touches `document`/`window` (grep-pinned).
+- **Voice numerics land on the SAME handler.** S531's coordinate-on-arrival
+  discharge: the guarded voice registration now commits the ten digit phrases
+  (`DIGIT_0`–`DIGIT_9`, display-name sourced) alongside the transport seven, and
+  the bridge's voice seam routes recognised digits through the very same
+  `RemoteManager` entry point — spoken and pressed digits join one queue and drain
+  as one commit. One buffer total (importer grep-pinned); the guarded no-op
+  platform posture is unchanged. Consuming `DIGIT_COMMIT` (go-to-time, search) is
+  a named follow-on, not part of this ship.
+- **Zero surface change.** Client-side input routing only: ZERO new request sites,
+  no new routes, no contract/server change; the vendored manifest stays
+  byte-identical and `app/config.xml` is byte-identical before and after
+  (blob hash proven in both mirrors).
+
 ### Added — W114 (S531): guarded VoiceControl registration (AD-23)
 
 - **Spoken transport, only where the platform already offers it.** New module
@@ -18,9 +48,10 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   a transport subset mapped onto ActionNames the remote already knows, with phrases
   taken from the shared display-name source (no forked label table). A recognised
   phrase is delivered through the single existing action bus rather than a second
-  dispatcher. Numeric voice commands are intentionally withheld: the timed
-  digit-commit buffer they must share is not present yet, so numerics coordinate on
-  arrival instead of becoming a blocking dependency.
+  dispatcher. Numeric voice commands were withheld at ship time — the timed
+  digit-commit buffer they must share was not present yet, so numerics coordinated
+  on arrival instead of becoming a blocking dependency. (Superseded: that buffer
+  landed with the next entry; the digit phrases are now committed.)
 - **Manifest honesty (the mask is honored).** `app/config.xml` is UNCHANGED — no
   `voicecontrol` `<feature>` was pre-added. On profiles where the voice API only
   materialises once such a feature is declared, this module simply no-ops, and the

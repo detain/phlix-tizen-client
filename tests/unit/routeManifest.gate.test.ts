@@ -365,6 +365,18 @@ export const S530_REQUESTS_DEDUP_TOKEN = 'S530REQDEDUPX9P10';
 // Era law kept: no new routes, no contracts change, zero server change.
 export const S531_VOICE_CONTROL_TOKEN = 'S531VOICECTRLX9P10';
 
+// S535 digit-commit buffer ritual token (AD-22; `src/remote/DigitBuffer.ts` is the
+// ONE pure queue — fed by physical-key digits in `RemoteManager.ts` and, per S531's
+// coordinate-on-arrival discharge, by voice numerics through the SAME handler at the
+// `tizenBridge.ts` onAction seam) — its ONLY code home is this line (1 code home /
+// 0 .md). The feature is client-side only and introduces ZERO new request sites (no
+// wire, no `/api/v1` literal), so the per-file pin above is UNCHANGED, the scan stays
+// 27, and the vendored manifest stays byte-identical (md5 06ce7ec9…). `app/config.xml`
+// is BYTE-IDENTICAL — buffered digits need no new `<feature>`, and the TN-2 voicecontrol
+// adjudication stays deferred exactly as S531 left it. Era law kept: no new routes, no
+// contracts change, zero server change.
+export const S535_DIGIT_BUFFER_TOKEN = 'S535DIGITBUFX9P1';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('730e55b7d3ad44a155f6b46374a9f6c463792840');

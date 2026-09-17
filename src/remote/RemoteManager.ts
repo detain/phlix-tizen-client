@@ -6,15 +6,26 @@
  * the SINGLE source of TV-remote events (the analogue of Electron's media
  * events). Arrow keys are intentionally not handled here — @phlix/ui's
  * useSpatialNav owns D-pad navigation directly on `document`.
+ *
+ * S535 (AD-22): the digit channel stops being a dead passthrough. Routed
+ * DIGIT_* keydowns feed the ONE shared digit-commit buffer (below), which
+ * drains as a single DIGIT_COMMIT action on the existing `action` channel.
+ * While a typing target holds focus, digits stay byte-identical to the old
+ * passthrough — no buffer, no preventDefault. Recognised numeric voice
+ * phrases (S531) enter through the SAME `pressDigit` seam — never a forked
+ * digit path.
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
 
 import KeyMapping, { type ActionName } from './KeyMapping';
+import { createDigitBuffer, isTypingTarget, type DigitBuffer } from './DigitBuffer';
 
 export interface ActionEvent {
   key: ActionName;
   repeat?: boolean;
+  /** Joined digit string carried by the S535 DIGIT_COMMIT drain (buffer value). */
+  value?: string;
 }
 
 export interface KeyEvent {
@@ -47,6 +58,16 @@ export class RemoteManager {
   suppressPropagation: ((mappedKey: ActionName, _event: KeyboardEvent) => boolean) | null = null;
   private activeKeyRepeat: ReturnType<typeof setTimeout> | ReturnType<typeof setInterval> | null =
     null;
+  /**
+   * THE single digit-commit buffer (S535 ONE-buffer law). Keydowns routed here
+   * by `onKeyDown` and voice digits routed here by `pressDigit` share it; its
+   * drain re-enters the ONE existing `action` channel as DIGIT_COMMIT.
+   */
+  private readonly digitBuffer: DigitBuffer = createDigitBuffer({
+    commit: (value: string) => {
+      this.emit('action', { key: KeyMapping.DIGIT_COMMIT, value });
+    }
+  });
   private listeners = new Map<RemoteEventName, Handler[]>();
   private readonly boundKeyDown: (_event: KeyboardEvent) => void;
   private readonly boundKeyUp: (_event: KeyboardEvent) => void;
@@ -76,6 +97,14 @@ export class RemoteManager {
     const mappedKey = KeyMapping.mapKeyCode(keyCode);
 
     this.emit('keydown', { keyCode, mappedKey });
+
+    // S535 (AD-22): digits on NORMAL focus feed the one shared commit buffer —
+    // the drain later emits a single DIGIT_COMMIT action. While a typing target
+    // holds focus this is skipped entirely: no buffer, no preventDefault, the
+    // event keeps its byte-identical passthrough so a search input types "1984".
+    if (KeyMapping.isDigit(mappedKey) && !isTypingTarget(event.target)) {
+      this.pressDigit(mappedKey);
+    }
 
     // Held-key repeat (FF/REW accel, volume). Clear any prior repeat timer
     // first — the webview fires auto-repeat keydowns while a key is held, and
@@ -144,7 +173,22 @@ export class RemoteManager {
     this.enabled = enabled;
     if (!enabled) {
       this.stopKeyRepeat();
+      // A disabled manager queues nothing and commits nothing (S535): drop the
+      // pending burst WITHOUT emitting — same posture as stopping key repeat.
+      this.digitBuffer.clear();
     }
+  }
+
+  /**
+   * Shared entry for ONE digit action name (e.g. 'DIGIT_7') into the single
+   * commit buffer (S535). Routed keydowns and recognised numeric voice phrases
+   * both arrive here — the ONE-buffer law's choke point. Non-digit names are
+   * refused without touching the queue.
+   */
+  pressDigit(action: ActionName): void {
+    const digit = KeyMapping.digitValue(action);
+    if (digit === null) return;
+    this.digitBuffer.push(digit);
   }
 
   /** Register an action handler (convenience wrapper). */
@@ -188,6 +232,7 @@ export class RemoteManager {
   /** Cleanup all listeners + DOM handlers. */
   destroy(): void {
     this.stopKeyRepeat();
+    this.digitBuffer.clear();
     if (typeof document !== 'undefined') {
       document.removeEventListener('keydown', this.boundKeyDown);
       document.removeEventListener('keyup', this.boundKeyUp);
