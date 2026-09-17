@@ -68,6 +68,13 @@ vi.mock('@/tizenBridge', () => ({
   installTizenBridge: (...args: unknown[]) => installTizenBridge(...args)
 }));
 
+// S522 AD-20 — boot installs the gamepad→key bridge once; mock it so the boot
+// tests assert the call without starting a real rAF loop under jsdom.
+const installGamepadBridge = vi.fn(() => () => {});
+vi.mock('@/remote/gamepadBridge', () => ({
+  installGamepadBridge: (...args: unknown[]) => installGamepadBridge(...args)
+}));
+
 // S298 — the hub-relay consumer boot wiring: resolve → open → dispatch.
 const resolveHubRelayConfigMock = vi.fn();
 const openHubRelayConnectionMock = vi.fn();
@@ -181,6 +188,15 @@ describe('boot (Tizen renderer entry)', () => {
 
     expect(mountSpy).toHaveBeenCalledWith('#phlix-app');
     expect(installTizenBridge).toHaveBeenCalledWith(fakeApp);
+  });
+
+  it('S522 AD-20: boot installs the gamepad→key bridge exactly once', async () => {
+    const mod = await import('@/main');
+    // The import above fired the module-scope `void boot()` once; wipe that so
+    // the count below reflects ONLY the explicit boot() under test.
+    installGamepadBridge.mockClear();
+    await mod.boot();
+    expect(installGamepadBridge).toHaveBeenCalledTimes(1);
   });
 
   it('mounts the spatial-nav host as a second app sharing pinia + router', async () => {

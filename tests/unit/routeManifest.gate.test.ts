@@ -300,6 +300,14 @@ export const S520_QUICKCONNECT_CLIENT_TOKEN = 'S520QCLIENTX9P8';
 // unchanged, md5 06ce7ec9…), which is why the per-file pin above moved to 27.
 export const S521_TELEMETRY_CONSENT_TOKEN = 'S521TELEMX9P8';
 
+// S522 gamepad→synthetic-keyboard bridge ritual token (AD-20; input-side only) —
+// its ONLY code home is this line (1 code home / 0 .md). It introduces ZERO new
+// request sites: `src/remote/gamepadBridge.ts` synthesises `document` key events
+// through the existing RemoteManager/KeyMapping seam and never touches the wire,
+// so the per-file pin above is UNCHANGED and the vendored manifest stays
+// byte-identical (md5 06ce7ec9…).
+export const S522_GAMEPAD_BRIDGE_TOKEN = 'S522GAMEPADX9P8';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('730e55b7d3ad44a155f6b46374a9f6c463792840');
