@@ -239,6 +239,7 @@ const PER_FILE_COVERAGE: Record<string, number> = {
   'src/pages/AudioTracksPage.vue': 1,
   'src/pages/ChaptersPage.vue': 1,
   'src/pages/ParentalControlsPage.vue': 9,
+  'src/quickconnect/quickConnectClient.ts': 3,
   'src/screens/RecommendationsScreen.vue': 1,
   'src/stores/useTrackPreferenceStore.ts': 2,
   'src/stores/useSyncPlayStore.ts': 6,
@@ -283,6 +284,13 @@ export const S516_ACTION_TOAST_TOKEN = 'S516TOASTX9P7';
 // S517 admin-console default-off build flag ritual token — its ONLY code home is
 // this line (1 code home / 0 .md).
 export const S517_ADMIN_FLAG_TOKEN = 'S517ADMINFLAGX9P7';
+
+// S520 quick-connect pairing CLIENT ritual token (initiate→poll→redeem through
+// the existing token-store seam) — its ONLY code home is this line (1 code home /
+// 0 .md). The 3 new request sites it introduces all live in
+// `src/quickconnect/quickConnectClient.ts` on EXISTING served routes (manifest
+// unchanged, md5 06ce7ec9…), which is exactly why the per-file pin above moved.
+export const S520_QUICKCONNECT_CLIENT_TOKEN = 'S520QCLIENTX9P8';
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {

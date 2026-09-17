@@ -598,3 +598,30 @@ describe('S516 action-toast overlay (AD-13)', () => {
     expect(document.getElementById('phlix-action-toast-overlay')?.textContent).toBe('');
   });
 });
+
+// S520 AD-25 — the quick-connect pairing surface mounts as the SEVENTH always-on
+// root app (shares the main app's pinia → one auth store), so it observes the
+// same server/session state and retires itself on landing a pairing. The panel
+// self-gates (empty base / already-logged-in render nothing), so boot mounting
+// it unconditionally is correct — the mount is the wiring, visibility is its own.
+describe('S520 quick-connect overlay (AD-25)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    createPhlixApp.mockClear().mockReturnValue(fakeApp);
+    mountSpy.mockClear();
+    secondMount.mockClear();
+    secondUse.mockClear().mockReturnValue(secondApp);
+    resolveHubRelayConfigMock.mockClear().mockReturnValue(null);
+    openHubRelayConnectionMock.mockClear();
+    probeServerMock.mockReset().mockImplementation(async () => true);
+    globalThis.localStorage.clear();
+  });
+
+  it('boots the quick-connect panel as a seventh root app sharing pinia', async () => {
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(secondMount).toHaveBeenCalledWith('#phlix-quick-connect');
+    // shares the SAME pinia instance as every other overlay app.
+    expect(secondUse).toHaveBeenCalledWith(fakePinia);
+  });
+});

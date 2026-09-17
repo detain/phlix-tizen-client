@@ -5,6 +5,28 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — W112 (S520): quick-connect pairing client (TV half) — 2026-09-17
+
+- **Sign in on the TV without a keyboard.** A no-keyboard device should never
+  make you type a password on a remote. `src/quickconnect/` adds the TV
+  (`client`) half of quick-connect: `initiatePairing` asks the server to mint a
+  short human-code, `QuickConnectPanel` shows it (no QR), `createPairingSession`
+  polls `…/{code}/status` and, on approval, `redeemPairingToken` fetches the
+  device's own token pair, which the flow hands back through the app's EXISTING
+  `useAuthStore().setTokens` seam — no second token store is introduced. The
+  companion's `approve` leg is deliberately out of scope (that is the phone's
+  job, never the TV's). The panel mounts as a seventh always-on root app sharing
+  the main app's pinia and self-gates: it renders and polls only when a server
+  base exists but no session does, retires itself the instant a pairing lands,
+  and issues zero status requests while hidden. Poll cadence prefers an explicit
+  override, then the server-published interval, then a conservative default, and
+  transient faults back off exponentially to a ceiling and then stop rather than
+  hammer; denied/expired/abandoned resolve as calm non-fatal phases (never a
+  throw). All three request sites ride EXISTING served routes — the vendored
+  410-route manifest is untouched, and `routeManifest.gate` advances its per-file
+  pin to count `src/quickconnect/quickConnectClient.ts` (scan 23 → 26 request
+  sites, same modules). No new server route or contracts change (era law).
+
 ### Changed — W111 (cs47b): route-manifest CONTENT re-vendor (404→410 tuples) — 2026-09-16
 
 - **cs#47 currency re-vendor (lane cs47b).** Vendored
