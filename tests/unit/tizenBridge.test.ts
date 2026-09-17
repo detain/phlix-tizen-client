@@ -4,6 +4,9 @@ import {
   createDomQualityMenu,
   installTizenBridge,
   qualityMenuActive,
+  defaultExitApplication,
+  createFocusTrapLayer,
+  FOCUS_TRAP_SELECTOR,
   type BridgePlayer,
   type BridgeRouter,
   type BridgeRemote,
@@ -12,6 +15,7 @@ import {
 } from '@/tizenBridge';
 import remoteManager from '@/remote/RemoteManager';
 import type { ActionEvent } from '@/remote/RemoteManager';
+import type { BackLayer, RowNode } from '@/remote/backPolicy';
 import { REMOTE_KEYS } from '@/remote/registerKeys';
 import type { App as VueApp } from 'vue';
 
@@ -254,6 +258,94 @@ describe('wireTizenBridge', () => {
     expect(quality.deactivate).not.toHaveBeenCalled();
     expect(player.closePlayer).toHaveBeenCalledTimes(1);
     expect(router.back).toHaveBeenCalledTimes(1);
+  });
+
+  // S526 / AD-10 — the four-rung ladder routed through the REAL wireTizenBridge
+  // seam. backPolicy.test.ts pins the pure decision table; these prove the
+  // bridge WIRES each rung to its effect and honours every injectable seam
+  // (layers / exit / findRow / snapRow / focusMemory), so no rung can ship
+  // un-routed and the zombie-webview exit is a real call behind `{ exit }`.
+  describe('S526 BACK ladder — per rung (bridge routing)', () => {
+    const rootRoute = (): BridgeRoute => ({ name: 'browse', path: '/app' });
+    const deepBrowse = (): BridgeRoute => ({ name: 'browse', path: '/app/library/1' });
+    function closable(id: string, open: boolean): BackLayer & { close: ReturnType<typeof vi.fn> } {
+      return { id, isOpen: () => open, close: vi.fn() };
+    }
+    const unscrolled: RowNode = { scrollLeft: 0, scrollWidth: 0, clientWidth: 0, parentElement: null };
+
+    it('row-snap: a panned shelf absorbs the press even with an open layer + a root route', () => {
+      const router = makeRouter();
+      const exit = vi.fn();
+      const snapRow = vi.fn();
+      const shelf: RowNode = { scrollLeft: 480, scrollWidth: 3200, clientWidth: 1000, parentElement: unscrolled };
+      const layer = closable('host-layer', true);
+      wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+        exit,
+        snapRow,
+        findRow: () => shelf,
+        layers: [layer]
+      });
+      remote.fire({ key: 'BACK' });
+      expect(snapRow).toHaveBeenCalledTimes(1);
+      expect(snapRow).toHaveBeenCalledWith(shelf);
+      expect(layer.close).not.toHaveBeenCalled();
+      expect(router.back).not.toHaveBeenCalled();
+      expect(exit).not.toHaveBeenCalled();
+    });
+
+    it('modal-close: with no panned row the TOPMOST open layer closes — no cascade, history untouched', () => {
+      const router = makeRouter();
+      const top = closable('top', true);
+      const bottom = closable('bottom', true);
+      wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+        exit: vi.fn(),
+        findRow: () => null,
+        layers: [top, bottom]
+      });
+      remote.fire({ key: 'BACK' });
+      expect(top.close).toHaveBeenCalledTimes(1);
+      expect(bottom.close).not.toHaveBeenCalled();
+      expect(router.back).not.toHaveBeenCalled();
+    });
+
+    it('exit-app: at the app root with nothing above it, the injected exit runs instead of a blind router.back()', () => {
+      const router = makeRouter();
+      const exit = vi.fn();
+      wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+        exit,
+        findRow: () => null
+      });
+      remote.fire({ key: 'BACK' });
+      expect(exit).toHaveBeenCalledTimes(1);
+      expect(router.back).not.toHaveBeenCalled();
+    });
+
+    it('history-back: a browse route that is NOT the floor keeps walking — exit stays armed only at the root', () => {
+      const router = makeRouter();
+      const exit = vi.fn();
+      wireTizenBridge(remote, makePlayer(), router, deepBrowse, makeQuality({ active: false }), {
+        exit,
+        findRow: () => null
+      });
+      remote.fire({ key: 'BACK' });
+      expect(router.back).toHaveBeenCalledTimes(1);
+      expect(exit).not.toHaveBeenCalled();
+    });
+
+    it('focus memory: YELLOW remembers the opener; the quality layer’s BACK returns focus to it', () => {
+      const opener = document.createElement('button');
+      document.body.appendChild(opener);
+      opener.focus();
+      expect(document.activeElement).toBe(opener);
+      const quality = makeQuality({ available: true });
+      wireTizenBridge(remote, makePlayer(), makeRouter(), playerRoute, quality);
+      remote.fire({ key: 'YELLOW' });
+      expect(quality.activate).toHaveBeenCalledTimes(1);
+      remote.fire({ key: 'BACK' });
+      expect(quality.deactivate).toHaveBeenCalledTimes(1);
+      expect(document.activeElement).toBe(opener);
+      opener.remove();
+    });
   });
 
   it('cleanup unsubscribes from the remote', () => {
@@ -556,5 +648,49 @@ describe('installTizenBridge (composed lifecycle teardown)', () => {
       teardown = installTizenBridge(makeApp('player', sink));
     }).not.toThrow();
     expect(() => teardown!()).not.toThrow();
+  });
+});
+
+describe('S526 defaultExitApplication — the zombie-webview exit behind a lazy seam', () => {
+  afterEach(() => {
+    delete (globalThis as { tizen?: unknown }).tizen;
+  });
+
+  it('is a silent no-op when there is no `tizen` global (browser dev / jsdom)', () => {
+    expect(() => defaultExitApplication()).not.toThrow();
+  });
+
+  it('calls tizen.application.getCurrentApplication().exit() when the platform is present', () => {
+    const exit = vi.fn();
+    (globalThis as { tizen?: unknown }).tizen = { application: { getCurrentApplication: () => ({ exit }) } };
+    defaultExitApplication();
+    expect(exit).toHaveBeenCalledTimes(1);
+  });
+
+  it('tolerates a partially-present tizen shape without throwing (no blind deep access)', () => {
+    (globalThis as { tizen?: unknown }).tizen = { application: {} };
+    expect(() => defaultExitApplication()).not.toThrow();
+  });
+});
+
+describe('S526 createFocusTrapLayer — the generic [data-focus-trap] modal-close layer', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('isOpen only when a focus-trap surface is actually on screen', () => {
+    const layer = createFocusTrapLayer();
+    expect(layer.isOpen()).toBe(false);
+    document.body.innerHTML = '<div data-focus-trap></div>';
+    expect(layer.isOpen()).toBe(true);
+  });
+
+  it('close dispatches an Escape keydown ON the trap so its own onEscape runs (bridge only rings the bell)', () => {
+    document.body.innerHTML = '<div data-focus-trap></div>';
+    const trap = document.querySelector(FOCUS_TRAP_SELECTOR) as HTMLElement;
+    const keys: string[] = [];
+    trap.addEventListener('keydown', (event: KeyboardEvent) => keys.push(event.key));
+    createFocusTrapLayer().close();
+    expect(keys).toEqual(['Escape']);
   });
 });

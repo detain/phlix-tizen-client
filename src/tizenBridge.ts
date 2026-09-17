@@ -11,6 +11,16 @@ import remoteManager from './remote/RemoteManager';
 import type { ActionEvent } from './remote/RemoteManager';
 import type { ActionName } from './remote/KeyMapping';
 import { installRemoteKeyRegistration, type TizenLike } from './remote/registerKeys';
+import {
+  createLayerFocusStack,
+  decideBackRung,
+  findScrolledRow,
+  isAppRootRoute,
+  openBackLayers,
+  type BackLayer,
+  type LayerFocusStack,
+  type RowNode
+} from './remote/backPolicy';
 
 // Minimal structural types for the pieces of the RemoteManager singleton, the
 // phlix-ui player store, the vue-router instance, and the current route that
@@ -174,6 +184,87 @@ export function createDomQualityMenu(state: Ref<boolean> = qualityMenuActive): B
 const SEEK_STEP_SECONDS = 10;
 const SEEK_STEP_REPEAT_SECONDS = 30;
 
+/** The focusable shape @phlix/ui's focus trap itself accepts (useFocusTrap.ts) —
+ * row-snap "item 0" focuses the first node a spatial stop could ever land on. */
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Attribute @phlix/ui's `useFocusTrap` puts on every modal surface it guards. */
+export const FOCUS_TRAP_SELECTOR = '[data-focus-trap]';
+
+/** The structural slice of the ambient `tizen` object the EXIT rung may need. */
+interface TizenApplicationLike {
+  application?: {
+    getCurrentApplication?: () => { exit?: () => void } | null;
+  } | null;
+}
+
+/**
+ * Zombie-webview exit (AD-10 / folded AD-28): the platform call is
+ * `tizen.application.getCurrentApplication().exit()`, resolved LAZILY through
+ * optional chaining so a non-Tizen webview (browser dev, jsdom) is a silent
+ * no-op — the module never touches `tizen.*` at import or on any other path.
+ */
+export function defaultExitApplication(): void {
+  const tizenGlobal = (globalThis as { tizen?: TizenApplicationLike }).tizen;
+  tizenGlobal?.application?.getCurrentApplication?.()?.exit?.();
+}
+
+/** Default row-snap probe: walk up from the focused node to a scrolled shelf. */
+function activeScrolledRow(): RowNode | null {
+  if (typeof document === 'undefined') return null;
+  return findScrolledRow(document.activeElement as unknown as RowNode | null);
+}
+
+/** Default row-snap executor: pan the row home and focus its first item. */
+function snapRowToStart(row: RowNode): void {
+  const element = row as unknown as HTMLElement;
+  element.scrollLeft = 0;
+  element.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)?.focus();
+}
+
+/**
+ * Generic modal-close layer for the `[data-focus-trap]` surfaces @phlix/ui
+ * owns: it has no exported close handle, but every trap guards with a keydown
+ * handler that runs its component's `onEscape`, so BACK is dispatched as the
+ * Escape key the trap already understands. Closing (and its own focus return)
+ * stays the modal's business — the bridge only rings the bell.
+ */
+export function createFocusTrapLayer(): BackLayer {
+  return {
+    id: 'ui-focus-trap',
+    isOpen(): boolean {
+      return typeof document !== 'undefined' && document.querySelector(FOCUS_TRAP_SELECTOR) !== null;
+    },
+    close(): void {
+      if (typeof document === 'undefined') return;
+      const trap = document.querySelector(FOCUS_TRAP_SELECTOR);
+      if (!trap) return;
+      const target = trap.contains(document.activeElement) ? document.activeElement ?? trap : trap;
+      target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    }
+  };
+}
+
+/**
+ * The injectable BACK seams of `wireTizenBridge` — every DOM/platform touch the
+ * ladder performs lives behind one of these so unit tests (and the AD-9 ui
+ * adopt-leg) can drive each rung with fakes. All optional; the defaults are the
+ * production behaviors described above.
+ */
+export interface BridgeBack {
+  /** Extra closable layers, TOPMOST FIRST; the trap + quality layers follow. */
+  layers?: BackLayer[];
+  /** Explicit app exit at the root rung (default: guarded `tizen` exit). */
+  exit?: () => void;
+  /** Row probe for the row-snap rung (default: `document.activeElement` walk). */
+  findRow?: () => RowNode | null;
+  /** Row executor for the row-snap rung (default: pan to 0 + focus item 0). */
+  snapRow?: (row: RowNode) => void;
+  /** Focus memory riding the layer stack (default: fresh LIFO per wiring). */
+  focusMemory?: LayerFocusStack<Element>;
+}
+
 /**
  * Pure wiring helper: subscribes to RemoteManager 'action' events and maps
  * remote transport/navigation keys onto a player store + router. Returns a
@@ -185,17 +276,73 @@ const SEEK_STEP_REPEAT_SECONDS = 30;
  * The exception is quality-selection mode (see `quality`): the YELLOW color
  * button opens the on-screen QualityMenu on the player route, and while it is
  * active BACK dismisses it instead of leaving the player.
+ *
+ * S526 (AD-10): BACK is no longer a one-liner — it walks the pure ladder from
+ * `remote/backPolicy.ts` (row-snap → topmost modal-close → history-back →
+ * explicit app exit at the root). Every effect the ladder runs is injectable
+ * through `back` (layers / exit / row probe+executor / focus memory), so the
+ * rung decisions are unit-pinned against fakes and the zombie-webview exit is
+ * a real `exitApplication()` behind that seam — never a blind `history.back()`
+ * poke at an empty stack.
  */
 export function wireTizenBridge(
   remote: BridgeRemote | null | undefined,
   player: BridgePlayer,
   router: BridgeRouter,
   getRoute: () => BridgeRoute,
-  quality: BridgeQualityMenu = createDomQualityMenu()
+  quality: BridgeQualityMenu = createDomQualityMenu(),
+  back: BridgeBack = {}
 ): () => void {
   if (!remote) {
     return () => { return; };
   }
+
+  // Focus memory riding the layer stack + the ladder's own seams.
+  const focusMemory = back.focusMemory ?? createLayerFocusStack<Element>();
+  // The quality flyout is the ladder's deepest closable layer; host-supplied
+  // layers and the generic ui focus-trap probe sit ABOVE it (topmost first).
+  const qualityLayer: BackLayer = {
+    id: 'quality-menu',
+    isOpen: () => quality.isActive(),
+    close: () => {
+      quality.deactivate();
+      // Back across the overlay stack lands where the viewer stood BEFORE the
+      // layer opened — but only while that node is still on screen; a layer
+      // torn down by navigation keeps its own (ui-side) focus return.
+      const opener = focusMemory.pop();
+      if (opener && opener.isConnected) (opener as HTMLElement).focus();
+    }
+  };
+  const backLayers: BackLayer[] = [...(back.layers ?? []), createFocusTrapLayer(), qualityLayer];
+  const findRow = back.findRow ?? activeScrolledRow;
+  const snapRow = back.snapRow ?? snapRowToStart;
+
+  const handleBack = (): void => {
+    const row = findRow();
+    const open = openBackLayers(backLayers);
+    const rung = decideBackRung({
+      rowScrolled: row !== null,
+      openLayers: open,
+      atAppRoot: isAppRootRoute(getRoute())
+    });
+    if (rung === 'row-snap' && row) {
+      snapRow(row);
+      return;
+    }
+    if (rung === 'modal-close') {
+      open[0]?.close();
+      return;
+    }
+    if (rung === 'exit-app') {
+      (back.exit ?? defaultExitApplication)();
+      return;
+    }
+    // history-back — the pre-S526 behavior, unchanged.
+    if (getRoute().name === 'player') {
+      player.closePlayer();
+    }
+    router.back();
+  };
 
   const handler = (action: ActionEvent): void => {
     switch (action.key) {
@@ -220,18 +367,10 @@ export function wireTizenBridge(
         player.seekBy(action.repeat ? -SEEK_STEP_REPEAT_SECONDS : -SEEK_STEP_SECONDS);
         break;
       case 'BACK':
-        // While the quality flyout is up, Back dismisses IT first — without
-        // tearing down the player underneath.
-        if (quality.isActive()) {
-          quality.deactivate();
-          break;
-        }
-        if (getRoute().name === 'player') {
-          player.closePlayer();
-          router.back();
-        } else {
-          router.back();
-        }
+        // S526 / AD-10 — the BACK ladder: row-snap first, then the topmost
+        // closable layer (quality flyout included), then history, then an
+        // EXPLICIT exit at the app root. Never a blind back() at the floor.
+        handleBack();
         break;
       case 'HOME':
         router.push('/app');
@@ -241,8 +380,15 @@ export function wireTizenBridge(
         // when the QualityMenu is actually on screen (multi-variant transcode);
         // it toggles quality-selection mode so the D-pad drives the picker.
         if (getRoute().name === 'player') {
-          if (quality.isActive()) quality.deactivate();
-          else if (quality.isAvailable()) quality.activate();
+          if (quality.isActive()) qualityLayer.close();
+          else if (quality.isAvailable()) {
+            // Remember where the viewer stood so BACK can return them (AD-10
+            // focus memory — the seam AD-9's ui focus-stack adopts).
+            if (typeof document !== 'undefined' && document.activeElement) {
+              focusMemory.push(document.activeElement);
+            }
+            quality.activate();
+          }
         }
         break;
       default:
@@ -275,8 +421,16 @@ export function wireTizenBridge(
  * ambient `tizen` global is absent and registration is a silent no-op; a
  * `tizenLike` may be injected for tests. RemoteManager's DOM keydown fallback
  * still handles every code that reaches it.
+ *
+ * S526 (AD-10): `options.exit` overrides the root rung's app exit — the
+ * fake-able seam behind `tizen.application.getCurrentApplication().exit()`, so
+ * no test (and no browser dev session) can ever trip a real platform call.
  */
-export function installTizenBridge(app: VueApp, tizenLike?: TizenLike | null): () => void {
+export function installTizenBridge(
+  app: VueApp,
+  tizenLike?: TizenLike | null,
+  options: { exit?: () => void } = {}
+): () => void {
   const pinia = app.config.globalProperties.$pinia;
   const router = app.config.globalProperties.$router as unknown as {
     push: (to: string) => unknown;
@@ -301,7 +455,8 @@ export function installTizenBridge(app: VueApp, tizenLike?: TizenLike | null): (
     player,
     router,
     getRoute,
-    quality
+    quality,
+    { exit: options.exit }
   );
 
   // Centralized teardown for the SECOND of the two orthogonal ways the menu

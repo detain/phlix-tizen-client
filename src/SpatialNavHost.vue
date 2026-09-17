@@ -21,6 +21,12 @@
 // explicit BACK/YELLOW deactivate, leaving the player route (a router.afterEach
 // guard in tizenBridge), and bridge cleanup — so it can never get stuck `true`
 // and freeze D-pad navigation app-wide.
+//
+// S526 / AD-10: the BACK key now walks a pure layer-stack ladder in
+// `remote/backPolicy.ts` (row-snap → topmost-modal-close → history-back →
+// explicit app exit at root). The modal-close rung dismisses the quality
+// flyout FIRST, so `qualityMenuActive` still tears down on BACK exactly as
+// before — the shared flag keeps gating spatial-nav out while the flyout is up.
 import { useRoute } from 'vue-router';
 import { useSpatialNav, usePreferencesStore } from '@phlix/ui';
 import { qualityMenuActive } from './tizenBridge';
