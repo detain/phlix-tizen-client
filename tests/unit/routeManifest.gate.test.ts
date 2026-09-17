@@ -327,6 +327,19 @@ export const S523_IDLE_SCREENSAVER_TOKEN = 'S523IDLEX9P8';
 // 06ce7ec9…). Era law kept: no new routes, no contracts change.
 export const S526_BACK_LAYER_TOAST_QUEUE_TOKEN = 'S526LAYERX9P9';
 
+// S529 mDNS-less LAN discovery ritual token (AD-24; the pure
+// `src/discovery/lanDiscovery.ts` /health probe engine + the address-history
+// connect suggestions in `resolveConfig.ts`) — its ONLY code home is this line
+// (1 code home / 0 .md). The engine reaches servers with a plain `fetch` GET of
+// the EXISTING unauth `/health` (already inside the granted `internet`
+// privilege) — it is NOT an `ApiClient`/`this.request` site and NEVER emits a
+// contiguous `/api/v1` literal, so it is invisible to BOTH the site scanner and
+// the blindness sweep. Introduces ZERO new request sites: the per-file pin above
+// is UNCHANGED, the scan stays 27, and the vendored manifest stays byte-identical
+// (md5 06ce7ec9…). `app/config.xml` is byte-identical (S503 mask honored — no
+// `systeminfo` privilege re-added). Era law kept: no new routes, no contracts change.
+export const S529_LAN_DISCOVERY_TOKEN = 'S529LANDISCX9P9';
+
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
     expect(manifest.provenance.serverSha).toBe('730e55b7d3ad44a155f6b46374a9f6c463792840');
