@@ -11,6 +11,11 @@ interface ImportMetaEnv {
    *  section (routes + nav entry) in the .wgt; ANY other value (including
    *  unset) means admin is omitted. Default-off. */
   readonly VITE_PHLIX_TV_ADMIN?: string;
+  /** Build-time locale override for the client i18n seam (src/i18n). Wins over
+   *  navigator.language, loses to an explicit runtime value. Unset/'en' keeps
+   *  the byte-identical English ui defaults (the catalog ships an empty 'en'
+   *  override). */
+  readonly VITE_PHLIX_LOCALE?: string;
 }
 
 interface ImportMeta {

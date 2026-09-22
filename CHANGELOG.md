@@ -5,6 +5,28 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — i18n messages seam wiring: client locale → `@phlix/ui` catalog overrides
+
+- **The seam is now reachable from the client.** `@phlix/ui`'s config-time
+  `PhlixAppConfig.messages` override existed since R6.5c but this client never
+  passed it, so translated strings had no path into the render. New
+  `src/i18n/index.ts` resolves the boot locale (explicit → `VITE_PHLIX_LOCALE` →
+  unprivileged `navigator.language` → `'en'` — no `tizen.systeminfo` privilege,
+  doctrine held) and `boot()` now passes
+  `messages: messagesForLocale(resolveLocale())` into `createPhlixApp`.
+- **Behavior-preserving by construction.** The only shipped catalog is `'en'`
+  (`src/i18n/locales/en.ts`) and it is an EMPTY override — ui's `mergeMessages`
+  reproduces its English defaults exactly. Adding a locale is new file + union
+  line + one registry line (`docs/i18n.md`).
+- **Pipeline PROVEN headlessly.** `tests/unit/i18n.test.ts` runs the REAL
+  v0.99.4 bundle unmocked: a fake `{ common: { retry: 'ZZZ-TEST' } }` override
+  reaches a mounted component's `useMessages().t` through the actual
+  provide→inject→merge→resolve chain (sibling keys keep English; omitted-config
+  and empty-en-catalog baselines pin byte-identical defaults), plus `mergeMessages`
+  semantics pins and a full `resolveLocale` priority table incl. env stubbing.
+  `main.test.ts` pins `boot()` passes the field. Zero new request sites — the
+  route manifest scan stays 27, `app/config.xml` untouched.
+
 ### Added — W115 (S535): digit-commit buffer — the digit channel goes LIVE (AD-22)
 
 - **One shared buffer replaces the dead passthrough.** New pure module
