@@ -616,7 +616,7 @@ onMounted(loadAll);
           id="tab-tags"
           class="section__title"
         >
-          Blocked Tags
+          {{ tTizen('parentalControls.tabBlockedTags') }}
         </h2>
       </div>
 
@@ -709,7 +709,7 @@ onMounted(loadAll);
           id="tab-limits"
           class="section__title"
         >
-          Stream Limits
+          {{ tTizen('parentalControls.tabStreamLimits') }}
         </h2>
       </div>
 

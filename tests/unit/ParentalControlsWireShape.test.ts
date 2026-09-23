@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import ParentalControlsPage from '@/pages/ParentalControlsPage.vue';
+import { clearTizenLocale, setTizenLocale } from '@/i18n/tizen';
+import { ES_TIZEN_MESSAGES } from '@/i18n/tizen/locales/es';
 
 /**
  * S325b — the tizen parental-controls page must read and write the WIRE
@@ -196,5 +198,31 @@ describe('ParentalControlsPage wire shape (S325b)', () => {
     // (createForProfile always INSERTs; it never upserts an id from the body).
     expect(apiCalls.some(c => c.method === 'POST' && c.url.endsWith('/schedules'))).toBe(false);
     expect(apiCalls.some(c => c.method === 'PUT' && c.url === '/api/v1/profiles/prof-1/schedules/7')).toBe(true);
+  });
+
+  // ── R1-F1: section headers ride the catalog, not bare literals ──────────
+
+  it('section headers render from the catalog — Spanish mount shows the es values, not English', async () => {
+    // The pre-fix defect: the two `h2.section__title` headings (Blocked Tags,
+    // Stream Limits) were bare template literals while their sibling tabs at
+    // the top of the page already resolved through tTizen. This is the REAL
+    // render proof: mount the component with the own-catalog locale pinned to
+    // es and read the headings back out of the DOM. (v-show keeps hidden tabs
+    // mounted, so both headings are present whichever tab is active.)
+    setTizenLocale('es');
+    try {
+      const wrapper = mount(ParentalControlsPage);
+      await flushPromises();
+
+      const tags = wrapper.get('h2#tab-tags').text();
+      const limits = wrapper.get('h2#tab-limits').text();
+      expect(tags).toBe(ES_TIZEN_MESSAGES.parentalControls.tabBlockedTags);
+      expect(limits).toBe(ES_TIZEN_MESSAGES.parentalControls.tabStreamLimits);
+      // And demonstrably NOT the old hardcoded English.
+      expect(tags).not.toBe('Blocked Tags');
+      expect(limits).not.toBe('Stream Limits');
+    } finally {
+      clearTizenLocale();
+    }
   });
 });

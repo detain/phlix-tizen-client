@@ -31,20 +31,32 @@
  *     `Record<PhlixLocaleCode, Record<string, Record<string, string>>>` for
  *     the same reason (its values are the relaxed bundles).
  *
- * Usage: node scripts/sync-ui-locale-bundles.mjs [--repo ../phlix-ui] [--ref <sha>]
+ * Usage: node scripts/sync-ui-locale-bundles.mjs [--repo ../phlix-ui] [--ref <sha>] [--branch <name>]
  * Requires the sibling checkout to contain the pinned ref (git cat-file -e).
+ * Bare run (no --ref/--branch) defaults to the PIN on disk — it RE-VENDORS
+ * the pinned commit and is idempotent; it can never roll the vendor back to a
+ * stale in-script constant. The SOURCE_* constants below are the BOOTSTRAP
+ * anchor used only when no PIN exists yet, and
+ * tests/unit/i18nLocales.test.ts hard-fails if they drift from the PIN.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** Pin the vendor came from — the re-pin cascade updates these two lines only. */
+/**
+ * BOOTSTRAP anchor for the pin the vendor came from — applied ONLY when no
+ * `PIN` manifest exists yet (first vendor). A bare run otherwise defaults to
+ * PIN.ref/PIN.branch on disk, so this pair can never silently re-anchor an
+ * already-pinned vendor backwards; the suite pins these constants equal to
+ * the on-disk PIN, so a re-pin via `--ref` must update them too (drift fails
+ * `tests/unit/i18nLocales.test.ts`).
+ */
 const SOURCE_BRANCH = 'feat/i18n-locale-bundles';
-const SOURCE_REF = '2f2df8a24152d6a542f441dd0c2029aa730c5f9a';
+const SOURCE_REF = 'dc1df7d553ef1501df294b797334cb400ae8a8d1';
 const SOURCE_DIR = 'src/i18n/locales';
 const TARGET_DIR = 'src/i18n/ui-locale-bundles';
 const FILES = ['es.ts', 'fr.ts', 'de.ts', 'it.ts', 'pt_BR.ts', 'ja.ts', 'index.ts'];
@@ -82,8 +94,40 @@ function vendored(file, source) {
   return out;
 }
 
+/**
+ * Bare-run default pin: read the manifest on disk (idempotent re-vendor of
+ * the pinned commit). Only a MISSING PIN falls back to the bootstrap
+ * constants — a present-but-broken PIN fails fast rather than silently
+ * re-anchoring the vendor to the constants.
+ */
+function pinnedFromDisk() {
+  if (!existsSync(join(TARGET_DIR, 'PIN'))) {
+    return { branch: SOURCE_BRANCH, ref: SOURCE_REF };
+  }
+  let pin;
+  try {
+    pin = JSON.parse(readFileSync(join(TARGET_DIR, 'PIN'), 'utf8'));
+  } catch (error) {
+    process.stderr.write(
+      `FAIL: ${TARGET_DIR}/PIN exists but is not valid JSON — the bare-run default ref comes from it. Fix or delete the manifest.\n`,
+    );
+    throw error;
+  }
+  if (
+    typeof pin.ref !== 'string' || pin.ref === '' ||
+    typeof pin.branch !== 'string' || pin.branch === ''
+  ) {
+    throw new Error(
+      `${TARGET_DIR}/PIN lacks a usable "ref"/"branch" — fix the manifest or delete it to fall back to the bootstrap constants.`,
+    );
+  }
+  return { branch: pin.branch, ref: pin.ref };
+}
+
 const repo = arg('--repo', '../phlix-ui');
-const ref = arg('--ref', SOURCE_REF);
+const pinned = pinnedFromDisk();
+const ref = arg('--ref', pinned.ref);
+const branch = arg('--branch', pinned.branch);
 
 for (const file of FILES) {
   const source = execFileSyncText(repo, ref, file);
@@ -111,7 +155,7 @@ function execFileSyncText(gitRepo, gitRef, file) {
 
 const pin = {
   source: 'phlix-ui',
-  branch: SOURCE_BRANCH,
+  branch,
   ref,
   directory: SOURCE_DIR,
   transforms: [

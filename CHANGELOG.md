@@ -54,6 +54,39 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   key set, placeholder, or pipe-segment shape changed, so no test expectation
   moved — the PIN↔source parity leg re-derives everything from the new ref.
 
+### Fixed — i18n locale lane: R1 review follow-ups (bare-run rollback guard, header/store literals) — 2026-09-23
+
+- **Sync-script rollback guard (R1-F3).** `scripts/sync-ui-locale-bundles.mjs`
+  kept a hardcoded `SOURCE_REF` beside the `PIN` manifest; after the
+  `dc1df7d5` re-vendor the constant was stale at `2f2df8a2`, so a BARE script
+  run would have silently re-vendored the OLD bundles and self-rewritten the
+  PIN (every self-consistent gate stayed green). Bare runs now default to
+  `PIN.ref`/`PIN.branch` on disk (idempotent re-sync; explicit `--ref`/
+  `--branch` still override for re-pins), the constants are bootstrap-only
+  (used when no PIN exists), a present-but-broken PIN now fails fast, and
+  `tests/unit/i18nLocales.test.ts` hard-pins constants == PIN so future
+  re-pins must sync the anchor deliberately.
+- **ParentalControls section headers localized (R1-F1).** The `Blocked Tags`
+  and `Stream Limits` `h2.section__title` literals now render through
+  `tTizen('parentalControls.tabBlockedTags'/'tabStreamLimits')` — the existing
+  tab keys whose English values are byte-identical to the literals (verified
+  against `en.ts`; all six locale catalogs already carried translations). New
+  real-mount proof: an es-locale mount asserts both headings render Spanish
+  out of the DOM.
+- **SyncPlay member fallback localized (R1-F2).** `useSyncPlayStore`'s
+  `normalizeMembers` used `name: m.name ?? 'Unknown'`; it is now
+  `?? tTizen('common.unknown')` (the accessor is already imported by the
+  Pinia `useMusicStore` precedent — no cycle; en render byte-identical).
+  Survey of the file's other English literals found none of the same
+  user-visible-display class: the `error.value`/`wsError.value` strings are
+  unread diagnostic state (no consumer renders them today), the API-error
+  fragment is a diagnostic template, and `'User left room'` is a WebSocket
+  close reason on the wire — all deliberately untranslated.
+- **Ahead-of-pin placeholder parity widened (R1-F4).** The cross-bundle
+  placeholder-parity law now covers ALL 7 ahead-of-pin ui keys (was 3); the
+  set is one hoisted `UI_AHEAD_OF_PIN` constant shared by the three laws that
+  consume it, so extending the vendor set cannot silently miss a law.
+
 ### Added — tizen-own string catalog: every client-rendered literal moves behind `tTizen()`
 
 - **The client's own strings are now cataloged.** The ui seam above reaches

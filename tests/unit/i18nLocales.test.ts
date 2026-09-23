@@ -102,6 +102,20 @@ const TIZEN_ADDITIVE_PIPES: readonly string[] = [
 // form in latin bundles where the English default hardcodes the plural.
 const UI_ADDITIVE_PIPES: readonly string[] = ['player.subtitleDownloads'];
 
+// Keys the vendored bundles carry AHEAD of the installed @phlix/ui pin
+// (v0.99.4). ONE list for all three laws below (installed-coverage flip,
+// cross-bundle placeholder parity, cross-bundle segment parity) so extending
+// the vendor set cannot silently miss a law.
+const UI_AHEAD_OF_PIN = [
+  'connect.scan',
+  'connect.scanning',
+  'connect.scanFailed',
+  'connect.scanEmpty',
+  'connect.scanListLabel',
+  'player.seekBackward',
+  'player.seekForward',
+].sort();
+
 // Keys whose value legitimately EQUALS English (brand tokens, unit formats,
 // {placeholder}-only templates). Verified BOTH directions per locale.
 const EN_LEAK_OK: Record<Locale, readonly string[]> = {
@@ -242,6 +256,25 @@ describe('vendored bundles — PIN integrity (runs in CI: needs no sibling)', ()
     }
   });
 
+  it('the sync script cannot silently roll the vendor back to a stale constant', () => {
+    // The pre-fix hazard: a hardcoded SOURCE_REF constant that drifted from
+    // PIN.ref (2f2df8a2 vs dc1df7d5 once shipped) made a BARE script run
+    // re-vendor the OLD commit and self-rewrite the PIN — silent rollback,
+    // undetectable except against the ui origin. Law now: the bare-run
+    // default comes from the PIN on disk, the constants are bootstrap-only,
+    // and this suite pins constants == PIN so the bootstrap anchor can never
+    // go stale unnoticed. Runs in CI (needs no sibling).
+    const script = readFileSync(join(HERE, '../../scripts/sync-ui-locale-bundles.mjs'), 'utf8');
+    const constantRef = script.match(/const SOURCE_REF = '([0-9a-f]{40})';/)?.[1];
+    const constantBranch = script.match(/const SOURCE_BRANCH = '([^']+)';/)?.[1];
+    expect(constantRef, 'SOURCE_REF constant missing from sync script').toBe(pin.ref);
+    expect(constantBranch, 'SOURCE_BRANCH constant missing from sync script').toBe(pin.branch);
+    // Bare-run default must resolve FROM THE PIN, not the constant.
+    expect(script).toContain("arg('--ref', pinned.ref)");
+    expect(script).toContain("arg('--branch', pinned.branch)");
+    expect(script).not.toMatch(/arg\('--ref', SOURCE_REF\)/);
+  });
+
   it('the registry exposes precisely the six estate locales', () => {
     expect(Object.keys(LOCALE_MESSAGES).sort()).toEqual([...LOCALES].sort());
   });
@@ -268,7 +301,7 @@ describe.skipIf(!SIBLING_PRESENT)(
         });
         expect(sha256(source), `PIN source hash for ${file}`).toBe(entry.source_sha256);
         const disk = readFileSync(join(VENDOR_DIR, file), 'utf8');
-        expect(disk, `${file} ≠ transform(${pin.ref.slice(0, 8)}:${file}) — re-run scripts/sync-ui-locale-bundles.mjs`).toBe(
+        expect(disk, `${file} ≠ transform(${pin.ref.slice(0, 8)}:${file}) — re-run scripts/sync-ui-locale-bundles.mjs (bare run re-vendors this PIN'd ref)`).toBe(
           applyTransforms(file, source),
         );
       }
@@ -300,17 +333,8 @@ describe('ui bundles — key-set identity and installed coverage', () => {
     // Vendored @ dc1df7d5 vs @phlix/ui 0.99.4 — the ahead-of-pin set is pinned
     // HERE so a client dependency bump that ships these keys flips this pin
     // and forces a conscious re-vendor/re-pin instead of silent drift.
-    const AHEAD_OF_PIN = [
-      'connect.scan',
-      'connect.scanning',
-      'connect.scanFailed',
-      'connect.scanEmpty',
-      'connect.scanListLabel',
-      'player.seekBackward',
-      'player.seekForward',
-    ].sort();
     const bundleKeys = [...flat(UI_TABLES.es).keys()];
-    expect(bundleKeys.filter((key) => !EN_UI.has(key)).sort()).toEqual(AHEAD_OF_PIN);
+    expect(bundleKeys.filter((key) => !EN_UI.has(key)).sort()).toEqual(UI_AHEAD_OF_PIN);
   });
 
   it('every bundle value keeps its key\'s {placeholder} set (vs English)', () => {
@@ -330,7 +354,9 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('cross-bundle placeholder sets agree for the ahead-of-pin keys', () => {
-    for (const key of ['connect.scan', 'player.seekBackward', 'player.seekForward']) {
+    // ALL 7 ahead-of-pin keys — they have no installed English baseline, so
+    // this loop is their ONLY placeholder-parity law across the six bundles.
+    for (const key of UI_AHEAD_OF_PIN) {
       const base = placeholders(flat(UI_TABLES.es).get(key) ?? '');
       for (const locale of LOCALES) {
         expect(placeholders(flat(UI_TABLES[locale]).get(key) ?? ''), `${locale} ${key}`).toBe(base);
@@ -360,8 +386,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('ahead-of-pin keys carry identical segment counts across bundles', () => {
-    const keys = ['connect.scan', 'connect.scanning', 'connect.scanFailed', 'connect.scanEmpty', 'connect.scanListLabel', 'player.seekBackward', 'player.seekForward'];
-    for (const key of keys) {
+    for (const key of UI_AHEAD_OF_PIN) {
       const counts = new Set(LOCALES.map((locale) => segments(flat(UI_TABLES[locale]).get(key) ?? '')));
       expect([...counts], `${key} segment counts differ across bundles`).toHaveLength(1);
     }
