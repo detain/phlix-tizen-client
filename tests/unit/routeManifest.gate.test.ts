@@ -11,15 +11,19 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.4.7, but the manifest shipped IN that tag is
- * stale for this pin's purpose — it embeds server `2f1d2ee6…` (md5
- * 4f03cb2e…), while the estate-wide canonical copy is the untagged master
- * regen at server `730e55b7` (md5 pinned below, contracts b34651d) — and the
- * package `exports` map blocks JSON subpath imports anyway. Vendoring this
- * one artifact is the sanctioned interim pattern — identical to mobile
- * (dc45e5c3) and roku (1da0910e). Re-adoption of the contracts export
- * replaces the copies when the next contracts tag ships (tracked W19,
- * phlix-ui #349 lane). (S412: this cite named the superseded #v0.4.4 pin;
+ * `@phlix/contracts` at #v0.5.0. Every tag this cite historically named
+ * shipped a STALE embed for this gate's purpose — #v0.4.7 embedded server
+ * `2f1d2ee6…` (md5 4f03cb2e…) — while the estate-wide canonical copy was the
+ * untagged master regen at server `730e55b7` (md5 pinned below, contracts
+ * b34651d) — and the package `exports` map blocks JSON subpath imports
+ * anyway. Vendoring this one artifact is the sanctioned interim pattern —
+ * identical to mobile (dc45e5c3) and roku (1da0910e). cs#48 re-pin re-measured
+ * the embed: the #v0.5.0 tag (peels to contracts 8ef65d30) carries server
+ * `730e55b7…`/md5 `06ce7ec9…` — byte-identical to the vendored copy — so
+ * re-adoption of the contracts export is finally unblocked; the switch itself
+ * stays the coordinated W19 phlix-ui #349 lane's call (mobile + roku vendor
+ * the same bytes), not a dependency re-pin's. This gate keeps reading the
+ * vendored fixture. (S412: this cite named the superseded #v0.4.4 pin;
  * comment-only, zero behavior. cs#44: advanced the pin cite to the #v0.4.6
  * tag it now names and that tag's measured embed shas; comment-only, 0 behavior.
  * cs#45: advanced the pin cite to the #v0.4.7 tag it now names and that tag's
@@ -30,7 +34,9 @@
  * stands — the tag was never moved, only the untagged canonical advanced.
  * cs#47: re-vendor to the untagged master regen at server `730e55b7`
  * (contracts b34651d, regen #34) — CONTENT regen, 404→410 tuples
- * (quick-connect pairing + consent-gated telemetry).)
+ * (quick-connect pairing + consent-gated telemetry). cs#48 (contracts re-pin
+ * v0.4.7→v0.5.0): advanced the pin cite to the #v0.5.0 tag the manifest now
+ * names and re-measured its embed (head note above); comment-only, 0 behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
