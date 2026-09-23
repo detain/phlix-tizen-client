@@ -33,6 +33,25 @@ import { useRoute } from 'vue-router';
 import { ApiClient } from '@phlix/ui';
 import { useApiBase, usePlayerStore } from '@phlix/ui';
 import type { ChapterMarker, Marker } from '@phlix/contracts';
+import { tTizen, type TizenMessageKey } from '../i18n/tizen';
+
+/**
+ * Tooltip label for a marker whose server `label` is empty: the wire type maps
+ * to its own-catalog key (contracts union intro|outro|credits|ad; 'ad' reuses
+ * the badge string — byte-identical to the old `Ad` capitalization). An unknown
+ * runtime type keeps the original generic capitalize fallback.
+ */
+const MARKER_TYPE_LABEL_KEYS: Record<string, TizenMessageKey> = {
+  intro: 'chapters.markerIntro',
+  outro: 'chapters.markerOutro',
+  credits: 'chapters.markerCredits',
+  ad: 'chapters.adBadge',
+};
+function markerFallbackLabel(type: string): string {
+  const key = MARKER_TYPE_LABEL_KEYS[type];
+  if (key) return tTizen(key);
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
 
 interface ChapterApiResponse {
   chapters: ChapterMarker[];
@@ -105,7 +124,7 @@ async function loadChapters(): Promise<void> {
     chapters.value = response.chapters ?? [];
   } catch (e) {
     if (gen !== chapterLoadGen) return;
-    error.value = e instanceof Error ? e.message : 'Failed to load chapters';
+    error.value = e instanceof Error ? e.message : tTizen('chapters.loadFailed');
     chapters.value = [];
   } finally {
     if (gen === chapterLoadGen) loading.value = false;
@@ -156,7 +175,7 @@ const chapterTickPositions = computed(() => {
 
   return chapters.value.map((chapter) => ({
     id: `chapter-${chapter.index}`,
-    title: chapter.title || `Chapter ${chapter.index + 1}`,
+    title: chapter.title || tTizen('chapters.fallbackTitle', { index: chapter.index + 1 }),
     positionPercent: Math.min(
       100,
       Math.max(0, (chapter.startSeconds / currentDuration.value) * 100),
@@ -181,7 +200,7 @@ const markerTickPositions = computed(() => {
       : 0;
     return {
       id: `marker-${marker.id}`,
-      title: marker.label || marker.type.charAt(0).toUpperCase() + marker.type.slice(1),
+      title: marker.label || markerFallbackLabel(marker.type),
       positionPercent: Math.min(100, Math.max(0, percent)),
       color: MARKER_COLORS[marker.type] ?? MARKER_COLORS.chapter,
       type: marker.type,
@@ -256,7 +275,7 @@ function updateChapterLabel(position: number): void {
   const currentChapter = getChapterAtPosition(position);
 
   if (currentChapter) {
-    const title = currentChapter.title || `Chapter ${currentChapter.index + 1}`;
+    const title = currentChapter.title || tTizen('chapters.fallbackTitle', { index: currentChapter.index + 1 });
     if (currentChapterTitle.value !== title) {
       currentChapterTitle.value = title;
     }
@@ -269,7 +288,7 @@ function updateChapterLabel(position: number): void {
     });
 
     if (nearChapter) {
-      const title = nearChapter.title || `Chapter ${nearChapter.index + 1}`;
+      const title = nearChapter.title || tTizen('chapters.fallbackTitle', { index: nearChapter.index + 1 });
       if (currentChapterTitle.value !== title) {
         currentChapterTitle.value = title;
       }
@@ -400,7 +419,7 @@ onBeforeUnmount(() => {
         >
           <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z" />
         </svg>
-        Ad
+        {{ tTizen('chapters.adBadge') }}
       </div>
     </Transition>
 

@@ -31,7 +31,10 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
 }));
 
-vi.mock('@phlix/ui', () => ({
+vi.mock('@phlix/ui', async () => ({
+  // Forward the real pure-string exports the i18n accessor imports: the mock
+  // replaces the whole module graph, and these two must stay genuine.
+  ...(await vi.importActual<Record<string, unknown>>('@phlix/ui')),
   useApiBase: () => ({ value: 'https://api.example.com' }),
   usePlayerStore: () => h.player,
   ApiClient: vi.fn(function () {

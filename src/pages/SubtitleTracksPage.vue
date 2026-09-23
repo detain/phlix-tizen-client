@@ -47,6 +47,7 @@ import type { SubtitleTrack } from '@phlix/contracts';
 import SubtitleTrackList from '../components/SubtitleTrackList.vue';
 import { fetchPlaybackInfoTracks } from './AudioTracksPage.vue';
 import { useTrackPreferenceStore } from '../stores/useTrackPreferenceStore';
+import { tTizen } from '../i18n/tizen';
 
 const route = useRoute();
 const router = useRouter();
@@ -75,7 +76,7 @@ const activeTrackId = computed<string | null>(() => {
 async function loadSubtitleTracks(): Promise<void> {
   const id = mediaId.value;
   if (!id) {
-    error.value = 'No media id provided';
+    error.value = tTizen('common.noMediaId');
     loading.value = false;
     return;
   }
@@ -108,7 +109,7 @@ async function loadSubtitleTracks(): Promise<void> {
       }
     }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load subtitle tracks';
+    error.value = e instanceof Error ? e.message : tTizen('subtitleTracks.loadFailed');
     subtitleTracks.value = [];
   } finally {
     loading.value = false;
@@ -148,7 +149,7 @@ watch(mediaId, loadSubtitleTracks);
       <button
         class="subtitle-tracks-page__back"
         type="button"
-        aria-label="Go back"
+        :aria-label="tTizen('common.goBack')"
         @click="goBack"
       >
         <svg
@@ -165,13 +166,13 @@ watch(mediaId, loadSubtitleTracks);
       </button>
       <h1 class="subtitle-tracks-page__title">
         <template v-if="loading">
-          Subtitle Tracks…
+          {{ tTizen('subtitleTracks.loadingTitle') }}
         </template>
         <template v-else-if="subtitleTracks.length">
-          {{ subtitleTracks.length }} {{ subtitleTracks.length === 1 ? 'Subtitle Track' : 'Subtitle Tracks' }}
+          {{ tTizen(subtitleTracks.length === 1 ? 'subtitleTracks.headingOne' : 'subtitleTracks.headingOther', { count: subtitleTracks.length }) }}
         </template>
         <template v-else>
-          Subtitle Tracks
+          {{ tTizen('subtitleTracks.title') }}
         </template>
       </h1>
     </header>
@@ -181,9 +182,9 @@ watch(mediaId, loadSubtitleTracks);
       class="subtitle-tracks-page__loading"
       role="status"
       aria-busy="true"
-      aria-label="Loading subtitle tracks"
+      :aria-label="tTizen('subtitleTracks.loadingAria')"
     >
-      <p>Loading subtitle tracks…</p>
+      <p>{{ tTizen('subtitleTracks.loading') }}</p>
     </div>
 
     <div
@@ -197,7 +198,7 @@ watch(mediaId, loadSubtitleTracks);
         class="subtitle-tracks-page__retry"
         @click="loadSubtitleTracks"
       >
-        Retry
+        {{ tTizen('common.retry') }}
       </button>
     </div>
 
@@ -205,12 +206,12 @@ watch(mediaId, loadSubtitleTracks);
       v-else-if="subtitleTracks.length === 0"
       class="subtitle-tracks-page__empty"
     >
-      <p>No subtitle tracks available for this media.</p>
+      <p>{{ tTizen('subtitleTracks.empty') }}</p>
     </div>
 
     <template v-else>
       <p class="subtitle-tracks-page__boundary">
-        Subtitles are matched by language — rows sharing a language behave identically.
+        {{ tTizen('subtitleTracks.languageNote') }}
       </p>
       <SubtitleTrackList
         :tracks="subtitleTracks"

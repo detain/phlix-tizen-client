@@ -20,6 +20,7 @@
  */
 
 import type { MusicAlbum } from '../stores/useMusicStore';
+import { tTizen } from '../i18n/tizen';
 
 interface Props {
   /** The album to display. */
@@ -39,7 +40,7 @@ const emit = defineEmits<{
     class="music-album-card"
     role="button"
     tabindex="0"
-    :aria-label="`${album.title}${album.year ? ` (${album.year})` : ''} — ${album.totalTracks} tracks`"
+    :aria-label="tTizen(album.year ? 'music.albumCardAria' : 'music.albumCardAriaNoYear', { title: album.title, year: album.year, count: album.totalTracks })"
     @click="emit('select', album.id)"
     @keydown.enter="emit('select', album.id)"
     @keydown.space.prevent="emit('select', album.id)"
@@ -48,7 +49,7 @@ const emit = defineEmits<{
       <img
         v-if="album.albumArtUrl"
         :src="album.albumArtUrl"
-        :alt="`Album art for ${album.title}`"
+        :alt="tTizen('music.albumArtAria', { title: album.title })"
         class="music-album-card__cover"
         loading="lazy"
       />
@@ -70,7 +71,7 @@ const emit = defineEmits<{
       <div class="music-album-card__meta">
         <span v-if="album.year" class="music-album-card__year">{{ album.year }}</span>
         <span class="music-album-card__tracks">
-          {{ album.totalTracks }} {{ album.totalTracks === 1 ? 'track' : 'tracks' }}
+          {{ tTizen(album.totalTracks === 1 ? 'music.trackCountOne' : 'music.trackCountOther', { count: album.totalTracks }) }}
         </span>
       </div>
       <span

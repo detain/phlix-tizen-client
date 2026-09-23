@@ -33,6 +33,7 @@ import type { MusicTrack } from '../stores/useMusicStore';
 import MusicArtistCard from '../components/MusicArtistCard.vue';
 import MusicAlbumCard from '../components/MusicAlbumCard.vue';
 import TrackListItem from '../components/TrackListItem.vue';
+import { tTizen } from '../i18n/tizen';
 
 const router = useRouter();
 const musicStore = useMusicStore();
@@ -44,14 +45,14 @@ const emit = defineEmits<{
 function getPageTitle(): string {
   switch (musicStore.currentView) {
     case 'artists':
-      return 'Artists';
+      return tTizen('music.artistsTitle');
     case 'albums':
       // The artist's identity IS its display name (the server has no artist PK).
-      return musicStore.selectedArtistId ?? 'Albums';
+      return musicStore.selectedArtistId ?? tTizen('music.albumsTitle');
     case 'tracks':
-      return musicStore.currentAlbum?.title ?? 'Tracks';
+      return musicStore.currentAlbum?.title ?? tTizen('music.tracksTitle');
     default:
-      return 'Music';
+      return tTizen('music.musicTitle');
   }
 }
 
@@ -124,7 +125,7 @@ watch(() => musicStore.currentView, loadInitialData);
       <button
         class="music-page__back"
         type="button"
-        aria-label="Go back"
+        :aria-label="tTizen('common.goBack')"
         @click="goBack"
       >
         <svg
@@ -150,9 +151,9 @@ watch(() => musicStore.currentView, loadInitialData);
       class="music-page__loading"
       role="status"
       aria-busy="true"
-      aria-label="Loading music"
+      :aria-label="tTizen('music.loadingAria')"
     >
-      <p>Loading music…</p>
+      <p>{{ tTizen('music.loading') }}</p>
     </div>
 
     <!-- Error state -->
@@ -167,7 +168,7 @@ watch(() => musicStore.currentView, loadInitialData);
         class="music-page__retry"
         @click="musicStore.clearError(); loadInitialData()"
       >
-        Retry
+        {{ tTizen('common.retry') }}
       </button>
     </div>
 
@@ -176,7 +177,7 @@ watch(() => musicStore.currentView, loadInitialData);
       v-else-if="musicStore.currentView === 'artists'"
       class="music-page__grid"
       role="list"
-      :aria-label="`${musicStore.artistsTotal} artists`"
+      :aria-label="tTizen('music.artistsAria', { count: musicStore.artistsTotal })"
     >
       <MusicArtistCard
         v-for="artist in musicStore.artists"
@@ -191,14 +192,14 @@ watch(() => musicStore.currentView, loadInitialData);
         class="music-page__load-more"
         role="listitem"
         :disabled="musicStore.loadingMore"
-        :aria-label="`Load more artists — showing ${musicStore.artists.length} of ${musicStore.artistsTotal}`"
+        :aria-label="tTizen('music.loadMoreArtistsAria', { shown: musicStore.artists.length, total: musicStore.artistsTotal })"
         @focusin="onLoadMoreFocus"
         @click="onLoadMoreFocus"
       >
         <span class="music-page__load-more-count">
           {{ musicStore.artists.length }} / {{ musicStore.artistsTotal }}
         </span>
-        <span>{{ musicStore.loadingMore ? 'Loading…' : 'Load more' }}</span>
+        <span>{{ musicStore.loadingMore ? tTizen('common.loading') : tTizen('common.loadMore') }}</span>
       </button>
     </div>
 
@@ -207,7 +208,7 @@ watch(() => musicStore.currentView, loadInitialData);
       v-else-if="musicStore.currentView === 'albums'"
       class="music-page__grid"
       role="list"
-      :aria-label="`${musicStore.albumsTotal} albums`"
+      :aria-label="tTizen('music.albumsAria', { count: musicStore.albumsTotal })"
     >
       <MusicAlbumCard
         v-for="album in musicStore.artistAlbums"
@@ -222,14 +223,14 @@ watch(() => musicStore.currentView, loadInitialData);
         class="music-page__load-more"
         role="listitem"
         :disabled="musicStore.loadingMore"
-        :aria-label="`Load more albums — showing ${musicStore.albums.length} of ${musicStore.albumsTotal}`"
+        :aria-label="tTizen('music.loadMoreAlbumsAria', { shown: musicStore.albums.length, total: musicStore.albumsTotal })"
         @focusin="onLoadMoreFocus"
         @click="onLoadMoreFocus"
       >
         <span class="music-page__load-more-count">
           {{ musicStore.albums.length }} / {{ musicStore.albumsTotal }}
         </span>
-        <span>{{ musicStore.loadingMore ? 'Loading…' : 'Load more' }}</span>
+        <span>{{ musicStore.loadingMore ? tTizen('common.loading') : tTizen('common.loadMore') }}</span>
       </button>
     </div>
 
@@ -242,7 +243,7 @@ watch(() => musicStore.currentView, loadInitialData);
         <img
           v-if="musicStore.currentAlbum.albumArtUrl"
           :src="musicStore.currentAlbum.albumArtUrl"
-          :alt="`Album art for ${musicStore.currentAlbum.title}`"
+          :alt="tTizen('music.albumArtAria', { title: musicStore.currentAlbum.title })"
           class="music-page__album-art"
         >
         <div
@@ -283,7 +284,7 @@ watch(() => musicStore.currentView, loadInitialData);
             v-if="musicStore.currentAlbum.year"
             class="music-page__album-year"
           >
-            {{ musicStore.currentAlbum.year }} · {{ musicStore.currentAlbum.totalTracks }} tracks
+            {{ tTizen('music.albumMeta', { year: musicStore.currentAlbum.year, count: musicStore.currentAlbum.totalTracks }) }}
           </p>
         </div>
       </div>
@@ -291,7 +292,7 @@ watch(() => musicStore.currentView, loadInitialData);
       <div
         class="music-page__track-list"
         role="list"
-        :aria-label="`${musicStore.albumTracks.length} tracks`"
+        :aria-label="tTizen('music.tracksAria', { count: musicStore.albumTracks.length })"
       >
         <TrackListItem
           v-for="track in musicStore.albumTracks"
@@ -308,7 +309,7 @@ watch(() => musicStore.currentView, loadInitialData);
       v-else
       class="music-page__empty"
     >
-      <p>No music found.</p>
+      <p>{{ tTizen('music.noMusicFound') }}</p>
     </div>
   </div>
 </template>

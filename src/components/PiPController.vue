@@ -20,6 +20,7 @@
  */
 
 import { ref, onMounted, onUnmounted } from 'vue';
+import { tTizen } from '../i18n/tizen';
 
 const isPipSupported = ref(false);
 const isPipActive = ref(false);
@@ -132,7 +133,7 @@ onUnmounted(() => {
       :class="{ 'is-active': isPipActive }"
       type="button"
       :aria-pressed="isPipActive"
-      :aria-label="isPipActive ? 'Exit picture-in-picture' : 'Enter picture-in-picture'"
+      :aria-label="isPipActive ? tTizen('pictureInPicture.exitAria') : tTizen('pictureInPicture.enterAria')"
       @click="togglePip"
       @keydown.enter="togglePip"
       @keydown.space.prevent="togglePip"
@@ -187,7 +188,7 @@ onUnmounted(() => {
         />
       </svg>
       <span class="pip-controller__label">
-        {{ isPipActive ? 'Exit PiP' : 'PiP' }}
+        {{ isPipActive ? tTizen('pictureInPicture.exitLabel') : tTizen('pictureInPicture.enterLabel') }}
       </span>
     </button>
   </div>

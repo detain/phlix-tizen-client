@@ -66,6 +66,7 @@ import { ApiClient, MUSIC_PAGE_SIZE } from '@phlix/ui';
 import { useApiBase } from '@phlix/ui';
 import type { MusicArtistsResult, MusicAlbumsResult } from '@phlix/ui';
 import { useRequestsStore } from '../api/useRequestsStore';
+import { tTizen } from '../i18n/tizen';
 
 /**
  * The normalized music row shapes, derived from `@phlix/ui`'s PUBLIC result
@@ -153,7 +154,7 @@ export const useMusicStore = defineStore('phlix-music', () => {
       artists.value = page.artists;
       artistsTotal.value = page.total;
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to load artists';
+      error.value = e instanceof Error ? e.message : tTizen('music.failedToLoadArtists');
       artists.value = [];
       artistsTotal.value = 0;
     } finally {
@@ -180,7 +181,7 @@ export const useMusicStore = defineStore('phlix-music', () => {
       artists.value = [...artists.value, ...page.artists];
       artistsTotal.value = page.total;
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to load more artists';
+      error.value = e instanceof Error ? e.message : tTizen('music.failedToLoadMoreArtists');
     } finally {
       loadingMore.value = false;
     }
@@ -203,7 +204,7 @@ export const useMusicStore = defineStore('phlix-music', () => {
       albumsTotal.value = page.total;
       albumsArtistFilter.value = artist ?? null;
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to load albums';
+      error.value = e instanceof Error ? e.message : tTizen('music.failedToLoadAlbums');
       albums.value = [];
       albumsTotal.value = 0;
       albumsArtistFilter.value = artist ?? null;
@@ -227,7 +228,7 @@ export const useMusicStore = defineStore('phlix-music', () => {
       albums.value = [...albums.value, ...page.albums];
       albumsTotal.value = page.total;
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to load more albums';
+      error.value = e instanceof Error ? e.message : tTizen('music.failedToLoadMoreAlbums');
     } finally {
       loadingMore.value = false;
     }
@@ -255,7 +256,7 @@ export const useMusicStore = defineStore('phlix-music', () => {
         () => getClient().getAlbum(title, artist ?? undefined),
       );
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to load album';
+      error.value = e instanceof Error ? e.message : tTizen('music.failedToLoadAlbum');
       currentAlbum.value = null;
     } finally {
       loading.value = false;
@@ -277,7 +278,7 @@ export const useMusicStore = defineStore('phlix-music', () => {
         getClient().getTrack(id),
       );
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to load track';
+      error.value = e instanceof Error ? e.message : tTizen('music.failedToLoadTrack');
       currentTrack.value = null;
     } finally {
       loading.value = false;

@@ -21,6 +21,7 @@
 
 import { computed } from 'vue';
 import type { AudioTrack } from '@phlix/contracts';
+import { tTizen } from '../i18n/tizen';
 
 interface Props {
   /** Ordered list of playback-info audio tracks (server StreamTrackShaper wire shape). */
@@ -43,8 +44,8 @@ const props = withDefaults(defineProps<Props>(), {
  * e.g. 2 → "Stereo", 6 → "5.1", 8 → "7.1"
  */
 function formatChannels(channels: number): string {
-  if (channels === 1) return 'Mono';
-  if (channels === 2) return 'Stereo';
+  if (channels === 1) return tTizen('audioTracks.mono');
+  if (channels === 2) return tTizen('audioTracks.stereo');
   if (channels === 6) return '5.1';
   if (channels === 8) return '7.1';
   if (channels === 12) return '7.1.4'; // Atmos
@@ -73,7 +74,7 @@ function formatLanguage(tag: string): string {
   } catch {
     // Fall through to raw tag
   }
-  return tag || 'Unknown';
+  return tag || tTizen('common.unknown');
 }
 
 /** Audio tracks are already ordered by the server; use them as-is. */
@@ -86,12 +87,12 @@ const totalCount = computed(() => props.tracks.length);
 <template>
   <nav
     class="audio-track-list"
-    aria-label="Audio track list"
+    :aria-label="tTizen('audioTracks.listAria')"
   >
     <ul
       class="audio-track-list__items"
       role="listbox"
-      :aria-label="`${totalCount} audio tracks`"
+      :aria-label="tTizen('audioTracks.countAria', { count: totalCount })"
     >
       <li
         v-for="track in sortedTracks"
@@ -127,7 +128,7 @@ const totalCount = computed(() => props.tracks.length);
           <span
             v-if="track.bitrate"
             class="audio-track-list__bitrate numeric"
-          >{{ (track.bitrate / 1000).toFixed(0) }}kbps</span>
+          >{{ tTizen('audioTracks.bitrateKbps', { value: (track.bitrate / 1000).toFixed(0) }) }}</span>
         </div>
         <span
           v-if="track.id === activeTrackId"

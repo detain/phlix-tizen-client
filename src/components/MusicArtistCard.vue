@@ -20,6 +20,7 @@
  */
 
 import type { MusicArtist } from '../stores/useMusicStore';
+import { tTizen } from '../i18n/tizen';
 
 interface Props {
   /** The artist to display. */
@@ -39,7 +40,7 @@ const emit = defineEmits<{
     class="music-artist-card"
     role="button"
     tabindex="0"
-    :aria-label="`${artist.name}${artist.albumCount ? `, ${artist.albumCount} albums` : ''}`"
+    :aria-label="artist.albumCount ? tTizen('music.artistCardAria', { name: artist.name, count: artist.albumCount }) : artist.name"
     @click="emit('select', artist.id)"
     @keydown.enter="emit('select', artist.id)"
     @keydown.space.prevent="emit('select', artist.id)"
@@ -48,7 +49,7 @@ const emit = defineEmits<{
       <img
         v-if="artist.imageUrl"
         :src="artist.imageUrl"
-        :alt="`Photo of ${artist.name}`"
+        :alt="tTizen('music.artistPhotoAlt', { name: artist.name })"
         class="music-artist-card__poster"
         loading="lazy"
       />
@@ -67,7 +68,7 @@ const emit = defineEmits<{
     <div class="music-artist-card__info">
       <h3 class="music-artist-card__name">{{ artist.name }}</h3>
       <span v-if="artist.albumCount" class="music-artist-card__albums">
-        {{ artist.albumCount }} {{ artist.albumCount === 1 ? 'album' : 'albums' }}
+        {{ tTizen(artist.albumCount === 1 ? 'music.albumCountOne' : 'music.albumCountOther', { count: artist.albumCount }) }}
       </span>
     </div>
   </article>

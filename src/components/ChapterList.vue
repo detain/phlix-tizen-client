@@ -22,6 +22,7 @@
 
 import { computed } from 'vue';
 import type { ChapterMarker } from '@phlix/contracts';
+import { tTizen } from '../i18n/tizen';
 
 interface Props {
   /** Ordered list of chapter markers for one media item (from GET /api/v1/media/{id}/chapters). */
@@ -56,7 +57,7 @@ function chapterLabel(chapter: ChapterMarker, listIndex: number): string {
   if (chapter.title?.trim()) {
     return chapter.title.trim();
   }
-  return `Chapter ${listIndex + 1}`;
+  return tTizen('chapters.fallbackTitle', { index: listIndex + 1 });
 }
 
 /** Chapters are already ordered by the server; use them as-is. */
@@ -69,12 +70,12 @@ const totalCount = computed(() => props.chapters.length);
 <template>
   <nav
     class="chapter-list"
-    aria-label="Chapter list"
+    :aria-label="tTizen('chapters.listAria')"
   >
     <ul
       class="chapter-list__items"
       role="listbox"
-      :aria-label="`${totalCount} chapters`"
+      :aria-label="tTizen('chapters.countAria', { count: totalCount })"
     >
       <li
         v-for="(chapter, listIndex) in sortedChapters"
@@ -82,7 +83,7 @@ const totalCount = computed(() => props.chapters.length);
         class="chapter-list__item"
         role="option"
         :aria-selected="false"
-        :aria-label="`${chapterLabel(chapter, listIndex)}, ${formatTime(chapter.startSeconds)}`"
+        :aria-label="tTizen('chapters.itemAria', { title: chapterLabel(chapter, listIndex), time: formatTime(chapter.startSeconds) })"
         tabindex="0"
         @click="onSeek(chapter.startSeconds * 1000)"
         @keydown.enter="onSeek(chapter.startSeconds * 1000)"

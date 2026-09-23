@@ -31,6 +31,7 @@
 
 import { computed } from 'vue';
 import type { SubtitleTrack } from '@phlix/contracts';
+import { tTizen } from '../i18n/tizen';
 
 interface Props {
   /** Ordered list of subtitle tracks from the playback-info wire. */
@@ -62,7 +63,7 @@ function formatLanguage(tag: string): string {
   } catch {
     // Fall through to raw tag
   }
-  return tag || 'Unknown';
+  return tag || tTizen('common.unknown');
 }
 
 /** Subtitle tracks are already ordered by the server; use them as-is. */
@@ -75,12 +76,12 @@ const totalCount = computed(() => props.tracks.length);
 <template>
   <nav
     class="subtitle-track-list"
-    aria-label="Subtitle track list"
+    :aria-label="tTizen('subtitleTracks.listAria')"
   >
     <ul
       class="subtitle-track-list__items"
       role="listbox"
-      :aria-label="`${totalCount} subtitle tracks`"
+      :aria-label="tTizen('subtitleTracks.countAria', { count: totalCount })"
     >
       <!-- "Off" option to disable subtitles -->
       <li
@@ -88,14 +89,14 @@ const totalCount = computed(() => props.tracks.length);
         :class="{ 'is-active': activeTrackId === null }"
         role="option"
         :aria-selected="activeTrackId === null"
-        aria-label="No subtitles"
+        :aria-label="tTizen('subtitleTracks.noneAria')"
         tabindex="0"
         @click="onSelect(null)"
         @keydown.enter="onSelect(null)"
         @keydown.space.prevent="onSelect(null)"
       >
         <div class="subtitle-track-list__main">
-          <span class="subtitle-track-list__language">Off</span>
+          <span class="subtitle-track-list__language">{{ tTizen('subtitleTracks.off') }}</span>
         </div>
         <span
           v-if="activeTrackId === null"
@@ -116,7 +117,7 @@ const totalCount = computed(() => props.tracks.length);
           formatLanguage(track.language),
           track.label,
           track.codec,
-          track.hearing_impaired ? 'hearing impaired' : null,
+          track.hearing_impaired ? tTizen('subtitleTracks.hearingImpaired') : null,
         ].filter(Boolean).join(', ')"
         tabindex="0"
         @click="onSelect(track)"
@@ -132,7 +133,7 @@ const totalCount = computed(() => props.tracks.length);
               v-if="track.hearing_impaired"
               class="subtitle-track-list__badges"
             >
-              <span class="subtitle-track-list__badge subtitle-track-list__badge--sdh">SDH</span>
+              <span class="subtitle-track-list__badge subtitle-track-list__badge--sdh">{{ tTizen('subtitleTracks.sdhBadge') }}</span>
             </div>
           </div>
           <span

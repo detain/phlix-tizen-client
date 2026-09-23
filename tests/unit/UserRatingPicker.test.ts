@@ -8,7 +8,10 @@ const mocks = vi.hoisted(() => ({
   error: vi.fn(),
 }));
 
-vi.mock('@phlix/ui', () => ({
+vi.mock('@phlix/ui', async () => ({
+  // Forward the real pure-string exports the i18n accessor imports: the mock
+  // replaces the whole module graph, and these two must stay genuine.
+  ...(await vi.importActual<Record<string, unknown>>('@phlix/ui')),
   useAuthStore: () => ({ client: { setRating: mocks.setRating } }),
   useToastStore: () => ({ error: mocks.error }),
 }));

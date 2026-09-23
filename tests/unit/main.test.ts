@@ -39,7 +39,10 @@ const ADMIN_ROUTE = { path: '/app/admin/dashboard', name: 'admin-dashboard' };
 // S515 — src/bootProbe.ts reuses the exported @phlix/ui probeServer; mock it so
 // boot() paths (reachable / unreachable / empty-skip) are pinned without network.
 const probeServerMock = vi.fn(async (..._args: unknown[]) => true);
-vi.mock('@phlix/ui', () => ({
+vi.mock('@phlix/ui', async () => ({
+  // Forward the real pure-string exports the i18n accessor imports: the mock
+  // replaces the whole module graph, and these two must stay genuine.
+  ...(await vi.importActual<Record<string, unknown>>('@phlix/ui')),
   createPhlixApp: (...args: unknown[]) => createPhlixApp(...args),
   buildAdminRoutes: () => [ADMIN_ROUTE],
   probeServer: (...args: unknown[]) => probeServerMock(...args),
