@@ -6,16 +6,16 @@
  * segment counts are pinned against `DEFAULT_MESSAGES` by `locales.test.ts`.
  *
  * Language decisions (flagged for review):
- * - Informal „du" register throughout (standard for German consumer media UIs;
+ * - Informal „du“ register throughout (standard for German consumer media UIs;
  *   matches the friendly English voice).
  * - Brand/product terms kept verbatim: Phlix, SyncPlay, theme names Nocturne /
  *   Daylight / Midnight, the badge SDH, ⌘K, HDR, ID, Token, URL, hub; example
  *   addresses (you@example.com, 192.168.1.50); units (Kbps, fps, p).
- * - German quotation marks „ … " around {title}/{query} insertions.
+ * - German quotation marks „ … “ around {title}/{query} insertions.
  * - Established German UI loanwords kept: Stream, Tag, Crossfade, Timer,
- *   Playlist-style „Mediathek" for library, „Kinomodus" for theater mode.
- * - „Captions and subtitles": German does not distinguish them; rendered as
- *   „Untertitel und Closed Captions" (Closed Captions is the accepted German
+ *   Playlist-style „Mediathek“ for library, „Kinomodus“ for theater mode.
+ * - „Captions and subtitles“: German does not distinguish them; rendered as
+ *   „Untertitel und Closed Captions“ (Closed Captions is the accepted German
  *   term for burn-in accessibility captions).
  * - Nouns that are identical in singular and plural (Künstler, Titel, Streams)
  *   still carry both pipe segments — CLDR German has two categories and the
@@ -78,7 +78,7 @@ export const DE_MESSAGES = {
     commands: 'Befehle',
     recent: 'Zuletzt verwendet',
     noResults: 'Keine passenden Befehle',
-    searchLibrary: 'Mediathek nach „{query}" durchsuchen',
+    searchLibrary: 'Mediathek nach „{query}“ durchsuchen',
     goToBrowse: 'Zu Stöbern gehen',
     goToSettings: 'Zu den Einstellungen gehen',
     themeNocturne: 'Theme: Nocturne',
@@ -255,12 +255,12 @@ export const DE_MESSAGES = {
     cancel: 'Abbrechen',
     transcodePreparingHeading: 'Dein Stream wird vorbereitet…',
     transcodePreparingTitled:
-      '„{title}" wird gerade in ein Format umgewandelt, das dein Browser abspielen kann. Es beginnt gleich.',
+      '„{title}“ wird gerade in ein Format umgewandelt, das dein Browser abspielen kann. Es beginnt gleich.',
     transcodePreparingUntitled:
       'Dieser Titel wird gerade in ein Format umgewandelt, das dein Browser abspielen kann. Es beginnt gleich.',
     transcodeHeading: 'Wiedergabe konnte gerade nicht gestartet werden',
     transcodeBodyTitled:
-      'Die Wiedergabe von „{title}" konnte gerade nicht gestartet werden. Versuche es später erneut.',
+      'Die Wiedergabe von „{title}“ konnte gerade nicht gestartet werden. Versuche es später erneut.',
     transcodeBodyUntitled:
       'Die Wiedergabe dieses Titels konnte gerade nicht gestartet werden. Versuche es später erneut.',
     goBack: 'Zurückgehen',

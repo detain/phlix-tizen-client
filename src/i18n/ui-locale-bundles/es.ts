@@ -13,9 +13,13 @@
  *   https://your-server:8096), technical units (Kbps, fps, p for pixel height).
  * - "Picture-in-picture" → "Imagen en imagen" (Apple/Google es convention).
  * - "Captions" → "Subtítulos" (es UI convention does not distinguish captions
- *   from subtitles; the source distinction survives via context labels).
- * - "Queue" → "Cola de reproducción" on first use in menu headers where space
- *   allows; plain "Cola" where the English is a bare one-word label.
+ *   from subtitles); where a key names the closed-caption format beside
+ *   subtitles ("Captions and subtitles"), the loanword "closed captions" is
+ *   kept, matching the de/it/pt_BR bundles — "leyendas" would read as
+ *   "legends/myths", not captions.
+ * - "Queue" → "Cola de reproducción" at the menu-header label (player.queue,
+ *   the queue panel's heading); plain "cola" survives in derived sentence
+ *   forms (queueEmpty, removeFromQueue) where it is an anaphoric short form.
  * - Curly quotes “ ” kept around {title}/{query} insertions, mirroring en.
  * - Plurals: two segments (one | other) per CLDR for every pipe-form key.
  *
@@ -185,7 +189,7 @@ export const ES_MESSAGES = {
     shuffle: 'Aleatorio',
     repeat: 'Repetir',
     selectTrack: 'Selecciona una pista para reproducir',
-    queue: 'Cola',
+    queue: 'Cola de reproducción',
     queueEmpty: 'La cola está vacía',
     removeFromQueue: 'Quitar de la cola',
     mute: 'Silenciar',
@@ -200,7 +204,7 @@ export const ES_MESSAGES = {
     qualityDirectStream: 'Stream directo: la calidad la determina el archivo fuente',
     captionsOn: 'Subtítulos (activados)',
     captionsOff: 'Subtítulos (desactivados)',
-    captionsAndSubtitles: 'Subtítulos y leyendas',
+    captionsAndSubtitles: 'Subtítulos y closed captions',
     subtitles: 'Subtítulos',
     subtitleTrack: 'Pista de subtítulos',
     off: 'Desactivado',

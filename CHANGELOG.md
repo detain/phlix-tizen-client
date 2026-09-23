@@ -41,6 +41,19 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   procedure incl. CI drift-policy, and the rewritten add-a-locale#7 recipe
   covering both catalogs.
 
+### Changed — ui locale bundles re-vendored at `phlix-ui@dc1df7d5`
+
+- The vendored copies + `PIN` were refreshed from the SSOT branch after the ui
+  review-fix commit `dc1df7d5` (follow-up to `2f2df8a2`). Eight shipped values
+  moved: es `player.captionsAndSubtitles` (leyendas → "closed captions" loanword)
+  and `player.queue` (Cola → Cola de reproducción); de `searchLibrary`,
+  `transcodePreparingTitled`, `transcodeBodyTitled` (quote closer `"` → `“` to
+  pair `„…“`); ja `syncplay.members` (native measure-word order), `connect.hint`
+  and `connect.invalidAddress` (half-width spaces at CJK↔ASCII boundaries).
+  Header comments in es/de/it were normalised (quote pairs + policy lines); no
+  key set, placeholder, or pipe-segment shape changed, so no test expectation
+  moved — the PIN↔source parity leg re-derives everything from the new ref.
+
 ### Added — tizen-own string catalog: every client-rendered literal moves behind `tTizen()`
 
 - **The client's own strings are now cataloged.** The ui seam above reaches

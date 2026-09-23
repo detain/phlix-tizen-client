@@ -297,7 +297,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles run exactly 7 keys AHEAD of the installed pin (the documented extras)', () => {
-    // Vendored @ 2f2df8a2 vs @phlix/ui 0.99.4 — the ahead-of-pin set is pinned
+    // Vendored @ dc1df7d5 vs @phlix/ui 0.99.4 — the ahead-of-pin set is pinned
     // HERE so a client dependency bump that ships these keys flips this pin
     // and forces a conscious re-vendor/re-pin instead of silent drift.
     const AHEAD_OF_PIN = [

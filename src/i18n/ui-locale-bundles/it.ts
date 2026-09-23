@@ -6,17 +6,17 @@
  * segment counts are pinned against `DEFAULT_MESSAGES` by `locales.test.ts`.
  *
  * Language decisions (flagged for review):
- * - Neutral Italian; infinitive register for confirmations (“Continuare?",
- *   “Eliminare l'orario…?") matching Italian UI convention.
+ * - Neutral Italian; infinitive register for confirmations (“Continuare?”,
+ *   “Eliminare l'orario…?”) matching Italian UI convention.
  * - Brand/product terms kept verbatim: Phlix, SyncPlay, the theme names
  *   Nocturne / Daylight / Midnight, the badge SDH, ⌘K, HDR, ID, hub; example
  *   addresses; units (Kbps, fps, p).
  * - English loanwords kept where Italian UI convention keeps them: “Picture in
- *   picture", “Crossfade", “Mini player", “download" (invariable).
- * - “Command palette" → “Riquadro comandi" (established Italian desktop-UI term;
- *   “tavolozza"/“paletta" would read as a painter's palette).
- * - “Captions and subtitles" → “Sottotitoli e closed caption": Italian has no
- *   everyday word for burn-in captions; “closed caption" is in use.
+ *   picture”, “Crossfade”, “Mini player”, “download” (invariable).
+ * - “Command palette” → “Riquadro comandi” (established Italian desktop-UI term;
+ *   “tavolozza”/“paletta” would read as a painter's palette).
+ * - “Captions and subtitles” → “Sottotitoli e closed caption”: Italian has no
+ *   everyday word for burn-in captions; “closed caption” is in use.
  * - Apostrophe ’ used for elisions (l'orario, dell'episodio).
  * - Nouns identical in singular and plural (album, download) still carry both
  *   pipe segments — CLDR Italian has two categories; the count invariant holds.
