@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phlix/ui`** — TypeScript → Vite (`@vitejs/plugin-vue`, target `chrome100`, `base:'./'`) → Tizen Chromium TV webview, packaged as a signed `.wgt`. All UI is rendered by `@phlix/ui`'s `createPhlixApp()`; this repo is boot glue + the Tizen remote/spatial-nav bridge (mirrors the Windows client). HLS comes from `@phlix/ui`'s player, RAM-tuned via `playerHlsConfig`. Pinned `@phlix/ui#v0.99.5`, `@phlix/contracts#v0.5.0`, `@phlix/syncplay#v0.1.5`; peer deps Vue 3 + Pinia + vue-router.
+Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phlix/ui`** — TypeScript → Vite (`@vitejs/plugin-vue`, target `chrome100`, `base:'./'`) → Tizen Chromium TV webview, packaged as a signed `.wgt`. All UI is rendered by `@phlix/ui`'s `createPhlixApp()`; this repo is boot glue + the Tizen remote/spatial-nav bridge (mirrors the Windows client). HLS comes from `@phlix/ui`'s player, RAM-tuned via `playerHlsConfig`. Pinned `@phlix/ui#v0.99.5`, `@phlix/contracts#v0.5.1`, `@phlix/syncplay#v0.1.5`; peer deps Vue 3 + Pinia + vue-router.
 
 ## Commands
 

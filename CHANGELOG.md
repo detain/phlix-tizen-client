@@ -5,6 +5,31 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — contracts re-pin v0.5.0 → v0.5.1 — 2026-09-23
+
+- **Pin advance (lane `chore/contracts-repin-v0.5.1`).** `@phlix/contracts`
+  bumped `#v0.5.0` → `#v0.5.1` (annotated tag `cf0163ee`, peels to contracts
+  merge-commit `e3c14f07` — the W1b registry expansion, contracts PR #78).
+  Purely ADDITIVE upstream: `dist/error-codes.json` grows 147 → 202 wire codes
+  (verified zero removals, zero duplicates); tizen carries NO error catalog
+  keyed to registry codes, so the 55 additions cause zero client adaptation
+  and zero test churn by design. SKEW persists (estate-wide, documented): the
+  v0.5.1 tag tree's `package.json` `version` FIELD still reads `0.4.7`; the
+  lock's `version` therefore holds `0.4.7` and only `resolved` advances.
+  Surgical lock diff: root echo + resolved sha; the `@phlix/ui` manifest edge
+  (`#v0.4.7`, ui's own declaration) stays as written and npm hoists the single
+  v0.5.1 tree — `npm ci --allow-git=all` accepts. The route-manifest embed is
+  UNCHANGED by this tag (v0.5.1 diffs only `src/errors.ts`, `test/`, and the
+  errors-affected `dist/` files): re-measured at server
+  `730e55b7…`/md5 `06ce7ec9…`, byte-identical to the vendored fixture —
+  `routeManifest.gate` advances its pin cite accordingly, comment-only,
+  0 behavior. The ui pin and `src/i18n/ui-locale-bundles/PIN` are untouched —
+  the contracts bump is disjoint from the ui-locale lineage (verified
+  byte-identical after). Gates held: typecheck, lint, build, 46 files /
+  726 tests (coverage floor), double-`npm run package` byte-stable; committed
+  `package/` regenerated in its own commit (contracts ride the widget chunks;
+  CI T-02 freshness).
+
 ### Changed — contracts re-pin v0.4.7 → v0.5.0 (cs#48) — 2026-09-23
 
 - **cs#48 pin advance (lane `chore/contracts-repin-v0.5.0`).** `@phlix/contracts`
