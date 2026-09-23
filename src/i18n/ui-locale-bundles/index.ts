@@ -25,6 +25,7 @@
  * @license MIT
  */
 
+import type { PhlixMessages } from '@phlix/ui';
 import { ES_MESSAGES } from './es';
 import { FR_MESSAGES } from './fr';
 import { DE_MESSAGES } from './de';
@@ -38,11 +39,11 @@ export { ES_MESSAGES, FR_MESSAGES, DE_MESSAGES, IT_MESSAGES, PT_BR_MESSAGES, JA_
 export type PhlixLocaleCode = 'es' | 'fr' | 'de' | 'it' | 'pt_BR' | 'ja';
 
 /**
- * Tag → bundle registry. Typed `Record<PhlixLocaleCode, Record<string, Record<string, string>>>` so the
+ * Tag → bundle registry. Typed `Record<PhlixLocaleCode, PhlixMessages>` so the
  * compiler forces every declared tag to carry a full bundle (and vice versa the
  * union is the single enumeration `LOCALE_MESSAGES[code]` can resolve).
  */
-export const LOCALE_MESSAGES: Record<PhlixLocaleCode, Record<string, Record<string, string>>> = {
+export const LOCALE_MESSAGES: Record<PhlixLocaleCode, PhlixMessages> = {
   es: ES_MESSAGES,
   fr: FR_MESSAGES,
   de: DE_MESSAGES,

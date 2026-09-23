@@ -3,10 +3,13 @@
  * feat/i18n-locales lane (es, fr, de, it, pt_BR, ja):
  *
  *  A. UI SEAM (vendored from phlix-ui, SSOT): key-set identity across the six
- *     bundles, coverage of the INSTALLED DEFAULT_MESSAGES, pinned ahead-of-pin
- *     extras, placeholder parity, CLDR segment law (incl. the documented
- *     additive exception), diacritics/CJK sanity, and PIN/hash drift guards
- *     against the vendored files (CI-skipped source leg, see below).
+ *     bundles, EXACT key-set equality with the INSTALLED DEFAULT_MESSAGES
+ *     (both directions — the v0.99.4-era 7-key ahead-pin skew was closed by
+ *     the v0.99.5 re-pin), strict-typing source greps (satisfies
+ *     PhlixMessages survives vendoring), placeholder parity, CLDR segment law
+ *     (incl. the documented additive exception), diacritics/CJK sanity, and
+ *     PIN/hash drift guards against the vendored files (CI-skipped source
+ *     leg, see below).
  *  B. TIZEN-OWN: 197-key identity per locale, placeholder parity, the
  *     additive-pipe plural doctrine (latin 2-seg on exactly 12 keys), JA zero
  *     pipes + counter phrases, per-locale English-LEAK allow-lists verified
@@ -101,20 +104,6 @@ const TIZEN_ADDITIVE_PIPES: readonly string[] = [
 // ui-side exception (SSOT doctrine): player.subtitleDownloads adds the pipe
 // form in latin bundles where the English default hardcodes the plural.
 const UI_ADDITIVE_PIPES: readonly string[] = ['player.subtitleDownloads'];
-
-// Keys the vendored bundles carry AHEAD of the installed @phlix/ui pin
-// (v0.99.4). ONE list for all three laws below (installed-coverage flip,
-// cross-bundle placeholder parity, cross-bundle segment parity) so extending
-// the vendor set cannot silently miss a law.
-const UI_AHEAD_OF_PIN = [
-  'connect.scan',
-  'connect.scanning',
-  'connect.scanFailed',
-  'connect.scanEmpty',
-  'connect.scanListLabel',
-  'player.seekBackward',
-  'player.seekForward',
-].sort();
 
 // Keys whose value legitimately EQUALS English (brand tokens, unit formats,
 // {placeholder}-only templates). Verified BOTH directions per locale.
@@ -278,22 +267,43 @@ describe('vendored bundles — PIN integrity (runs in CI: needs no sibling)', ()
   it('the registry exposes precisely the six estate locales', () => {
     expect(Object.keys(LOCALE_MESSAGES).sort()).toEqual([...LOCALES].sort());
   });
+
+  it('vendored files keep strict typing against the installed package (CI-runnable)', () => {
+    // The v0.99.5 re-pin deleted the v0.99.4-era key-skew relaxation: every
+    // file must import PhlixMessages from '@phlix/ui' (a declared barrel
+    // export at that tag), the bundles must still `satisfies PhlixMessages`
+    // and the registry keep `Record<PhlixLocaleCode, PhlixMessages>`, with no
+    // ui-internal '../messages' path surviving. vue-tsc compile-checks the
+    // same law; this grep pins the TEXT so a silent revert cannot hide behind
+    // an equally-compiling relaxed shape.
+    for (const file of ['de.ts', 'es.ts', 'fr.ts', 'index.ts', 'it.ts', 'ja.ts', 'pt_BR.ts']) {
+      const text = readFileSync(join(VENDOR_DIR, file), 'utf8');
+      expect(text, `${file} missing the '@phlix/ui' PhlixMessages import`).toContain(
+        "import type { PhlixMessages } from '@phlix/ui';",
+      );
+      expect(text, `${file} still references the ui-internal '../messages'`).not.toContain("'../messages'");
+      if (file === 'index.ts') {
+        expect(text, `${file} registry not strict-typed`).toContain('Record<PhlixLocaleCode, PhlixMessages>');
+        expect(text, `${file} carries the dead relaxed shape`).not.toContain('Record<string, Record<string, string>>');
+      } else {
+        expect(text, `${file} lost its satisfies annotation`).toContain('satisfies PhlixMessages;');
+        expect(text, `${file} carries the dead relaxed shape`).not.toContain('satisfies Record<string, Record<string, string>>;');
+      }
+    }
+  });
 });
 
 describe.skipIf(!SIBLING_PRESENT)(
   'vendored bundles — SOURCE parity vs pinned phlix-ui commit [HARD-FAILS locally; SKIPS in CI: no phlix-ui sibling checked out — drift protection rides the local gate + re-pin cascade, see docs/i18n.md]',
   () => {
     it('disk equals script-transformed pristine source AND PIN source hashes match', () => {
-      // Re-derive the vendored bytes from `git show <ref>:<file>` with the
-      // three documented transforms; any mismatch means someone hand-edited
-      // the vendor or the SSOT moved without a re-pin.
-      const applyTransforms = (file: string, source: string): string => {
-        let out = source.split("import type { PhlixMessages } from '../messages';\n").join('');
-        out = file === 'index.ts'
-          ? out.split('Record<PhlixLocaleCode, PhlixMessages>').join('Record<PhlixLocaleCode, Record<string, Record<string, string>>>')
-          : out.split('satisfies PhlixMessages;').join('satisfies Record<string, Record<string, string>>;');
-        return out;
-      };
+      // Re-derive the vendored bytes from `git show <ref>:<file>` with the ONE
+      // documented transform (import-path rewrite); any mismatch means someone
+      // hand-edited the vendor or the SSOT moved without a re-pin.
+      const applyTransforms = (source: string): string =>
+        source
+          .split("import type { PhlixMessages } from '../messages';\n")
+          .join("import type { PhlixMessages } from '@phlix/ui';\n");
       for (const [file, entry] of Object.entries(pin.files)) {
         const source = execFileSync('git', ['-C', SIBLING_UI, 'show', `${pin.ref}:${pin.directory}/${file}`], {
           encoding: 'utf8',
@@ -302,7 +312,7 @@ describe.skipIf(!SIBLING_PRESENT)(
         expect(sha256(source), `PIN source hash for ${file}`).toBe(entry.source_sha256);
         const disk = readFileSync(join(VENDOR_DIR, file), 'utf8');
         expect(disk, `${file} ≠ transform(${pin.ref.slice(0, 8)}:${file}) — re-run scripts/sync-ui-locale-bundles.mjs (bare run re-vendors this PIN'd ref)`).toBe(
-          applyTransforms(file, source),
+          applyTransforms(source),
         );
       }
     });
@@ -329,12 +339,16 @@ describe('ui bundles — key-set identity and installed coverage', () => {
     }
   });
 
-  it('bundles run exactly 7 keys AHEAD of the installed pin (the documented extras)', () => {
-    // Vendored @ dc1df7d5 vs @phlix/ui 0.99.4 — the ahead-of-pin set is pinned
-    // HERE so a client dependency bump that ships these keys flips this pin
-    // and forces a conscious re-vendor/re-pin instead of silent drift.
+  it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
+    // Vendored @ 3017f443 == @phlix/ui v0.99.5, which shipped the 7 keys the
+    // dc1df7d5 bundles used to run ahead with. With the installed ⊆ bundle law
+    // above, this pins EXACT key-set equality in both directions — and the
+    // restored `satisfies`... see strict-typing greps — compile-proves it too.
+    // Future ui-catalog growth without a client re-pin flips one direction and
+    // forces a conscious re-sync instead of silent drift.
     const bundleKeys = [...flat(UI_TABLES.es).keys()];
-    expect(bundleKeys.filter((key) => !EN_UI.has(key)).sort()).toEqual(UI_AHEAD_OF_PIN);
+    expect(bundleKeys.filter((key) => !EN_UI.has(key))).toEqual([]);
+    expect(EN_UI.size).toBe(bundleKeys.length);
   });
 
   it('every bundle value keeps its key\'s {placeholder} set (vs English)', () => {
@@ -342,24 +356,13 @@ describe('ui bundles — key-set identity and installed coverage', () => {
       const table = flat(UI_TABLES[locale]);
       for (const [key, value] of table) {
         const en = EN_UI.get(key);
-        // Ahead-of-pin keys have no installed baseline — cross-bundle parity
-        // below still covers them; here they must at least be non-empty.
+        // Exact-equality pin above guarantees a baseline for EVERY bundle key;
+        // a missing one means the vendor ran ahead of the install again —
+        // fail loud rather than silently skip the law.
         if (en === undefined) {
-          expect(value.trim().length, `${locale} ${key} empty`).toBeGreaterThan(0);
-          continue;
+          throw new Error(`${locale} ${key} has no installed English baseline — re-vendor against the current pin`);
         }
         expect(placeholders(value), `${locale} ${key} placeholders`).toBe(placeholders(en));
-      }
-    }
-  });
-
-  it('cross-bundle placeholder sets agree for the ahead-of-pin keys', () => {
-    // ALL 7 ahead-of-pin keys — they have no installed English baseline, so
-    // this loop is their ONLY placeholder-parity law across the six bundles.
-    for (const key of UI_AHEAD_OF_PIN) {
-      const base = placeholders(flat(UI_TABLES.es).get(key) ?? '');
-      for (const locale of LOCALES) {
-        expect(placeholders(flat(UI_TABLES[locale]).get(key) ?? ''), `${locale} ${key}`).toBe(base);
       }
     }
   });
@@ -369,7 +372,11 @@ describe('ui bundles — key-set identity and installed coverage', () => {
       const table = flat(UI_TABLES[locale]);
       for (const [key, value] of table) {
         const en = EN_UI.get(key);
-        if (en === undefined) continue; // ahead-of-pin: cross-bundle counts pinned below
+        // Same fail-loud law as the placeholder suite: exact-equality pinning
+        // means every key has an installed baseline now.
+        if (en === undefined) {
+          throw new Error(`${locale} ${key} has no installed English baseline — re-vendor against the current pin`);
+        }
         if (locale === 'ja') {
           // SSOT ja doctrine: Japanese has one plural category — every English
           // pipe template collapses to a single counter-equipped segment.
@@ -382,13 +389,6 @@ describe('ui bundles — key-set identity and installed coverage', () => {
         }
         expect(segments(value), `${locale} ${key} segment drift vs en`).toBe(segments(en));
       }
-    }
-  });
-
-  it('ahead-of-pin keys carry identical segment counts across bundles', () => {
-    for (const key of UI_AHEAD_OF_PIN) {
-      const counts = new Set(LOCALES.map((locale) => segments(flat(UI_TABLES[locale]).get(key) ?? '')));
-      expect([...counts], `${key} segment counts differ across bundles`).toHaveLength(1);
     }
   });
 

@@ -2,7 +2,7 @@
  * Client-local i18n entry point — resolves the boot locale and hands the
  * `@phlix/ui` app factory its message-catalog overrides.
  *
- * ## The seam this wires (verified against the resolved v0.99.4 copy)
+ * ## The seam this wires (verified against the resolved v0.99.5 copy)
  *
  * `@phlix/ui` exposes a CONFIG-TIME i18n seam: `PhlixAppConfig.messages`
  * (a `PhlixMessagesConfig` = deep-partial `group.key` override map,
@@ -59,7 +59,7 @@
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
-import type { PhlixMessagesConfig } from '@phlix/ui';
+import type { PhlixMessages, PhlixMessagesConfig } from '@phlix/ui';
 import { EN_MESSAGES } from './locales/en';
 import { LOCALE_MESSAGES, type PhlixLocaleCode } from './ui-locale-bundles';
 
@@ -83,16 +83,17 @@ export const SUPPORTED_LOCALES: readonly SupportedLocale[] = [
 ];
 
 /**
- * The vendored bundles are COMPLETE `group.key` string tables
- * (`Record<string, Record<string, string>>` — see the transform notes in
- * `scripts/sync-ui-locale-bundles.mjs`); the seam consumes any such table as a
- * `PhlixMessagesConfig` override, which accepts every full bundle by shape.
- * This is the ONE boundary cast (Law 2): the runtime suite re-proves key
- * identity + placeholder parity on every test run, so nothing past this line
+ * The vendored bundles are COMPLETE `PhlixMessages` tables — strict-typed with
+ * `satisfies PhlixMessages` against the INSTALLED package catalog (the
+ * v0.99.4-era key-skew relaxation was reverted at the v0.99.5 re-pin; see the
+ * transform notes in `scripts/sync-ui-locale-bundles.mjs`). A full
+ * `PhlixMessages` IS a valid `PhlixMessagesConfig` override — every group
+ * present, every key a string — so this is a typed pass-through, no cast:
+ * the compiler already proved key identity, nothing past this line
  * re-validates.
  */
-function configOf(bundle: Record<string, Record<string, string>>): PhlixMessagesConfig {
-  return bundle as unknown as PhlixMessagesConfig;
+function configOf(bundle: PhlixMessages): PhlixMessagesConfig {
+  return bundle;
 }
 
 /**

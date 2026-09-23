@@ -25,6 +25,7 @@
  * @license MIT
  */
 
+import type { PhlixMessages } from '@phlix/ui';
 
 export const IT_MESSAGES = {
   common: {
@@ -476,4 +477,4 @@ export const IT_MESSAGES = {
     'transcoding.hdrOutput': 'Output HDR',
     'transcoding.toneMapMode': 'Modalità mappatura toni',
   },
-} satisfies Record<string, Record<string, string>>;
+} satisfies PhlixMessages;
