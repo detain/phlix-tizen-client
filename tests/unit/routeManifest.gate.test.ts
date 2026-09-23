@@ -11,7 +11,7 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.5.0. Every tag this cite historically named
+ * `@phlix/contracts` at #v0.5.1. Every tag this cite historically named
  * shipped a STALE embed for this gate's purpose — #v0.4.7 embedded server
  * `2f1d2ee6…` (md5 4f03cb2e…) — while the estate-wide canonical copy was the
  * untagged master regen at server `730e55b7` (md5 pinned below, contracts
@@ -36,7 +36,13 @@
  * (contracts b34651d, regen #34) — CONTENT regen, 404→410 tuples
  * (quick-connect pairing + consent-gated telemetry). cs#48 (contracts re-pin
  * v0.4.7→v0.5.0): advanced the pin cite to the #v0.5.0 tag the manifest now
- * names and re-measured its embed (head note above); comment-only, 0 behavior.)
+ * names and re-measured its embed (head note above); comment-only, 0 behavior.
+ * contracts v0.5.0→v0.5.1 re-pin: advanced the pin cite to the #v0.5.1 tag it
+ * now names and re-measured its embed — the v0.5.1 diff (peels to contracts
+ * e3c14f07) touches ONLY the errors registry + its dist (147→202 additive
+ * codes); the embed stands at server `730e55b7…`/md5 `06ce7ec9…` — verified
+ * byte-identical to the vendored fixture at this
+ * leg; comment-only, 0 behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
