@@ -19,6 +19,7 @@
  */
 
 import { computed } from 'vue'
+import { tTizen } from '../i18n/tizen'
 
 interface Props {
   /** 0–10 score; null renders an em‑dash placeholder. */
@@ -72,7 +73,7 @@ const starMask = computed(() => buildStarMask(props.score ?? 0))
   <div
     class="rating-badge"
     role="img"
-    :aria-label="`Rating: ${score ?? 'unrated'} out of 10`"
+    :aria-label="tTizen('ratings.badgeAria', { score: score ?? tTizen('ratings.unrated') })"
   >
     <div
       class="stars"

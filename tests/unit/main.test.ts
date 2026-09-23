@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { PhlixMessagesConfig } from '@phlix/ui';
 
 // --- Module mocks -----------------------------------------------------------
 // CSS side-effect imports are meaningless under jsdom — stub them out.
@@ -38,7 +39,10 @@ const ADMIN_ROUTE = { path: '/app/admin/dashboard', name: 'admin-dashboard' };
 // S515 — src/bootProbe.ts reuses the exported @phlix/ui probeServer; mock it so
 // boot() paths (reachable / unreachable / empty-skip) are pinned without network.
 const probeServerMock = vi.fn(async (..._args: unknown[]) => true);
-vi.mock('@phlix/ui', () => ({
+vi.mock('@phlix/ui', async () => ({
+  // Forward the real pure-string exports the i18n accessor imports: the mock
+  // replaces the whole module graph, and these two must stay genuine.
+  ...(await vi.importActual<Record<string, unknown>>('@phlix/ui')),
   createPhlixApp: (...args: unknown[]) => createPhlixApp(...args),
   buildAdminRoutes: () => [ADMIN_ROUTE],
   probeServer: (...args: unknown[]) => probeServerMock(...args),
@@ -188,6 +192,20 @@ describe('boot (Tizen renderer entry)', () => {
 
     expect(mountSpy).toHaveBeenCalledWith('#phlix-app');
     expect(installTizenBridge).toHaveBeenCalledWith(fakeApp);
+  });
+
+  it('passes the i18n messages seam into createPhlixApp (en = empty override, behavior-preserving)', async () => {
+    const mod = await import('@/main');
+    createPhlixApp.mockClear();
+    await mod.boot();
+
+    const cfg = createPhlixApp.mock.calls[0][0] as { messages?: PhlixMessagesConfig };
+    // The FIELD MUST be present — that is the wiring. With only the 'en' catalog
+    // registered it is an EMPTY override map, so ui's mergeMessages reproduces
+    // the English defaults exactly (proven deep in i18n.test.ts against the real
+    // bundle). A missing key here would mean the seam silently un-wired itself.
+    expect(cfg).toHaveProperty('messages');
+    expect(cfg.messages).toEqual({});
   });
 
   it('S522 AD-20: boot installs the gamepad→key bridge exactly once', async () => {

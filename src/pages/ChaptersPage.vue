@@ -19,6 +19,7 @@ import { useApiBase } from '@phlix/ui';
 import { usePlayerStore } from '@phlix/ui';
 import type { ChapterMarker } from '@phlix/contracts';
 import ChapterList from '../components/ChapterList.vue';
+import { tTizen } from '../i18n/tizen';
 
 interface ChapterApiResponse {
   chapters: ChapterMarker[];
@@ -38,7 +39,7 @@ const mediaId = computed(() => String(route.params.id ?? ''));
 async function loadChapters(): Promise<void> {
   const id = mediaId.value;
   if (!id) {
-    error.value = 'No media id provided';
+    error.value = tTizen('common.noMediaId');
     loading.value = false;
     return;
   }
@@ -53,7 +54,7 @@ async function loadChapters(): Promise<void> {
     );
     chapters.value = response.chapters ?? [];
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load chapters';
+    error.value = e instanceof Error ? e.message : tTizen('chapters.loadFailed');
     chapters.value = [];
   } finally {
     loading.value = false;
@@ -85,7 +86,7 @@ watch(mediaId, loadChapters);
       <button
         class="chapters-page__back"
         type="button"
-        aria-label="Go back"
+        :aria-label="tTizen('common.goBack')"
         @click="goBack"
       >
         <svg
@@ -102,13 +103,13 @@ watch(mediaId, loadChapters);
       </button>
       <h1 class="chapters-page__title">
         <template v-if="loading">
-          Chapters…
+          {{ tTizen('chapters.loadingTitle') }}
         </template>
         <template v-else-if="chapters.length">
-          {{ chapters.length }} {{ chapters.length === 1 ? 'Chapter' : 'Chapters' }}
+          {{ tTizen(chapters.length === 1 ? 'chapters.countHeadingOne' : 'chapters.countHeadingOther', { count: chapters.length }) }}
         </template>
         <template v-else>
-          Chapters
+          {{ tTizen('chapters.title') }}
         </template>
       </h1>
     </header>
@@ -118,9 +119,9 @@ watch(mediaId, loadChapters);
       class="chapters-page__loading"
       role="status"
       aria-busy="true"
-      aria-label="Loading chapters"
+      :aria-label="tTizen('chapters.loadingAria')"
     >
-      <p>Loading chapters…</p>
+      <p>{{ tTizen('chapters.loading') }}</p>
     </div>
 
     <div
@@ -134,7 +135,7 @@ watch(mediaId, loadChapters);
         class="chapters-page__retry"
         @click="loadChapters"
       >
-        Retry
+        {{ tTizen('common.retry') }}
       </button>
     </div>
 
@@ -142,7 +143,7 @@ watch(mediaId, loadChapters);
       v-else-if="chapters.length === 0"
       class="chapters-page__empty"
     >
-      <p>No chapters available for this media.</p>
+      <p>{{ tTizen('chapters.empty') }}</p>
     </div>
 
     <template v-else>

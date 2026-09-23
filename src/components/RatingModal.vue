@@ -18,6 +18,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import RatingBadge from './RatingBadge.vue'
 import UserRatingPicker from './UserRatingPicker.vue'
+import { tTizen } from '../i18n/tizen'
 
 interface Props {
   /** Media item being rated. */
@@ -104,12 +105,12 @@ function handleClose() {
               id="rating-modal-title"
               class="modal-title"
             >
-              Rate This Title
+              {{ tTizen('ratings.modalTitle') }}
             </h2>
             <button
               type="button"
               class="close-btn"
-              aria-label="Close rating modal"
+              :aria-label="tTizen('ratings.modalCloseAria')"
               @click="handleClose"
             >
               <svg
@@ -127,7 +128,7 @@ function handleClose() {
           <div class="modal-body">
             <!-- Aggregate rating display -->
             <div class="aggregate-section">
-              <span class="section-label">Community Rating</span>
+              <span class="section-label">{{ tTizen('ratings.communityRating') }}</span>
               <RatingBadge :score="aggregateScore" />
             </div>
 
@@ -136,7 +137,7 @@ function handleClose() {
 
             <!-- User's personal rating -->
             <div class="user-section">
-              <span class="section-label">Your Rating</span>
+              <span class="section-label">{{ tTizen('ratings.yourRatingHeading') }}</span>
               <UserRatingPicker
                 :media-id="itemId"
                 :user-rating="userRating"
@@ -147,7 +148,7 @@ function handleClose() {
 
           <footer class="modal-footer">
             <p class="hint">
-              Press <kbd>Esc</kbd> to close
+              {{ tTizen('ratings.pressEscPrefix') }}<kbd>Esc</kbd>{{ tTizen('ratings.pressEscSuffix') }}
             </p>
           </footer>
         </div>

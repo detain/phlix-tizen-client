@@ -8,6 +8,7 @@
  */
 
 import type { MusicTrack } from '../stores/useMusicStore';
+import { tTizen } from '../i18n/tizen';
 
 interface Props {
   /** The track to display. */
@@ -37,7 +38,7 @@ function formatDuration(seconds: number): string {
     class="track-list-item"
     role="button"
     tabindex="0"
-    :aria-label="`${track.title} — ${formatDuration(track.durationSecs)}`"
+    :aria-label="tTizen('tracks.durationAria', { title: track.title, duration: formatDuration(track.durationSecs) })"
     :class="{ 'track-list-item--playing': isPlaying }"
     @click="emit('play', track.id)"
     @keydown.enter="emit('play', track.id)"
@@ -63,7 +64,7 @@ function formatDuration(seconds: number): string {
     <button
       class="track-list-item__play"
       type="button"
-      :aria-label="`Play ${track.title}`"
+      :aria-label="tTizen('tracks.playAria', { title: track.title })"
       @click.stop="emit('play', track.id)"
     >
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">

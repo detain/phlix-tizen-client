@@ -19,6 +19,7 @@ import { useApiBase } from '@phlix/ui';
 import type { UserRecommendation } from '@phlix/contracts';
 import RecommendationCard from '../components/RecommendationCard.vue';
 import { useRequestsStore } from '../api/useRequestsStore';
+import { tTizen } from '../i18n/tizen';
 
 interface RecommendationApiResponse {
   recommendations: UserRecommendation[];
@@ -51,7 +52,7 @@ async function load(): Promise<void> {
     );
     items.value = data.recommendations ?? [];
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load recommendations';
+    error.value = e instanceof Error ? e.message : tTizen('recommendations.failed');
     items.value = [];
   } finally {
     loading.value = false;
@@ -75,7 +76,7 @@ onMounted(load);
       <button
         class="recommendations-screen__back"
         type="button"
-        aria-label="Go back"
+        :aria-label="tTizen('common.goBack')"
         @click="goBack"
       >
         <svg
@@ -92,13 +93,13 @@ onMounted(load);
       </button>
       <h1 class="recommendations-screen__title">
         <template v-if="loading">
-          For You…
+          {{ tTizen('recommendations.headingEllipsis') }}
         </template>
         <template v-else-if="items.length">
-          {{ items.length }} Recommendations
+          {{ tTizen('recommendations.headingCount', { count: items.length }) }}
         </template>
         <template v-else>
-          For You
+          {{ tTizen('recommendations.heading') }}
         </template>
       </h1>
     </header>
@@ -108,9 +109,9 @@ onMounted(load);
       class="recommendations-screen__loading"
       role="status"
       aria-busy="true"
-      aria-label="Loading recommendations"
+      :aria-label="tTizen('recommendations.loadingAria')"
     >
-      <p>Loading recommendations…</p>
+      <p>{{ tTizen('recommendations.loading') }}</p>
     </div>
 
     <div
@@ -124,7 +125,7 @@ onMounted(load);
         class="recommendations-screen__retry"
         @click="load"
       >
-        Retry
+        {{ tTizen('common.retry') }}
       </button>
     </div>
 
@@ -132,14 +133,14 @@ onMounted(load);
       v-else-if="items.length === 0"
       class="recommendations-screen__empty"
     >
-      <p>No recommendations yet. Keep watching to get personalized suggestions!</p>
+      <p>{{ tTizen('recommendations.empty') }}</p>
     </div>
 
     <div
       v-else
       class="recommendations-screen__grid"
       role="list"
-      :aria-label="`${items.length} recommendations`"
+      :aria-label="tTizen('recommendations.gridAria', { count: items.length })"
     >
       <RecommendationCard
         v-for="item in items"

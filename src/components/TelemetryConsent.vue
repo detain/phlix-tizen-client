@@ -30,6 +30,7 @@
  */
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useApiBase } from '@phlix/ui';
+import { tTizen } from '../i18n/tizen';
 import {
   buildTelemetryDeps,
   CONSENT_KEY,
@@ -95,14 +96,13 @@ onBeforeUnmount(() => {
     v-if="visible"
     class="telemetry-consent"
     role="region"
-    aria-label="Help improve Phlix"
+    :aria-label="tTizen('telemetry.aria')"
   >
     <p class="telemetry-consent__title">
-      Share anonymous usage stats?
+      {{ tTizen('telemetry.title') }}
     </p>
     <p class="telemetry-consent__body">
-      A single periodic signal (device id, app version) — no titles, no account.
-      You can change this anytime.
+      {{ tTizen('telemetry.body') }}
     </p>
     <div class="telemetry-consent__actions">
       <button
@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
         data-testid="telemetry-enable"
         @click="enable"
       >
-        Enable
+        {{ tTizen('telemetry.enable') }}
       </button>
       <button
         type="button"
@@ -119,7 +119,7 @@ onBeforeUnmount(() => {
         data-testid="telemetry-decline"
         @click="decline"
       >
-        Not now
+        {{ tTizen('telemetry.notNow') }}
       </button>
     </div>
   </div>

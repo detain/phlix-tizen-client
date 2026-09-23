@@ -27,6 +27,7 @@ import { useRoute } from 'vue-router';
 import { ApiClient } from '@phlix/ui';
 import { useApiBase, usePlayerStore } from '@phlix/ui';
 import type { Marker, SkipButtonSpec } from '@phlix/contracts';
+import { tTizen } from '../i18n/tizen';
 
 interface MarkersApiResponse {
   markers: Marker[];
@@ -195,13 +196,13 @@ onBeforeUnmount(() => {
   <div
     v-if="hasMarkers && (showSkipIntro || showSkipOutro)"
     class="skip-intro-overlay"
-    aria-label="Skip controls"
+    :aria-label="tTizen('skip.controlsAria')"
   >
     <button
       v-if="showSkipIntro"
       class="skip-intro-overlay__button skip-intro-overlay__button--intro"
       type="button"
-      aria-label="Skip intro"
+      :aria-label="tTizen('skip.introAria')"
       @click="skipIntro"
       @keydown.enter="skipIntro"
       @keydown.space.prevent="skipIntro"
@@ -225,14 +226,14 @@ onBeforeUnmount(() => {
           />
         </svg>
       </span>
-      <span class="skip-intro-overlay__label">Skip Intro</span>
+      <span class="skip-intro-overlay__label">{{ tTizen('skip.introLabel') }}</span>
     </button>
 
     <button
       v-if="showSkipOutro"
       class="skip-intro-overlay__button skip-intro-overlay__button--outro"
       type="button"
-      aria-label="Skip outro"
+      :aria-label="tTizen('skip.outroAria')"
       @click="skipOutro"
       @keydown.enter="skipOutro"
       @keydown.space.prevent="skipOutro"
@@ -256,7 +257,7 @@ onBeforeUnmount(() => {
           />
         </svg>
       </span>
-      <span class="skip-intro-overlay__label">Skip Outro</span>
+      <span class="skip-intro-overlay__label">{{ tTizen('skip.outroLabel') }}</span>
     </button>
   </div>
 </template>

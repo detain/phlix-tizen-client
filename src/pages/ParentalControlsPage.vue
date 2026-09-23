@@ -19,6 +19,7 @@ import { useRouter } from 'vue-router';
 import { ApiClient } from '@phlix/ui';
 import { useApiBase } from '@phlix/ui';
 import { useAuthStore, type AuthUser } from '@phlix/ui';
+import { tTizen, type TizenMessageKey } from '../i18n/tizen';
 import type {
   AccessSchedule,
   DayOfWeek,
@@ -61,13 +62,13 @@ const scheduleForm = ref({
 const savingSchedule = ref(false);
 
 const DAYS: { label: string; value: DayOfWeek }[] = [
-  { label: 'Mon', value: 'mon' },
-  { label: 'Tue', value: 'tue' },
-  { label: 'Wed', value: 'wed' },
-  { label: 'Thu', value: 'thu' },
-  { label: 'Fri', value: 'fri' },
-  { label: 'Sat', value: 'sat' },
-  { label: 'Sun', value: 'sun' }
+  { label: tTizen('days.mon'), value: 'mon' },
+  { label: tTizen('days.tue'), value: 'tue' },
+  { label: tTizen('days.wed'), value: 'wed' },
+  { label: tTizen('days.thu'), value: 'thu' },
+  { label: tTizen('days.fri'), value: 'fri' },
+  { label: tTizen('days.sat'), value: 'sat' },
+  { label: tTizen('days.sun'), value: 'sun' }
 ];
 
 function startCreateSchedule(): void {
@@ -253,7 +254,7 @@ async function saveLimit(): Promise<void> {
 async function loadSchedules(): Promise<void> {
   const pid = profileId.value;
   if (!pid) {
-    errorSchedules.value = 'No profile selected';
+    errorSchedules.value = tTizen('parentalControls.noProfileSelected');
     return;
   }
 
@@ -267,7 +268,7 @@ async function loadSchedules(): Promise<void> {
     );
     schedules.value = data.schedules ?? [];
   } catch (e) {
-    errorSchedules.value = e instanceof Error ? e.message : 'Failed to load schedules';
+    errorSchedules.value = e instanceof Error ? e.message : tTizen('parentalControls.failedSchedules');
     schedules.value = [];
   } finally {
     loadingSchedules.value = false;
@@ -277,7 +278,7 @@ async function loadSchedules(): Promise<void> {
 async function loadTags(): Promise<void> {
   const pid = profileId.value;
   if (!pid) {
-    errorTags.value = 'No profile selected';
+    errorTags.value = tTizen('parentalControls.noProfileSelected');
     return;
   }
 
@@ -291,7 +292,7 @@ async function loadTags(): Promise<void> {
     );
     blockedTags.value = (data.tags ?? []).filter(t => t.tag_type === 'blocked');
   } catch (e) {
-    errorTags.value = e instanceof Error ? e.message : 'Failed to load tags';
+    errorTags.value = e instanceof Error ? e.message : tTizen('parentalControls.failedTags');
     blockedTags.value = [];
   } finally {
     loadingTags.value = false;
@@ -301,7 +302,7 @@ async function loadTags(): Promise<void> {
 async function loadStreamLimit(): Promise<void> {
   const pid = profileId.value;
   if (!pid) {
-    errorLimits.value = 'No profile selected';
+    errorLimits.value = tTizen('parentalControls.noProfileSelected');
     return;
   }
 
@@ -315,7 +316,7 @@ async function loadStreamLimit(): Promise<void> {
     );
     streamLimit.value = data;
   } catch (e) {
-    errorLimits.value = e instanceof Error ? e.message : 'Failed to load stream limit';
+    errorLimits.value = e instanceof Error ? e.message : tTizen('parentalControls.failedStreamLimits');
     streamLimit.value = null;
   } finally {
     loadingLimits.value = false;
@@ -335,18 +336,18 @@ function goBack(): void {
 function formatTime(time: string): string {
   const [h, m] = time.split(':');
   const hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const ampm = hour >= 12 ? tTizen('parentalControls.timePm') : tTizen('parentalControls.timeAm');
   const hour12 = hour % 12 || 12;
   return `${hour12}:${m} ${ampm}`;
 }
 
 function formatDays(days: DayOfWeek[]): string {
-  if (days.length === 0) return 'No days set';
-  if (days.length === 7) return 'Every day';
-  const dayLabels: Record<DayOfWeek, string> = {
-    mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun'
+  if (days.length === 0) return tTizen('parentalControls.noDaysSet');
+  if (days.length === 7) return tTizen('parentalControls.everyDay');
+  const dayLabels: Record<DayOfWeek, TizenMessageKey> = {
+    mon: 'days.mon', tue: 'days.tue', wed: 'days.wed', thu: 'days.thu', fri: 'days.fri', sat: 'days.sat', sun: 'days.sun'
   };
-  return days.map(d => dayLabels[d]).join(', ');
+  return days.map(d => tTizen(dayLabels[d])).join(', ');
 }
 
 // ── Lifecycle ───────────────────────────────────────────────────────────────
@@ -360,7 +361,7 @@ onMounted(loadAll);
       <button
         class="parental-controls__back"
         type="button"
-        aria-label="Go back"
+        :aria-label="tTizen('common.goBack')"
         @click="goBack"
       >
         <svg
@@ -376,14 +377,14 @@ onMounted(loadAll);
         </svg>
       </button>
       <h1 class="parental-controls__title">
-        Parental Controls
+        {{ tTizen('parentalControls.title') }}
       </h1>
     </header>
 
     <nav
       class="parental-controls__tabs"
       role="tablist"
-      aria-label="Settings sections"
+      :aria-label="tTizen('parentalControls.sectionsAria')"
     >
       <button
         role="tab"
@@ -391,7 +392,7 @@ onMounted(loadAll);
         :class="['parental-controls__tab', { 'parental-controls__tab--active': activeTab === 'schedules' }]"
         @click="activeTab = 'schedules'"
       >
-        Schedules
+        {{ tTizen('parentalControls.tabSchedules') }}
       </button>
       <button
         role="tab"
@@ -399,7 +400,7 @@ onMounted(loadAll);
         :class="['parental-controls__tab', { 'parental-controls__tab--active': activeTab === 'tags' }]"
         @click="activeTab = 'tags'"
       >
-        Blocked Tags
+        {{ tTizen('parentalControls.tabBlockedTags') }}
       </button>
       <button
         role="tab"
@@ -407,7 +408,7 @@ onMounted(loadAll);
         :class="['parental-controls__tab', { 'parental-controls__tab--active': activeTab === 'limits' }]"
         @click="activeTab = 'limits'"
       >
-        Stream Limits
+        {{ tTizen('parentalControls.tabStreamLimits') }}
       </button>
     </nav>
 
@@ -423,7 +424,7 @@ onMounted(loadAll);
           id="tab-schedules"
           class="section__title"
         >
-          Access Schedules
+          {{ tTizen('parentalControls.accessSchedules') }}
         </h2>
         <button
           v-if="!editingSchedule"
@@ -431,7 +432,7 @@ onMounted(loadAll);
           class="section__action"
           @click="startCreateSchedule"
         >
-          + Add Schedule
+          {{ tTizen('parentalControls.addSchedule') }}
         </button>
       </div>
 
@@ -441,7 +442,7 @@ onMounted(loadAll);
         role="status"
         aria-busy="true"
       >
-        <p>Loading schedules…</p>
+        <p>{{ tTizen('parentalControls.loadingSchedules') }}</p>
       </div>
 
       <div
@@ -455,7 +456,7 @@ onMounted(loadAll);
           class="retry-btn"
           @click="loadSchedules"
         >
-          Retry
+          {{ tTizen('common.retry') }}
         </button>
       </div>
 
@@ -463,7 +464,7 @@ onMounted(loadAll);
         v-else-if="schedules.length === 0"
         class="section__empty"
       >
-        <p>No access schedules configured.</p>
+        <p>{{ tTizen('parentalControls.noSchedules') }}</p>
       </div>
 
       <ul
@@ -484,7 +485,7 @@ onMounted(loadAll);
             <span
               v-if="!schedule.is_active"
               class="schedule-item__badge"
-            >Inactive</span>
+            >{{ tTizen('common.inactive') }}</span>
           </div>
           <div class="schedule-item__actions">
             <button
@@ -492,14 +493,14 @@ onMounted(loadAll);
               class="action-btn"
               @click="startEditSchedule(schedule)"
             >
-              Edit
+              {{ tTizen('common.edit') }}
             </button>
             <button
               type="button"
               class="action-btn action-btn--danger"
               @click="deleteSchedule(schedule.id)"
             >
-              Delete
+              {{ tTizen('common.delete') }}
             </button>
           </div>
         </li>
@@ -511,20 +512,20 @@ onMounted(loadAll);
         class="schedule-form"
       >
         <h3 class="form__title">
-          {{ editingSchedule ? 'Edit Schedule' : 'New Schedule' }}
+          {{ editingSchedule ? tTizen('parentalControls.editScheduleTitle') : tTizen('parentalControls.newScheduleTitle') }}
         </h3>
 
         <div class="form__field">
           <label
             class="form__label"
             for="schedule-name"
-          >Name</label>
+          >{{ tTizen('common.name') }}</label>
           <input
             id="schedule-name"
             v-model="scheduleForm.name"
             type="text"
             class="form__input"
-            placeholder="e.g., Homework Time"
+            :placeholder="tTizen('parentalControls.namePlaceholder')"
           >
         </div>
 
@@ -533,7 +534,7 @@ onMounted(loadAll);
             <label
               class="form__label"
               for="schedule-start"
-            >Start Time</label>
+            >{{ tTizen('parentalControls.startTime') }}</label>
             <input
               id="schedule-start"
               v-model="scheduleForm.startTime"
@@ -545,7 +546,7 @@ onMounted(loadAll);
             <label
               class="form__label"
               for="schedule-end"
-            >End Time</label>
+            >{{ tTizen('parentalControls.endTime') }}</label>
             <input
               id="schedule-end"
               v-model="scheduleForm.endTime"
@@ -556,7 +557,7 @@ onMounted(loadAll);
         </div>
 
         <div class="form__field">
-          <label class="form__label">Days of Week</label>
+          <label class="form__label">{{ tTizen('parentalControls.daysOfWeek') }}</label>
           <div class="day-picker">
             <button
               v-for="day in DAYS"
@@ -574,7 +575,7 @@ onMounted(loadAll);
           <label
             class="form__label"
             for="schedule-active"
-          >Active</label>
+          >{{ tTizen('common.active') }}</label>
           <input
             id="schedule-active"
             v-model="scheduleForm.isActive"
@@ -589,7 +590,7 @@ onMounted(loadAll);
             class="cancel-btn"
             @click="cancelEditSchedule"
           >
-            Cancel
+            {{ tTizen('common.cancel') }}
           </button>
           <button
             type="button"
@@ -597,7 +598,7 @@ onMounted(loadAll);
             :disabled="savingSchedule || !scheduleForm.name"
             @click="saveSchedule"
           >
-            {{ savingSchedule ? 'Saving…' : 'Save' }}
+            {{ savingSchedule ? tTizen('common.saving') : tTizen('common.save') }}
           </button>
         </div>
       </div>
@@ -615,12 +616,12 @@ onMounted(loadAll);
           id="tab-tags"
           class="section__title"
         >
-          Blocked Tags
+          {{ tTizen('parentalControls.tabBlockedTags') }}
         </h2>
       </div>
 
       <p class="section__desc">
-        Tags block content from appearing in search or recommendations.
+        {{ tTizen('parentalControls.blockedTagsHint') }}
       </p>
 
       <div
@@ -629,7 +630,7 @@ onMounted(loadAll);
         role="status"
         aria-busy="true"
       >
-        <p>Loading tags…</p>
+        <p>{{ tTizen('parentalControls.loadingTags') }}</p>
       </div>
 
       <div
@@ -643,7 +644,7 @@ onMounted(loadAll);
           class="retry-btn"
           @click="loadTags"
         >
-          Retry
+          {{ tTizen('common.retry') }}
         </button>
       </div>
 
@@ -653,7 +654,7 @@ onMounted(loadAll);
             v-model="newTagInput"
             type="text"
             class="tag-input"
-            placeholder="Enter tag to block…"
+            :placeholder="tTizen('parentalControls.tagPlaceholder')"
             @keyup.enter="addTag"
           >
           <button
@@ -662,7 +663,7 @@ onMounted(loadAll);
             :disabled="addingTag || !newTagInput.trim()"
             @click="addTag"
           >
-            {{ addingTag ? 'Adding…' : 'Add' }}
+            {{ addingTag ? tTizen('common.adding') : tTizen('common.add') }}
           </button>
         </div>
 
@@ -680,7 +681,7 @@ onMounted(loadAll);
             <button
               type="button"
               class="tag-item__remove"
-              aria-label="Remove tag"
+              :aria-label="tTizen('parentalControls.removeTagAria')"
               @click="removeTag(tag.id)"
             >
               ×
@@ -691,7 +692,7 @@ onMounted(loadAll);
           v-else
           class="section__empty"
         >
-          No blocked tags configured.
+          {{ tTizen('parentalControls.noBlockedTags') }}
         </p>
       </div>
     </section>
@@ -708,7 +709,7 @@ onMounted(loadAll);
           id="tab-limits"
           class="section__title"
         >
-          Stream Limits
+          {{ tTizen('parentalControls.tabStreamLimits') }}
         </h2>
       </div>
 
@@ -718,7 +719,7 @@ onMounted(loadAll);
         role="status"
         aria-busy="true"
       >
-        <p>Loading limits…</p>
+        <p>{{ tTizen('parentalControls.loadingLimits') }}</p>
       </div>
 
       <div
@@ -732,7 +733,7 @@ onMounted(loadAll);
           class="retry-btn"
           @click="loadStreamLimit"
         >
-          Retry
+          {{ tTizen('common.retry') }}
         </button>
       </div>
 
@@ -744,7 +745,7 @@ onMounted(loadAll);
           <label
             class="form__label"
             for="limit-streams"
-          >Max Concurrent Streams</label>
+          >{{ tTizen('parentalControls.maxConcurrentStreams') }}</label>
           <input
             id="limit-streams"
             v-model.number="limitForm.maxConcurrentStreams"
@@ -759,7 +760,7 @@ onMounted(loadAll);
           <label
             class="form__label"
             for="limit-bandwidth"
-          >Max Bandwidth (kbps, 0 = unlimited)</label>
+          >{{ tTizen('parentalControls.maxBandwidthLabel') }}</label>
           <input
             id="limit-bandwidth"
             v-model.number="limitForm.maxTotalBandwidthKbps"
@@ -775,7 +776,7 @@ onMounted(loadAll);
             class="cancel-btn"
             @click="cancelEditLimit"
           >
-            Cancel
+            {{ tTizen('common.cancel') }}
           </button>
           <button
             type="button"
@@ -783,7 +784,7 @@ onMounted(loadAll);
             :disabled="savingLimit"
             @click="saveLimit"
           >
-            {{ savingLimit ? 'Saving…' : 'Save' }}
+            {{ savingLimit ? tTizen('common.saving') : tTizen('common.save') }}
           </button>
         </div>
       </div>
@@ -795,7 +796,7 @@ onMounted(loadAll);
         <dl class="limit-list">
           <div class="limit-item">
             <dt class="limit-item__label">
-              Max Concurrent Streams
+              {{ tTizen('parentalControls.maxConcurrentStreams') }}
             </dt>
             <dd class="limit-item__value">
               {{ streamLimit?.maxConcurrentStreams ?? '—' }}
@@ -803,10 +804,10 @@ onMounted(loadAll);
           </div>
           <div class="limit-item">
             <dt class="limit-item__label">
-              Max Total Bandwidth
+              {{ tTizen('parentalControls.maxTotalBandwidth') }}
             </dt>
             <dd class="limit-item__value">
-              {{ streamLimit?.maxTotalBandwidthKbps ? `${streamLimit.maxTotalBandwidthKbps} kbps` : 'Unlimited' }}
+              {{ streamLimit?.maxTotalBandwidthKbps ? tTizen('parentalControls.bandwidthKbps', { kbps: streamLimit.maxTotalBandwidthKbps }) : tTizen('common.unlimited') }}
             </dd>
           </div>
         </dl>
@@ -815,7 +816,7 @@ onMounted(loadAll);
           class="section__action"
           @click="startEditLimit"
         >
-          Edit Limits
+          {{ tTizen('parentalControls.editLimits') }}
         </button>
       </div>
     </section>

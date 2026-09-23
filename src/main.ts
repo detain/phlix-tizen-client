@@ -15,6 +15,8 @@ import { buildPhlixHeaders } from '@phlix/contracts';
 import '@phlix/ui/style.css';
 import '@phlix/ui/fonts.css';
 import { resolveAppConfig, pushAddressHistory } from './resolveConfig';
+import { resolveLocale, messagesForLocale } from './i18n';
+import { setTizenLocale, tTizen } from './i18n/tizen';
 import { probeBootBase } from './bootProbe';
 import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
@@ -74,13 +76,13 @@ export function buildMenu(): MenuItem[] {
   const items: MenuItem[] = [
     // `libraryLinks` expands Browse into one nav link per library (fetched from
     // /api/v1/libraries), matching the per-library Browse sections.
-    { id: 'browse', label: 'Browse', to: '/app', libraryLinks: true },
-    { id: 'for-you', label: 'For You', to: '/app/recommendations' },
-    { id: 'settings', label: 'Settings', to: '/app/settings' },
-    { id: 'parental-controls', label: 'Parental Controls', to: '/app/parental-controls' }
+    { id: 'browse', label: tTizen('menu.browse'), to: '/app', libraryLinks: true },
+    { id: 'for-you', label: tTizen('menu.forYou'), to: '/app/recommendations' },
+    { id: 'settings', label: tTizen('menu.settings'), to: '/app/settings' },
+    { id: 'parental-controls', label: tTizen('menu.parentalControls'), to: '/app/parental-controls' }
   ];
   if (tvAdminEnabled()) {
-    items.push({ id: 'admin', label: 'Admin', to: '/app/admin/dashboard', requiresAdmin: true });
+    items.push({ id: 'admin', label: tTizen('menu.admin'), to: '/app/admin/dashboard', requiresAdmin: true });
   }
   return items;
 }
@@ -185,7 +187,7 @@ export function renderBootFailure(error: unknown): void {
   console.error('[phlix] Fatal boot failure:', error);
   try {
     const host = document.getElementById('phlix-app');
-    const text = `Phlix failed to start: ${message}`;
+    const text = tTizen('boot.failedStart', { message });
     if (host) host.textContent = text;
     else document.body.textContent = text;
   } catch {
@@ -242,7 +244,7 @@ function wireHubRelayConsumer(
     onStatusChange: (status) => {
       if (status === 'waiting-visible') {
         if (hubPausedNoticeId === null) {
-          hubPausedNoticeId = toast.warning('Hub connection paused — resumes when you open the app again', {
+          hubPausedNoticeId = toast.warning(tTizen('hub.pausedNotice'), {
             duration: 6000,
           });
         }
@@ -286,6 +288,12 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
 
   const { app, apiBase } = resolveAppConfig({ serverUrl, envUrl });
 
+  // ONE locale truth for the whole client (explicit → VITE_PHLIX_LOCALE →
+  // navigator.language → 'en'): pinned for the own-strings catalog AND passed
+  // as the ui-seam override map below, so the two catalogs can never disagree.
+  const locale = resolveLocale();
+  setTizenLocale(locale);
+
   // S515 AD-3 — classify a SET-but-UNREACHABLE base before committing to it
   // (the connect-gate alone only catches the EMPTY one). Skipped for an empty
   // base, so first-run behavior is byte-identical; never rejects.
@@ -328,7 +336,14 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
     // mirroring the server web-ui. Without these the shell shows no nav at all.
     menu: buildMenu(),
     extraRoutes: buildExtraRoutes(),
-    playerHlsConfig: TIZEN_HLS_CONFIG
+    playerHlsConfig: TIZEN_HLS_CONFIG,
+    // i18n seam (config-time, @phlix/ui R6.5c): the client-resolved locale's
+    // override map flows into ui's mergeMessages OVER its English defaults.
+    // Today only 'en' is registered and its override is EMPTY, so this is
+    // behavior-identical to omitting the field — the wiring is the deliverable.
+    // Locale priority: explicit → VITE_PHLIX_LOCALE → navigator.language → 'en'
+    // (no privileged tizen.systeminfo call — see src/i18n/index.ts doctrine).
+    messages: messagesForLocale(locale)
   });
 
   // S515 AD-3 — probe said unreachable: land the user on @phlix/ui's existing

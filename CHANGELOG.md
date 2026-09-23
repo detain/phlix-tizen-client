@@ -5,6 +5,140 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — six-locale build-out: vendored ui bundles + tizen-own translations (es, fr, de, it, pt_BR, ja)
+
+- **The estate's six locales now ship.** Per the 2026-09 estate decision the
+  client speaks es / fr / de / it / pt_BR / ja. The ui-catalog translations
+  are NOT forked here: `phlix-ui` is the SSOT and its locale bundles (authored
+  at `feat/i18n-locale-bundles@2f2df8a2`) arrive as SHA-PINNED vendored copies
+  under `src/i18n/ui-locale-bundles/` + a `PIN` hash manifest, refreshed by
+  `scripts/sync-ui-locale-bundles.mjs` (three documented transforms; the
+  `satisfies` relaxation exists because the bundles run 7 keys ahead of the
+  installed v0.99.4 pin — the extras are pinned in tests until the next
+  dependency bump). `MESSAGE_CATALOGS` serves them through the existing
+  config-time seam with one documented boundary cast.
+- **Tizen-own catalog translated ×6.** `src/i18n/tizen/locales/{es,fr,de,it,pt_BR,ja}.ts`
+  each carry the complete 197-key set typed `satisfies TizenCatalog` (compile
+  key-set law). Doctrine: every `{placeholder}` verbatim; latin locales add
+  CLDR two-segment pipes on exactly the 12 keys where English hardcoded a
+  plural while passing `count`; **ja carries zero pipes** (single CLDR
+  category) with native counters 人/枚/曲/件/章/本 and One/Other pairs holding
+  identical values; per-locale English-leak allow-lists (brand/unit/format
+  tokens) are pinned BOTH directions; pt_BR is Brazilian, and every `pt-*`
+  device signal resolves to it (`normalizeLocaleTag` is region-aware for pt —
+  the alternative silently degrades all Portuguese devices to English).
+- **Resolution matrix + real-bundle E2E.** New `tests/unit/i18nLocales.test.ts`
+  (45 tests): tag→bundle for BOTH registries (incl. `es-ES`→es wins outright,
+  `zz`/`xx_YY`/`kl-GL` fall through, `pt-PT`→`pt_BR`), Spanish actually
+  rendering through `mergeMessages()`/`tTizen()`, the en path byte-identical
+  (all 197 own-catalog pins re-walked), PIN↔disk hashes (runs in CI) and
+  PIN↔pristine-source transform parity (hard-fails locally, SKIPS in CI —
+  tizen CI clones only `phlix-contracts`; drift rides the local gate +
+  re-pin cascade). Three existing expectations that assumed es/fr were
+  UNSUPPORTED were revised to genuinely-unsupported probes (`zz`-class) —
+  intent preserved, inverted truth documented inline.
+- **Docs.** `docs/i18n.md` gains the locale matrix, the vendoring/refresh
+  procedure incl. CI drift-policy, and the rewritten add-a-locale#7 recipe
+  covering both catalogs.
+
+### Changed — ui locale bundles re-vendored at `phlix-ui@dc1df7d5`
+
+- The vendored copies + `PIN` were refreshed from the SSOT branch after the ui
+  review-fix commit `dc1df7d5` (follow-up to `2f2df8a2`). Eight shipped values
+  moved: es `player.captionsAndSubtitles` (leyendas → "closed captions" loanword)
+  and `player.queue` (Cola → Cola de reproducción); de `searchLibrary`,
+  `transcodePreparingTitled`, `transcodeBodyTitled` (quote closer `"` → `“` to
+  pair `„…“`); ja `syncplay.members` (native measure-word order), `connect.hint`
+  and `connect.invalidAddress` (half-width spaces at CJK↔ASCII boundaries).
+  Header comments in es/de/it were normalised (quote pairs + policy lines); no
+  key set, placeholder, or pipe-segment shape changed, so no test expectation
+  moved — the PIN↔source parity leg re-derives everything from the new ref.
+
+### Fixed — i18n locale lane: R1 review follow-ups (bare-run rollback guard, header/store literals) — 2026-09-23
+
+- **Sync-script rollback guard (R1-F3).** `scripts/sync-ui-locale-bundles.mjs`
+  kept a hardcoded `SOURCE_REF` beside the `PIN` manifest; after the
+  `dc1df7d5` re-vendor the constant was stale at `2f2df8a2`, so a BARE script
+  run would have silently re-vendored the OLD bundles and self-rewritten the
+  PIN (every self-consistent gate stayed green). Bare runs now default to
+  `PIN.ref`/`PIN.branch` on disk (idempotent re-sync; explicit `--ref`/
+  `--branch` still override for re-pins), the constants are bootstrap-only
+  (used when no PIN exists), a present-but-broken PIN now fails fast, and
+  `tests/unit/i18nLocales.test.ts` hard-pins constants == PIN so future
+  re-pins must sync the anchor deliberately.
+- **ParentalControls section headers localized (R1-F1).** The `Blocked Tags`
+  and `Stream Limits` `h2.section__title` literals now render through
+  `tTizen('parentalControls.tabBlockedTags'/'tabStreamLimits')` — the existing
+  tab keys whose English values are byte-identical to the literals (verified
+  against `en.ts`; all six locale catalogs already carried translations). New
+  real-mount proof: an es-locale mount asserts both headings render Spanish
+  out of the DOM.
+- **SyncPlay member fallback localized (R1-F2).** `useSyncPlayStore`'s
+  `normalizeMembers` used `name: m.name ?? 'Unknown'`; it is now
+  `?? tTizen('common.unknown')` (the accessor is already imported by the
+  Pinia `useMusicStore` precedent — no cycle; en render byte-identical).
+  Survey of the file's other English literals found none of the same
+  user-visible-display class: the `error.value`/`wsError.value` strings are
+  unread diagnostic state (no consumer renders them today), the API-error
+  fragment is a diagnostic template, and `'User left room'` is a WebSocket
+  close reason on the wire — all deliberately untranslated.
+- **Ahead-of-pin placeholder parity widened (R1-F4).** The cross-bundle
+  placeholder-parity law now covers ALL 7 ahead-of-pin ui keys (was 3); the
+  set is one hoisted `UI_AHEAD_OF_PIN` constant shared by the three laws that
+  consume it, so extending the vendor set cannot silently miss a law.
+
+### Added — tizen-own string catalog: every client-rendered literal moves behind `tTizen()`
+
+- **The client's own strings are now cataloged.** The ui seam above reaches
+  only strings `@phlix/ui` renders; everything this client renders from its
+  nine root-mounted apps and pages (menu labels, boot-failure chrome, the hub
+  paused notice, overlay/list/page/panel text) sat as inline literals. New
+  `src/i18n/tizen/locales/en.ts` (`TIZEN_EN`, 197 keys / 18 groups) holds each
+  EXACT original string (interpolated ones become `{param}` templates), and
+  `src/i18n/tizen/index.ts` exposes `tTizen(key, params?)` with ui-parity
+  semantics: `{name}` interpolation (unmatched tokens ride through), pipe-form
+  plurals selected by `params.count` through ui's own exported
+  `selectPluralTemplate`, raw-key fallback with a loud `import.meta.env.DEV`
+  warning on unknown keys.
+- **One locale truth, zero forks.** The accessor REUSES `resolveLocale()` /
+  `SupportedLocale` from `src/i18n/index.ts`; `boot()` resolves the locale
+  ONCE and threads it into BOTH catalogs (`setTizenLocale(locale)` +
+  `messagesForLocale(locale)`), so they can never disagree. Adding a locale is
+  now two files + two registry lines, documented in `docs/i18n.md`.
+- **Behavior byte-identical, contract pinned.** No string was translated; `'en'`
+  remains the only locale. `tests/unit/tizenI18n.test.ts` pins every catalog
+  value verbatim against the pre-refactor literals, scans that every key has a
+  live quoted call site (and every call-site key is defined), pins
+  `tTizen('audioTracks.applyRefusal')` against the intentionally-literal English
+  ANCHOR export the boundary tests import, and pins `boot.splashHint` against
+  the zero-JS `index.html` splash. `src/tizenBridge.ts` carries no user-facing
+  literals (verified). Wire identity (`deviceName`), the dual-use
+  `KeyMapping.DISPLAY_NAMES` voice phrases, and non-rendered sync-play strings
+  are deliberately excluded — rationale in `docs/i18n.md`. Zero new request
+  sites; manifest scan stays 27, `app/config.xml` untouched.
+
+### Added — i18n messages seam wiring: client locale → `@phlix/ui` catalog overrides
+
+- **The seam is now reachable from the client.** `@phlix/ui`'s config-time
+  `PhlixAppConfig.messages` override existed since R6.5c but this client never
+  passed it, so translated strings had no path into the render. New
+  `src/i18n/index.ts` resolves the boot locale (explicit → `VITE_PHLIX_LOCALE` →
+  unprivileged `navigator.language` → `'en'` — no `tizen.systeminfo` privilege,
+  doctrine held) and `boot()` now passes
+  `messages: messagesForLocale(resolveLocale())` into `createPhlixApp`.
+- **Behavior-preserving by construction.** The only shipped catalog is `'en'`
+  (`src/i18n/locales/en.ts`) and it is an EMPTY override — ui's `mergeMessages`
+  reproduces its English defaults exactly. Adding a locale is new file + union
+  line + one registry line (`docs/i18n.md`).
+- **Pipeline PROVEN headlessly.** `tests/unit/i18n.test.ts` runs the REAL
+  v0.99.4 bundle unmocked: a fake `{ common: { retry: 'ZZZ-TEST' } }` override
+  reaches a mounted component's `useMessages().t` through the actual
+  provide→inject→merge→resolve chain (sibling keys keep English; omitted-config
+  and empty-en-catalog baselines pin byte-identical defaults), plus `mergeMessages`
+  semantics pins and a full `resolveLocale` priority table incl. env stubbing.
+  `main.test.ts` pins `boot()` passes the field. Zero new request sites — the
+  route manifest scan stays 27, `app/config.xml` untouched.
+
 ### Added — W115 (S535): digit-commit buffer — the digit channel goes LIVE (AD-22)
 
 - **One shared buffer replaces the dead passthrough.** New pure module

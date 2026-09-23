@@ -42,6 +42,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { usePlayerStore } from '@phlix/ui';
 import remoteManager from '../remote/RemoteManager';
+import { tTizen } from '../i18n/tizen';
 import {
   IDLE_BODY_CLASS,
   IDLE_TICK_MS,
@@ -140,7 +141,7 @@ onBeforeUnmount(() => {
       </p>
       <span class="screensaver__rule" />
       <p class="screensaver__hint">
-        Press any key to wake
+        {{ tTizen('screensaver.wakeHint') }}
       </p>
     </div>
   </div>

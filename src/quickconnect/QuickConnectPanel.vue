@@ -34,6 +34,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ApiClient, useApiBase, useAuthStore } from '@phlix/ui';
 import { createPairingSession, type PairingPhase, type PairingSession } from './quickConnectSession';
+import { tTizen } from '../i18n/tizen';
 
 const apiBase = useApiBase();
 const auth = useAuthStore();
@@ -55,15 +56,15 @@ const retryable = computed(() => phase.value === 'denied' || phase.value === 'ex
 function currentStatusText(): string {
   switch (phase.value) {
     case 'initiating':
-      return 'Preparing your code…';
+      return tTizen('quickConnect.preparing');
     case 'pairing':
-      return 'Open Phlix on your phone and enter this code';
+      return tTizen('quickConnect.instruction');
     case 'denied':
-      return 'Pairing was declined.';
+      return tTizen('quickConnect.declined');
     case 'expired':
-      return 'That code expired.';
+      return tTizen('quickConnect.expired');
     case 'error':
-      return 'Could not reach the server.';
+      return tTizen('quickConnect.unreachable');
     default:
       return '';
   }
@@ -139,14 +140,14 @@ watch(eligible, (active) => {
     class="quick-connect"
     role="dialog"
     aria-live="polite"
-    aria-label="Pair with your phone"
+    :aria-label="tTizen('quickConnect.aria')"
   >
     <div class="quick-connect__card">
       <p class="quick-connect__eyebrow">
-        Phlix for Samsung TV
+        {{ tTizen('quickConnect.eyebrow') }}
       </p>
       <h1 class="quick-connect__title">
-        Sign in without a keyboard
+        {{ tTizen('quickConnect.title') }}
       </h1>
       <p class="quick-connect__lead">
         {{ currentStatusText() }}
@@ -171,7 +172,7 @@ watch(eligible, (active) => {
         v-if="expiresAtSeconds"
         class="quick-connect__meta"
       >
-        Expires in a few minutes — no need to hurry.
+        {{ tTizen('quickConnect.expiryNote') }}
       </p>
 
       <button
@@ -181,11 +182,11 @@ watch(eligible, (active) => {
         data-testid="qc-retry"
         @click="beginSession"
       >
-        Try again
+        {{ tTizen('quickConnect.tryAgain') }}
       </button>
 
       <p class="quick-connect__hint">
-        On your phone, open Phlix → Sign in on TV → type the code.
+        {{ tTizen('quickConnect.hint') }}
       </p>
     </div>
   </div>

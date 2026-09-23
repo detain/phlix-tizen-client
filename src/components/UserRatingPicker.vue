@@ -21,6 +21,7 @@
  */
 
 import { ref, computed, onMounted } from 'vue'
+import { tTizen } from '../i18n/tizen'
 import { useAuthStore, useToastStore } from '@phlix/ui'
 
 interface Props {
@@ -80,7 +81,7 @@ async function selectStar(starIndex: number) {
     emit('rating-changed', finalRating)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    toast.error(`Failed to save rating: ${msg}`, { duration: 4000 })
+    toast.error(tTizen('ratings.saveFailedToast', { message: msg }), { duration: 4000 })
   } finally {
     submitting.value = false
   }
@@ -102,14 +103,14 @@ onMounted(() => {
   <div
     class="user-rating-picker"
     role="group"
-    aria-label="Rate this media"
+    :aria-label="tTizen('ratings.pickerAria')"
   >
-    <span class="picker-label">Your rating</span>
+    <span class="picker-label">{{ tTizen('ratings.yourRatingLabel') }}</span>
 
     <div
       class="stars-row"
       role="radiogroup"
-      :aria-label="`Current rating: ${userRating ?? 0} of 10`"
+      :aria-label="tTizen('ratings.currentRatingAria', { rating: userRating ?? 0 })"
     >
       <button
         v-for="starIdx in 5"
@@ -118,7 +119,7 @@ onMounted(() => {
         class="star-btn"
         :class="[`star-btn--${starState(starIdx - 1, activeStars)}`]"
         :aria-checked="ratingToStars(userRating) === starIdx"
-        :aria-label="`${starIdx} star${starIdx > 1 ? 's' : ''} (${starToRating(starIdx)} of 10)`"
+        :aria-label="tTizen(starIdx > 1 ? 'ratings.starsAria' : 'ratings.starAria', { stars: starIdx, score: starToRating(starIdx) })"
         role="radio"
         :tabindex="starIdx === 1 ? 0 : -1"
         :disabled="submitting"
@@ -149,7 +150,7 @@ onMounted(() => {
     <span
       v-else
       class="rating-value rating-value--unset"
-    >Not rated</span>
+    >{{ tTizen('ratings.notRated') }}</span>
   </div>
 </template>
 

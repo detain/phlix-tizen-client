@@ -17,6 +17,7 @@
  */
 
 import type { UserRecommendation } from '@phlix/contracts';
+import { tTizen } from '../i18n/tizen';
 
 interface Props {
   /** The recommendation to display. */
@@ -36,7 +37,7 @@ const emit = defineEmits<{
     class="recommendation-card"
     role="button"
     tabindex="0"
-    :aria-label="`${item.title}${item.year ? ` (${item.year})` : ''} — ${Math.round(item.score * 100)}% match`"
+    :aria-label="tTizen(item.year ? 'recommendations.cardAria' : 'recommendations.cardAriaNoYear', { title: item.title, year: item.year, percent: Math.round(item.score * 100) })"
     @click="emit('select', item.id)"
     @keydown.enter="emit('select', item.id)"
     @keydown.space.prevent="emit('select', item.id)"
@@ -45,7 +46,7 @@ const emit = defineEmits<{
       <img
         v-if="item.posterUrl"
         :src="item.posterUrl"
-        :alt="`Poster for ${item.title}`"
+        :alt="tTizen('recommendations.posterAlt', { title: item.title })"
         class="recommendation-card__poster"
         loading="lazy"
       >
@@ -82,9 +83,9 @@ const emit = defineEmits<{
           v-if="item.year"
           class="recommendation-card__year"
         >{{ item.year }}</span>
-        <span class="recommendation-card__score">{{ Math.round(item.score * 100) }}% match</span>
+        <span class="recommendation-card__score">{{ Math.round(item.score * 100) }}{{ tTizen('recommendations.matchSuffix') }}</span>
       </div>
-      <span class="recommendation-card__reason">Because You Watched</span>
+      <span class="recommendation-card__reason">{{ tTizen('recommendations.becauseYouWatched') }}</span>
     </div>
   </article>
 </template>

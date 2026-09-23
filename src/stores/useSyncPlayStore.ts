@@ -40,6 +40,7 @@ import type {
 } from '@phlix/contracts';
 import { SyncPlayClient, serializeMessage } from '@phlix/syncplay';
 import type { PendingPlayMediaCommand } from '../api/hubRelay';
+import { tTizen } from '../i18n/tizen';
 
 // ---- Types -----------------------------------------------------------------
 
@@ -238,7 +239,7 @@ function normalizeMembers(raw: RawSyncPlayGroup | undefined): LocalSyncPlayMembe
     : Object.entries(members).map(([key, value]) => ({ id: key, ...value }));
   return list.map((m) => ({
     id: m.id ?? '',
-    name: m.name ?? 'Unknown',
+    name: m.name ?? tTizen('common.unknown'),
     profileId: 0,
     role: m.is_host === true ? 'owner' : 'contributor',
     isOnline: true,

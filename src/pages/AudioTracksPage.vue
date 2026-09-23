@@ -41,6 +41,9 @@ export async function fetchPlaybackInfoTracks(
  */
 export const AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE =
   'Audio track choice cannot be applied: the @phlix/ui player store exposes no audio-track switching surface (state: none; actions: setSubtitle/setQuality only).';
+// i18n: this export stays the English ANCHOR the boundary tests import; the
+// rendered refusal goes through the own-catalog (audioTracks.applyRefusal),
+// whose value is pinned byte-identical to this constant by tizenI18n.test.ts.
 </script>
 
 <script setup lang="ts">
@@ -82,6 +85,7 @@ import { useApiBase } from '@phlix/ui';
 // <script> block above — both blocks compile into ONE module scope, so they
 // are deliberately NOT re-imported here.
 import AudioTrackList from '../components/AudioTrackList.vue';
+import { tTizen } from '../i18n/tizen';
 import { useTrackPreferenceStore } from '../stores/useTrackPreferenceStore';
 
 const route = useRoute();
@@ -112,7 +116,7 @@ const activeTrackId = computed<string | null>(() => null);
 async function loadAudioTracks(): Promise<void> {
   const id = mediaId.value;
   if (!id) {
-    error.value = 'No media id provided';
+    error.value = tTizen('common.noMediaId');
     loading.value = false;
     return;
   }
@@ -140,7 +144,7 @@ async function loadAudioTracks(): Promise<void> {
     );
     preferredLanguage.value = resolved.language;
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Failed to load audio tracks';
+    error.value = e instanceof Error ? e.message : tTizen('audioTracks.loadFailed');
     audioTracks.value = [];
     preferredLanguage.value = null;
   } finally {
@@ -160,11 +164,11 @@ async function loadAudioTracks(): Promise<void> {
  * cannot be applied live on this store today.
  */
 function onSelectTrack(track: AudioTrack): void {
-  refusal.value = AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE;
+  refusal.value = tTizen('audioTracks.applyRefusal');
   const language = track.language;
   if (language) {
     preferredLanguage.value = language;
-    savedConfirmation.value = `Remembered ${language} as your preferred audio language for this title.`;
+    savedConfirmation.value = tTizen('audioTracks.rememberedNote', { language });
     void trackPreference.persist(apiBase.value, mediaId.value, 'audio', language);
   }
 }
@@ -183,7 +187,7 @@ watch(mediaId, loadAudioTracks);
       <button
         class="audio-tracks-page__back"
         type="button"
-        aria-label="Go back"
+        :aria-label="tTizen('common.goBack')"
         @click="goBack"
       >
         <svg
@@ -200,13 +204,13 @@ watch(mediaId, loadAudioTracks);
       </button>
       <h1 class="audio-tracks-page__title">
         <template v-if="loading">
-          Audio Tracks…
+          {{ tTizen('audioTracks.loadingTitle') }}
         </template>
         <template v-else-if="audioTracks.length">
-          {{ audioTracks.length }} {{ audioTracks.length === 1 ? 'Audio Track' : 'Audio Tracks' }}
+          {{ tTizen(audioTracks.length === 1 ? 'audioTracks.headingOne' : 'audioTracks.headingOther', { count: audioTracks.length }) }}
         </template>
         <template v-else>
-          Audio Tracks
+          {{ tTizen('audioTracks.title') }}
         </template>
       </h1>
     </header>
@@ -216,9 +220,9 @@ watch(mediaId, loadAudioTracks);
       class="audio-tracks-page__loading"
       role="status"
       aria-busy="true"
-      aria-label="Loading audio tracks"
+      :aria-label="tTizen('audioTracks.loadingAria')"
     >
-      <p>Loading audio tracks…</p>
+      <p>{{ tTizen('audioTracks.loading') }}</p>
     </div>
 
     <div
@@ -232,7 +236,7 @@ watch(mediaId, loadAudioTracks);
         class="audio-tracks-page__retry"
         @click="loadAudioTracks"
       >
-        Retry
+        {{ tTizen('common.retry') }}
       </button>
     </div>
 
@@ -240,7 +244,7 @@ watch(mediaId, loadAudioTracks);
       v-else-if="audioTracks.length === 0"
       class="audio-tracks-page__empty"
     >
-      <p>No alternative audio tracks available for this media.</p>
+      <p>{{ tTizen('audioTracks.empty') }}</p>
     </div>
 
     <template v-else>
@@ -249,7 +253,7 @@ watch(mediaId, loadAudioTracks);
         class="audio-tracks-page__preferred"
         role="status"
       >
-        Preferred for this title: {{ preferredLanguage }}
+        {{ tTizen('audioTracks.preferredNote', { language: preferredLanguage }) }}
       </p>
       <p
         v-if="savedConfirmation"
