@@ -418,10 +418,23 @@ describe('tTizen accessor semantics', () => {
   it('setTizenLocale parses garbage to the english fallback, never throws', () => {
     expect(() => setTizenLocale('')).not.toThrow();
     expect(tizenLocale()).toBe('en');
-    setTizenLocale('fr-FR');
-    expect(tizenLocale()).toBe('en'); // no fr locale registered yet
+    setTizenLocale('ko-KR');
+    expect(tizenLocale()).toBe('en'); // genuinely unsupported subtag → fallback
     setTizenLocale('en-US');
     expect(tizenLocale()).toBe('en');
+  });
+
+  it('setTizenLocale accepts the estate locales through regional tags', () => {
+    // Post 6-locale build-out (was pinned as 'fr unsupported → en' before the
+    // bundles shipped — same probe, inverted truth, intent preserved: the
+    // accessor resolves exactly what the registry contains).
+    setTizenLocale('fr-FR');
+    expect(tizenLocale()).toBe('fr');
+    setTizenLocale('pt-BR');
+    expect(tizenLocale()).toBe('pt_BR');
+    setTizenLocale('ja-JP');
+    expect(tizenLocale()).toBe('ja');
+    setTizenLocale('en');
   });
 
   it('tTizen memoizes per locale and rebuilds on change', () => {

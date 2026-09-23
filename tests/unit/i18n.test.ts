@@ -169,6 +169,17 @@ describe('normalizeLocaleTag', () => {
     expect(normalizeLocaleTag('  zh-Hans-CN ')).toBe('zh');
   });
 
+  it('maps EVERY Portuguese signal to the one shipped pt catalog (pt_BR)', () => {
+    // Region-aware exception to the primary-subtag rule (docblock in
+    // src/i18n/index.ts): collapsing pt to bare 'pt' would drop the only key
+    // the registry has, degrading every pt device to English.
+    expect(normalizeLocaleTag('pt')).toBe('pt_BR');
+    expect(normalizeLocaleTag('pt_BR')).toBe('pt_BR');
+    expect(normalizeLocaleTag('PT_br')).toBe('pt_BR');
+    expect(normalizeLocaleTag('pt-PT')).toBe('pt_BR'); // European pt sees Brazilian, not English
+    expect(normalizeLocaleTag('pt-419')).toBe('pt_BR');
+  });
+
   it('yields null for empty/whitespace/absent signals', () => {
     expect(normalizeLocaleTag('')).toBeNull();
     expect(normalizeLocaleTag('   ')).toBeNull();
@@ -182,7 +193,12 @@ describe('isSupportedLocale', () => {
     for (const locale of SUPPORTED_LOCALES) {
       expect(isSupportedLocale(locale)).toBe(true);
     }
-    expect(isSupportedLocale('fr')).toBe(false);
+    // Genuinely unsupported (post 6-locale build-out): raw subtags that never
+    // key a catalog. 'pt' is deliberately rejected BEFORE normalization —
+    // the registry key is the region tag 'pt_BR' (see normalizeLocaleTag).
+    expect(isSupportedLocale('zz')).toBe(false);
+    expect(isSupportedLocale('ko')).toBe(false);
+    expect(isSupportedLocale('pt')).toBe(false);
     expect(isSupportedLocale(null)).toBe(false);
     expect(isSupportedLocale('constructor')).toBe(false); // prototype keys never count
   });
@@ -202,12 +218,21 @@ describe('resolveLocale priority (explicit → env → navigator → fallback)',
   });
 
   it('unsupported signals fall through to the fallback locale', () => {
-    expect(resolveLocale({ explicit: 'es', env: 'fr', navigatorLanguage: 'de-DE' })).toBe(FALLBACK_LOCALE);
+    // Post 6-locale build-out the genuinely-unsupported probes carry the
+    // original intent: es/fr/de ARE supported now (pinned by the matrix in
+    // tests/unit/i18nLocales.test.ts), so zz/xx/kl prove the same walk.
+    expect(resolveLocale({ explicit: 'zz', env: 'xx_YY', navigatorLanguage: 'kl-GL' })).toBe(FALLBACK_LOCALE);
   });
 
   it('a higher-priority UNSUPPORTED signal does not veto a lower supported one', () => {
-    // 'es' parses but has no catalog yet → the walk continues to the next signal.
-    expect(resolveLocale({ explicit: 'es-ES', env: null, navigatorLanguage: 'en_US' })).toBe('en');
+    // 'zz' parses but has no catalog → the walk continues to the next signal.
+    expect(resolveLocale({ explicit: 'zz-ZZ', env: null, navigatorLanguage: 'en_US' })).toBe('en');
+  });
+
+  it('a higher-priority SUPPORTED regional signal wins outright', () => {
+    // Mirror pin of the law above, post build-out: 'es-ES' parses AND has a
+    // catalog, so it resolves to 'es' without consulting lower signals.
+    expect(resolveLocale({ explicit: 'es-ES', env: 'ja', navigatorLanguage: 'de' })).toBe('es');
   });
 
   it('reads VITE_PHLIX_LOCALE from the environment when no explicit slot is passed', () => {

@@ -33,32 +33,67 @@
  *    none and exists in every TV webview Chromium shell.
  * 4. `FALLBACK_LOCALE` ('en').
  *
- * Every candidate is PARSED (Law 2): normalized to a primary BCP-47 subtag and
- * tested against the registry, so only a `SupportedLocale` ever leaves
+ * Every candidate is PARSED (Law 2): normalized against the registry (primary
+ * BCP-47 subtag, with `pt` region-aware — see `normalizeLocaleTag`) and tested
+ * against the catalog table, so only a `SupportedLocale` ever leaves
  * `resolveLocale` — downstream code never re-validates.
  *
- * ## Adding a locale (e.g. Spanish) — exactly three edits
+ * ## Shipped locales (estate decision, 2026-09)
  *
- * 1. New file `src/i18n/locales/es.ts` exporting `ES_MESSAGES: PhlixMessagesConfig`
- *    with only the `group.key` strings you translate (partial groups OK).
- * 2. Add `'es'` to the `SupportedLocale` union + `SUPPORTED_LOCALES` below.
- * 3. Add one registry line: `es: () => ES_MESSAGES`.
+ * en + the six estate locales es / fr / de / it / pt_BR / ja. The ui-catalog
+ * translations are NOT authored here: `@phlix/ui` is the SSOT and its locale
+ * bundles arrive as SHA-PINNED vendored copies in `src/i18n/ui-locale-bundles/`
+ * (refresh via `scripts/sync-ui-locale-bundles.mjs`; drift-guarded by
+ * `tests/unit/i18nLocales.test.ts`).
+ *
+ * ## Adding a 7th locale — the ui-seam half is three edits
+ *
+ * 1. Author it in phlix-ui (`src/i18n/locales/xx.ts` + its registry) and
+ *    re-vendor: `node scripts/sync-ui-locale-bundles.mjs` after re-pinning the
+ *    branch/sha in that script.
+ * 2. `'xx'` enters `SupportedLocale` automatically — the union is
+ *    `'en' | PhlixLocaleCode` and the code union comes from the vendored barrel.
+ * 3. One registry line: `xx: () => configOf(LOCALE_MESSAGES.xx)`.
+ *    (The tizen-own half lives in `src/i18n/tizen/index.ts` — see docs/i18n.md.)
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
 import type { PhlixMessagesConfig } from '@phlix/ui';
 import { EN_MESSAGES } from './locales/en';
+import { LOCALE_MESSAGES, type PhlixLocaleCode } from './ui-locale-bundles';
 
-/** Locales this client ships catalogs for. Union = the registry's key set. */
-export type SupportedLocale = 'en';
+/** Locales this client ships catalogs for. Union = the registry's key set;
+ *  the six vendored tags come from the ui barrel, so the SSOT is one import. */
+export type SupportedLocale = 'en' | PhlixLocaleCode;
 
 /** Last-resort locale when no signal parses to a supported one. */
 export const FALLBACK_LOCALE: SupportedLocale = 'en';
 
 /** Every locale `resolveLocale` can select (mirrors the union; kept as data so
  *  tests and future Settings rows can enumerate it without type tricks). */
-export const SUPPORTED_LOCALES: readonly SupportedLocale[] = ['en'];
+export const SUPPORTED_LOCALES: readonly SupportedLocale[] = [
+  'en',
+  'es',
+  'fr',
+  'de',
+  'it',
+  'pt_BR',
+  'ja',
+];
+
+/**
+ * The vendored bundles are COMPLETE `group.key` string tables
+ * (`Record<string, Record<string, string>>` — see the transform notes in
+ * `scripts/sync-ui-locale-bundles.mjs`); the seam consumes any such table as a
+ * `PhlixMessagesConfig` override, which accepts every full bundle by shape.
+ * This is the ONE boundary cast (Law 2): the runtime suite re-proves key
+ * identity + placeholder parity on every test run, so nothing past this line
+ * re-validates.
+ */
+function configOf(bundle: Record<string, Record<string, string>>): PhlixMessagesConfig {
+  return bundle as unknown as PhlixMessagesConfig;
+}
 
 /**
  * Locale → catalog factory. Factories (not constants) keep module-load lazy and
@@ -68,6 +103,12 @@ export const SUPPORTED_LOCALES: readonly SupportedLocale[] = ['en'];
  */
 const MESSAGE_CATALOGS: Record<SupportedLocale, () => PhlixMessagesConfig> = {
   en: () => EN_MESSAGES,
+  es: () => configOf(LOCALE_MESSAGES.es),
+  fr: () => configOf(LOCALE_MESSAGES.fr),
+  de: () => configOf(LOCALE_MESSAGES.de),
+  it: () => configOf(LOCALE_MESSAGES.it),
+  pt_BR: () => configOf(LOCALE_MESSAGES.pt_BR),
+  ja: () => configOf(LOCALE_MESSAGES.ja),
 };
 
 /** Inputs `resolveLocale` considers, highest priority first. */
@@ -81,15 +122,25 @@ export interface LocaleSignals {
 }
 
 /**
- * Parse a BCP-47-ish tag ('en-US', 'ES_es', ' es-419 ') down to its lowercased
- * primary subtag ('en', 'es'). Splitting on both hyphen and underscore keeps
- * legacy `en_US`-style tags parseable. Empty/whitespace input yields `null` so
- * the caller's early-exit chain treats it as "no signal", never as locale ''.
+ * Parse a BCP-47-ish tag ('en-US', 'ES_es', ' es-419 ', 'pt_BR') into its
+ * registry key. Splitting on both hyphen and underscore keeps legacy
+ * `en_US`-style tags parseable. Empty/whitespace input yields `null` so the
+ * caller's early-exit chain treats it as "no signal", never as locale ''.
+ *
+ * Region rule: the primary subtag wins for every locale EXCEPT Portuguese.
+ * The estate ships one pt catalog — `pt_BR`, Brazilian, per the 2026-09
+ * decision — and collapsing `pt-*` to bare `pt` would drop the only key the
+ * registry has. So any `pt` signal (bare `pt`, `pt_BR`, or a foreign region
+ * like `pt-PT`) resolves to `pt_BR`: presenting European-Portuguese viewers
+ * their own-language Brazilian variant beats silently degrading them to
+ * English, and a future second pt bundle is a registry addition, not a
+ * resolver rewrite.
  */
 export function normalizeLocaleTag(tag: string | null | undefined): string | null {
   if (!tag) return null;
   const primary = tag.trim().toLowerCase().split(/[-_]/)[0];
-  return primary === '' ? null : primary;
+  if (primary === '') return null;
+  return primary === 'pt' ? 'pt_BR' : primary;
 }
 
 /** Whether a normalized primary subtag has a catalog in this client. */

@@ -1,0 +1,41 @@
+{
+  "source": "phlix-ui",
+  "branch": "feat/i18n-locale-bundles",
+  "ref": "2f2df8a24152d6a542f441dd0c2029aa730c5f9a",
+  "directory": "src/i18n/locales",
+  "transforms": [
+    "drop `import type { PhlixMessages } from '../messages';`",
+    "bundles: `satisfies PhlixMessages` -> `satisfies Record<string, Record<string, string>>`",
+    "index: `Record<PhlixLocaleCode, PhlixMessages>` -> `Record<PhlixLocaleCode, Record<string, Record<string, string>>>`"
+  ],
+  "files": {
+    "es.ts": {
+      "source_sha256": "4732be57244b9be922974651c3de3758502853adc9f6f5217ca0a41bf3c22131",
+      "vendored_sha256": "00717df81e41fe411b2098105d2a7dfa680af8c86bd9d41f9ad224b18884d8bd"
+    },
+    "fr.ts": {
+      "source_sha256": "8a6c21b956cd0ad71e71baf77dec848f0f0e9a573d3441217b26356be4ea2f00",
+      "vendored_sha256": "3ac1c618ee3b50102b563f5b6e10473438f87418534aaaeccb194d9044210bdb"
+    },
+    "de.ts": {
+      "source_sha256": "114cef5e2c0f91dbffb461bb8cf91b2f1393e8b322dd8003350bcbfbbe6a1549",
+      "vendored_sha256": "b919d1ef30f51be85832db836f904ef4219ef33cb4f7237f6ad71dc0898b638a"
+    },
+    "it.ts": {
+      "source_sha256": "4781b298de038614b6e45fb31433a19790288d01b342d408429e8f552eecfa4a",
+      "vendored_sha256": "60d03eab3f9b7d14a30ca03568d101e567b2fa7f317a7210db389107b561b7c4"
+    },
+    "pt_BR.ts": {
+      "source_sha256": "a964087c367e9d43ef9a7059a107546047c6c049d2f7cf2c32cd5c6784c9c1e0",
+      "vendored_sha256": "f308a8d6f4a0d4cabfec231eea6eb59a73a7dc72007d279fb7a1402cbf504978"
+    },
+    "ja.ts": {
+      "source_sha256": "dd15fa46f3ff06f5e3ac24c0674b70c7c6d0768c62d7f31b72cde6b927683b4b",
+      "vendored_sha256": "422f67c528a3556726b3aa3fd6639fb1c31bdc442c13cd808f620cb410f7ab61"
+    },
+    "index.ts": {
+      "source_sha256": "f5c2011a7cdef8f7ffeb467e46f6f957613b4ecc40c8e54039584de7ad15c3d2",
+      "vendored_sha256": "37c3f7603329a55aeaa3761bcb8af39624af8a956a422cff47f83ca81ee62065"
+    }
+  }
+}

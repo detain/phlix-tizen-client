@@ -5,6 +5,42 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — six-locale build-out: vendored ui bundles + tizen-own translations (es, fr, de, it, pt_BR, ja)
+
+- **The estate's six locales now ship.** Per the 2026-09 estate decision the
+  client speaks es / fr / de / it / pt_BR / ja. The ui-catalog translations
+  are NOT forked here: `phlix-ui` is the SSOT and its locale bundles (authored
+  at `feat/i18n-locale-bundles@2f2df8a2`) arrive as SHA-PINNED vendored copies
+  under `src/i18n/ui-locale-bundles/` + a `PIN` hash manifest, refreshed by
+  `scripts/sync-ui-locale-bundles.mjs` (three documented transforms; the
+  `satisfies` relaxation exists because the bundles run 7 keys ahead of the
+  installed v0.99.4 pin — the extras are pinned in tests until the next
+  dependency bump). `MESSAGE_CATALOGS` serves them through the existing
+  config-time seam with one documented boundary cast.
+- **Tizen-own catalog translated ×6.** `src/i18n/tizen/locales/{es,fr,de,it,pt_BR,ja}.ts`
+  each carry the complete 197-key set typed `satisfies TizenCatalog` (compile
+  key-set law). Doctrine: every `{placeholder}` verbatim; latin locales add
+  CLDR two-segment pipes on exactly the 12 keys where English hardcoded a
+  plural while passing `count`; **ja carries zero pipes** (single CLDR
+  category) with native counters 人/枚/曲/件/章/本 and One/Other pairs holding
+  identical values; per-locale English-leak allow-lists (brand/unit/format
+  tokens) are pinned BOTH directions; pt_BR is Brazilian, and every `pt-*`
+  device signal resolves to it (`normalizeLocaleTag` is region-aware for pt —
+  the alternative silently degrades all Portuguese devices to English).
+- **Resolution matrix + real-bundle E2E.** New `tests/unit/i18nLocales.test.ts`
+  (45 tests): tag→bundle for BOTH registries (incl. `es-ES`→es wins outright,
+  `zz`/`xx_YY`/`kl-GL` fall through, `pt-PT`→`pt_BR`), Spanish actually
+  rendering through `mergeMessages()`/`tTizen()`, the en path byte-identical
+  (all 197 own-catalog pins re-walked), PIN↔disk hashes (runs in CI) and
+  PIN↔pristine-source transform parity (hard-fails locally, SKIPS in CI —
+  tizen CI clones only `phlix-contracts`; drift rides the local gate +
+  re-pin cascade). Three existing expectations that assumed es/fr were
+  UNSUPPORTED were revised to genuinely-unsupported probes (`zz`-class) —
+  intent preserved, inverted truth documented inline.
+- **Docs.** `docs/i18n.md` gains the locale matrix, the vendoring/refresh
+  procedure incl. CI drift-policy, and the rewritten add-a-locale#7 recipe
+  covering both catalogs.
+
 ### Added — tizen-own string catalog: every client-rendered literal moves behind `tTizen()`
 
 - **The client's own strings are now cataloged.** The ui seam above reaches

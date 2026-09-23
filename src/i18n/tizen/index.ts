@@ -32,12 +32,14 @@
  * seam and the own-strings catalog can never disagree. Until boot sets it (and
  * in pure tests), the accessor lazily resolves from the same signals.
  *
- * ## Adding a locale (e.g. Spanish) — exactly one edit here
+ * ## Adding a locale — exactly two edits (the estate six shipped 2026-09)
  *
- * 1. New file `src/i18n/tizen/locales/es.ts` exporting
- *    `ES_TIZEN_MESSAGES satisfies TizenMessagesConfig` (partial groups OK).
- * 2. One registry line: `es: () => ES_TIZEN_MESSAGES`.
- *    (`src/i18n/index.ts` still needs its own ui-seam line — see its docblock.)
+ * 1. New file `src/i18n/tizen/locales/xx.ts` exporting
+ *    `XX_TIZEN_MESSAGES satisfies TizenCatalog` (full translation — the
+ *    compiler forces key-set parity with English; a deliberate partial may
+ *    instead declare `satisfies TizenMessagesConfig`).
+ * 2. One registry line: `xx: () => XX_TIZEN_MESSAGES`.
+ *    (`src/i18n/index.ts` covers the ui-seam half via the vendored bundles.)
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
@@ -57,6 +59,12 @@ import {
   type TizenMessageKey,
   type TizenMessagesConfig,
 } from './locales/en';
+import { ES_TIZEN_MESSAGES } from './locales/es';
+import { FR_TIZEN_MESSAGES } from './locales/fr';
+import { DE_TIZEN_MESSAGES } from './locales/de';
+import { IT_TIZEN_MESSAGES } from './locales/it';
+import { PT_BR_TIZEN_MESSAGES } from './locales/pt_BR';
+import { JA_TIZEN_MESSAGES } from './locales/ja';
 
 export type {
   TizenCatalog,
@@ -154,10 +162,19 @@ export function createTizenTranslator(overrides?: TizenMessagesConfig): TizenTra
 /**
  * Locale → own-catalog override factory. `en` is the BASE table itself, so its
  * override is empty by contract (mirrors the ui-seam `locales/en.ts` decision).
+ * The six estate locales ship FULL tables (`satisfies TizenCatalog`-checked —
+ * see `tests/unit/i18nLocales.test.ts`), still merged per group so any future
+ * key added to English falls back cleanly until translated.
  * Factories keep module-load lazy and hand each merge a fresh object.
  */
 const TIZEN_CATALOG_OVERRIDES: Record<SupportedLocale, () => TizenMessagesConfig> = {
   en: () => ({}),
+  es: () => ES_TIZEN_MESSAGES,
+  fr: () => FR_TIZEN_MESSAGES,
+  de: () => DE_TIZEN_MESSAGES,
+  it: () => IT_TIZEN_MESSAGES,
+  pt_BR: () => PT_BR_TIZEN_MESSAGES,
+  ja: () => JA_TIZEN_MESSAGES,
 };
 
 /** Boot-pinned locale; `null` until `setTizenLocale` runs (tests, pre-boot). */
