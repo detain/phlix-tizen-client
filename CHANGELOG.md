@@ -5,6 +5,36 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — tizen-own string catalog: every client-rendered literal moves behind `tTizen()`
+
+- **The client's own strings are now cataloged.** The ui seam above reaches
+  only strings `@phlix/ui` renders; everything this client renders from its
+  nine root-mounted apps and pages (menu labels, boot-failure chrome, the hub
+  paused notice, overlay/list/page/panel text) sat as inline literals. New
+  `src/i18n/tizen/locales/en.ts` (`TIZEN_EN`, 197 keys / 18 groups) holds each
+  EXACT original string (interpolated ones become `{param}` templates), and
+  `src/i18n/tizen/index.ts` exposes `tTizen(key, params?)` with ui-parity
+  semantics: `{name}` interpolation (unmatched tokens ride through), pipe-form
+  plurals selected by `params.count` through ui's own exported
+  `selectPluralTemplate`, raw-key fallback with a loud `import.meta.env.DEV`
+  warning on unknown keys.
+- **One locale truth, zero forks.** The accessor REUSES `resolveLocale()` /
+  `SupportedLocale` from `src/i18n/index.ts`; `boot()` resolves the locale
+  ONCE and threads it into BOTH catalogs (`setTizenLocale(locale)` +
+  `messagesForLocale(locale)`), so they can never disagree. Adding a locale is
+  now two files + two registry lines, documented in `docs/i18n.md`.
+- **Behavior byte-identical, contract pinned.** No string was translated; `'en'`
+  remains the only locale. `tests/unit/tizenI18n.test.ts` pins every catalog
+  value verbatim against the pre-refactor literals, scans that every key has a
+  live quoted call site (and every call-site key is defined), pins
+  `tTizen('audioTracks.applyRefusal')` against the intentionally-literal English
+  ANCHOR export the boundary tests import, and pins `boot.splashHint` against
+  the zero-JS `index.html` splash. `src/tizenBridge.ts` carries no user-facing
+  literals (verified). Wire identity (`deviceName`), the dual-use
+  `KeyMapping.DISPLAY_NAMES` voice phrases, and non-rendered sync-play strings
+  are deliberately excluded — rationale in `docs/i18n.md`. Zero new request
+  sites; manifest scan stays 27, `app/config.xml` untouched.
+
 ### Added — i18n messages seam wiring: client locale → `@phlix/ui` catalog overrides
 
 - **The seam is now reachable from the client.** `@phlix/ui`'s config-time
