@@ -5,6 +5,31 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — contracts re-pin v0.4.7 → v0.5.0 (cs#48) — 2026-09-23
+
+- **cs#48 pin advance (lane `chore/contracts-repin-v0.5.0`).** `@phlix/contracts`
+  bumped `#v0.4.7` → `#v0.5.0` (tag peels to contracts master `8ef65d30`). Purely
+  ADDITIVE upstream — the new `src/errors.ts` wire-code registry +
+  `dist/error-codes.json` land with zero changes to existing exports — so the
+  client adapts nothing by design (a bump-induced break would have stopped the
+  lane). SKEW (estate-wide, documented): the v0.5.0 tag tree's `package.json`
+  `version` FIELD still reads `0.4.7`; the lock's `version` therefore holds
+  `0.4.7` and only `resolved` advances — version-field readers need the
+  documented override (cf. the windows lockwalk `manifestVersion` precedent).
+  Surgical lock diff: root echo + the `node_modules/@phlix/contracts` entry's
+  resolved sha; the `@phlix/ui` manifest edge (`#v0.4.7`, ui's own declaration)
+  stays as written and npm hoists the single v0.5.0 tree — `npm ci
+  --allow-git=all` accepts it byte-for-byte. The v0.5.0 tag now embeds the
+  canonical server-route-manifest (server `730e55b7`/md5 `06ce7ec9` —
+  byte-identical to the vendored fixture), so `routeManifest.gate` advances its
+  pin cite + records the re-measurement, comment-only, 0 behavior; re-adoption
+  of the contracts export stays the coordinated W19 phlix-ui #349 call. The ui
+  pin and `src/i18n/ui-locale-bundles/PIN` are untouched — the contracts bump
+  does not disturb the ui-locale lineage. Gates held: typecheck, lint, build,
+  46 files / 726 tests (coverage floor), double-`npm run package` byte-stable;
+  committed `package/` regenerated in its own commit (contracts rides the
+  widget chunks; CI T-02 freshness).
+
 ### Added — six-locale build-out: vendored ui bundles + tizen-own translations (es, fr, de, it, pt_BR, ja)
 
 - **The estate's six locales now ship.** Per the 2026-09 estate decision the
