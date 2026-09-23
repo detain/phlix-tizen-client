@@ -26,6 +26,7 @@
  * @license MIT
  */
 
+import type { PhlixMessages } from '@phlix/ui';
 
 export const JA_MESSAGES = {
   common: {
@@ -477,4 +478,4 @@ export const JA_MESSAGES = {
     'transcoding.hdrOutput': 'HDR出力',
     'transcoding.toneMapMode': 'トーンマップモード',
   },
-} satisfies Record<string, Record<string, string>>;
+} satisfies PhlixMessages;

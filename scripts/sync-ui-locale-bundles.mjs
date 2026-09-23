@@ -15,21 +15,17 @@
  *
  * TRANSFORMS — the complete list; any other diff is drift:
  *  1. `../messages` has no client-side counterpart: the line
- *     `import type { PhlixMessages } from '../messages';` is DROPPED in every
- *     file (the symbol is unused after transforms 2 and 3).
- *  2. Locale bundles (6 files): `} satisfies PhlixMessages;` becomes
- *     `} satisfies Record<string, Record<string, string>>;`. The bundles
- *     carry 7 keys AHEAD of the installed v0.99.4 catalog (connect.scan,
- *     connect.scanning, connect.scanFailed, connect.scanEmpty,
- *     connect.scanListLabel, player.seekBackward, player.seekForward);
- *     `PhlixMessages = typeof DEFAULT_MESSAGES` of the INSTALLED package is
- *     literal-keyed, so satisfies-ing against it would fail on exactly those
- *     ahead-of-pin keys. Value-shape stays compile-checked; the key-set law
- *     moves to the runtime suite (6-way identity + installed coverage +
- *     pinned ahead-of-pin set).
- *  3. index.ts registry: `Record<PhlixLocaleCode, PhlixMessages>` becomes
- *     `Record<PhlixLocaleCode, Record<string, Record<string, string>>>` for
- *     the same reason (its values are the relaxed bundles).
+ *     `import type { PhlixMessages } from '../messages';` is rewritten to
+ *     `import type { PhlixMessages } from '@phlix/ui';` (the type is a
+ *     declared export of the package barrel since v0.99.5). EVERYTHING ELSE
+ *     IS VERBATIM: the strict `satisfies PhlixMessages` (bundles) and
+ *     `Record<PhlixLocaleCode, PhlixMessages>` (index) annotations survive,
+ *     so the client build compile-checks key sets against the INSTALLED
+ *     catalog. The earlier relaxation transforms (2: satisfies →
+ *     `Record<string, Record<string, string>>`; 3: registry value → the same)
+ *     existed ONLY because the dc1df7d5 bundles ran 7 keys ahead of the
+ *     v0.99.4 install; the v0.99.5 re-pin closed that skew (exact key-set
+ *     equality both directions), so the relaxation was deleted with it.
  *
  * Usage: node scripts/sync-ui-locale-bundles.mjs [--repo ../phlix-ui] [--ref <sha>] [--branch <name>]
  * Requires the sibling checkout to contain the pinned ref (git cat-file -e).
@@ -55,14 +51,16 @@ import { join } from 'node:path';
  * the on-disk PIN, so a re-pin via `--ref` must update them too (drift fails
  * `tests/unit/i18nLocales.test.ts`).
  */
-const SOURCE_BRANCH = 'feat/i18n-locale-bundles';
-const SOURCE_REF = 'dc1df7d553ef1501df294b797334cb400ae8a8d1';
+const SOURCE_BRANCH = 'master';
+const SOURCE_REF = '3017f443f33a4368cb7b94c67f47814fe0db0bff';
 const SOURCE_DIR = 'src/i18n/locales';
 const TARGET_DIR = 'src/i18n/ui-locale-bundles';
 const FILES = ['es.ts', 'fr.ts', 'de.ts', 'it.ts', 'pt_BR.ts', 'ja.ts', 'index.ts'];
 
-/** The exact import path this vendor replaces in the source (transform 1). */
+/** The exact import line this vendor rewrites (transform 1). */
 const SOURCE_IMPORT_LINE = "import type { PhlixMessages } from '../messages';\n";
+/** Its client-side replacement: the same type, exported by the installed package. */
+const VENDORED_IMPORT_LINE = "import type { PhlixMessages } from '@phlix/ui';\n";
 
 function sha256(text) {
   return createHash('sha256').update(text, 'utf8').digest('hex');
@@ -73,23 +71,21 @@ function arg(flag, fallback) {
   return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
-/** Deterministic source→vendored rewrite (transforms 1–3, docblock has the why). */
+/** Deterministic source→vendored rewrite (the single transform; docblock has the why). */
 function vendored(file, source) {
-  let out = source.split(SOURCE_IMPORT_LINE).join('');
-  if (out.includes(SOURCE_IMPORT_LINE.trim())) {
-    throw new Error(`${file}: unexpected variant of the '../messages' import — update the script`);
+  if (!source.includes(SOURCE_IMPORT_LINE.trim())) {
+    throw new Error(`${file}: the pinned '../messages' PhlixMessages import is gone upstream — update the script`);
   }
-  if (file === 'index.ts') {
-    out = out
-      .split('Record<PhlixLocaleCode, PhlixMessages>')
-      .join('Record<PhlixLocaleCode, Record<string, Record<string, string>>>');
-  } else {
-    out = out
-      .split('satisfies PhlixMessages;')
-      .join('satisfies Record<string, Record<string, string>>;');
+  const out = source.split(SOURCE_IMPORT_LINE).join(VENDORED_IMPORT_LINE);
+  if (out.includes("'../messages'")) {
+    throw new Error(`${file}: an unexpected variant of the '../messages' import survived the rewrite — update the script`);
   }
-  if (out.includes('PhlixMessages;') || out.includes('PhlixMessages\n')) {
-    throw new Error(`${file}: a PhlixMessages reference survived the transforms — update the script`);
+  // Fail loud if upstream ever drops the strict typing this vendor preserves:
+  // the compile-check against the installed catalog is the whole point.
+  const strictAnnotation =
+    file === 'index.ts' ? 'Record<PhlixLocaleCode, PhlixMessages>' : 'satisfies PhlixMessages;';
+  if (!out.includes(strictAnnotation)) {
+    throw new Error(`${file}: upstream dropped \`${strictAnnotation}\` — the vendor must keep strict typing against the installed catalog`);
   }
   return out;
 }
@@ -159,9 +155,7 @@ const pin = {
   ref,
   directory: SOURCE_DIR,
   transforms: [
-    "drop `import type { PhlixMessages } from '../messages';`",
-    "bundles: `satisfies PhlixMessages` -> `satisfies Record<string, Record<string, string>>`",
-    "index: `Record<PhlixLocaleCode, PhlixMessages>` -> `Record<PhlixLocaleCode, Record<string, Record<string, string>>>`",
+    "rewrite `import type { PhlixMessages } from '../messages';` -> `import type { PhlixMessages } from '@phlix/ui';` (strict typing — `satisfies`/`Record<...>` annotations — is preserved verbatim)",
   ],
   files: Object.fromEntries(
     FILES.map((file) => {
