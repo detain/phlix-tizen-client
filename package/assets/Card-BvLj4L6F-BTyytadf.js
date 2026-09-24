@@ -1,0 +1,1 @@
+import{e as o,d,h as p,p as r,L as n,y as s}from"./index-CmU6KsYl.js";var i=o(d({__name:"Card",props:{padding:{type:Boolean,default:!0}},setup(e){return(a,t)=>(p(),r("div",{class:s(["phlix-card",{"phlix-card--no-padding":!e.padding}])},[n(a.$slots,"default",{},void 0)],2))}}),[["__scopeId","data-v-0e99c3b2"]]);export{i as o};

@@ -5,6 +5,34 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — ui re-pin v0.99.5 → v0.99.6 — 2026-09-24
+
+- **Pin advance (lane `chore/ui-repin-v0.99.6`).** `@phlix/ui` bumped
+  `#v0.99.5` → `#v0.99.6` (annotated tag `7d0b71d1`, peels to ui merge-commit
+  `98a5bf38` — signup error-catalog rendering, ui PRs #421–#425). Strict-equality
+  pin law holds: the lock's `resolved` is exactly the tag peel. SKEW persists
+  (estate-wide, documented): the v0.99.6 tag tree's `package.json` `version`
+  FIELD still reads `0.99.4`; the lock's `version` therefore holds `0.99.4` and
+  only `resolved` advances. ADDITIVE upstream, verified at the source:
+  `git diff 3017f443..98a5bf38 -- src/i18n/` touches ONLY the new
+  `errors.ts`/`errors.test.ts` module (ui's error-code catalog — a separate
+  module this client does not consume); `src/i18n/messages.ts`, `locales/` and
+  `plural.ts` are byte-unchanged. Installed-tree verification: `DEFAULT_MESSAGES`
+  still flattens to 412 keys / 16 groups (read from the resolved v0.99.6 bundle),
+  exactly equal to every vendored bundle key set both directions — the strict
+  `satisfies PhlixMessages` typing still compile-checks clean (`typecheck`), so
+  the key-set equality law never trips. `scripts/sync-ui-locale-bundles.mjs`
+  re-vendored at `--ref 98a5bf38` produced a ZERO content diff — only `PIN.ref`
+  and the bootstrap `SOURCE_REF` constant move (`PIN.branch`/`SOURCE_BRANCH`
+  stay `master`), contradicting nothing and confirming ui's additive claim.
+  Side-benefit: ui's own contracts manifest edge now declares `#v0.5.1`,
+  matching this client's top-level contracts pin — the lock hoists a single
+  v0.5.1 tree (3-line lock diff total). The route-manifest fixture is untouched
+  (no request-site changes; `routeManifest.gate` green). Gates held: typecheck,
+  lint, build, 46 files / 726 tests exact; committed `package/` regenerated in
+  its own commit (ui rides the widget chunks; CI T-02 freshness), double-`npm
+  run package` byte-stable.
+
 ### Changed — contracts re-pin v0.5.0 → v0.5.1 — 2026-09-23
 
 - **Pin advance (lane `chore/contracts-repin-v0.5.1`).** `@phlix/contracts`

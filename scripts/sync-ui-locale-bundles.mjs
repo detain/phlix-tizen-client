@@ -52,7 +52,7 @@ import { join } from 'node:path';
  * `tests/unit/i18nLocales.test.ts`).
  */
 const SOURCE_BRANCH = 'master';
-const SOURCE_REF = '3017f443f33a4368cb7b94c67f47814fe0db0bff';
+const SOURCE_REF = '98a5bf389ad29701a4991986dea4cb264fb1f3ee';
 const SOURCE_DIR = 'src/i18n/locales';
 const TARGET_DIR = 'src/i18n/ui-locale-bundles';
 const FILES = ['es.ts', 'fr.ts', 'de.ts', 'it.ts', 'pt_BR.ts', 'ja.ts', 'index.ts'];

@@ -2,7 +2,7 @@
  * Client-local i18n entry point — resolves the boot locale and hands the
  * `@phlix/ui` app factory its message-catalog overrides.
  *
- * ## The seam this wires (verified against the resolved v0.99.5 copy)
+ * ## The seam this wires (verified against the resolved v0.99.6 copy)
  *
  * `@phlix/ui` exposes a CONFIG-TIME i18n seam: `PhlixAppConfig.messages`
  * (a `PhlixMessagesConfig` = deep-partial `group.key` override map,
