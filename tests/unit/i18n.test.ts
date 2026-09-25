@@ -3,7 +3,7 @@
  * actually reaches the rendered strings of `@phlix/ui`.
  *
  * Three layers, deepest first in importance:
- *  1. END-TO-END against the REAL v0.99.6 `@phlix/ui` bundle (no mocks): a fake
+ *  1. END-TO-END against the REAL v0.99.7 `@phlix/ui` bundle (no mocks): a fake
  *     override `{ common: { retry: 'ZZZ-TEST' } }` passed to the real
  *     `createPhlixApp()` must surface as 'ZZZ-TEST' through the real
  *     `useMessages().t` inside a mounted component, while untouched keys keep
@@ -120,7 +120,7 @@ describe('end-to-end: client messages override reaches ui-rendered strings (real
     const wrapper = mount(probeComponent(['common.retry', 'common.close', 'player.play', 'shell.browse']), {
       global: { provide: realProvides(enApp) },
     });
-    // ui defaults at resolved v0.99.6 — any drift here is a ui-side change, not
+    // ui defaults at resolved v0.99.7 — any drift here is a ui-side change, not
     // this wiring.
     expect(wrapper.find('[data-key="common.retry"]').text()).toBe('Retry');
     expect(wrapper.find('[data-key="common.close"]').text()).toBe('Close');
