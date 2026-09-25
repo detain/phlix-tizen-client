@@ -5,6 +5,46 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — ui re-pin v0.99.6 → v0.99.7 — 2026-09-25
+
+- **Pin advance (lane `chore/ui-repin-v0.99.7`).** `@phlix/ui` bumped
+  `#v0.99.6` → `#v0.99.7` (annotated tag `da9f1625`, peels to ui merge-commit
+  `bc1d29bf` — ui-side hygiene: `.gitattributes` LF shield, contracts-pin test
+  synced to `#v0.5.2`, route-gate test harness + errors/LoginForm test
+  refreshes; no shipped-behavior change). Strict-equality pin law holds: the
+  lock's `resolved` is exactly the tag peel.
+  **VERSION-FIELD SKEW ENDED (ui side).** The v0.99.6 tag tree's
+  `package.json` `version` FIELD still read `0.99.4` (the v0.99.6 entry below
+  notes the lag — historical record kept), so only `resolved` advanced and this
+  lock's `version` carried the lag. The v0.99.7 release commit bumps the
+  manifest honestly to `0.99.7`, so this lane moves the lock's ui `version`
+  `0.99.4` → `0.99.7` alongside `resolved` — lock and tag now agree in every
+  field.
+- **ui's contracts edge moves `#v0.5.1` → `#v0.5.2`.** The lock's
+  `node_modules/@phlix/ui` dependency edge previously carried the stale
+  `#v0.5.1` text as published in ui `98a5bf38` (that entry explicitly left it
+  "exactly as written"); ui `bc1d29bf` re-declares it at `#v0.5.2`, matching
+  the single hoisted `node_modules/@phlix/contracts` copy this repo already
+  resolves — both old and new edge text were/are served by that one v0.5.2
+  checkout (no nested copy ever existed), so the resolved contract bytes never
+  moved. Recorded honestly: this is edge-text alignment, not a dependency
+  behavior change.
+- **Zero-content pin, proven at the tags.** `git diff 98a5bf38..bc1d29bf --
+  src/i18n/locales/` is EMPTY — the release lane proved dist zero-delta across
+  `98a5bf38` → `bc1d29bf`. Empirical proof in-lane: `node
+  scripts/sync-ui-locale-bundles.mjs --ref bc1d29bf --branch master`
+  re-vendored with a ZERO content diff — only `PIN.ref` moved; all 14 hashes
+  (7 files × `source_sha256` + `vendored_sha256`) byte-identical before and
+  after. The six-locale bundles and installed `DEFAULT_MESSAGES` still flatten
+  to 412 keys / 16 groups.
+- **`package/` needs NO regeneration.** Unlike #115 (whose regen existed
+  because bundled CONTENT moved), nothing changed in the bundle: `npm run
+  package` executed twice; `git status --porcelain -- package/` stayed empty,
+  so no `package/` commit rides this PR. The CI widget-build freshness job
+  remains the authority.
+- **Syncplay untouched.** `@phlix/syncplay` stays `#v0.1.5`
+  (`b82d4f36…`).
+
 ### Changed — contracts re-pin v0.5.1 → v0.5.2 — 2026-09-25
 
 - **Pin advance (lane `chore/contracts-repin-v0.5.2`).** `@phlix/contracts`

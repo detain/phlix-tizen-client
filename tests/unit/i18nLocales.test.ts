@@ -340,7 +340,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ 98a5bf38 == @phlix/ui v0.99.6 (catalog identical to v0.99.5,
+    // Vendored @ bc1d29bf == @phlix/ui v0.99.7 (catalog identical to v0.99.6,
     // which shipped the 7 keys the dc1df7d5 bundles used to run ahead with).
     // With the installed ⊆ bundle law
     // above, this pins EXACT key-set equality in both directions — and the
