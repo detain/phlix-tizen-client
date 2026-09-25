@@ -11,7 +11,7 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.5.1. Every tag this cite historically named
+ * `@phlix/contracts` at #v0.5.2. Every tag this cite historically named
  * shipped a STALE embed for this gate's purpose — #v0.4.7 embedded server
  * `2f1d2ee6…` (md5 4f03cb2e…) — while the estate-wide canonical copy was the
  * untagged master regen at server `730e55b7` (md5 pinned below, contracts
@@ -42,7 +42,14 @@
  * e3c14f07) touches ONLY the errors registry + its dist (147→202 additive
  * codes); the embed stands at server `730e55b7…`/md5 `06ce7ec9…` — verified
  * byte-identical to the vendored fixture at this
- * leg; comment-only, 0 behavior.)
+ * leg; comment-only, 0 behavior. contracts v0.5.1→v0.5.2 re-pin: advanced the
+ * pin cite to the #v0.5.2 tag it now names and re-measured its embed — the
+ * v0.5.2 diff (peels to contracts 7afb6a91) touches only errors-registry
+ * docblocks/types, source maps, and repo plumbing; `dist/phlix-contracts.js`,
+ * `dist/error-codes.json` and `dist/server-route-manifest.json` are
+ * byte-identical to v0.5.1, so the embed stands at server
+ * `730e55b7…`/md5 `06ce7ec9…` — verified byte-identical to the vendored
+ * fixture at this leg; comment-only, 0 behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to

@@ -5,6 +5,43 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — contracts re-pin v0.5.1 → v0.5.2 — 2026-09-25
+
+- **Pin advance (lane `chore/contracts-repin-v0.5.2`).** `@phlix/contracts`
+  bumped `#v0.5.1` → `#v0.5.2` (annotated tag `9676874e`, peels to contracts
+  merge-commit `7afb6a91` — errors-registry coordinate re-sweep, CI freshness
+  gates, repo LF shield, contracts PRs #79–#83). Strict-equality pin law
+  holds: the lock's `resolved` is exactly the tag peel.
+  **VERSION-FIELD SKEW ENDED.** In the two prior legs the tag trees'
+  `package.json` `version` FIELD still read `0.4.7` (see the v0.5.0/v0.5.1
+  entries below — kept as historical record, not rewritten), so only
+  `resolved` advanced and the lock's `version` carried the lag. The v0.5.2
+  release commit (`ac669ca`) bumps the manifest honestly to `0.5.2`, so this
+  lane moves the lock's `version` `0.4.7` → `0.5.2` alongside `resolved` —
+  lock and tag now agree in every field.
+- **Zero-content pin, proven at the tags.** The `v0.5.1..v0.5.2` diff touches
+  errors docblocks/types (`src/errors.ts`, `dist/errors.d.ts`), source maps,
+  and repo plumbing only; measured byte-identical across both tags:
+  `dist/phlix-contracts.js` (md5 `6cd0a00e…`), `dist/error-codes.json`
+  (md5 `b919685d…`, 202 codes), `dist/server-route-manifest.json`
+  (md5 `06ce7ec9…`). The version-field bump is manifest metadata, never
+  bundled. Consequence: the committed `package/` needs NO regeneration this
+  time — unlike #113/#114, whose regen existed because bundled CONTENT moved.
+  Empirical proof in-lane: `npm run package` executed twice;
+  `git status --porcelain -- package/` stayed empty, so no `package/` commit
+  rides this PR.
+- **Fixture + i18n untouched.** Route-manifest fixture unmodified — the gate
+  comment cites `#v0.5.2` and re-measures its embed (stands server
+  `730e55b7…`/md5 `06ce7ec9…`, byte-identical to the vendored copy);
+  comment-only, 0 behavior. `src/i18n/` is DO-NOT-TOUCH on this lane: `PIN` +
+  every vendored bundle byte-identical before/after, with the #116
+  `.gitattributes` LF shield verified active (`git ls-files --eol`: `i/lf
+  w/lf` across the tree). The `@phlix/ui` manifest's own contracts edge
+  (`#v0.5.1`, as published in ui `98a5bf38`) stays exactly as written —
+  that line is ui's declaration, not this client's pin; npm hoists the single
+  top-level contracts tree and `npm ci --allow-git=all` accepts. Gates held:
+  typecheck, lint, build, 46 files / 726 tests exact.
+
 ### Changed — ui re-pin v0.99.5 → v0.99.6 — 2026-09-24
 
 - **Pin advance (lane `chore/ui-repin-v0.99.6`).** `@phlix/ui` bumped
