@@ -468,9 +468,26 @@ class SyncPlayApiClient {
  * Build the SyncPlay WebSocket URL for a group.
  *
  * The server listens for SyncPlay on port 8097 of the API host (spec §3;
- * `WebSocketServer.php`). The host is derived from `apiBase` — the TV points at
- * a remote server, so `window.location` is not a valid source. The JWT token
+ * `WebSocketServer.php`). The host and the ws/wss scheme are derived from
+ * `apiBase` — the TV points at a remote server (and a `.wgt` runs from
+ * `file://`), so `window.location` is never a valid source. The JWT token
  * and the room id travel as query params.
+ *
+ * TODO(security, estate policy WEBSOCKET_URL_QUERY_REFUSED): carrying the bearer
+ * JWT in the query string deviates from the contracts policy — the hub relay
+ * (:8804, `src/api/hubRelay.ts`) correctly sends the token via the
+ * `Sec-WebSocket-Protocol` header using the TWO-ENTRY form
+ * `new WebSocket(url, ['bearer', token])` (`src/api/hubRelay.ts:453`) — a scheme
+ * entry plus a separate token entry, which the browser serializes as
+ * `Sec-WebSocket-Protocol: bearer, <jwt>`. It is NOT the single dotted
+ * `['bearer.<jwt>']` shape. This client cannot switch yet because the SERVER is
+ * the blocker: phlix-server `src/Server/WebSocket/WebSocketServer.php`
+ * `onWebSocketConnect()` authenticates ONLY `$request->get('token')` (query) and
+ * `SyncPlayAuthMiddleware` never reads `Sec-WebSocket-Protocol`. Switching the
+ * carrier before the :8097 endpoint adopts the bearer subprotocol would break
+ * the wire. Server-side dependency: mirror the relay's two-entry subprotocol
+ * acceptance on :8097, then flip this to
+ * `new WebSocket(url, ['bearer', token])` (strip the token from the URL).
  */
 function buildWsUrl(apiBase: string, roomId: string, token: string): string {
   let hostname = '';
