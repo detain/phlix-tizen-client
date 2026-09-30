@@ -24,6 +24,14 @@ class MockWebSocket {
     /** Carrier-flip pin: the Sec-WebSocket-Protocol offer as constructed (['bearer', <jwt>]). */
     readonly protocols?: string | string[],
   ) {
+    // WHATWG-faithful (HTML spec §3.1 step 9, measured Chrome 153 SyntaxError):
+    // an EMPTY protocol entry throws. This mutation-pins the connectWs bail —
+    // without `token ? ['bearer', token] : undefined`, dialing with '' throws
+    // right here exactly like the real Chromium webview.
+    const entries = typeof protocols === 'string' ? [protocols] : protocols ?? [];
+    if (entries.some((p) => p === '')) {
+      throw new SyntaxError("Failed to construct 'WebSocket': The protocol's value cannot be an empty string");
+    }
     MockWebSocket.instances.push(this);
   }
   static CONNECTING = 0;
@@ -542,13 +550,34 @@ describe('useSyncPlayStore', () => {
       expect(url).not.toContain(jwt);
     });
 
+    // WHATWG constructor law (HTML spec §3.1 step 9; measured Chrome 153
+    // SyntaxError — the Tizen webview is Chromium): an EMPTY protocol entry
+    // THROWS. connectWs bails with `token ? ['bearer', token] : undefined` so
+    // '' can never reach the ctor — a token-less caller dials anonymously
+    // (no subprotocol offer) instead of dying swallowed in the dial try/catch.
+    it('empty token offers NO subprotocol — protocols undefined, ctor cannot throw', () => {
+      const store = useSyncPlayStore();
+      // Mutation pin: MockWebSocket throws on empty entries exactly like
+      // Chromium, so reverting to the unguarded ['bearer', token] form makes
+      // this red — the ctor throw would surface as wsError, not a clean dial.
+      expect(() => store.connectWs('https://api.example.com', 'room-123', '')).not.toThrow();
+      const sock = lastSocket();
+      expect(sock.protocols).toBeUndefined();
+      expect(sock.url).toBe('wss://api.example.com:8097?room=room-123'); // still credential-free
+      expect(store.wsError).toBeNull(); // happy anonymous dial, not the error path
+    });
+
     it('reconnect lane re-enters connectWs with the token — the ladder never rebuilds the URL itself', async () => {
       // scheduleReconnect closes over (apiBase, roomId, token) and calls
       // connectWs again, so the bearer carrier rides every rung by construction.
-      // This is also the regression pin for the onclose identity guard: Pinia's
-      // reactive state proxies the stored socket, so the guard must compare
-      // through `toRaw` — before that fix every close early-returned and the
-      // ladder never armed (measured: wsReconnecting stayed false).
+      // This is also the regression pin for the onclose identity guard: the
+      // harness's plain-class MockWebSocket IS proxied by vue's reactive()
+      // (toStringTag '[object Object]'), so without the `toRaw` unwrap the
+      // guard early-returns here and the ladder never arms (measured:
+      // wsReconnecting stayed false). Real platform-tagged WebSockets are
+      // stored raw (vue 3.5.39 doesn't proxy '[object WebSocket]') — prod
+      // identity always worked; the unwrap is defense-in-depth, see the
+      // honest docblock at the toRaw site in useSyncPlayStore.ts.
       const store = useSyncPlayStore();
       store.connectWs('https://api.example.com', 'room-1', 'token-abc');
       // @ts-expect-error - setting directly for test

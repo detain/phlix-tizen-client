@@ -5,6 +5,29 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — SyncPlay :8097 empty-token subprotocol bail — 2026-09-30
+
+- **`connectWs` no longer lets an empty token reach the `WebSocket`
+  constructor.** The `:8097` dial's second argument becomes
+  `token ? ['bearer', token] : undefined` — with a missing token the socket
+  opens with NO subprotocol offer (anonymous handshake) instead of constructing
+  `['bearer', '']`. Rationale (measured fact from the @phlix/ui rework lane):
+  the WHATWG constructor THROWS on empty protocol entries (HTML spec §3.1
+  step 9; Chrome 153 `SyntaxError`), and the Tizen webview is Chromium — the
+  throw would be swallowed by the dial's try/catch as a generic
+  `wsError`, misreporting "no token" as "connect failed". Estate-shape parity
+  with `../phlix-ui/src/api/syncplay.ts`.
+- **Prose correction.** The 2026-09-29 entry's "latent PROD reconnect bug"
+  claim was overstated — see its corrected bullet below (harness-only proxying;
+  `toRaw` is defense-in-depth). The commit-message narrative of `9a5b24b`
+  carried the same overstatement; this entry is the amend-in-new-commit
+  (the pushed commit is never rewritten).
+- **Tests.** `MockWebSocket` now mirrors the spec and throws on empty protocol
+  entries (mutation-pinning the bail); new pins: an empty token constructs with
+  `protocols === undefined` and `connectWs` does not throw / sets no `wsError`;
+  the bearer path is unchanged (`['bearer', <jwt>]`). Suite 729 → 730, all
+  green; typecheck / lint / build green.
+
 ### Changed — SyncPlay :8097 bearer-subprotocol carrier flip — 2026-09-29
 
 - **`src/stores/useSyncPlayStore.ts` moves the handshake JWT from the `?token=`
@@ -23,12 +46,17 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   while old client builds age out — this client has moved. Platform proof the
   constructor form works in this webview: `src/api/hubRelay.ts:453` has always
   opened the `:8804` relay socket with exactly `['bearer', token]`.
-- **Latent reconnect bug fixed en route (surfaced by the flip's test).** The
-  `ws.onclose` stale-socket guard compared `wsConnection.value !== ws`, but
-  Pinia's reactive state proxies the stored socket, so the identity never
-  matched and EVERY close early-returned — auto-reconnect was dead (measured:
-  `wsReconnecting` stayed false on a raw 1006). The guard now unwraps through
-  vue `toRaw` before the identity compare.
+- **`toRaw` hardening of the `ws.onclose` identity guard (surfaced by the
+  flip's test; original entry OVERSTATED — corrected 2026-09-30).** The guard
+  compares `toRaw(wsConnection.value) !== ws`. Reviewer-measured on vue 3.5.39:
+  `reactive()` proxies only `toStringTag:'Object'` values, and a REAL browser
+  WebSocket is platform-tagged (`'[object WebSocket]'`) — it is stored RAW, so
+  production identity matching always worked and auto-reconnect was never dead
+  in prod. The proxy-induced mismatch existed ONLY in the harness, where the
+  plain-class `MockWebSocket` (tag `'[object Object]'`) IS proxied and every
+  mocked close early-returned. The `toRaw` unwrap stays as defense-in-depth
+  (it pins the identity compare against any future proxy-shaped stored handle
+  and keeps the harness lane honest); it is not a production bugfix.
 - **Tests.** `MockWebSocket` records the constructor `(url, protocols)` args
   (mirroring `hubRelay.test.ts`'s `FakeWebSocket`); three new pins: protocols
   are exactly `['bearer', <jwt>]` for a dotted JWT-shaped token (refutes the

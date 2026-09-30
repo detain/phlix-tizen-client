@@ -482,7 +482,9 @@ class SyncPlayApiClient {
  * presented via the `Sec-WebSocket-Protocol` header using the TWO-ENTRY form
  * `new WebSocket(url, ['bearer', token])` — a scheme entry plus a separate
  * token entry, serialized as `Sec-WebSocket-Protocol: bearer, <jwt>`. It is
- * NOT the single dotted `['bearer.<jwt>']` shape. Same webview, same law:
+ * NOT the single dotted `['bearer.<jwt>']` shape. With NO token the dial
+ * offers nothing at all (second arg `undefined` — the ctor throws on empty
+ * protocol entries, HTML spec §3.1 step 9). Same webview, same law:
  * the hub relay (`src/api/hubRelay.ts:453`, `:8804`) has always used it — the
  * in-repo proof the constructor form works on the Tizen platform. Server-side
  * acceptance on `:8097` shipped in phlix-server 424c14d0
@@ -634,8 +636,12 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
 
       // Bearer subprotocol carrier — estate two-entry law (see buildWsUrl
       // docblock; server phlix-server 424c14d0, docs/dev/WEBSOCKET_AUTH_CARRIERS.md).
-      // The token never enters the URL.
-      const ws = new WebSocket(url, ['bearer', token]);
+      // The token never enters the URL. Empty-token bail: the WHATWG constructor
+      // throws on an empty protocol entry (HTML spec §3.1 step 9; measured
+      // SyntaxError in Chrome 153), so '' must never reach `protocols` — a
+      // missing token dials anonymously (no offer header) instead of dying
+      // inside the try/catch below. Mirrors the @phlix/ui syncplay.ts shape.
+      const ws = new WebSocket(url, token ? ['bearer', token] : undefined);
 
       ws.onopen = () => {
         wsConnected.value = true;
@@ -664,13 +670,16 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
       };
 
       ws.onclose = (event) => {
-        // Identity compare against the RAW handle: Pinia's reactive state wraps
-        // the stored object in a reactive proxy (ref inside a setup store is
-        // reachable through `reactive()`), so `wsConnection.value !== ws` alone
-        // could never match — measured: every real close early-returned there,
-        // silently killing both stale-close filtering AND the auto-reconnect
-        // ladder. `toRaw` unwraps the proxy; a plain (never-wrapped) handle is
-        // its own `toRaw`, so non-Pinia consumers compare identically.
+        // Identity compare against the RAW handle. Honest scope (reviewer-
+        // measured on vue 3.5.39): `reactive()` only proxies objects whose
+        // toStringTag is 'Object' — a REAL browser WebSocket is platform-tagged
+        // ('[object WebSocket]') and is stored raw, so production identity never
+        // mismatched; the proxy-induced dead-reconnect path this guard fixes was
+        // observable only in the harness, where the plain-class MockWebSocket
+        // (toStringTag '[object Object]') IS proxied. `toRaw` stays as defense-
+        // in-depth: it unwraps any future proxy-shaped substitute while a plain
+        // (never-wrapped) handle is its own `toRaw`, so real sockets compare
+        // identically either way.
         if (toRaw(wsConnection.value) !== ws) return;
         wsConnection.value = null;
         wsConnected.value = false;
