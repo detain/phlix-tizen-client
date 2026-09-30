@@ -5,6 +5,23 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — `/app/library/scan` route is admin-gated (`meta.requiresAdmin`) — 2026-09-30
+
+- **Security (estate L-4 follow-up, mirrors server web-ui `114c9aaf`).** The
+  library-scan route was registered unguarded, so a logged-in NON-admin could
+  mount the operator page whose rows assume the `paths` key that server
+  `b3aece4e` redacts for non-admins. The route now carries
+  `meta: { requiresAdmin: true }` — the exact key the vendored @phlix/ui
+  authGuard checks (`to.meta?.requiresAdmin === true`): non-admins bounce to
+  browse pre-render, anonymous visitors to login. No @phlix/ui bump needed —
+  the guard honors the key in the pinned v0.99.7.
+- **Tests.** New `tests/unit/library-scan-route.test.ts` pins the meta in the
+  `src/main.ts` route block, cross-checks the shape against the LIVE
+  `buildAdminRoutes()` section meta from the vendored tarball, and probes the
+  vendored guard's `requiresAdmin` reads — a future ui key-rename flips these
+  red instead of silently un-gating. The existing `buildExtraRoutes` wiring
+  test now asserts the meta on the runtime route object. Suite 730 → 733.
+
 ### Changed — SyncPlay :8097 empty-token subprotocol bail — 2026-09-30
 
 - **`connectWs` no longer lets an empty token reach the `WebSocket`

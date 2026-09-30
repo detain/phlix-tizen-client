@@ -97,7 +97,19 @@ export function buildMenu(): MenuItem[] {
 export function buildExtraRoutes(): RouteRecordRaw[] {
   return [
     ...(tvAdminEnabled() ? buildAdminRoutes() : []),
-    { path: '/app/library/scan', name: 'library-scan', component: LibraryScanPage },
+    {
+      // ADMIN-ONLY (estate L-4 follow-up, mirrors server web-ui 114c9aaf).
+      // /api/v1/libraries strips absolute-fs `paths` for non-admins, and the
+      // scan surface is operator-facing — the vendored @phlix/ui authGuard
+      // (wa() in createPhlixApp.ts) checks `to.meta?.requiresAdmin === true`:
+      // a logged-in non-admin bounces to browse pre-render, an anonymous
+      // visitor gets login. The marker must equal the admin section routes'
+      // own meta — pinned in tests/unit/library-scan-route.test.ts.
+      path: '/app/library/scan',
+      name: 'library-scan',
+      meta: { requiresAdmin: true },
+      component: LibraryScanPage
+    },
     { path: '/app/chapters/:id', name: 'chapters', component: ChaptersPage },
     { path: '/app/audio-tracks/:id', name: 'audio-tracks', component: AudioTracksPage },
     // S407: the subtitle picker's consumer page (mirror of audio-tracks).
