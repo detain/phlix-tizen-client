@@ -18,7 +18,12 @@ class MockWebSocket {
   send = vi.fn();
   /** S418: every socket built so far in the current test — the seam that lets a test FIRE `onmessage`. */
   static instances: MockWebSocket[] = [];
-  constructor() {
+  constructor(
+    /** Carrier-flip pin: the socket URL as constructed (must never carry a token). */
+    readonly url: string = '',
+    /** Carrier-flip pin: the Sec-WebSocket-Protocol offer as constructed (['bearer', <jwt>]). */
+    readonly protocols?: string | string[],
+  ) {
     MockWebSocket.instances.push(this);
   }
   static CONNECTING = 0;
@@ -511,6 +516,56 @@ describe('useSyncPlayStore', () => {
 
       // This should return early without error
       expect(() => store.connectWs('https://api.example.com', 'room-123', 'token-abc')).not.toThrow();
+    });
+
+    // Carrier flip (estate policy WEBSOCKET_URL_QUERY_REFUSED): the bearer JWT
+    // travels ONLY in the two-entry Sec-WebSocket-Protocol offer; the URL carries
+    // no credential. Server law: phlix-server 424c14d0,
+    // docs/dev/WEBSOCKET_AUTH_CARRIERS.md. Platform proof: src/api/hubRelay.ts:453
+    // has always opened the :8804 relay socket with ['bearer', token] in this webview.
+    it('offers the bearer JWT via the two-entry subprotocol form, not a dotted entry', () => {
+      const store = useSyncPlayStore();
+      // JWT-shaped token (dotted) — a `bearer.<jwt>` single-entry mistake or any
+      // URL echo would leak/maim this exact value.
+      const jwt = 'eyJhbGci.eyJzdWIi.signature';
+      store.connectWs('https://api.example.com', 'room-123', jwt);
+      expect(lastSocket().protocols).toEqual(['bearer', jwt]);
+    });
+
+    it('builds a credential-free URL — no token= param, no token echo, room kept', () => {
+      const store = useSyncPlayStore();
+      const jwt = 'eyJhbGci.eyJzdWIi.signature';
+      store.connectWs('https://api.example.com', 'room-123', jwt);
+      const { url } = lastSocket();
+      expect(url).toBe('wss://api.example.com:8097?room=room-123');
+      expect(url).not.toContain('token=');
+      expect(url).not.toContain(jwt);
+    });
+
+    it('reconnect lane re-enters connectWs with the token — the ladder never rebuilds the URL itself', async () => {
+      // scheduleReconnect closes over (apiBase, roomId, token) and calls
+      // connectWs again, so the bearer carrier rides every rung by construction.
+      // This is also the regression pin for the onclose identity guard: Pinia's
+      // reactive state proxies the stored socket, so the guard must compare
+      // through `toRaw` — before that fix every close early-returned and the
+      // ladder never armed (measured: wsReconnecting stayed false).
+      const store = useSyncPlayStore();
+      store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+      // @ts-expect-error - setting directly for test
+      store.currentRoom = { group_id: 'room-1' };
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing' };
+      const pending = globalThis.setTimeout;
+      try {
+        lastSocket().onclose?.({ code: 1006 }); // unexpected close → ladder arms
+        expect(store.wsReconnecting).toBe(true);
+        await new Promise<void>((resolve) => pending(resolve, 1100)); // real 1 s first rung
+        const reconnectSocket = MockWebSocket.instances.at(-1)!;
+        expect(reconnectSocket.url).toBe('wss://api.example.com:8097?room=room-1');
+        expect(reconnectSocket.protocols).toEqual(['bearer', 'token-abc']);
+      } finally {
+        store.disconnectWs(); // clear any armed reconnect timer
+      }
     });
   });
 

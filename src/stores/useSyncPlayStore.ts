@@ -19,6 +19,10 @@
  *     `/sessions/{id}/command` and no `/members` route (S276) — the group IS
  *     the session, and members ride inside the group state.
  *   - Playback transport is the WebSocket on `:8097` (`syncplay_*` frames).
+ *     The handshake JWT rides the bearer subprotocol carrier
+ *     (`new WebSocket(url, ['bearer', token])`), never a URL query param
+ *     (estate policy WEBSOCKET_URL_QUERY_REFUSED; server phlix-server
+ *     424c14d0 — see `buildWsUrl` for the full law).
  *   - All field names are snake_case; positions/durations are MILLISECONDS
  *     (SPEC.md:91). The store applies wire positions verbatim on receive and
  *     on state adoption (S293: receive side untouched); only the `sendCommand`
@@ -29,7 +33,7 @@
  */
 
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, toRaw } from 'vue';
 import type {
   SyncPlayGroup,
   SyncPlayGroupListItem,
@@ -470,26 +474,28 @@ class SyncPlayApiClient {
  * The server listens for SyncPlay on port 8097 of the API host (spec §3;
  * `WebSocketServer.php`). The host and the ws/wss scheme are derived from
  * `apiBase` — the TV points at a remote server (and a `.wgt` runs from
- * `file://`), so `window.location` is never a valid source. The JWT token
- * and the room id travel as query params.
+ * `file://`), so `window.location` is never a valid source. Only the non-
+ * credential room id travels as a query param; the JWT NEVER enters the URL
+ * (estate policy WEBSOCKET_URL_QUERY_REFUSED).
  *
- * TODO(security, estate policy WEBSOCKET_URL_QUERY_REFUSED): carrying the bearer
- * JWT in the query string deviates from the contracts policy — the hub relay
- * (:8804, `src/api/hubRelay.ts`) correctly sends the token via the
- * `Sec-WebSocket-Protocol` header using the TWO-ENTRY form
- * `new WebSocket(url, ['bearer', token])` (`src/api/hubRelay.ts:453`) — a scheme
- * entry plus a separate token entry, which the browser serializes as
- * `Sec-WebSocket-Protocol: bearer, <jwt>`. It is NOT the single dotted
- * `['bearer.<jwt>']` shape. This client cannot switch yet because the SERVER is
- * the blocker: phlix-server `src/Server/WebSocket/WebSocketServer.php`
- * `onWebSocketConnect()` authenticates ONLY `$request->get('token')` (query) and
- * `SyncPlayAuthMiddleware` never reads `Sec-WebSocket-Protocol`. Switching the
- * carrier before the :8097 endpoint adopts the bearer subprotocol would break
- * the wire. Server-side dependency: mirror the relay's two-entry subprotocol
- * acceptance on :8097, then flip this to
- * `new WebSocket(url, ['bearer', token])` (strip the token from the URL).
+ * Carrier law (estate policy WEBSOCKET_URL_QUERY_REFUSED): the bearer JWT is
+ * presented via the `Sec-WebSocket-Protocol` header using the TWO-ENTRY form
+ * `new WebSocket(url, ['bearer', token])` — a scheme entry plus a separate
+ * token entry, serialized as `Sec-WebSocket-Protocol: bearer, <jwt>`. It is
+ * NOT the single dotted `['bearer.<jwt>']` shape. Same webview, same law:
+ * the hub relay (`src/api/hubRelay.ts:453`, `:8804`) has always used it — the
+ * in-repo proof the constructor form works on the Tizen platform. Server-side
+ * acceptance on `:8097` shipped in phlix-server 424c14d0
+ * (`SyncPlayAuthMiddleware::offersBearerSubprotocol()` /
+ * `bearerSubprotocolToken()` / `resolveHandshakeToken()`; law doc
+ * `docs/dev/WEBSOCKET_AUTH_CARRIERS.md`): the bearer carrier is priority 1
+ * (TARGET), the server echoes `Sec-WebSocket-Protocol: bearer` gated on the
+ * offer. Transitional note: the legacy `?token=` query carrier is still
+ * ACCEPTED server-side (priority 2, RETIRING) while old client builds age
+ * out — this client has moved and emits no query token; the token-less
+ * `buildWsUrl` signature below makes re-introducing one a type error.
  */
-function buildWsUrl(apiBase: string, roomId: string, token: string): string {
+function buildWsUrl(apiBase: string, roomId: string): string {
   let hostname = '';
   let protocol = 'ws:';
   try {
@@ -500,7 +506,7 @@ function buildWsUrl(apiBase: string, roomId: string, token: string): string {
     // Fail fast: an unparsable apiBase cannot produce a socket URL.
     return '';
   }
-  return `${protocol}//${hostname}:8097?token=${encodeURIComponent(token)}&room=${encodeURIComponent(roomId)}`;
+  return `${protocol}//${hostname}:8097?room=${encodeURIComponent(roomId)}`;
 }
 
 // ---- Store Definition -----------------------------------------------------
@@ -580,7 +586,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
       disconnectWs();
     }
 
-    const url = buildWsUrl(apiBase, roomId, token);
+    const url = buildWsUrl(apiBase, roomId);
     if (!url) {
       wsError.value = 'Invalid server URL — cannot open SyncPlay WebSocket';
       return;
@@ -626,7 +632,10 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
       });
       syncPlayClient = client;
 
-      const ws = new WebSocket(url);
+      // Bearer subprotocol carrier — estate two-entry law (see buildWsUrl
+      // docblock; server phlix-server 424c14d0, docs/dev/WEBSOCKET_AUTH_CARRIERS.md).
+      // The token never enters the URL.
+      const ws = new WebSocket(url, ['bearer', token]);
 
       ws.onopen = () => {
         wsConnected.value = true;
@@ -655,7 +664,14 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
       };
 
       ws.onclose = (event) => {
-        if (wsConnection.value !== ws) return;
+        // Identity compare against the RAW handle: Pinia's reactive state wraps
+        // the stored object in a reactive proxy (ref inside a setup store is
+        // reachable through `reactive()`), so `wsConnection.value !== ws` alone
+        // could never match — measured: every real close early-returned there,
+        // silently killing both stale-close filtering AND the auto-reconnect
+        // ladder. `toRaw` unwraps the proxy; a plain (never-wrapped) handle is
+        // its own `toRaw`, so non-Pinia consumers compare identically.
+        if (toRaw(wsConnection.value) !== ws) return;
         wsConnection.value = null;
         wsConnected.value = false;
         client.onDisconnect();

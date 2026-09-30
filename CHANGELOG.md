@@ -5,6 +5,39 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — SyncPlay :8097 bearer-subprotocol carrier flip — 2026-09-29
+
+- **`src/stores/useSyncPlayStore.ts` moves the handshake JWT from the `?token=`
+  query param to the two-entry bearer subprotocol carrier** —
+  `new WebSocket(url, ['bearer', token])` at the `connectWs` construction site,
+  and `buildWsUrl` loses its `token` parameter entirely (the URL is now
+  `wss://<host>:8097?room=<id>`; the room param is non-credential and stays).
+  The signature change makes re-introducing a query token a type error.
+  Retires the `0b63874` TODO block — the blocker it named lifted in
+  phlix-server `424c14d0`, which ships the transitional dual-carrier law on
+  `:8097` (`SyncPlayAuthMiddleware::offersBearerSubprotocol()` /
+  `bearerSubprotocolToken()` / `resolveHandshakeToken()`, doc
+  `phlix-server docs/dev/WEBSOCKET_AUTH_CARRIERS.md`): bearer is priority 1
+  (TARGET) with the offer-gated `Sec-WebSocket-Protocol: bearer` echo; the
+  legacy query carrier remains ACCEPTED server-side (priority 2, RETIRING)
+  while old client builds age out — this client has moved. Platform proof the
+  constructor form works in this webview: `src/api/hubRelay.ts:453` has always
+  opened the `:8804` relay socket with exactly `['bearer', token]`.
+- **Latent reconnect bug fixed en route (surfaced by the flip's test).** The
+  `ws.onclose` stale-socket guard compared `wsConnection.value !== ws`, but
+  Pinia's reactive state proxies the stored socket, so the identity never
+  matched and EVERY close early-returned — auto-reconnect was dead (measured:
+  `wsReconnecting` stayed false on a raw 1006). The guard now unwraps through
+  vue `toRaw` before the identity compare.
+- **Tests.** `MockWebSocket` records the constructor `(url, protocols)` args
+  (mirroring `hubRelay.test.ts`'s `FakeWebSocket`); three new pins: protocols
+  are exactly `['bearer', <jwt>]` for a dotted JWT-shaped token (refutes the
+  dotted-single-entry shape), the URL is byte-pinned
+  `wss://api.example.com:8097?room=room-123` with no `token=` and no token
+  echo, and the reconnect lane re-enters `connectWs` through the real 1 s rung
+  with the same bearer carrier (doubles as the `toRaw` regression pin).
+  Suite 726 → 729, all green; typecheck / lint / build green.
+
 ### Changed — ui re-pin v0.99.6 → v0.99.7 — 2026-09-25
 
 - **Pin advance (lane `chore/ui-repin-v0.99.7`).** `@phlix/ui` bumped
