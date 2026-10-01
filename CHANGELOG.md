@@ -52,7 +52,10 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   keeps them; the new index chunk embeds `leaf_hub_id_already_bound` +
   `syncplay.queue_limit_exceeded` (1× each; the 412-route table itself did
   NOT tree-in). Determinism proved: two consecutive `npm run package` runs
-  → identical aggregate md5 `3ebe6b6b…` (was `f3635488…`). Shipped-shape
+  → identical aggregate md5 `3ebe6b6b…` (was `fc70830b…` under the standing
+  formula per the b56eabd correction — the companion commit's message cited
+  `f3635488…`, the known phantom; that pushed message stands as history,
+  corrected forward-only here). Shipped-shape
   guards re-checked on the new bundle: `["bearer"` subprotocol present,
   zero `[?&]token=` in any js/html.
 - **Gates:** typecheck 0, lint 0, vitest 47 files / **733 tests exact**
