@@ -11,7 +11,7 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.5.2. Every tag this cite historically named
+ * `@phlix/contracts` at #v0.5.3. Every tag this cite historically named
  * shipped a STALE embed for this gate's purpose — #v0.4.7 embedded server
  * `2f1d2ee6…` (md5 4f03cb2e…) — while the estate-wide canonical copy was the
  * untagged master regen at server `730e55b7` (md5 pinned below, contracts
@@ -49,7 +49,20 @@
  * `dist/error-codes.json` and `dist/server-route-manifest.json` are
  * byte-identical to v0.5.1, so the embed stands at server
  * `730e55b7…`/md5 `06ce7ec9…` — verified byte-identical to the vendored
- * fixture at this leg; comment-only, 0 behavior.)
+ * fixture at this leg; comment-only, 0 behavior. contracts v0.5.2→v0.5.3
+ * re-pin (2026-10-01): TRUE content re-vendor — the #v0.5.3 tag (peels to
+ * contracts 430981e) ships `dist/server-route-manifest.json` @ server
+ * `758f9149…`/md5 `91579683…`, 412 tuples (+`GET|POST /api/v1/books/{id}/progress`
+ * vs the 410-tuple cs#47 canonical, ZERO removals), re-vendored byte-for-byte —
+ * cmp-proven identical to the tag payload and to mobile's v0.5.3 leg. The
+ * tag-embed now EQUALS the estate canonical; re-adoption of the contracts
+ * export stays unblocked and still out of a dependency re-pin's scope (W19
+ * phlix-ui #349 lane's call) — this gate keeps reading the vendored fixture.
+ * Provenance/total/length/md5/unique pins rotated to the new bytes; the
+ * S279-class dead-rail tripwires and the WS/relay OUT-of-manifest pins
+ * re-verified against them (zero removals ⇒ the dead rails stay unserved).
+ * Per-file scan coverage UNCHANGED: the two new routes are not called from
+ * this tree.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
@@ -398,22 +411,23 @@ export const S535_DIGIT_BUFFER_TOKEN = 'S535DIGITBUFX9P1';
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
-    expect(manifest.provenance.serverSha).toBe('730e55b7d3ad44a155f6b46374a9f6c463792840');
-    expect(manifest.provenance.total).toBe(410);
-    expect(manifest.routes).toHaveLength(410);
+    expect(manifest.provenance.serverSha).toBe('758f91496c068551b310f1078093335f79c20e04');
+    expect(manifest.provenance.total).toBe(412);
+    expect(manifest.routes).toHaveLength(412);
     expect(manifest.provenance.generator).toBe('scripts/generate-server-route-manifest.mjs');
   });
 
   it('is byte-identical to the sibling contracts artifact it vendors', () => {
-    // md5 of `@phlix/contracts` `dist/server-route-manifest.json` at this wave's
-    // merged master provenance regen (untagged, s280rest doctrine).
-    // Mobile and roku vendored the SAME bytes — one source across the estate;
-    // any drift here means this copy was edited (the artifact says "do not").
+    // md5 of `@phlix/contracts` `dist/server-route-manifest.json` AT the #v0.5.3
+    // tag (peels to contracts 430981e) — re-vendored byte-for-byte from the tag
+    // at this pin bump (2026-10-01); mobile re-vendored the SAME bytes (cmp
+    // proven at this leg) — one source across the estate; any drift here means
+    // this copy was edited (the artifact says "do not").
     const raw = readFileSync(MANIFEST_PATH);
     const md5 = createHash('md5').update(raw).digest('hex');
-    expect(md5).toBe('06ce7ec95bc064cc0f13b94389af9a82');
+    expect(md5).toBe('915796837d38a77733c169996d97640c');
     const unique = new Set(manifest.routes.map(([m, r]) => `${m} ${r}`));
-    expect(unique.size).toBe(410);
+    expect(unique.size).toBe(412);
   });
 });
 
@@ -436,7 +450,7 @@ describe(`${GATE_ID} — every URL tizen issues is tuple-exact served`, () => {
     console.log(
       `[${GATE_ID}] tizen: ${sites.length} request sites / ${uniqueTuples.size} distinct ` +
         `[method, pathTemplate] tuples across ${perFile.size} modules — all tuple-exact against ` +
-        `the vendored 410-route manifest @ ${manifest.provenance.serverSha}`,
+        `the vendored 412-route manifest @ ${manifest.provenance.serverSha}`,
     );
     for (const [file, count] of [...perFile.entries()].sort()) {
       console.log(`  ${file}: ${count}`);

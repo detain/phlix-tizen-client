@@ -5,6 +5,60 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — contracts re-pin v0.5.2 → v0.5.3 — 2026-10-01
+
+- **Pin advance (lane `chore/contracts-repin-v0.5.3`).** `@phlix/contracts`
+  bumped `#v0.5.2` → `#v0.5.3` (annotated tag `eb90e6d`, peels to contracts
+  `430981e` — strict-equality pin law holds: the lock's `resolved` equals the
+  tag peel, `ls-remote`-verified this leg). The release grows the error-code
+  registry 202 → 204 (`+leaf_hub_id_already_bound`,
+  `+syncplay.queue_limit_exceeded`; `dist/error-codes.json` md5 `40c1da48…`)
+  and re-ships the server-route manifest 410 → 412 tuples (`+GET|POST
+  /api/v1/books/{id}/progress`, ZERO removals; server sha `758f9149…`).
+- **TRUE content re-vendor (S280 gate).** `tests/fixtures/server-route-manifest.json`
+  re-vendored byte-for-byte from the tag's `dist/server-route-manifest.json`
+  (md5 `91579683…`; cmp-proven identical to the tag payload and to mobile's
+  v0.5.3 leg — one source across the estate). Gate pins rotated:
+  provenance serverSha `730e55b7…`→`758f9149…`, total/length/unique
+  410→412, fixture md5 `06ce7ec9…`→`91579683…`, log wording. Negative
+  tripwires re-verified against the new bytes: S279-class dead rails
+  (`/syncplay/rooms`, `/syncplay/sessions`, `/audio-tracks`, `/playlist`)
+  stay UNSERVED, hub-minted relay-token stays absent from the server
+  manifest, WS/relay transports stay OUT of the HTTP registry, and the
+  planted-red non-vacuity control still fires. Per-file scan coverage
+  UNCHANGED (27 sites across 11 modules) — the two new routes are not
+  called from this tree.
+- **Compile-pin verdict: NO TS2741 class break.** Unlike mobile (whose
+  `syncplayErrors.ts` imports the `SyncPlayErrorCode` union directly),
+  tizen has NO exhaustive `Record` over any contracts-derived union:
+  `grep -rn "ErrorCode\|error_code" src/ tests/` yields ZERO matches;
+  every `@phlix/contracts` type import is erased at compile time. The
+  registry growth is therefore type-invisible here.
+- **Lock: surgical 3+/3−.** Exactly the root `packages[""]` edge text + the
+  hoisted `node_modules/@phlix/contracts` node (`version` `0.5.2`→`0.5.3`,
+  `resolved` → peel `430981e`). The `@phlix/ui` manifest's own contracts
+  edge (`#v0.5.2`, as published in ui `a580410f`) stays exactly as written
+  — ui's declaration, not this client's pin; npm hoists the single
+  top-level contracts tree and `npm ci --allow-git=all` accepts (v0.5.2-leg
+  precedent). Zero unrelated churn: the seven `devOptional` markers byte-
+  identical (npm 12 install verified non-destructive on this lock shape).
+- **Locale law untouched.** `src/i18n/**` (PIN manifest, six vendored
+  ui-locale bundles, SOURCE_REF `a580410f`, 441-key equality) and
+  `scripts/sync-ui-locale-bundles.mjs` are NOT in this commit — contracts
+  rides no locale surface; the re-pin must not move them and did not.
+- **`package/` refresh RIDES THE COMPANION COMMIT — bundle genuinely
+  moved.** tizen's single runtime contracts import (`buildPhlixHeaders`)
+  shares its module with the error-code registry constants, and rollup
+  keeps them; the new index chunk embeds `leaf_hub_id_already_bound` +
+  `syncplay.queue_limit_exceeded` (1× each; the 412-route table itself did
+  NOT tree-in). Determinism proved: two consecutive `npm run package` runs
+  → identical aggregate md5 `3ebe6b6b…` (was `f3635488…`). Shipped-shape
+  guards re-checked on the new bundle: `["bearer"` subprotocol present,
+  zero `[?&]token=` in any js/html.
+- **Gates:** typecheck 0, lint 0, vitest 47 files / **733 tests exact**
+  (baseline held — fixture+pin rotation changed counts 410→412 INSIDE the
+  gate but no site counts), build 0.
+
 ### Changed — ui re-pin v0.99.7 → v0.99.8 — 2026-10-01
 
 - **Pin advance (lane `chore/ui-repin-v0.99.8`, retag-cascade estate item).**
