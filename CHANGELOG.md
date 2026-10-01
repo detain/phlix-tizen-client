@@ -35,7 +35,14 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   AGENTS.md/CLAUDE.md pin lines, test headers) updated to v0.99.8.
 - **`package/` REGENERATED (companion commit).** Content moved, so the
   committed widget output refreshes. Determinism proved: `npm run package` ×2 →
-  byte-identical file sets; tree aggregate md5 `104bb4fc…` → `f3635488…`.
+  byte-identical file sets; tree aggregate md5 `104bb4fc…` → `fc70830b…`
+  (lane time cited `f3635488…` — NOT reproducible under the formula
+  `cd package && find . -type f | sort | xargs md5sum | sort -k2 | md5sum`;
+  reviewer re-ran it 2026-10-01 on the committed `ac4c7c0` tree and got
+  `fc70830bdbb372084b8c69b40fa69751`, while the same formula on the prior
+  `476c00d` tree reproduces `104bb4fc291acb76832c3d774d93190f` exactly, so
+  the formula is confirmed and only the cited new-side value was phantom —
+  corrected forward-only; the `ac4c7c0` commit message stands as history).
   Shipped-widget proofs: `["bearer"` appears in `assets/index-*.js` (×3: the
   vendored ui syncplay dial, the vendored ui hub-relay dial, and this repo's own
   `useSyncPlayStore` dial — all three now law-consistent) and in the lazy
