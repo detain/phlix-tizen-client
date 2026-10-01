@@ -38,6 +38,7 @@ export const JA_MESSAGES = {
     noMatches: '該当する項目はありません',
     searchPlaceholder: '検索…',
     selectPlaceholder: '選択…',
+    breadcrumb: 'パンくずリスト',
   },
   shell: {
     skipToContent: '本文へスキップ',
@@ -266,6 +267,30 @@ export const JA_MESSAGES = {
     transcodeBodyUntitled:
       'ただいまこのタイトルの再生を開始できません。しばらくしてからもう一度お試しください。',
     goBack: '戻る',
+    themeMute: 'テーマ曲をミュート',
+    themeUnmute: 'テーマ曲のミュートを解除',
+    themeStop: 'テーマ曲を停止',
+    skipControls: 'スキップ操作',
+  },
+  itemActions: {
+    addFavorite: 'お気に入りに追加',
+    removeFavorite: 'お気に入りから削除',
+    inFavorites: 'お気に入り済み',
+    watchlist: 'ウォッチリスト',
+    markWatched: '視聴済みにする',
+    watched: '視聴済み',
+    markWatchedAria: '視聴済みとしてマーク',
+    markUnwatchedAria: '未視聴としてマーク',
+  },
+  reader: {
+    decreaseFont: 'フォントサイズを小さくする',
+    increaseFont: 'フォントサイズを大きくする',
+    lightMode: 'ライトモード',
+    sepiaMode: 'セピアモード',
+    darkMode: 'ダークモード',
+  },
+  mcpTokens: {
+    title: 'MCPトークン',
   },
   syncplay: {
     syncPlay: 'SyncPlay',
@@ -302,6 +327,7 @@ export const JA_MESSAGES = {
     fastForward: '早送り再生',
     playAll: '全員で再生を開始',
     pauseAll: '全員を一時停止',
+    modeSelect: 'ルームを作成または参加',
   },
   music: {
     title: 'ミュージックライブラリ',
@@ -364,6 +390,9 @@ export const JA_MESSAGES = {
     artistNotFound: 'アーティストが見つかりません',
     artistsNotFound: 'アーティストが見つかりません',
     artistsDescription: 'ライブラリのすべてのアーティストを見る',
+    trackListing: 'トラックリスト',
+    searchTracksAria: 'トラックを検索',
+    musicTracksAria: '音楽のトラック',
   },
   settings: {
     theme: 'テーマ',
@@ -428,6 +457,12 @@ export const JA_MESSAGES = {
     markWatchedAria: '視聴済みとしてマーク',
     markUnwatchedAria: '未視聴としてマーク',
     noEpisodes: '再生できるエピソードはまだありません',
+    loadingAria: 'シーズンを読み込み中',
+    loadError: 'このシーズンを読み込めませんでした',
+    backToSeries: 'シリーズに戻る',
+    episodes: 'エピソード',
+    notFound: 'シーズンが見つかりません',
+    notFoundDescription: '{series}に該当するシーズンはありません。',
   },
   parental: {
     title: 'ペアレンタルコントロール',

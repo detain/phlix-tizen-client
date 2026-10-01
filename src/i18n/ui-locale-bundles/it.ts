@@ -37,6 +37,7 @@ export const IT_MESSAGES = {
     noMatches: 'Nessuna corrispondenza',
     searchPlaceholder: 'Cerca…',
     selectPlaceholder: 'Seleziona…',
+    breadcrumb: 'Percorso di navigazione',
   },
   shell: {
     skipToContent: 'Vai al contenuto',
@@ -265,6 +266,30 @@ export const IT_MESSAGES = {
     transcodeBodyUntitled:
       'Non è stato possibile avviare la riproduzione di questo titolo al momento. Riprova più tardi.',
     goBack: 'Torna indietro',
+    themeMute: 'Disattiva l’audio della sigla',
+    themeUnmute: 'Riattiva l’audio della sigla',
+    themeStop: 'Ferma la sigla',
+    skipControls: 'Controlli di salto',
+  },
+  itemActions: {
+    addFavorite: 'Aggiungi ai preferiti',
+    removeFavorite: 'Rimuovi dai preferiti',
+    inFavorites: 'Nei preferiti',
+    watchlist: 'Da vedere',
+    markWatched: 'Segna come visto',
+    watched: 'Visto',
+    markWatchedAria: 'Segna come visto',
+    markUnwatchedAria: 'Segna come non visto',
+  },
+  reader: {
+    decreaseFont: 'Riduci dimensione del testo',
+    increaseFont: 'Aumenta dimensione del testo',
+    lightMode: 'Tema chiaro',
+    sepiaMode: 'Tema seppia',
+    darkMode: 'Tema scuro',
+  },
+  mcpTokens: {
+    title: 'Token MCP',
   },
   syncplay: {
     syncPlay: 'SyncPlay',
@@ -301,6 +326,7 @@ export const IT_MESSAGES = {
     fastForward: 'Avanza velocemente',
     playAll: 'Riproduci per tutti',
     pauseAll: 'Metti in pausa per tutti',
+    modeSelect: 'Crea o unisciti a una stanza',
   },
   music: {
     title: 'Libreria musicale',
@@ -363,6 +389,9 @@ export const IT_MESSAGES = {
     artistNotFound: 'Artista non trovato',
     artistsNotFound: 'Nessun artista trovato',
     artistsDescription: 'Sfoglia tutti gli artisti della tua libreria',
+    trackListing: 'Elenco brani',
+    searchTracksAria: 'Cerca brani',
+    musicTracksAria: 'Brani musicali',
   },
   settings: {
     theme: 'Tema',
@@ -427,6 +456,12 @@ export const IT_MESSAGES = {
     markWatchedAria: 'Segna come visto',
     markUnwatchedAria: 'Segna come non visto',
     noEpisodes: 'Ancora nessun episodio da riprodurre',
+    loadingAria: 'Caricamento stagione',
+    loadError: 'Impossibile caricare questa stagione',
+    backToSeries: 'Torna alla serie',
+    episodes: 'Episodi',
+    notFound: 'Stagione non trovata',
+    notFoundDescription: '{series} non contiene questa stagione.',
   },
   parental: {
     title: 'Controllo parentale',

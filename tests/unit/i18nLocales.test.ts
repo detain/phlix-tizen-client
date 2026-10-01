@@ -340,8 +340,10 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ bc1d29bf == @phlix/ui v0.99.7 (catalog identical to v0.99.6,
-    // which shipped the 7 keys the dc1df7d5 bundles used to run ahead with).
+    // Vendored @ a580410f == @phlix/ui v0.99.8 (catalog GREW +35 lines/locale
+    // over v0.99.7 — itemActions, reader, player-theme, mcpTokens, syncplay
+    // modeSelect, music a11y — bundles and the installed copy re-synced TOGETHER
+    // in this pin, so both equality directions still hold by construction).
     // With the installed ⊆ bundle law
     // above, this pins EXACT key-set equality in both directions — and the
     // restored `satisfies`... see strict-typing greps — compile-proves it too.

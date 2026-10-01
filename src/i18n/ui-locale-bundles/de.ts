@@ -37,6 +37,7 @@ export const DE_MESSAGES = {
     noMatches: 'Keine Treffer',
     searchPlaceholder: 'Suchen…',
     selectPlaceholder: 'Auswählen…',
+    breadcrumb: 'Brotkrumenavigation',
   },
   shell: {
     skipToContent: 'Zum Inhalt springen',
@@ -265,6 +266,30 @@ export const DE_MESSAGES = {
     transcodeBodyUntitled:
       'Die Wiedergabe dieses Titels konnte gerade nicht gestartet werden. Versuche es später erneut.',
     goBack: 'Zurückgehen',
+    themeMute: 'Titelmusik stummschalten',
+    themeUnmute: 'Titelmusik aktivieren',
+    themeStop: 'Titelmusik stoppen',
+    skipControls: 'Skip-Steuerung',
+  },
+  itemActions: {
+    addFavorite: 'Zu Favoriten hinzufügen',
+    removeFavorite: 'Aus Favoriten entfernen',
+    inFavorites: 'In Favoriten',
+    watchlist: 'Merkliste',
+    markWatched: 'Als gesehen markieren',
+    watched: 'Gesehen',
+    markWatchedAria: 'Als gesehen markieren',
+    markUnwatchedAria: 'Als ungesehen markieren',
+  },
+  reader: {
+    decreaseFont: 'Schriftgröße verringern',
+    increaseFont: 'Schriftgröße erhöhen',
+    lightMode: 'Heller Modus',
+    sepiaMode: 'Sepia-Modus',
+    darkMode: 'Dunkler Modus',
+  },
+  mcpTokens: {
+    title: 'MCP-Tokens',
   },
   syncplay: {
     syncPlay: 'SyncPlay',
@@ -301,6 +326,7 @@ export const DE_MESSAGES = {
     fastForward: 'Vorspulen',
     playAll: 'Für alle abspielen',
     pauseAll: 'Für alle pausieren',
+    modeSelect: 'Raum erstellen oder beitreten',
   },
   music: {
     title: 'Musikbibliothek',
@@ -363,6 +389,9 @@ export const DE_MESSAGES = {
     artistNotFound: 'Künstler nicht gefunden',
     artistsNotFound: 'Keine Künstler gefunden',
     artistsDescription: 'Alle Künstler in deiner Mediathek durchstöbern',
+    trackListing: 'Titelliste',
+    searchTracksAria: 'Titel durchsuchen',
+    musicTracksAria: 'Musiktitel',
   },
   settings: {
     theme: 'Theme',
@@ -427,6 +456,12 @@ export const DE_MESSAGES = {
     markWatchedAria: 'Als gesehen markieren',
     markUnwatchedAria: 'Als ungesehen markieren',
     noEpisodes: 'Noch keine Folgen abspielbar',
+    loadingAria: 'Staffel wird geladen',
+    loadError: 'Diese Staffel konnte nicht geladen werden',
+    backToSeries: 'Zurück zur Serie',
+    episodes: 'Episoden',
+    notFound: 'Staffel nicht gefunden',
+    notFoundDescription: 'Eine solche Staffel gibt es in {series} nicht.',
   },
   parental: {
     title: 'Kindersicherung',

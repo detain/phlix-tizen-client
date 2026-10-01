@@ -5,6 +5,51 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — ui re-pin v0.99.7 → v0.99.8 — 2026-10-01
+
+- **Pin advance (lane `chore/ui-repin-v0.99.8`, retag-cascade estate item).**
+  `@phlix/ui` bumped `#v0.99.7` → `#v0.99.8` (annotated tag `35f727a6`, peels to
+  `a580410f` — lock `resolved` equals the tag peel; strict-equality pin law
+  holds; manifest `version` field honestly reads `0.99.8`). The release carries:
+  the syncplay **bearer-subprotocol flip** (vendored `src/api/syncplay.ts` dials
+  `:8097` with `['bearer', token]`, never `?token=`), the **invite one-time-token
+  DTO** (`/redeem` surface), the **`player.css` export rename** (`./ui.css` →
+  `./player.css`), and the **`paths?.` guard hardening (P1)** — the crash-risk
+  fix for consumers whose server redacts `paths` for non-admins.
+- **ui manifest deps→peers.** `a580410f` moved `vue`/`pinia`/`vue-router` from
+  ui's `dependencies` to `peerDependencies`; the lock's `node_modules/@phlix/ui`
+  node therefore LOSES those three edges. The hoisted root copies (this repo's
+  own declares) are untouched — no nested shadow ever existed, so resolved
+  versions never moved. Zero other lock churn: exactly the ui node + the
+  root `packages[""].dependencies` edge text.
+- **TRUE RE-VENDOR (i18n).** Unlike the zero-content v0.99.7 pin, the locale
+  tree genuinely moved: catalog **412 → 441 keys** (`+29`: itemActions, reader,
+  player-theme, mcpTokens, syncplay modeSelect, music a11y).
+  `scripts/sync-ui-locale-bundles.mjs` re-run at `SOURCE_REF=a580410f`: the six
+  bundles each gained 35 lines, `PIN` re-derived (14 hashes at the new blobs),
+  bare-run re-vendor proved **idempotent** (byte-identical second pass), and the
+  installed `DEFAULT_MESSAGES` flattens to the same **441** keys — the exact
+  both-direction equality law in `tests/unit/i18nLocales.test.ts` is
+  compile-proven by the surviving `satisfies PhlixMessages` annotations and
+  green in the suite. Era prose (docs/i18n.md, src/i18n/index.ts,
+  AGENTS.md/CLAUDE.md pin lines, test headers) updated to v0.99.8.
+- **`package/` REGENERATED (companion commit).** Content moved, so the
+  committed widget output refreshes. Determinism proved: `npm run package` ×2 →
+  byte-identical file sets; tree aggregate md5 `104bb4fc…` → `f3635488…`.
+  Shipped-widget proofs: `["bearer"` appears in `assets/index-*.js` (×3: the
+  vendored ui syncplay dial, the vendored ui hub-relay dial, and this repo's own
+  `useSyncPlayStore` dial — all three now law-consistent) and in the lazy
+  `SyncPlayModal-*.js` chunk (×1, the `buildWsProtocols` helper); `paths?.`
+  guards ship in the index bundle (×2); **ZERO** `[?&]token=` in any shipped
+  js/html/css (the only surviving `?token=` mentions repo-wide are source-map
+  docblock prose). `SyncPlayPage`/`PlayerPage` chunks ship: the ui router
+  (`createPhlixApp.ts` `${base}/syncplay`) makes the bearer-flipped vendored
+  syncplay surface LIVE in the widget alongside the client-local store path.
+- **Gates.** typecheck 0, lint 0, suite 733 → 733 (all green; CI expectation
+  732 + 1 skip unchanged), build 0, package ×2 deterministic.
+- **Syncplay/contracts edges untouched.** `@phlix/syncplay` stays `#v0.1.5`,
+  `@phlix/contracts` stays `#v0.5.2` (both here and inside ui's manifest).
+
 ### Fixed — `/app/library/scan` route is admin-gated (`meta.requiresAdmin`) — 2026-09-30
 
 - **Security (estate L-4 follow-up, mirrors server web-ui `114c9aaf`).** The
