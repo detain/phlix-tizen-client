@@ -10,7 +10,8 @@
  * is deliberately ABSENT: approving is the phone's job, never the TV's (scope law).
  *
  * Every path literal lives INLINE in a `client.<verb>('…')` call and on an
- * EXISTING served route (the vendored 410-tuple manifest @ server `730e55b7`),
+ * EXISTING served route (the vendored route manifest — 410 tuples in this
+ * lane's server era `730e55b7`, now the 412-tuple pin @ server `758f9149`),
  * so `routeManifest.gate` sees 3 sites / 3 files-1:1 and the fixture stays
  * byte-identical. The `{code}` is a path SEGMENT (`…/quick-connect/{code}/status`),
  * not a query, matching the served template exactly.

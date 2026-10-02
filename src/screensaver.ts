@@ -23,7 +23,9 @@
  *
  * ZEROS this step keeps: zero manifest change, zero new request sites (this
  * module never touches the wire → `routeManifest.gate`'s scan stays 27 and the
- * vendored fixture is byte-identical, md5 06ce7ec9…), zero focus interaction.
+ * vendored fixture stayed byte-identical at this step's era (md5 06ce7ec9…;
+ * the pin has since advanced to the 412-tuple 91579683… tree), zero focus
+ * interaction.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT

@@ -10,9 +10,10 @@
  *
  * The wire: exactly ONE existing server route —
  *   `POST /api/v1/telemetry/heartbeat`
- * (the S518 consent-first route, live at server era 730e55b7 and present in the
- * vendored 410-tuple manifest). We add no route, so the fixture stays
- * byte-identical and no contracts cascade fires. The server 400s before parsing
+ * (the S518 consent-first route, live since server era 730e55b7 and present
+ * in the vendored 412-tuple manifest @ server `758f9149`). We add no route,
+ * so the fixture stays byte-identical and no contracts cascade fires. The
+ * server 400s before parsing
  * unless `consent === true`; we never even reach the network when unconsented,
  * and the handler `record()` never throws → the client treats any non-2xx as a
  * swallow-and-retry-later, never an error path.
