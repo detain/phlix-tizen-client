@@ -5,6 +5,47 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — ui re-pin v0.99.8 → v0.99.9 — 2026-10-03
+
+- **Pin advance (release-cascade lane, ui tag v0.99.9).** `@phlix/ui` bumped
+  `#v0.99.8` → `#v0.99.9` (annotated tag `c7130f70`, peels to `cc931723` —
+  the lock's `resolved` equals the tag peel; strict-equality pin law holds;
+  manifest `version` field honestly reads `0.99.9`). The release carries the
+  **playlist create-contract fix** (ui `09bf8248`): the member-facing
+  'Add to playlist' now sends EXACTLY `{name, library_id}` to
+  `POST /api/v1/playlists` (server `CollectionController::create` requires
+  `library_id` — the flow 400ed for every role before), unwraps the
+  `{collection}` 201 envelope fail-loud, and chains
+  `POST /api/v1/collections/{id}/items/{mediaItemId}` so the item lands —
+  plus the contracts `#v0.5.3` catalog (204 codes) and the `library_id`
+  wire-truth doc pass riding the ui dist chain.
+- **Lock churn is the minimal declared-delta shape** (npm 11.19.0 / node
+  24.20.0, `npm_config_userconfig=/dev/null`): exactly 4+/4− — the root
+  `packages[""].dependencies` edge, and in the `node_modules/@phlix/ui`
+  node the `version`/`resolved` pair plus the recorded `@phlix/contracts`
+  edge `#v0.5.2`→`#v0.5.3` (the tarball now publishes the v0.5.3 edge; the
+  hoisted root contracts/syncplay copies were ALREADY at `#v0.5.3`/`#v0.1.5`
+  since the b99c964 lane, so the edges converge — zero nested shadow nodes,
+  zero other lock movement; no `devOptional`→`dev` rewrite churn).
+  `npm ci`-clean install; vendored identity proven: installed
+  `node_modules/@phlix/ui/dist/phlix-ui.js` sha256 `5efa7cb5…8aa78cdc` ==
+  the tag's tree blob == the server/hub lanes' install.
+- **i18n law untouched.** `scripts/sync-ui-locale-bundles.mjs` needs no
+  re-run: `src/i18n/locales/` + `messages.ts` are byte-unchanged between
+  `a580410f` (the PIN ref) and `cc931723` (`git diff` empty; the only i18n
+  delta was `errors.ts`, outside the vendored set), so the six bundles and
+  the PIN manifest stay true — drift tests green as-is.
+- **Widget re-packaged.** `npm run package` refreshed `package/` (31 assets
+  rotated + `index.html`; deterministic: two consecutive package runs
+  byte-identical by md5 census). Proofs on the shipped widget: the
+  `{name:t,library_id:n}` create payload and per-leg failure toasts are in
+  the new chunks, the `['bearer', …]` WS carrier is live, zero `[?&]token=`
+  occurrences, and `syncplay.queue_limit_exceeded` (the v0.5.3 catalog)
+  rides the bundle.
+- **Gates:** `vue-tsc --noEmit` 0; `eslint .` 0; `vitest run` **47 files /
+  733 passed** (baseline exactly held); `npm run package` 0. CI re-runs the
+  same legs, incl. 'Assert committed package/ is fresh'.
+
 ### Changed — contracts re-pin v0.5.2 → v0.5.3 — 2026-10-01
 
 - **Pin advance (lane `chore/contracts-repin-v0.5.3`).** `@phlix/contracts`
