@@ -9,7 +9,7 @@ on:
 jobs:
   lint:
     name: Run ESLint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout code
@@ -29,7 +29,7 @@ jobs:
 
   build:
     name: Build Check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Checkout code

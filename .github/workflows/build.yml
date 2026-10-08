@@ -16,7 +16,7 @@ concurrency:
 jobs:
   build:
     name: Build widget package
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -78,7 +78,7 @@ jobs:
     # artifacts are always served zipped — a Release is the only way to offer the
     # bare widget). Skipped on PRs and tag pushes.
     if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
 
