@@ -5,6 +5,45 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed — ui re-pin v0.99.9 → v0.99.10 — 2026-10-14
+
+- **Pin advance (release-cascade lane, ui tag v0.99.10).** `@phlix/ui` bumped
+  `#v0.99.9` → `#v0.99.10` (annotated tag `5898effc`, peels to `18c76eb0` —
+  the lock's `resolved` equals the tag peel; strict-equality pin law holds;
+  manifest `version` field honestly reads `0.99.10`). The release carries the
+  **plugin-themes fix** (ui `c81480b9`): the themes store no longer
+  short-circuits its `/api/v1/themes` fetch on an EMPTY-string apiBase — an
+  absent base is same-origin, so the loader now gates on `null` and hosted
+  pages (and the widget's served-context equivalent) discover plugin themes
+  in the Appearance picker instead of shipping built-ins only.
+- **Lock churn is the minimal declared-delta shape** (npm 11.19.0 / node
+  24.20.0, `npm_config_userconfig=/dev/null`): exactly 3+/3− — the root
+  `packages[""].dependencies` edge plus the `node_modules/@phlix/ui` node's
+  `version`/`resolved` pair. The recorded `@phlix/contracts` edge under ui is
+  UNCHANGED (`#v0.5.3` still requested — v0.99.10 rotated no dependency
+  edges); zero other lock movement, zero `devOptional`→`dev` rewrite churn.
+  `npm ci`-clean install; vendored identity proven: installed
+  `node_modules/@phlix/ui/dist/phlix-ui.js` sha256 `deff3847…c056c8c7` ==
+  the tag's tree blob == the server/hub lanes' install.
+- **i18n law untouched.** `scripts/sync-ui-locale-bundles.mjs` needs no
+  re-run: `src/i18n/locales/` + `messages.ts` are byte-unchanged between
+  `cc931723` (the prior peel) and `18c76eb0` (`git diff` empty; the only
+  test-tree delta was ui's own `ci-shard-gate.test.ts`, outside the vendored
+  set), so the six bundles and the PIN manifest stay true — drift tests green
+  as-is.
+- **Widget re-packaged.** `npm run package` refreshed `package/` (31 assets
+  rotated + `index.html`; deterministic: two consecutive package runs
+  byte-identical, aggregate md5 `699737bd…`). Proofs on the shipped widget:
+  the old themes-loader short-circuit `if(c!==""&&!(a.value&&!u))` (chunk
+  `index-BCwpm1zs.js`) is GONE — the new `index-KxHfFy-r.js` carries the
+  null-check shape `if(c!==null&&!(a.value&&!u))` around the same
+  `get("/api/v1/themes",…)` call site.
+- **Gates:** `vue-tsc --noEmit` 0 (folds into `package`); `eslint .` 0;
+  `vitest run` **47 files / 733 total** (732 passed + 1 skipped — the
+  sibling-clone-only i18nLocales pristine-source leg, skipped exactly as CI
+  does; totals held baseline-exact); `npm run package` 0. CI re-runs the same
+  legs, incl. 'Assert committed package/ is fresh'.
+
 ### Changed — ui re-pin v0.99.8 → v0.99.9 — 2026-10-03
 
 - **Pin advance (release-cascade lane, ui tag v0.99.9).** `@phlix/ui` bumped
