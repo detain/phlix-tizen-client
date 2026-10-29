@@ -40,22 +40,34 @@ describe('registerKeys (S509 — AD-1)', () => {
     delete (globalThis as { tizen?: unknown }).tizen;
   });
 
-  it('registers the full documented media / channel / colour key set', () => {
+  it('registers the full consumer-backed key set (M-TIZEN-09 amended)', () => {
     const tizen = makeTizen();
     const held = registerRemoteKeys(undefined, tizen);
     expect(tizen.device.registerKey).toHaveBeenCalledTimes(REMOTE_KEYS.length);
     expect(held).toEqual(REMOTE_KEYS);
-    // The brief's transport set is all present by name.
+    // The brief's transport set is all present by name — MINUS MediaPrevious
+    // (M-TIZEN-09: no seam exists; registering it only fed dead actions) and
+    // Info. `Colors` stays: one platform name carries the family, and YELLOW
+    // consumes it; the channel pair stays as the zap-guard (below).
     for (const name of [
       'MediaPlay',
       'MediaPause',
       'MediaStop',
       'MediaNext',
-      'MediaPrevious',
       'MediaRewind',
-      'MediaFastForward'
+      'MediaFastForward',
+      'MediaPlayPause',
+      'Colors'
     ]) {
       expect(REMOTE_KEYS).toContain(name);
+    }
+    for (const retired of ['MediaPrevious', 'Info']) {
+      expect(REMOTE_KEYS).not.toContain(retired);
+    }
+    // The channel pair STAYS (M-TIZEN-09 audit): registration is what makes
+    // the documented live-TV-zap preventDefault possible at all.
+    for (const kept of ['NextChannel', 'PreviousChannel', 'Colors']) {
+      expect(REMOTE_KEYS).toContain(kept);
     }
   });
 
@@ -105,14 +117,16 @@ describe('registerKeys (S509 — AD-1)', () => {
   });
 
   it('installRemoteKeyRegistration pairs release of EXACTLY what it registered', () => {
-    const tizen = makeTizen({ throws: new Set(['Info']) });
+    // M-TIZEN-09 rotation: 'Info' left the set with the dead vocabulary, so
+    // the rejecting-profile probe moves to 'Colors' (still a live name).
+    const tizen = makeTizen({ throws: new Set(['Colors']) });
     const teardown = installRemoteKeyRegistration(tizen);
-    // Everything but the rejected 'Info' was acquired.
-    expect(tizen.registered).toEqual(REMOTE_KEYS.filter((k) => k !== 'Info'));
+    // Everything but the rejected 'Colors' was acquired.
+    expect(tizen.registered).toEqual(REMOTE_KEYS.filter((k) => k !== 'Colors'));
 
     teardown();
     // Teardown released precisely that acquired subset — no over-unregister, no leak.
-    expect(tizen.unregistered).toEqual(REMOTE_KEYS.filter((k) => k !== 'Info'));
+    expect(tizen.unregistered).toEqual(REMOTE_KEYS.filter((k) => k !== 'Colors'));
   });
 
   it('installRemoteKeyRegistration teardown is a safe no-op on a non-Tizen webview', () => {

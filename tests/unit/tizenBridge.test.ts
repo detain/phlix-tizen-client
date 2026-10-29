@@ -22,9 +22,23 @@ import { REMOTE_KEYS } from '@/remote/registerKeys';
 import type { App as VueApp } from 'vue';
 
 // usePlayerStore is only touched by installTizenBridge, not the pure helper;
-// stub it so importing the module is safe under jsdom.
+// stub it so importing the module is safe under jsdom. M-TIZEN-09: the stub
+// carries the FULL BridgePlayer shape now — wired actions (NEXT/VOLUME/MUTE)
+// genuinely reach store seams, so a bare `{}` stand-in would TypeError under
+// the very bus tests below. All no-ops: these tests assert the ACTION STREAM,
+// never store effects (those are the wireTizenBridge pins above).
 vi.mock('@phlix/ui', () => ({
-  usePlayerStore: vi.fn(() => ({}))
+  usePlayerStore: vi.fn(() => ({
+    playing: false,
+    play: () => { /* bus-only stub */ },
+    pause: () => { /* bus-only stub */ },
+    closePlayer: () => { /* bus-only stub */ },
+    seekBy: () => { /* bus-only stub */ },
+    volume: 0.5,
+    setVolume: () => { /* bus-only stub */ },
+    toggleMute: () => { /* bus-only stub */ },
+    next: () => null
+  }))
 }));
 
 // MutationObserver callbacks fire on a microtask; a macrotask tick reliably
@@ -61,13 +75,23 @@ function makePlayer(playing = false): BridgePlayer & {
   pause: ReturnType<typeof vi.fn>;
   closePlayer: ReturnType<typeof vi.fn>;
   seekBy: ReturnType<typeof vi.fn>;
+  setVolume: ReturnType<typeof vi.fn>;
+  toggleMute: ReturnType<typeof vi.fn>;
+  next: ReturnType<typeof vi.fn>;
 } {
   return {
     playing,
     play: vi.fn(),
     pause: vi.fn(),
     closePlayer: vi.fn(),
-    seekBy: vi.fn()
+    seekBy: vi.fn(),
+    // M-TIZEN-09 seams — the real @phlix/ui store carries all four (volume is
+    // the Pinia-UNWRAPPED number at store level). 0.5 is a mid-scale fake so
+    // both ±0.05 steps are observable; clamping is the store's own law.
+    volume: 0.5,
+    setVolume: vi.fn(),
+    toggleMute: vi.fn(),
+    next: vi.fn()
   };
 }
 
@@ -169,6 +193,63 @@ describe('wireTizenBridge', () => {
     expect(player.seekBy).toHaveBeenNthCalledWith(1, -10);
     remote.fire({ key: 'REWIND', repeat: true });
     expect(player.seekBy).toHaveBeenNthCalledWith(2, -30);
+  });
+
+  // M-TIZEN-09 (review tizen__gameux M1) — the dead half of the transport
+  // vocabulary gets live store seams (or honest removal). These arms are
+  // pure-bridge pins; the KEY-side reachability is pinned in
+  // RemoteManager.test.ts / KeyMapping.test.ts.
+  it('NEXT advances the queue through the store seam, resolver reading stream_url', () => {
+    const player = makePlayer(true);
+    wireTizenBridge(remote, player, makeRouter(), browseRoute);
+    remote.fire({ key: 'NEXT' });
+    expect(player.next).toHaveBeenCalledTimes(1);
+    // BARE next() would write an EMPTY streamUrl (setCurrent assigns whenever
+    // the value !== undefined) — the bridge must pass a resolver that reads
+    // the queue item's OWN already-resolved field, and fall back safely.
+    const resolver = player.next.mock.calls[0][0] as (i: { stream_url?: string }) => string;
+    expect(typeof resolver).toBe('function');
+    expect(resolver({ stream_url: 'http://h/s.m3u8' })).toBe('http://h/s.m3u8');
+    expect(resolver({})).toBe('');
+  });
+
+  it('VOLUME_UP/VOLUME_DOWN step ±0.05 (the vendored ArrowUp/Down idiom) via setVolume', () => {
+    const player = makePlayer(true);
+    wireTizenBridge(remote, player, makeRouter(), browseRoute);
+    remote.fire({ key: 'VOLUME_UP' });
+    expect(player.setVolume).toHaveBeenNthCalledWith(1, 0.55);
+    remote.fire({ key: 'VOLUME_DOWN' });
+    expect(player.setVolume).toHaveBeenNthCalledWith(2, 0.45);
+    // Store clamps 0..1 itself; the bridge forwards raw steps, never re-clamps
+    // a second way (single source of the bound).
+    player.volume = 1;
+    remote.fire({ key: 'VOLUME_UP' });
+    expect(player.setVolume).toHaveBeenNthCalledWith(3, 1.05);
+  });
+
+  it('MUTE toggles through the store seam (parent: swallowed + toast, no effect)', () => {
+    const player = makePlayer(true);
+    wireTizenBridge(remote, player, makeRouter(), browseRoute);
+    remote.fire({ key: 'MUTE' });
+    expect(player.toggleMute).toHaveBeenCalledTimes(1);
+  });
+
+  it('RETIRED actions stay inert on the bridge (no half-wired ghosts)', () => {
+    const player = makePlayer(true);
+    const router = makeRouter();
+    wireTizenBridge(remote, player, router, browseRoute);
+    // PREVIOUS has no seam both-sides → the mapping is gone AND the bridge
+    // must not grow a half-invented arm: the key path never emits it, and if
+    // anything ever did, it lands in the honest default arm.
+    remote.fire({ key: 'PREVIOUS' });
+    remote.fire({ key: 'RED' });
+    remote.fire({ key: 'MENU' });
+    expect(player.seekBy).not.toHaveBeenCalled();
+    expect(player.setVolume).not.toHaveBeenCalled();
+    expect(player.toggleMute).not.toHaveBeenCalled();
+    expect(player.next).not.toHaveBeenCalled();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.back).not.toHaveBeenCalled();
   });
 
   it('BACK on the player route closes the player and goes back', () => {

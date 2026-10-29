@@ -178,15 +178,16 @@ describe('RemoteManager key handling', () => {
     expect(keyupHandler).not.toHaveBeenCalled();
   });
 
-  it('calls preventDefault for repeatable keys (FF/REW) - twice (repeatable + handled)', () => {
+  it('calls preventDefault for the held-repeat seek keys (FF/REW) - three times (repeatable + immediate + handled)', () => {
+    // M-TIZEN-09: FF/REW are immediate AND repeatable now — the branch hits
+    // stack up: repeatable arm (timer), immediate arm (tap emit), handled arm.
     const ffEvent = fakeKeyEvent(417); // FAST_FORWARD
     rm.onKeyDown(ffEvent);
-    // Called once for repeatable (line 84) and once for handled (line 100)
-    expect(ffEvent.preventDefault).toHaveBeenCalledTimes(2);
+    expect(ffEvent.preventDefault).toHaveBeenCalledTimes(3);
 
     const rewEvent = fakeKeyEvent(412); // REWIND
     rm.onKeyDown(rewEvent);
-    expect(rewEvent.preventDefault).toHaveBeenCalledTimes(2);
+    expect(rewEvent.preventDefault).toHaveBeenCalledTimes(3);
   });
 
   it('calls preventDefault for immediate keys (PLAY/PAUSE/STOP/BACK/HOME) - twice (immediate + handled)', () => {
@@ -198,8 +199,21 @@ describe('RemoteManager key handling', () => {
     }
   });
 
-  it('does not call preventDefault for unhandled keys (arrows/ENTER)', () => {
-    for (const keyCode of [37, 38, 39, 40, 13]) {
+  it('calls preventDefault for the M-TIZEN-09 taps (NEXT/VOLUME) - twice (immediate + handled)', () => {
+    // Volume/NEXT left the repeatable set (no repeat timer arm) and joined
+    // immediate: exactly the two preventDefault hits every discrete tap gets.
+    for (const keyCode of [425, 1028, 1029]) {
+      const e = fakeKeyEvent(keyCode);
+      rm.onKeyDown(e);
+      expect(e.preventDefault).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it('does not call preventDefault for unhandled keys (arrows/ENTER/retired codes)', () => {
+    // M-TIZEN-09: RETIRED codes (403 RED, 10282 MENU, 79 OPTIONS) now resolve
+    // to UNKNOWN_* and pass through unhandled — the honest system behavior
+    // the review's cure demands (was: swallowed + a caption toast).
+    for (const keyCode of [37, 38, 39, 40, 13, 403, 10282, 79]) {
       const e = fakeKeyEvent(keyCode);
       rm.onKeyDown(e);
       expect(e.preventDefault).not.toHaveBeenCalled();
@@ -233,26 +247,83 @@ describe('RemoteManager key repeat', () => {
     rm.destroy();
   });
 
-  it('does NOT emit action immediately for repeatable-only keys (FF/REW)', () => {
-    const rm = new RemoteManager();
-    const handler = vi.fn();
-    rm.onAction(handler);
-    rm.onKeyDown(fakeKeyEvent(417)); // FAST_FORWARD (repeatable but not immediate)
-    // No immediate emission - only sets up the repeat timer
-    expect(handler).not.toHaveBeenCalled();
-    rm.destroy();
-  });
-
-  it('schedules key repeat for repeatable keys - emits after delay plus interval', () => {
+  it('FAST_FORWARD/REWIND tap EMITS ONE non-repeat action on keydown (M-TIZEN-09)', () => {
+    // Parent law (the bug): repeatable-only ⇒ a single press emitted nothing
+    // (the review's "single-tap is dead"). New law: the press itself steps —
+    // the bridge's designed ±10 s arm finally has an emitter on the key path.
     const rm = new RemoteManager();
     const handler = vi.fn();
     rm.onAction(handler);
     rm.onKeyDown(fakeKeyEvent(417)); // FAST_FORWARD
-    expect(handler).not.toHaveBeenCalled();
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler).toHaveBeenCalledWith({ key: 'FAST_FORWARD' }); // no repeat stamp
+    handler.mockClear();
+    rm.onKeyDown(fakeKeyEvent(412)); // REWIND
+    expect(handler).toHaveBeenCalledWith({ key: 'REWIND' });
+    rm.destroy();
+  });
 
-    // Advance past keyRepeatDelay (500ms) + keyRepeatInterval (100ms)
-    vi.advanceTimersByTime(600);
-    expect(handler).toHaveBeenCalledWith({ key: 'FAST_FORWARD', repeat: true });
+  it('a tap (keydown + keyup inside the delay) emits EXACTLY ONE step — no hold action', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    rm.onKeyDown(fakeKeyEvent(417));
+    vi.advanceTimersByTime(300); // < keyRepeatDelay (500)
+    rm.onKeyUp(fakeKeyEvent(417));
+    vi.advanceTimersByTime(2000);
+    expect(handler.mock.calls.map((c) => c[0])).toEqual([{ key: 'FAST_FORWARD' }]);
+    rm.destroy();
+  });
+
+  it('NEXT/VOLUME_UP/VOLUME_DOWN/MUTE emit immediately (M-TIZEN-09 taps)', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    for (const keyCode of [425, 1028, 1029, 1025]) {
+      rm.onKeyDown(fakeKeyEvent(keyCode));
+    }
+    vi.advanceTimersByTime(3000); // nothing extra from any repeat machinery
+    expect(handler.mock.calls.map((c) => c[0])).toEqual([
+      { key: 'NEXT' },
+      { key: 'VOLUME_UP' },
+      { key: 'VOLUME_DOWN' },
+      { key: 'MUTE' }
+    ]);
+    rm.destroy();
+  });
+
+  it('RETIRED vocabulary emits nothing and is not preventDefaulted (dead keys absent)', () => {
+    // 424 PREVIOUS / 403 RED / 10282 MENU / 79 OPTIONS were removed from the
+    // KEY_MAP (dead mapping = lie in code). The codes resolve to UNKNOWN_*
+    // and pass through exactly like the arrows do.
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    for (const keyCode of [424, 403, 10282, 79]) {
+      const e = fakeKeyEvent(keyCode);
+      rm.onKeyDown(e);
+      expect(e.preventDefault).not.toHaveBeenCalled();
+    }
+    vi.advanceTimersByTime(3000);
+    expect(handler).not.toHaveBeenCalled();
+    rm.destroy();
+  });
+
+  it('schedules key repeat for the held seek keys - first step after delay plus interval', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    rm.onKeyDown(fakeKeyEvent(417)); // FAST_FORWARD — tap step fires immediately…
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    // …the HOLD cadence (M-TIZEN-09): keyRepeatDelay 500 + interval 500 ⇒
+    // first repeat at 1000 ms. Parent was 500+100: a 30 s step every 100 ms
+    // (≈300× timeline) — the review's "hold is a teleport". Throttled to 2
+    // steps/s ≈ 60×, still relative seekBy deltas, never a target jump.
+    vi.advanceTimersByTime(900);
+    expect(handler).toHaveBeenCalledTimes(1); // not yet — pin against the old 600 ms cadence
+    vi.advanceTimersByTime(150);
+    expect(handler).toHaveBeenLastCalledWith({ key: 'FAST_FORWARD', repeat: true });
     rm.destroy();
   });
 
@@ -261,10 +332,10 @@ describe('RemoteManager key repeat', () => {
     const handler = vi.fn();
     rm.onAction(handler);
     rm.onKeyDown(fakeKeyEvent(417)); // FAST_FORWARD
-    vi.advanceTimersByTime(600); // Get past first repeat
+    vi.advanceTimersByTime(1050); // past the first HOLD repeat
     rm.onKeyUp(fakeKeyEvent(417));
     const countBefore = handler.mock.calls.length;
-    vi.advanceTimersByTime(200); // More time
+    vi.advanceTimersByTime(1000); // more time
     const countAfter = handler.mock.calls.length;
     // No new calls after key up
     expect(countAfter).toBe(countBefore);
@@ -275,13 +346,16 @@ describe('RemoteManager key repeat', () => {
     const rm = new RemoteManager();
     const handler = vi.fn();
     rm.onAction(handler);
-    rm.onKeyDown(fakeKeyEvent(417)); // FAST_FORWARD
-    vi.advanceTimersByTime(600); // First repeat
+    rm.onKeyDown(fakeKeyEvent(417)); // FAST_FORWARD (tap)
+    vi.advanceTimersByTime(1050); // first HOLD repeat
 
     const countAfterFirst = handler.mock.calls.length;
-    vi.advanceTimersByTime(100); // Past keyRepeatInterval
+    vi.advanceTimersByTime(500); // past keyRepeatInterval (500 ms)
     const countAfterSecond = handler.mock.calls.length;
-    expect(countAfterSecond).toBeGreaterThan(countAfterFirst);
+    expect(countAfterSecond).toBe(countAfterFirst + 1);
+    // …and stays at that cadence — not the parent's 100 ms machine-gun.
+    vi.advanceTimersByTime(1500);
+    expect(handler.mock.calls.length).toBe(countAfterSecond + 3);
     rm.destroy();
   });
 });
@@ -513,12 +587,11 @@ describe('RemoteManager enabled state', () => {
   it('disabling stops any active key repeat', () => {
     const handler = vi.fn();
     rm.onAction(handler);
-    rm.onKeyDown(fakeKeyEvent(417)); // FAST_FORWARD
+    rm.onKeyDown(fakeKeyEvent(417)); // FAST_FORWARD (tap step)
     rm.setEnabled(false);
-    vi.advanceTimersByTime(600);
-    // No more repeats after disabling
+    vi.advanceTimersByTime(2000); // well past delay + interval (M-TIZEN-09 cadence)
     const callsAfterDisable = handler.mock.calls.length;
-    vi.advanceTimersByTime(200);
+    vi.advanceTimersByTime(2000);
     const callsAfterMoreTime = handler.mock.calls.length;
     expect(callsAfterMoreTime).toBe(callsAfterDisable);
   });

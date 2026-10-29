@@ -99,8 +99,10 @@ const VOICE_TRANSPORT_ACTIONS: readonly ActionName[] = [
   'STOP',
   'REWIND',
   'FAST_FORWARD',
-  'NEXT',
-  'PREVIOUS'
+  'NEXT'
+  // M-TIZEN-09: 'PREVIOUS' removed WITH its key mapping — a spoken "Previous"
+  // would have resolved to an action no consumer exists for (phrase list is
+  // derived from the ONE vocabulary, so dead keys mean dead phrases).
 ];
 
 /** DIGIT_0 … DIGIT_9 — the numeral phrases, from the ONE digit vocabulary. */

@@ -14,6 +14,14 @@
  * passthrough — no buffer, no preventDefault. Recognised numeric voice
  * phrases (S531) enter through the SAME `pressDigit` seam — never a forked
  * digit path.
+ *
+ * M-TIZEN-09 (review tizen__gameux M1): transport taps go LIVE and the hold
+ * cadence is throttled. FAST_FORWARD/REWIND are now immediate AND repeatable
+ * (tap = one ±10 s step on keydown via the existing emit branch; hold adds
+ * ±30 s steps after the delay), NEXT/VOLUME_UP/VOLUME_DOWN moved from the
+ * repeatable-only set to immediate (each press is one discrete step — a
+ * 10 Hz track-skip storm was the parent's only emission path), and the
+ * repeatable set is FF/REW alone. `keyRepeatInterval` 100 → 500 ms.
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
@@ -39,7 +47,15 @@ type Handler = (_data: ActionEvent | KeyEvent) => void;
 export class RemoteManager {
   enabled = true;
   keyRepeatDelay = 500;
-  keyRepeatInterval = 100;
+  /**
+   * M-TIZEN-09 (review tizen__gameux M1): 100 → 500 ms. At 100 ms a held FF
+   * fired a 30 s step ten times a second (≈300× timeline — a teleport, not a
+   * fast-forward). 500 ms × the designed 30 s repeat step = 2 steps/s ≈ 60×,
+   * a mainstream hold-FF rate. The step stays a RELATIVE `seekBy` delta via
+   * the bridge — never a per-tick jump to a computed target. Only the seek
+   * accelerators repeat anymore (the repeatable set is FF/REW alone).
+   */
+  keyRepeatInterval = 500;
   /**
    * Optional host predicate. When it returns true for a keydown, RemoteManager
    * calls `event.stopImmediatePropagation()` so LATER `document` keydown
@@ -106,9 +122,13 @@ export class RemoteManager {
       this.pressDigit(mappedKey);
     }
 
-    // Held-key repeat (FF/REW accel, volume). Clear any prior repeat timer
-    // first — the webview fires auto-repeat keydowns while a key is held, and
-    // re-arming without clearing would orphan the previous timer.
+    // Held-key repeat (seek-accelerator hold: FAST_FORWARD/REWIND). Clear any
+    // prior repeat timer first — a host that fires auto-repeat keydowns while
+    // a key is held would otherwise orphan the previous timer. (M-TIZEN-09:
+    // FF/REW are ALSO immediate now — under such a host they tap-step ±10 per
+    // keydown exactly like every other immediate key already does; on the
+    // tvinputdevice path one press is one keydown, which is the shipped
+    // doctrine — see remote/registerKeys.ts.)
     if (KeyMapping.isRepeatable(mappedKey)) {
       event.preventDefault();
       this.stopKeyRepeat();

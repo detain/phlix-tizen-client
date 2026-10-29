@@ -10,8 +10,25 @@
  * its key-repeat would fire phantom navigation actions on top of spatial-nav.
  *
  * S509 (AD-1) adds the 2020+ media-key codes the `tvinputdevice` registration
- * now makes reachable (10252 → PLAY_PAUSE, 427/428 → CHANNEL_UP/DOWN) and names
- * the digit keys DIGIT_0..9 as routing groundwork for a later commit buffer.
+ * now makes reachable (10252 → PLAY_PAUSE) and names the digit keys DIGIT_0..9
+ * as routing groundwork for a later commit buffer.
+ *
+ * M-TIZEN-09 (review tizen__gameux M1) retires the DEAD half of the vocabulary
+ * and makes the transport taps live. Rule applied: a mapped key with no
+ * consumer on EITHER side of the bridge is a lie in code — remove the mapping
+ * (the key then reaches the webview/TV unhandled, which is the honest
+ * behavior); a single press with a sensible action must emit it. Removed:
+ * PREVIOUS + OPTIONS (no `usePlayerStore` seam anywhere in the pinned
+ * @phlix/ui) and RED/GREEN/BLUE + MENU/INFO/TOOLS (swallowed, caption
+ * a toast, accomplish nothing — MENU/INFO actively DENY the TV's own system
+ * surfaces). CHANNEL_UP/DOWN KEPT: their immediate classification carries a
+ * documented platform effect (stopping the live-TV zap — see the KEY_MAP note;
+ * the review's M1 did not enumerate them). FAST_FORWARD/REWIND join IMMEDIATE
+ * so the bridge's already-designed ±10 s single-tap seek (`tizenBridge.ts`
+ * SEEK_STEP_SECONDS) fires; NEXT/VOLUME_UP/VOLUME_DOWN become immediate
+ * single-step actions with real store seams (`next()`, `setVolume()`).
+ * Held-FF cadence is throttled in `RemoteManager` (repeat interval 100 →
+ * 500 ms), never a per-tick teleport.
  *
  * S535 (AD-22) makes that groundwork live: digits route through the shared
  * digit-commit buffer (`remote/DigitBuffer.ts`) and drain as the new
@@ -41,24 +58,25 @@ const KEY_MAP: Record<number, ActionName> = {
   19: 'PAUSE',
   417: 'FAST_FORWARD',
   412: 'REWIND',
-  424: 'PREVIOUS',
   425: 'NEXT',
+  // PREVIOUS (424) REMOVED (M-TIZEN-09): no `previous` seam exists on the
+  // pinned @phlix/ui usePlayerStore surface (grep both-sides: store d.ts/chunk
+  // 0 hits; the PlayerPage binds no previoustrack producer). Dead mapping.
 
-  // Color buttons
-  403: 'RED',
-  404: 'GREEN',
+  // Color buttons — YELLOW only (M-TIZEN-09): RED/GREEN/BLUE (403/404/406)
+  // had no consumer on either side of the bridge (swallowed + a caption toast
+  // = the lie the review names). YELLOW is the live quality-menu key.
   405: 'YELLOW',
-  406: 'BLUE',
 
   // Volume
   1028: 'VOLUME_UP',
   1029: 'VOLUME_DOWN',
   1025: 'MUTE',
 
-  // Menu
-  10282: 'MENU',
-  18: 'INFO',
-  113: 'TOOLS',
+  // MENU (10282) / INFO (18) / TOOLS (113) REMOVED (M-TIZEN-09): zero
+  // consumers both-sides; swallowing MENU/INFO additionally denies Samsung's
+  // own system menu, and codes 18/113 collide with the desktop Alt/F2
+  // keydowns that dev sessions receive.
 
   // Digit keys (S509 groundwork, LIVE since S535/AD-22): named DIGIT_0..DIGIT_9,
   // RemoteManager feeds them to the shared digit-commit buffer when the event
@@ -79,30 +97,48 @@ const KEY_MAP: Record<number, ActionName> = {
 
   // Tizen specific
   66: 'PLAY_PAUSE',
-  79: 'OPTIONS',
+  // OPTIONS (79) REMOVED (M-TIZEN-09): never classified (never emitted an
+  // action, never preventDefaulted) — a mapped name with zero consumers. 79 is
+  // also the desktop 'O' keyCode that @phlix/ui's skipOutro shortcut rides.
 
   // Media-transport / channel keys registered via `tvinputdevice` (S509): 10252 is
   // the dedicated MediaPlayPause toggle (aliased onto PLAY_PAUSE); 427/428 are the
-  // NextChannel/PreviousChannel codes. PLAY/STOP/PAUSE/FF/REWIND/NEXT/PREVIOUS
-  // already resolve via the classic codes above, so only these two gaps are added.
+  // NextChannel/PreviousChannel codes. PLAY/STOP/PAUSE/FF/REWIND/NEXT already
+  // resolve via the classic codes above, so S509 added only these gaps.
+  //
+  // M-TIZEN-09 KEPT the channel pair (unlike the other dead names): their
+  // consumer is NEGATIVE — the documented defensive swallow (DEVELOPER.md
+  // "claiming the channel keys as immediate also stops a registered channel
+  // press from zapping the app to live TV"). The preventDefault IS the
+  // feature; no functional action exists and none was invented here.
+  // Residual honesty note for the toast surface: the caption still reads
+  // "Channel Up/Down" although nothing functional happens (queue: suppress
+  // the caption or rename it — a MINOR, not this item).
   10252: 'PLAY_PAUSE',
   427: 'CHANNEL_UP',
   428: 'CHANNEL_DOWN'
 };
 
-// Held-key repeat: FAST_FORWARD/REWIND accelerate seek when held. Arrow keys
-// intentionally removed — spatial-nav handles repeat navigation itself.
+// Held-key repeat: ONLY the seek accelerators. M-TIZEN-09 removed NEXT/
+// PREVIOUS/VOLUME_* from this set — "hold to repeat a track skip / volume step"
+// has no ui idiom and only produced 10 Hz actions into a default arm. FF/REW
+// stay repeatable AND join IMMEDIATE below: the press taps one ±10 s step,
+// holding past the delay adds 30 s steps at the throttled cadence. Arrows are
+// intentionally out — spatial-nav handles repeat navigation itself.
 const REPEATABLE_ACTIONS: ReadonlySet<ActionName> = new Set([
   'FAST_FORWARD',
-  'REWIND',
-  'NEXT',
-  'PREVIOUS',
-  'VOLUME_UP',
-  'VOLUME_DOWN'
+  'REWIND'
 ]);
 
 // Immediate (fire on keydown). BACK/HOME/PLAY/STOP/PAUSE are bridged to the
 // player/router. ENTER intentionally removed — native focus activation.
+// M-TIZEN-09 (review tizen__gameux M1): the transport taps land HERE. A lone
+// FF/REW press has a sensible action (the ±10 s seek jump the bridge was
+// already designed for), so keeping it repeatable-only made the single press
+// a silent no-op; NEXT/VOLUME_UP/VOLUME_DOWN join with real store seams. The
+// choice is set membership on the existing emit-on-keydown branch
+// (RemoteManager.ts isImmediate), NOT a new keyup-repeat-detector state
+// machine — zero invention beyond classification.
 const IMMEDIATE_ACTIONS: ReadonlySet<ActionName> = new Set([
   'BACK',
   'HOME',
@@ -110,16 +146,18 @@ const IMMEDIATE_ACTIONS: ReadonlySet<ActionName> = new Set([
   'STOP',
   'PAUSE',
   'PLAY_PAUSE',
-  'RED',
-  'GREEN',
-  'YELLOW',
-  'BLUE',
+  'FAST_FORWARD',
+  'REWIND',
+  'NEXT',
+  'VOLUME_UP',
+  'VOLUME_DOWN',
   'MUTE',
-  'MENU',
-  'INFO',
-  'TOOLS',
+  // Defensive swallow (see the 427/428 KEY_MAP note): immediate+handled means
+  // RemoteManager preventDefaults them, which is the documented live-TV-zap
+  // guard. No bridge case exists — the ACTION is not the point, the SWALLOW is.
   'CHANNEL_UP',
-  'CHANNEL_DOWN'
+  'CHANNEL_DOWN',
+  'YELLOW'
 ]);
 
 // Digit actions (S509 naming; since S535 routed into the shared digit-commit
@@ -167,18 +205,16 @@ const DISPLAY_NAMES: Record<string, string> = {
   FAST_FORWARD: 'Fast Forward',
   REWIND: 'Rewind',
   NEXT: 'Next',
-  PREVIOUS: 'Previous',
-  RED: 'Red',
-  GREEN: 'Green',
   YELLOW: 'Yellow',
-  BLUE: 'Blue',
+  // M-TIZEN-09: PREVIOUS/RED/GREEN/BLUE/MENU/INFO/TOOLS/CHANNEL_UP/
+  // CHANNEL_DOWN display rows removed with their mappings — no key produces
+  // the action and no voice phrase reads these labels any more.
   VOLUME_UP: 'Volume Up',
   VOLUME_DOWN: 'Volume Down',
   MUTE: 'Mute',
-  MENU: 'Menu',
-  INFO: 'Info',
-  TOOLS: 'Tools',
   PLAY_PAUSE: 'Play/Pause',
+  // KEPT with the defensive channel swallow (M-TIZEN-09) — see KEY_MAP note;
+  // the caption nuance is a reported residual, the parent behavior preserved.
   CHANNEL_UP: 'Channel Up',
   CHANNEL_DOWN: 'Channel Down',
   DIGIT_0: '0',

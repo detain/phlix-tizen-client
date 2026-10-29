@@ -33,11 +33,19 @@ export interface TizenLike {
 }
 
 /**
- * The keys this client registers at app-ready. The transport set (play/pause/stop/
- * next/previous/rewind/fast-forward) is what the S509 brief names; `MediaPlayPause`
- * is the single-toggle variant (mapped to PLAY_PAUSE in KeyMapping, code 10252); the
- * channel keys (427/428 → CHANNEL_UP/DOWN) and the colour / Info keys round out the
- * set the survey mapped. Names are the Tizen `tvinputdevice` key identifiers.
+ * The keys this client registers at app-ready. The transport set
+ * (play/pause/stop/next/rewind/fast-forward) is what the S509 brief names;
+ * `MediaPlayPause` is the single-toggle variant (mapped to PLAY_PAUSE in
+ * KeyMapping, code 10252). REMOVED since M-TIZEN-09: `MediaPrevious` (no seam
+ * exists — registering fed a key into an action nobody consumes) and `Info`
+ * (same, and the swallow denied the TV's own info surface). The CHANNEL pair
+ * STAYS — their consumer is negative: registration is what lets RemoteManager's
+ * documented immediate+handled preventDefault stop a channel press from zapping
+ * the app to live TV (see the CHANNEL_UP/DOWN note in remote/KeyMapping.ts;
+ * the review's M1 did not enumerate them). `Colors` STAYS — it is a single
+ * platform key name for the whole four-color family and YELLOW (the live
+ * quality-menu key) rides it; the unmapped color keys arrive as UNKNOWN_* and
+ * pass through unhandled. Names are the Tizen `tvinputdevice` identifiers.
  */
 export const REMOTE_KEYS: readonly string[] = [
   'MediaPlay',
@@ -47,11 +55,9 @@ export const REMOTE_KEYS: readonly string[] = [
   'MediaFastForward',
   'MediaRewind',
   'MediaNext',
-  'MediaPrevious',
   'NextChannel',
   'PreviousChannel',
-  'Colors',
-  'Info'
+  'Colors'
 ];
 
 /**

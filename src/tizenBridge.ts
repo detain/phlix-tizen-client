@@ -42,6 +42,18 @@ export interface BridgePlayer {
   closePlayer: () => void;
   /** Relative seek in seconds (phlix-ui player command bus). */
   seekBy: (_delta: number) => void;
+  /** Current player volume 0..1 (phlix-ui store; Pinia unwraps the ref here). */
+  volume: number;
+  /** Absolute volume set — the store CLAMPS to 0..1 and auto-unmutes above 0. */
+  setVolume: (_level: number) => void;
+  /** Player mute toggle (phlix-ui store seam, the ui 'M' shortcut's target). */
+  toggleMute: () => void;
+  /**
+   * Queue advance (phlix-ui store seam). The resolver supplies the shifted
+   * item's stream URL from data ALREADY on the queue item (`stream_url`) —
+   * calling `next()` with no resolver would write an EMPTY streamUrl.
+   */
+  next: (_resolveStreamUrl?: (_item: { stream_url?: string }) => string) => unknown;
 }
 
 export interface BridgeRouter {
@@ -185,6 +197,14 @@ export function createDomQualityMenu(state: Ref<boolean> = qualityMenuActive): B
 /** Single-tap seek jump (seconds); held keys jump further. */
 const SEEK_STEP_SECONDS = 10;
 const SEEK_STEP_REPEAT_SECONDS = 30;
+
+/**
+ * Volume step per VOLUME_UP/DOWN press (M-TIZEN-09) — EXACTLY the vendored
+ * player's own ArrowUp/Down step (0.05, @phlix/ui v0.99.10 shortcuts module),
+ * so remote and keyboard idiom cannot disagree. The store's `setVolume`
+ * clamps 0..1 and auto-unmutes when raising above zero; the bridge forwards.
+ */
+const VOLUME_STEP = 0.05;
 
 /** The focusable shape @phlix/ui's focus trap itself accepts (useFocusTrap.ts) —
  * row-snap "item 0" focuses the first node a spatial stop could ever land on.
@@ -404,10 +424,28 @@ export function wireTizenBridge(
         player.closePlayer();
         break;
       case 'FAST_FORWARD':
+        // M-TIZEN-09: the bare (non-repeat) press is now REACHABLE — FF/REW
+        // joined IMMEDIATE, so a tap lands here as one ±10 s step and a held
+        // key adds ±30 s steps at the throttled 500 ms cadence.
         player.seekBy(action.repeat ? SEEK_STEP_REPEAT_SECONDS : SEEK_STEP_SECONDS);
         break;
       case 'REWIND':
         player.seekBy(action.repeat ? -SEEK_STEP_REPEAT_SECONDS : -SEEK_STEP_SECONDS);
+        break;
+      case 'NEXT':
+        // M-TIZEN-09: the store seam exists; the resolver reads the queue
+        // item's OWN already-resolved `stream_url` (no new request site —
+        // same shape ui's PlayerPage passes via its streamUrlFor prop).
+        player.next((item) => item.stream_url ?? '');
+        break;
+      case 'VOLUME_UP':
+        player.setVolume(player.volume + VOLUME_STEP);
+        break;
+      case 'VOLUME_DOWN':
+        player.setVolume(player.volume - VOLUME_STEP);
+        break;
+      case 'MUTE':
+        player.toggleMute();
         break;
       case 'BACK':
         // S526 / AD-10 — the BACK ladder: row-snap first, then the topmost
@@ -435,7 +473,11 @@ export function wireTizenBridge(
         }
         break;
       default:
-        // Arrows / ENTER / other color keys / etc. — not bridged.
+        // Arrows / ENTER / keys with no consumer — not bridged. M-TIZEN-09
+        // retired the dead vocabulary at the KEY_MAP, so the codes it removed
+        // (PREVIOUS, RED/GREEN/BLUE, MENU/INFO/TOOLS, CHANNEL_*) can no longer
+        // even reach here as actions: they map to UNKNOWN_* and pass through
+        // unhandled to the webview/system.
         break;
     }
   };
@@ -460,7 +502,8 @@ export function wireTizenBridge(
  * S509 (AD-1): registers the 2020+ `tvinputdevice` media / channel / colour keys
  * once here — at app-ready, alongside the rest of the bridge — and releases
  * exactly those keys in the returned teardown (the same install/teardown pairing
- * the route guard uses, so there is no listener leak). On a non-Tizen webview the
+ * the route guard uses, so there is no listener leak; M-TIZEN-09 pruned the dead
+ * names — the channel pair rides on for the documented zap-guard). On a non-Tizen webview the
  * ambient `tizen` global is absent and registration is a silent no-op; a
  * `tizenLike` may be injected for tests. RemoteManager's DOM keydown fallback
  * still handles every code that reaches it.
@@ -522,8 +565,10 @@ export function installTizenBridge(
         })
       : undefined;
 
-  // S509 — declare the 2020+ media / channel / colour keys with the platform now
-  // (app-ready). Returns a teardown releasing only what it acquired; a no-op when
+  // S509 — declare the 2020+ media / channel / colour keys to the platform now
+  // (app-ready; M-TIZEN-09 pruned MediaPrevious + Info from the set — dead
+  // actions — while the channel pair stays as the documented live-TV-zap
+  // swallow). Returns a teardown releasing only what it acquired; a no-op when
   // the `tizen` global is absent. Registered keys arrive as DOM keydowns that
   // RemoteManager + KeyMapping already dispatch — no second pipeline.
   const releaseRemoteKeys = installRemoteKeyRegistration(tizenLike);

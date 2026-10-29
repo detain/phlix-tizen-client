@@ -5,6 +5,53 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — transport keys: single-tap live, hold throttled, dead vocabulary removed (M-TIZEN-09 / review tizen__gameux M1) — 2026-10-29
+
+- **Single-tap was dead by classification.** `FAST_FORWARD`/`REWIND` were
+  repeatable-ONLY (`KeyMapping.ts:95-102` at the parent) and absent from
+  `IMMEDIATE` (`:106-123`), so a lone press emitted nothing — its only effect
+  was `preventDefault` (`RemoteManager.ts:112-117`). The bridge already carried
+  the designed tap arm (`seekBy(±SEEK_STEP_SECONDS=10)` gated on the ABSENCE of
+  `action.repeat` — reachable only from voice at the parent). Cure = admit
+  FF/REW to `IMMEDIATE` (keydown-emit model — the state machine's existing
+  shape; a keyup-detector would invent per-press repeat-tracking that exists
+  nowhere); the ±10/±30 ternary went live unchanged.
+- **Hold was a teleport.** The repeat timer fired `+30 s` every
+  `keyRepeatInterval = 100 ms` (`:42`) from 500 ms ≈ 300× timeline. `100 → 500`
+  with the steps staying RELATIVE (`seekBy`, never a target jump): held FF now
+  runs 30 s steps at 2 Hz = 60×, inside mainstream fast-forward. Tap-vs-hold
+  boundary stays at the unchanged `keyRepeatDelay = 500 ms`.
+- **Dead vocabulary, both-sides audited** (the only functional consumers are
+  `wireTizenBridge`'s switch + the cosmetic `ActionToastOverlay`; vendored
+  `@phlix/ui` v0.99.10 subscribes to nothing on the shell bus). REMOVED —
+  `PREVIOUS` 424 (`next` exists in the store, `previous` has ZERO seams
+  anywhere), `RED/GREEN/BLUE` 403/404/406 and `MENU/INFO/TOOLS` 10282/18/113
+  (swallowed + captioned, accomplish nothing; MENU/INFO actively DENY the TV's
+  own surfaces), `OPTIONS` 79 (unclassified AND a desktop-'O' collision).
+  WIRED to EXISTING store seams only: `NEXT → next(item => item.stream_url ??
+  '')` (bare `next()` writes an empty streamUrl — resolver mandatory),
+  `VOLUME_UP/DOWN → setVolume(volume ± 0.05)` (the vendored ArrowUp/Down idiom;
+  the store clamps + auto-unmutes), `MUTE → toggleMute()`. `YELLOW` stays
+  (live quality menu). `CHANNEL_UP/DOWN` KEPT after re-audit: no functional
+  consumer, but the immediate+handled swallow is DEVELOPER.md's DOCUMENTED
+  live-TV-zap guard and M1 never enumerated them (misleading caption logged as
+  a MINOR residual).
+- `REMOTE_KEYS` sheds `MediaPrevious` + `Info`; the voice command list derives
+  from the ONE vocabulary (`PREVIOUS` phrase gone with its action).
+- **Measured:** vitest FULL serial 52 files 874 → **883** (+9 exact: 4 tap /
+  cadence-pair / retired-emit / 3 bridge seams … full list in
+  `.reviews/fixlog/M-TIZEN-09__fix.md`); the 21 new/rotated pins are RED at
+  parent `34c0bb3` with only this lane's test files overlaid (21 failed |
+  133 passed across the five touched files — measured-from-red); `vue-tsc` 0;
+  `eslint` 0; `package/` rebuilt, 30-for-30 chunk renames + `index.html` ref,
+  determinism ×2 aggregate md5 `0966d6c4f32f6c6941af09d9d2ccdc1b`; bundle
+  honesty grep: zero dead-vocabulary strings in the shipped chunks.
+- Adjacent NOT-fixed (reported): keyCode 66 (`PLAY_PAUSE`) is desktop 'B' —
+  typing 'b' outside the digit-branch typing guard toggles playback; digit
+  buffer has no DIGIT_COMMIT consumer (pre-existing MINOR m3). Doc-currency
+  owed: DEVELOPER.md:195/:306 + AGENTS.md:54-56/:70/:87/:159 (lane law —
+  reported for closeout collection, not self-edited).
+
 ### Fixed — the claim side can no longer undercut the Chromium ≥ 85 engine floor (M-TIZEN-08 / review tizen__exploiter) — 2026-10-29
 
 - **Premise reconciled, nothing fabricated.** The review's pre-85-support chain

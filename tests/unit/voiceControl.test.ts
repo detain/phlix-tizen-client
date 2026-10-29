@@ -211,7 +211,7 @@ describe('voiceControl — default commands reuse existing ActionNames (AC#1)', 
     // S531's WITHHELD-numeric posture discharged with the AD-22 buffer's arrival:
     // the digits are registered because they now land on the SAME commit handler.
     expect(DEFAULT_VOICE_COMMANDS.length).toBeGreaterThan(0);
-    const transport = ['PLAY', 'PAUSE', 'STOP', 'REWIND', 'FAST_FORWARD', 'NEXT', 'PREVIOUS'];
+    const transport = ['PLAY', 'PAUSE', 'STOP', 'REWIND', 'FAST_FORWARD', 'NEXT'];
     const digits = Array.from({ length: 10 }, (_, n) => `DIGIT_${n}`);
     expect(DEFAULT_VOICE_COMMANDS.map((c) => c.action)).toEqual([...transport, ...digits]);
     // Every digit action is still a KEY_MAP-existing name and its phrase is the

@@ -29,16 +29,19 @@ describe('KeyMapping', () => {
   });
 
   describe('isRepeatable', () => {
-    it('returns true for repeatable actions', () => {
+    // M-TIZEN-09 (review tizen__gameux M1): the repeatable set is the SEEK
+    // ACCELERATORS ALONE. NEXT/PREVIOUS/VOLUME_* leave it — a held track-skip
+    // or volume key repeating at the interval cadence was a 10 Hz action storm
+    // into a default arm; one press is one discrete step (immediate, below).
+    it('returns true for the seek-accelerator actions', () => {
       expect(KeyMapping.isRepeatable('FAST_FORWARD')).toBe(true);
       expect(KeyMapping.isRepeatable('REWIND')).toBe(true);
-      expect(KeyMapping.isRepeatable('NEXT')).toBe(true);
-      expect(KeyMapping.isRepeatable('PREVIOUS')).toBe(true);
-      expect(KeyMapping.isRepeatable('VOLUME_UP')).toBe(true);
-      expect(KeyMapping.isRepeatable('VOLUME_DOWN')).toBe(true);
     });
 
-    it('returns false for non-repeatable actions', () => {
+    it('returns false for single-step and non-repeat actions', () => {
+      expect(KeyMapping.isRepeatable('NEXT')).toBe(false);
+      expect(KeyMapping.isRepeatable('VOLUME_UP')).toBe(false);
+      expect(KeyMapping.isRepeatable('VOLUME_DOWN')).toBe(false);
       expect(KeyMapping.isRepeatable('PLAY')).toBe(false);
       expect(KeyMapping.isRepeatable('PAUSE')).toBe(false);
       expect(KeyMapping.isRepeatable('STOP')).toBe(false);
@@ -57,22 +60,30 @@ describe('KeyMapping', () => {
       expect(KeyMapping.isImmediate('BACK')).toBe(true);
       expect(KeyMapping.isImmediate('HOME')).toBe(true);
       expect(KeyMapping.isImmediate('PLAY_PAUSE')).toBe(true);
-      expect(KeyMapping.isImmediate('RED')).toBe(true);
-      expect(KeyMapping.isImmediate('GREEN')).toBe(true);
       expect(KeyMapping.isImmediate('YELLOW')).toBe(true);
-      expect(KeyMapping.isImmediate('BLUE')).toBe(true);
       expect(KeyMapping.isImmediate('MUTE')).toBe(true);
-      expect(KeyMapping.isImmediate('MENU')).toBe(true);
-      expect(KeyMapping.isImmediate('INFO')).toBe(true);
-      expect(KeyMapping.isImmediate('TOOLS')).toBe(true);
+      // M-TIZEN-09: the transport taps join the immediate vocabulary — a lone
+      // FF/REW press emits the bridge's already-designed ±10 s seek step
+      // (repeatable AND immediate: hold still adds ±30 s steps).
+      expect(KeyMapping.isImmediate('FAST_FORWARD')).toBe(true);
+      expect(KeyMapping.isImmediate('REWIND')).toBe(true);
+      expect(KeyMapping.isImmediate('NEXT')).toBe(true);
+      expect(KeyMapping.isImmediate('VOLUME_UP')).toBe(true);
+      expect(KeyMapping.isImmediate('VOLUME_DOWN')).toBe(true);
     });
 
-    it('returns false for non-immediate actions', () => {
-      expect(KeyMapping.isImmediate('FAST_FORWARD')).toBe(false);
-      expect(KeyMapping.isImmediate('REWIND')).toBe(false);
+    it('returns false for unclassified and retired actions', () => {
+      // LEFT/ENTER stay spatial-nav/native-owned; RED/GREEN/BLUE/MENU/INFO/
+      // TOOLS were RETIRED with their mappings (M-TIZEN-09) — the names can no
+      // longer even be produced by mapKeyCode, and stay out of every set.
       expect(KeyMapping.isImmediate('LEFT')).toBe(false);
       expect(KeyMapping.isImmediate('ENTER')).toBe(false);
-      expect(KeyMapping.isImmediate('VOLUME_UP')).toBe(false);
+      expect(KeyMapping.isImmediate('RED')).toBe(false);
+      expect(KeyMapping.isImmediate('GREEN')).toBe(false);
+      expect(KeyMapping.isImmediate('BLUE')).toBe(false);
+      expect(KeyMapping.isImmediate('MENU')).toBe(false);
+      expect(KeyMapping.isImmediate('INFO')).toBe(false);
+      expect(KeyMapping.isImmediate('TOOLS')).toBe(false);
     });
   });
 
@@ -81,19 +92,25 @@ describe('KeyMapping', () => {
       // From repeatable
       expect(KeyMapping.isHandled('FAST_FORWARD')).toBe(true);
       expect(KeyMapping.isHandled('REWIND')).toBe(true);
+      // From immediate (M-TIZEN-09: volume + next are immediate now)
       expect(KeyMapping.isHandled('VOLUME_UP')).toBe(true);
-      // From immediate only
+      expect(KeyMapping.isHandled('NEXT')).toBe(true);
+      expect(KeyMapping.isHandled('MUTE')).toBe(true);
       expect(KeyMapping.isHandled('PLAY')).toBe(true);
       expect(KeyMapping.isHandled('BACK')).toBe(true);
-      expect(KeyMapping.isHandled('RED')).toBe(true);
     });
 
-    it('returns false for unhandled actions (arrows, enter)', () => {
+    it('returns false for unhandled actions (arrows, enter, retired keys)', () => {
       expect(KeyMapping.isHandled('LEFT')).toBe(false);
       expect(KeyMapping.isHandled('UP')).toBe(false);
       expect(KeyMapping.isHandled('RIGHT')).toBe(false);
       expect(KeyMapping.isHandled('DOWN')).toBe(false);
       expect(KeyMapping.isHandled('ENTER')).toBe(false);
+      // Retired by M-TIZEN-09: no longer mapped AND no longer swallowed —
+      // their codes reach the webview/system unhandled (honest pass-through).
+      expect(KeyMapping.isHandled('RED')).toBe(false);
+      expect(KeyMapping.isHandled('MENU')).toBe(false);
+      expect(KeyMapping.isHandled('INFO')).toBe(false);
     });
   });
 
@@ -112,18 +129,20 @@ describe('KeyMapping', () => {
       expect(KeyMapping.getDisplayName('FAST_FORWARD')).toBe('Fast Forward');
       expect(KeyMapping.getDisplayName('REWIND')).toBe('Rewind');
       expect(KeyMapping.getDisplayName('NEXT')).toBe('Next');
-      expect(KeyMapping.getDisplayName('PREVIOUS')).toBe('Previous');
-      expect(KeyMapping.getDisplayName('RED')).toBe('Red');
-      expect(KeyMapping.getDisplayName('GREEN')).toBe('Green');
       expect(KeyMapping.getDisplayName('YELLOW')).toBe('Yellow');
-      expect(KeyMapping.getDisplayName('BLUE')).toBe('Blue');
       expect(KeyMapping.getDisplayName('VOLUME_UP')).toBe('Volume Up');
       expect(KeyMapping.getDisplayName('VOLUME_DOWN')).toBe('Volume Down');
       expect(KeyMapping.getDisplayName('MUTE')).toBe('Mute');
-      expect(KeyMapping.getDisplayName('MENU')).toBe('Menu');
-      expect(KeyMapping.getDisplayName('INFO')).toBe('Info');
-      expect(KeyMapping.getDisplayName('TOOLS')).toBe('Tools');
       expect(KeyMapping.getDisplayName('PLAY_PAUSE')).toBe('Play/Pause');
+    });
+
+    // M-TIZEN-09: retired vocabulary has NO display row — the names fall
+    // through to the raw-token arm, and the KEY_MAP pins below prove no key
+    // can even produce them. A caption for a dead key was part of the lie.
+    it('has no display rows for the retired M-TIZEN-09 actions', () => {
+      for (const dead of ['PREVIOUS', 'RED', 'GREEN', 'BLUE', 'MENU', 'INFO', 'TOOLS']) {
+        expect(KeyMapping.getDisplayName(dead)).toBe(dead);
+      }
     });
 
     it('returns the action itself for unknown actions (lines 160-164)', () => {
@@ -150,47 +169,61 @@ describe('KeyMapping', () => {
       expect(keys).toContain('19'); // PAUSE
       expect(keys).toContain('417'); // FF
       expect(keys).toContain('412'); // REW
-      expect(keys).toContain('424'); // PREVIOUS
       expect(keys).toContain('425'); // NEXT
-      // Color buttons
-      expect(keys).toContain('403'); // RED
-      expect(keys).toContain('404'); // GREEN
+      // Color buttons — YELLOW only after M-TIZEN-09
       expect(keys).toContain('405'); // YELLOW
-      expect(keys).toContain('406'); // BLUE
       // Volume
       expect(keys).toContain('1028'); // VOLUME_UP
       expect(keys).toContain('1029'); // VOLUME_DOWN
       expect(keys).toContain('1025'); // MUTE
-      // Menu
-      expect(keys).toContain('10282'); // MENU
-      expect(keys).toContain('18'); // INFO
-      expect(keys).toContain('113'); // TOOLS
       // Digits
       expect(keys).toContain('48'); // 0
       expect(keys).toContain('49'); // 1
       expect(keys).toContain('57'); // 9
       // Tizen specific
       expect(keys).toContain('66'); // PLAY_PAUSE
-      expect(keys).toContain('79'); // OPTIONS
+    });
+
+    // M-TIZEN-09 (review tizen__gameux M1) — the dead half of the vocabulary
+    // is ABSENT from the map: a mapping with zero consumers on both sides of
+    // the bridge is a lie in code. These codes now resolve to UNKNOWN_* and
+    // pass through RemoteManager unhandled (native/system behavior).
+    it('drops the dead-key codes from KEY_MAP (dead mapping = lie in code)', () => {
+      const keys = Object.keys(KeyMapping.KEY_MAP);
+      expect(keys).not.toContain('424'); // PREVIOUS — no store seam both-sides
+      expect(keys).not.toContain('403'); // RED
+      expect(keys).not.toContain('404'); // GREEN
+      expect(keys).not.toContain('406'); // BLUE
+      expect(keys).not.toContain('10282'); // MENU — TV system surface, not ours to swallow
+      expect(keys).not.toContain('18'); // INFO (also desktop Alt)
+      expect(keys).not.toContain('113'); // TOOLS (also desktop F2)
+      expect(keys).not.toContain('79'); // OPTIONS — never emitted, never handled
+      expect(KeyMapping.mapKeyCode(424)).toBe('UNKNOWN_424');
+      expect(KeyMapping.mapKeyCode(403)).toBe('UNKNOWN_403');
+      expect(KeyMapping.mapKeyCode(10282)).toBe('UNKNOWN_10282');
     });
   });
 
-  // S509 (AD-1) — the media-transport / channel codes now reachable via
-  // tvinputdevice registration, and the named digit-key routing groundwork.
-  describe('S509 media + channel + digit seams', () => {
-    it('maps the 2020+ media / channel key codes', () => {
+  // S509 (AD-1) — the media-transport codes still reachable via tvinputdevice
+  // registration, and the named digit-key routing groundwork. M-TIZEN-09's
+  // vocabulary audit KEPT the channel pair as the documented live-TV-zap
+  // defensive swallow (re-pinned here as law, with its rationale).
+  describe('S509 media + digit seams (M-TIZEN-09 amended)', () => {
+    it('maps the 2020+ PLAY_PAUSE media code', () => {
       expect(KeyMapping.mapKeyCode(10252)).toBe('PLAY_PAUSE');
-      expect(KeyMapping.mapKeyCode(427)).toBe('CHANNEL_UP');
-      expect(KeyMapping.mapKeyCode(428)).toBe('CHANNEL_DOWN');
     });
 
-    it('treats channel keys as immediate (fire on keydown)', () => {
+    it('KEEPS the channel keys as the documented defensive swallow (M-TIZEN-09 audit)', () => {
+      // Not a functional consumer — an ActionToast caption with no effect —
+      // but the immediate+handled preventDefault IS the documented guard that
+      // stops a registered channel press zapping the app to live TV
+      // (DEVELOPER.md S509 prose). Registration + swallow stay by law; the
+      // misleading caption is a reported MINOR residual, not an M1 lie.
+      expect(KeyMapping.mapKeyCode(427)).toBe('CHANNEL_UP');
+      expect(KeyMapping.mapKeyCode(428)).toBe('CHANNEL_DOWN');
       expect(KeyMapping.isImmediate('CHANNEL_UP')).toBe(true);
       expect(KeyMapping.isImmediate('CHANNEL_DOWN')).toBe(true);
       expect(KeyMapping.isHandled('CHANNEL_UP')).toBe(true);
-    });
-
-    it('gives channel keys display names', () => {
       expect(KeyMapping.getDisplayName('CHANNEL_UP')).toBe('Channel Up');
       expect(KeyMapping.getDisplayName('CHANNEL_DOWN')).toBe('Channel Down');
     });
@@ -224,7 +257,7 @@ describe('KeyMapping', () => {
       expect(KeyMapping.getDisplayName('DIGIT_7')).toBe('7');
     });
 
-    it('KEY_MAP contains the new S509 codes', () => {
+    it('KEY_MAP contains the S509 codes (channel pair kept as the zap-guard)', () => {
       const keys = Object.keys(KeyMapping.KEY_MAP);
       expect(keys).toContain('10252');
       expect(keys).toContain('427');
