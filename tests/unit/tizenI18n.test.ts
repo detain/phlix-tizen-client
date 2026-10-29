@@ -145,8 +145,9 @@ const EXPECTED: Record<string, string> = {
   "ratings.modalCloseAria": "Close rating modal",
   "ratings.communityRating": "Community Rating",
   "ratings.yourRatingHeading": "Your Rating",
-  "ratings.pressEscPrefix": "Press ",
-  "ratings.pressEscSuffix": " to close",
+  "ratings.pressBackPrefix": "Press ",
+  "ratings.pressBackKey": "Back",
+  "ratings.pressBackSuffix": " to close (or Esc on a keyboard)",
   "ratings.pickerAria": "Rate this media",
   "ratings.yourRatingLabel": "Your rating",
   "ratings.currentRatingAria": "Current rating: {rating} of 10",
@@ -273,7 +274,7 @@ describe('tizen-own catalog — integrity', () => {
   });
 
   it('every value is a non-empty trimmed-ish string', () => {
-    const ALLOWED_EDGE_SPACE = new Set(['ratings.pressEscPrefix', 'ratings.pressEscSuffix']);
+    const ALLOWED_EDGE_SPACE = new Set(['ratings.pressBackPrefix', 'ratings.pressBackSuffix']);
     for (const [key, value] of Object.entries(actual)) {
       expect(typeof value).toBe('string');
       expect(value.length, key).toBeGreaterThan(0);

@@ -3,8 +3,11 @@
  * RatingModal — overlay modal combining aggregate RatingBadge and personal
  * UserRatingPicker for a media item.
  *
- * Used on the media detail screen when the user clicks "Rate". The modal is
- * closed by the Escape key, clicking the backdrop, or the explicit close button.
+ * Used on the media detail screen when the user clicks "Rate". Closing is
+ * device-honest: the TV REMOTE BACK key (keyCode 10009 via the S526 BACK
+ * ladder — the overlay's `data-rating-modal` registers it as a closable
+ * layer in tizenBridge), the Escape key on desktop/browser runs, a backdrop
+ * click, or the explicit close button.
  *
  * TV-SPECIFIC: No phlix-ui equivalent found. This modal component is specific
  * to the TV app's media detail interaction pattern.
@@ -63,6 +66,10 @@ onUnmounted(() => {
   document.removeEventListener('keydown', handleKeyDown)
 })
 
+// Escape closes on desktop/browser runs, and it is ALSO the bell the S526
+// BACK ladder rings for this layer (tizenBridge `createRatingModalLayer`
+// dispatches a bubbling Escape keydown on `data-rating-modal` when the
+// remote Back key is pressed) — one handler, both realities.
 function handleKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape' && props.visible) {
     emit('close')
@@ -90,6 +97,7 @@ function handleClose() {
       <div
         v-if="visible"
         class="rating-modal-overlay"
+        data-rating-modal
         role="dialog"
         aria-modal="true"
         aria-labelledby="rating-modal-title"
@@ -148,7 +156,7 @@ function handleClose() {
 
           <footer class="modal-footer">
             <p class="hint">
-              {{ tTizen('ratings.pressEscPrefix') }}<kbd>Esc</kbd>{{ tTizen('ratings.pressEscSuffix') }}
+              {{ tTizen('ratings.pressBackPrefix') }}<kbd>{{ tTizen('ratings.pressBackKey') }}</kbd>{{ tTizen('ratings.pressBackSuffix') }}
             </p>
           </footer>
         </div>

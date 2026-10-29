@@ -5,6 +5,37 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — rating-modal key hint matches remote reality; the modal joins the BACK ladder (M-TIZEN-18 / review tizen__writer MAJOR #6) — 2026-10-29
+
+- **The violation, at tip a7ea19e.** `RatingModal.vue` rendered "Press
+  **Esc** to close" — a Samsung remote has no Esc; the dismiss key is
+  **Back** (keyCode 10009). Behind the wording lie sat a functional hole:
+  the modal's only key handler listened for `e.key === 'Escape'`, and the
+  overlay was registered with NONE of the S526 `BackLayer` ladder surfaces,
+  so a device BACK press fell past `modal-close` into `history-back` —
+  navigating the page underneath while the dialog stayed up. Second defect
+  inside the first: the `Esc` literal was hardcoded outside `TIZEN_EN`, so
+  the six non-English locales dutifully translated a prefix/suffix pair
+  around an untranslated, nonexistent key name.
+- **Cure (both sides).** `createRatingModalLayer()` (id `rating-modal`,
+  probe `[data-rating-modal]`) joins the ladder below the full-bleed
+  z-12000 quick-connect takeover and above the generic ui focus-trap
+  probe, same ring-the-bell contract: BACK dispatches a bubbling `Escape`
+  keydown on the overlay root and the modal's own handler closes — the
+  Escape listener stays because it IS the bell AND the desktop truth (the
+  app runs in browsers). The hint becomes device-first and fully
+  localizable: `pressBackPrefix` + kbd(`pressBackKey`) + `pressBackSuffix`
+  → EN "Press **Back** to close (or Esc on a keyboard)"; all seven locale
+  catalogs gain the key-name token (de Zurück / es Atrás / fr Retour /
+  it Indietro / ja 戻る / pt_BR Voltar), catalog 199→200 keys.
+- **Pins.** `tizenI18n.test.ts` byte-identity table + edge-space set
+  rotated; `i18nLocales.test.ts` 200-key law + edge-space pair rotated;
+  `docs/i18n.md` counts re-pinned; `tizenBridge.test.ts` gains the layer
+  suite (id, probe, bell, root-BACK-closes-not-exits, both priority
+  rankings, no-fabrication); `RatingModal.test.ts` pins the honest copy,
+  the probe attribute lifecycle, and copy↔function coherence (the named
+  key demonstrably closes the modal).
+
 ### Fixed — signing.md CLI-fallback phantom flag/commands from the partial cure removed; pin arms extended (M-TIZEN-17 / review tizen__writer MAJOR #5) — 2026-10-29
 
 - **The violation, at tip 756e79b.** The reviewer's ORIGINAL fabrics (`sdb

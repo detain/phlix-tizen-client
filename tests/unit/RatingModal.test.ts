@@ -61,6 +61,50 @@ describe('RatingModal', () => {
     wrapper.unmount();
   });
 
+  // M-TIZEN-18 (tizen__writer MAJOR #6): "Press Esc" was a device lie (no Esc
+  // on a Samsung remote) AND the hardcoded `Esc` sat outside TIZEN_EN, so the
+  // six locales translated a prefix/suffix pair around an unlocalizable,
+  // nonexistent key name. The hint now names the remote Back key (with Esc as
+  // the desktop mention), every token rides the catalog, and the visible
+  // overlay advertises the ladder probe the bridge closes through.
+  it('renders the device-honest hint: localized Back key first, Esc demoted to the desktop mention', () => {
+    const wrapper = mountModal();
+
+    const hint = wrapper.find('.hint');
+    expect(hint.text()).toBe('Press Back to close (or Esc on a keyboard)');
+    // The kbd wraps the LOCALIZED key token — no hardcoded <kbd>Esc</kbd>.
+    expect(hint.find('kbd').text()).toBe('Back');
+  });
+
+  it('carries the data-rating-modal probe only while the overlay is rendered', () => {
+    const wrapper = mountModal();
+    expect(wrapper.find('[data-rating-modal]').exists()).toBe(true);
+    wrapper.unmount();
+
+    const hidden = mountModal({ visible: false });
+    expect(hidden.find('[data-rating-modal]').exists()).toBe(false);
+    hidden.unmount();
+  });
+
+  it('closes when the BACK ladder rings the Escape bell on the overlay root', () => {
+    // Same dispatch createRatingModalLayer().close() performs when RemoteManager
+    // maps keyCode 10009 (Samsung Back) to the BACK rung — pins copy↔function
+    // coherence: the key the hint names demonstrably closes this modal. The
+    // modal listens on `document`, so the tree must be ATTACHED for the bell's
+    // bubbling Escape to travel the real on-device path (overlay → document).
+    const wrapper = mount(RatingModal, {
+      props: { itemId: 'm1', aggregateScore: 8, visible: true },
+      attachTo: document.body,
+      global: { stubs: { Teleport: true, UserRatingPicker: true } },
+    });
+
+    const overlay = wrapper.find('[data-rating-modal]').element;
+    overlay.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+
+    expect(wrapper.emitted('close')).toHaveLength(1);
+    wrapper.unmount();
+  });
+
   it('relays a child rating change up as score-changed', async () => {
     const wrapper = mountModal();
 

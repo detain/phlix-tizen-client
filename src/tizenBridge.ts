@@ -302,13 +302,47 @@ export function createQuickConnectLayer(): BackLayer {
 }
 
 /**
+ * Attribute the RatingModal overlay root carries WHILE visible (M-TIZEN-18).
+ * The BACK ladder probes it so the rating dialog is a closable layer — the
+ * hint on its footer names the Back key, and this is what makes that true.
+ */
+export const RATING_MODAL_SELECTOR = '[data-rating-modal]';
+
+/**
+ * The rating modal (client-owned, z-9999) as a closable BACK layer
+ * (M-TIZEN-18, tizen__writer MAJOR #6). Same ring-the-bell contract as the
+ * quick-connect layer: BACK dispatches an Escape keydown ON the overlay root
+ * and the modal's own document-level Escape handler decides what closing
+ * means (emit `close`; the host unmounts). Without this layer the ladder
+ * fell past modal-close straight into `history-back` — the page underneath
+ * navigated while the modal the viewer wanted gone stayed up. Ranking sits
+ * between the two neighbours by z-order reality: BELOW the full-bleed
+ * z-12000 quick-connect takeover (the visible card answers first) and ABOVE
+ * the generic ui focus-trap probe (this overlay covers trap surfaces).
+ */
+export function createRatingModalLayer(): BackLayer {
+  return {
+    id: 'rating-modal',
+    isOpen(): boolean {
+      return typeof document !== 'undefined' && document.querySelector(RATING_MODAL_SELECTOR) !== null;
+    },
+    close(): void {
+      if (typeof document === 'undefined') return;
+      const overlay = document.querySelector(RATING_MODAL_SELECTOR);
+      if (!overlay) return;
+      overlay.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    }
+  };
+}
+
+/**
  * The injectable BACK seams of `wireTizenBridge` — every DOM/platform touch the
  * ladder performs lives behind one of these so unit tests (and the AD-9 ui
  * adopt-leg) can drive each rung with fakes. All optional; the defaults are the
  * production behaviors described above.
  */
 export interface BridgeBack {
-  /** Extra closable layers, TOPMOST FIRST; quick-connect, trap + quality follow. */
+  /** Extra closable layers, TOPMOST FIRST; quick-connect, rating, trap + quality follow. */
   layers?: BackLayer[];
   /** Explicit app exit at the root rung (default: guarded `tizen` exit). */
   exit?: () => void;
@@ -355,10 +389,12 @@ export function wireTizenBridge(
   // Focus memory riding the layer stack + the ladder's own seams.
   const focusMemory = back.focusMemory ?? createLayerFocusStack<Element>();
   // The quality flyout is the ladder's deepest closable layer; host-supplied
-  // layers, the C16 quick-connect takeover and the generic ui focus-trap probe
-  // sit ABOVE it (topmost first). The takeover outranks the trap because the
-  // panel is full-bleed z-12000: whatever trap may idle beneath it, the card
-  // the viewer can SEE is the one a BACK press must answer to first.
+  // layers, the C16 quick-connect takeover, the M-TIZEN-18 rating modal and
+  // the generic ui focus-trap probe sit ABOVE it (topmost first). The takeover
+  // outranks the trap because the panel is full-bleed z-12000: whatever trap
+  // may idle beneath it, the card the viewer can SEE is the one a BACK press
+  // must answer to first; the z-9999 rating overlay ranks between the two for
+  // the same visible-surface reason.
   const qualityLayer: BackLayer = {
     id: 'quality-menu',
     isOpen: () => quality.isActive(),
@@ -374,6 +410,7 @@ export function wireTizenBridge(
   const backLayers: BackLayer[] = [
     ...(back.layers ?? []),
     createQuickConnectLayer(),
+    createRatingModalLayer(),
     createFocusTrapLayer(),
     qualityLayer,
   ];

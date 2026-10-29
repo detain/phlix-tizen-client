@@ -9,6 +9,8 @@ import {
   FOCUS_TRAP_SELECTOR,
   createQuickConnectLayer,
   QUICK_CONNECT_SELECTOR,
+  createRatingModalLayer,
+  RATING_MODAL_SELECTOR,
   type BridgePlayer,
   type BridgeRouter,
   type BridgeRemote,
@@ -964,6 +966,115 @@ describe('C16 createQuickConnectLayer — the pairing takeover as a closable BAC
   });
 
   it('with NO takeover on screen, a root BACK still exits — the layer never fabricates itself', () => {
+    const router = makeRouter();
+    const exit = vi.fn();
+    wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+      exit,
+      findRow: () => null
+    });
+    remote.fire({ key: 'BACK' });
+    expect(exit).toHaveBeenCalledTimes(1);
+  });
+});
+
+// M-TIZEN-18 (tizen__writer MAJOR #6): the rating modal told TV users to
+// "Press Esc" (no such key on a Samsung remote) while the BACK ladder never
+// offered it a rung — the press fell to history-back and navigated the page
+// underneath an open dialog. These pin the bridge side of the cure: the probe,
+// the bell, the ladder priority, and the root-BACK behavior (closes the modal
+// — no exit, no navigate) that makes the copy's promise true on device.
+describe('M-TIZEN-18 createRatingModalLayer — the rating modal as a closable BACK layer', () => {
+  let remote: FakeRemote;
+
+  beforeEach(() => {
+    remote = makeRemote();
+    document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const rootRoute = (): BridgeRoute => ({ name: 'browse', path: '/app' });
+
+  it('id is rating-modal (diagnostic pin for the ladder)', () => {
+    expect(createRatingModalLayer().id).toBe('rating-modal');
+  });
+
+  it('isOpen only while the overlay root is on screen', () => {
+    const layer = createRatingModalLayer();
+    expect(layer.isOpen()).toBe(false);
+    document.body.innerHTML = '<div data-rating-modal></div>';
+    expect(layer.isOpen()).toBe(true);
+  });
+
+  it('close dispatches an Escape keydown ON the overlay (bridge only rings the bell)', () => {
+    document.body.innerHTML = '<div data-rating-modal></div>';
+    const overlay = document.querySelector(RATING_MODAL_SELECTOR) as HTMLElement;
+    const keys: string[] = [];
+    overlay.addEventListener('keydown', (event: KeyboardEvent) => keys.push(event.key));
+    createRatingModalLayer().close();
+    expect(keys).toEqual(['Escape']);
+  });
+
+  it('BACK at the app root closes the rating modal INSTEAD of quitting or navigating', () => {
+    document.body.innerHTML = '<div data-rating-modal></div>';
+    const overlay = document.querySelector(RATING_MODAL_SELECTOR) as HTMLElement;
+    const keys: string[] = [];
+    overlay.addEventListener('keydown', (event: KeyboardEvent) => keys.push(event.key));
+    const router = makeRouter();
+    const exit = vi.fn();
+    wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+      exit,
+      findRow: () => null
+    });
+    remote.fire({ key: 'BACK' });
+    expect(keys).toEqual(['Escape']);
+    expect(exit).not.toHaveBeenCalled();
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
+  it('the full-bleed quick-connect takeover outranks the rating modal (z-12000 > z-9999)', () => {
+    document.body.innerHTML = '<div data-rating-modal></div><div data-quick-connect-panel></div>';
+    const ratingKeys: string[] = [];
+    const panelKeys: string[] = [];
+    document
+      .querySelector(RATING_MODAL_SELECTOR)!
+      .addEventListener('keydown', (event: Event) => ratingKeys.push((event as KeyboardEvent).key));
+    document
+      .querySelector(QUICK_CONNECT_SELECTOR)!
+      .addEventListener('keydown', (event: Event) => panelKeys.push((event as KeyboardEvent).key));
+    const router = makeRouter();
+    wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+      exit: vi.fn(),
+      findRow: () => null
+    });
+    remote.fire({ key: 'BACK' });
+    expect(panelKeys).toEqual(['Escape']);
+    expect(ratingKeys).toEqual([]);
+  });
+
+  it('the rating modal outranks a ui focus-trap surface (z-9999 covers trap modals)', () => {
+    document.body.innerHTML = '<div data-focus-trap></div><div data-rating-modal></div>';
+    const trapKeys: string[] = [];
+    const ratingKeys: string[] = [];
+    document
+      .querySelector(FOCUS_TRAP_SELECTOR)!
+      .addEventListener('keydown', (event: Event) => trapKeys.push((event as KeyboardEvent).key));
+    document
+      .querySelector(RATING_MODAL_SELECTOR)!
+      .addEventListener('keydown', (event: Event) => ratingKeys.push((event as KeyboardEvent).key));
+    const router = makeRouter();
+    wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+      exit: vi.fn(),
+      findRow: () => null
+    });
+    remote.fire({ key: 'BACK' });
+    expect(ratingKeys).toEqual(['Escape']);
+    expect(trapKeys).toEqual([]);
+  });
+
+  it('with NO rating modal on screen, a root BACK still exits — the layer never fabricates itself', () => {
     const router = makeRouter();
     const exit = vi.fn();
     wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
