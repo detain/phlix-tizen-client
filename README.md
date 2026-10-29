@@ -123,6 +123,22 @@ its own context from `localStorage['phlix.hubUrl']`, `['phlix.hubServerId']` and
 and `VITE_PHLIX_HUB_SERVER_ID` (all env vars are declared in `vite-env.d.ts`).
 Without a hub context nothing opens.
 
+**Relay transport is TLS-mandatory (M-TIZEN-06).** The relay socket presents a
+bearer credential in its opening handshake (`Sec-WebSocket-Protocol: bearer, …`),
+so the dial requires an **`https://` hub base** (`wss://`). A plaintext hub base
+is refused at connect — loudly, with an actionable console error — before any
+credential (including the relay-token mint) touches the wire; nothing else in
+the app is affected and the socket simply stays closed. For **LOCAL TESTING
+ONLY** (a dev hub on plain http), the build-time escape hatch
+
+```bash
+VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY=1 npm run build
+```
+
+permits the plaintext `ws://` dial and warns on the console with every attempt.
+It ships the relay bearer token **unencrypted to anyone on your network** and is
+**never release-safe** — do not build a `.wgt` for distribution with it set.
+
 The client sends `X-Phlix-Device-Type: samsung-tizen` and a stable
 `X-Phlix-Device-ID` (persisted as `phlix.deviceId`). **The server** maps the
 device-type header to the appropriate streaming/transcode quality profile — the

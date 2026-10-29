@@ -5,8 +5,11 @@
  * Proves the consumer against the REAL hub protocol shapes (re-derived from the
  * hub's `SyncPlayRelayWorker` + `PendingCommandDispatcher`):
  *
- * - URL `ws://<host>:8804/syncplay/{server_id}` — the path the relay's
- *   `onWebSocketConnect()` parses the server id from.
+ * - URL `wss://<host>:8804/syncplay/{server_id}` — the path the relay's
+ *   `onWebSocketConnect()` parses the server id from. M-TIZEN-06: the scheme
+ *   is the bearer-transport TLS LAW — an https base dials `wss:`, a plaintext
+ *   base is REFUSED at connect (named, actionable, before the mint), and
+ *   `ws:` ships only through the honestly-named dev hatch, warned per dial.
  * - Token on the `Sec-WebSocket-Protocol: bearer, <token>` SUBPROTOCOL — the
  *   only carrier a Tizen webview WebSocket can present (S237 removed the query
  *   string; the relay accepts Authorization OR the bearer subprotocol, and
@@ -37,6 +40,9 @@ import {
   mintHubRelayToken,
   createRelayTokenProvider,
   resolveHubRelayConfig,
+  HubRelayInsecureTransportError,
+  HUB_RELAY_INSECURE_DEV_HATCH_ENV,
+  insecureRelayHatchEnabled,
   type PendingPlayMediaCommand,
 } from '@/api/hubRelay';
 
@@ -147,7 +153,8 @@ function pendingCommand(over: Partial<PendingPlayMediaCommand> = {}): PendingPla
 function config(over: Partial<Parameters<typeof openHubRelayConnection>[0]> = {}) {
   return {
     serverId: SERVER_ID,
-    hubBaseUrl: 'http://hub.example.test',
+    // M-TIZEN-06: the TLS law makes an https base the only dial-able default.
+    hubBaseUrl: 'https://hub.example.test',
     tokenProvider: () => 'tok-123',
     onPendingCommand: vi.fn(),
     ...over,
@@ -164,16 +171,17 @@ afterEach(() => {
   closeHubRelayConnection();
   vi.useRealTimers();
   vi.restoreAllMocks();
+  vi.unstubAllEnvs(); // M-TIZEN-06 hatch legs must not leak into later files
 });
 
 // ── url construction ──────────────────────────────────────────────────────────
 
-describe('buildHubRelayUrl — the relay URL shape', () => {
+describe('buildHubRelayUrl — the relay URL shape + M-TIZEN-06 TLS law', () => {
   it('dials :8804 with the /syncplay/{server_id} path the relay parses', () => {
-    const url = new URL(buildHubRelayUrl('http://hub.example.test', SERVER_ID));
+    const url = new URL(buildHubRelayUrl('https://hub.example.test', SERVER_ID));
     expect(url.port).toBe(String(HUB_SYNC_PLAY_PORT));
     expect(url.pathname).toBe(`/syncplay/${SERVER_ID}`);
-    expect(url.protocol).toBe('ws:');
+    expect(url.protocol).toBe('wss:');
   });
 
   it('keeps the RELAY port (8804), never the origin port', () => {
@@ -183,8 +191,64 @@ describe('buildHubRelayUrl — the relay URL shape', () => {
   });
 
   it('encodes the server id in the path', () => {
-    const url = new URL(buildHubRelayUrl('http://hub.example.test', 'srv with spaces'));
+    const url = new URL(buildHubRelayUrl('https://hub.example.test', 'srv with spaces'));
     expect(url.pathname).toBe('/syncplay/srv%20with%20spaces');
+  });
+
+  it('REFUSES a plaintext hub base with the named, actionable error', () => {
+    let caught: unknown;
+    try {
+      buildHubRelayUrl('http://hub.example.test', SERVER_ID, false);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(HubRelayInsecureTransportError);
+    const message = (caught as Error).message;
+    expect((caught as Error).name).toBe('HubRelayInsecureTransportError');
+    expect(message).toContain('wss:// is mandatory');
+    expect(message).toContain(HUB_RELAY_INSECURE_DEV_HATCH_ENV); // the escape hatch is NAMED
+    expect(message).toContain('http://hub.example.test'); // actionable: which origin was refused
+    // The former silent-downgrade shape must be UNREACHABLE without the hatch.
+  });
+
+  it('refuses a bare ws:// base too — only an https origin is secure', () => {
+    expect(() => buildHubRelayUrl('ws://hub.example.test', SERVER_ID, false)).toThrow(
+      HubRelayInsecureTransportError,
+    );
+  });
+
+  it('an unparsable base still throws the URL TypeError (the laddered path), not the TLS error', () => {
+    expect(() => buildHubRelayUrl('not a url', SERVER_ID, false)).toThrow(TypeError);
+  });
+
+  it('ships ws:// ONLY through the explicit insecure allowance', () => {
+    const url = new URL(buildHubRelayUrl('http://hub.example.test', SERVER_ID, true));
+    expect(url.protocol).toBe('ws:');
+    expect(url.port).toBe(String(HUB_SYNC_PLAY_PORT));
+  });
+
+  it('the allowInsecure default IS the build-env hatch read (unlock → ws:, re-lock → refuse)', () => {
+    expect(insecureRelayHatchEnabled()).toBe(false); // hatch unset in the test env
+    expect(() => buildHubRelayUrl('http://hub.example.test', SERVER_ID)).toThrow(
+      HubRelayInsecureTransportError,
+    );
+    vi.stubEnv(HUB_RELAY_INSECURE_DEV_HATCH_ENV, '1');
+    expect(insecureRelayHatchEnabled()).toBe(true);
+    expect(new URL(buildHubRelayUrl('http://hub.example.test', SERVER_ID)).protocol).toBe('ws:');
+    vi.unstubAllEnvs();
+    expect(insecureRelayHatchEnabled()).toBe(false);
+    expect(() => buildHubRelayUrl('http://hub.example.test', SERVER_ID)).toThrow(
+      HubRelayInsecureTransportError,
+    );
+  });
+
+  it('any hatch value other than exactly "1" keeps the gate shut (TV_ADMIN convention)', () => {
+    vi.stubEnv(HUB_RELAY_INSECURE_DEV_HATCH_ENV, 'true');
+    expect(insecureRelayHatchEnabled()).toBe(false);
+    expect(() => buildHubRelayUrl('http://hub.example.test', SERVER_ID)).toThrow(
+      HubRelayInsecureTransportError,
+    );
+    vi.unstubAllEnvs();
   });
 });
 
@@ -466,10 +530,10 @@ describe('resolveHubRelayConfig — the Tizen boot resolution', () => {
 // ── lifecycle: open-whenever, rebind, backoff, close ─────────────────────────
 
 describe('openHubRelayConnection — the open-whenever lifecycle', () => {
-  it('offers the bearer subprotocol carrier on :8804', () => {
+  it('offers the bearer subprotocol carrier on :8804 over wss (TLS law, M-TIZEN-06)', () => {
     openHubRelayConnection(config());
     const s = socket();
-    expect(s.url).toBe(`ws://hub.example.test:${HUB_SYNC_PLAY_PORT}/syncplay/${SERVER_ID}`);
+    expect(s.url).toBe(`wss://hub.example.test:${HUB_SYNC_PLAY_PORT}/syncplay/${SERVER_ID}`);
     expect(s.protocols).toEqual(['bearer', 'tok-123']);
   });
 
@@ -816,5 +880,72 @@ describe('openHubRelayConnection — S510 visible-window retry', () => {
     const { onStatusChange } = exhaust(source, { visibilitySource: null });
     expect(onStatusChange).toHaveBeenLastCalledWith('closed');
     expect(source.addCount).toBe(0);
+  });
+});
+
+// ── M-TIZEN-06 — bearer transport TLS gate at the connect boundary ────────────
+
+describe('M-TIZEN-06 — the connect path never rides a bearer plaintext', () => {
+  it('plaintext base, no hatch: refuses BEFORE the mint — no socket, no token, no ladder, no wait', () => {
+    vi.useFakeTimers();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const tokenProvider = vi.fn(() => 'tok-123');
+    const canRetryToken = vi.fn(() => true); // a hub session EXISTS — the gate must still refuse first
+    const onStatusChange = vi.fn();
+    const source = visSource();
+    openHubRelayConnection(
+      config({ hubBaseUrl: 'http://hub.example.test', tokenProvider, canRetryToken, onStatusChange, visibilitySource: source }),
+    );
+    // Fail LOUD with an actionable, non-secret-bearing error naming the fix.
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const logged = String(errorSpy.mock.calls[0][0]);
+    expect(logged).toContain('relay dial to http://hub.example.test refused');
+    expect(logged).toContain('wss:// is mandatory');
+    expect(logged).toContain(HUB_RELAY_INSECURE_DEV_HATCH_ENV);
+    // Bearer custody: the refusal precedes every credential touch — the S2a
+    // mint (hub JWT in Authorization) and the relay dial are both never started.
+    expect(tokenProvider).not.toHaveBeenCalled();
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(onStatusChange).toHaveBeenLastCalledWith('closed');
+    // A POLICY refusal is terminal, not transient: spending the whole ladder
+    // budget (and the visible-window patience) produces no further attempts.
+    vi.advanceTimersByTime(600_000);
+    expect(FakeWebSocket.instances).toHaveLength(0);
+    expect(tokenProvider).not.toHaveBeenCalled();
+    expect(source.addCount).toBe(0); // no S510 foreground wait armed either
+  });
+
+  it('dev hatch ON (env=1): dials ws:// and DISCLOSES on every attempt — never silently', () => {
+    vi.stubEnv(HUB_RELAY_INSECURE_DEV_HATCH_ENV, '1');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error');
+    openHubRelayConnection(config({ hubBaseUrl: 'http://hub.example.test' }));
+    const s = socket();
+    expect(s.url).toBe(`ws://hub.example.test:${HUB_SYNC_PLAY_PORT}/syncplay/${SERVER_ID}`);
+    expect(s.protocols).toEqual(['bearer', 'tok-123']);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(String(warnSpy.mock.calls[0][0])).toContain('INSECURE DEV HATCH');
+    expect(String(warnSpy.mock.calls[0][0])).toContain(HUB_RELAY_INSECURE_DEV_HATCH_ENV);
+    expect(errorSpy).not.toHaveBeenCalled(); // hatch-on is a disclosure, not a refusal
+  });
+
+  it('a second dial attempt re-discloses (warning is per-attempt, not one-shot)', () => {
+    vi.useFakeTimers();
+    vi.stubEnv(HUB_RELAY_INSECURE_DEV_HATCH_ENV, '1');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    openHubRelayConnection(config({ hubBaseUrl: 'http://hub.example.test' }));
+    socket().onclose?.(); // drop → the ladder re-dials on rung 1
+    vi.advanceTimersByTime(1000);
+    expect(FakeWebSocket.instances).toHaveLength(2);
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('https base: dials wss:// quietly — the default law needs no hatch noise', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    openHubRelayConnection(config({ hubBaseUrl: 'https://hub.example.test' }));
+    expect(socket().url).toBe(`wss://hub.example.test:${HUB_SYNC_PLAY_PORT}/syncplay/${SERVER_ID}`);
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 });

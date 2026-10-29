@@ -236,7 +236,9 @@ export function renderBootFailure(error: unknown): void {
 /**
  * S298 — wire the hub-relay `pending_command` consumer at boot.
  *
- * "Alexa, play X" lands on the hub's SyncPlay relay (`ws://<hub>:8804`), which
+ * "Alexa, play X" lands on the hub's SyncPlay relay (`wss://<hub>:8804` — the
+ * bearer dial is TLS-mandatory since M-TIZEN-06; a plaintext hub base without
+ * the dev hatch is refused at connect), which
  * matches an authenticated (hub user, server) socket — NOT a SyncPlay room.
  * The consumer socket therefore opens WHENEVER the app is open with a hub
  * context, independently of any watch-together session (the old store socket

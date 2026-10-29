@@ -11,6 +11,13 @@ interface ImportMetaEnv {
    *  section (routes + nav entry) in the .wgt; ANY other value (including
    *  unset) means admin is omitted. Default-off. */
   readonly VITE_PHLIX_TV_ADMIN?: string;
+  /** M-TIZEN-06 — INSECURE DEV-ONLY hub-relay transport hatch. Set to '1' to
+   *  let the hub relay dial plaintext `ws://` when the hub base is not
+   *  `https:`. Default-off: without it a bearer relay connection to a
+   *  non-https hub is REFUSED at connect (the relay token would be readable
+   *  on the LAN). For local relay testing against a dev hub ONLY — never
+   *  ship a release .wgt built with this set. See README → Configuration. */
+  readonly VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY?: string;
   /** Build-time locale override for the client i18n seam (src/i18n). Wins over
    *  navigator.language, loses to an explicit runtime value. Unset/'en' keeps
    *  the byte-identical English ui defaults (the catalog ships an empty 'en'

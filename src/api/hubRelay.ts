@@ -7,8 +7,14 @@
  * consumer (`src/api/hubRelay.ts` in phlix-ui, S298 ui half) adapted to the
  * Tizen boot glue:
  *
- * - **URL** — `ws(s)://<hub-host>:8804/syncplay/<server_id>` (the path the
- *   relay's `onWebSocketConnect()` parses the server id from).
+ * - **URL** — `wss://<hub-host>:8804/syncplay/<server_id>` (the path the
+ *   relay's `onWebSocketConnect()` parses the server id from). M-TIZEN-06:
+ *   a bearer-carrying relay dial MUST be TLS — an `https:` hub base is the
+ *   default-law requirement, and a plaintext base is refused loudly before
+ *   anything (token mint included) rides the wire. The only plaintext path
+ *   is the honestly-named build-time dev hatch
+ *   {@link HUB_RELAY_INSECURE_DEV_HATCH_ENV}, documented README-insecure-only,
+ *   and every dial through it warns on the console.
  * - **Token carrier** — the `Sec-WebSocket-Protocol: bearer, <token>`
  *   subprotocol. The relay accepts `Authorization: Bearer` OR the bearer
  *   subprotocol (S237); a browser/TV WebSocket cannot set request headers, so
@@ -129,10 +135,13 @@ export interface HubRelayConfig {
    */
   visibilitySource?: HubRelayVisibilitySource | null;
   /**
-   * Hub base origin, e.g. `http://192.168.1.50:8800`. The relay listens on port
-   * 8804 regardless of this origin's own port. Tizen has no same-origin layout
-   * (the app runs from `file://`), so the boot glue ALWAYS supplies this —
-   * see {@link resolveHubRelayConfig}.
+   * Hub base origin — MUST be `https:` for a live relay dial (M-TIZEN-06: the
+   * bearer subprotocol must not ride plaintext; a plaintext base is refused
+   * at connect with a named, actionable error, and only the build-time dev
+   * hatch {@link HUB_RELAY_INSECURE_DEV_HATCH_ENV} permits the `ws:` shape).
+   * The relay listens on port 8804 regardless of this origin's own port.
+   * Tizen has no same-origin layout (the app runs from `file://`), so the
+   * boot glue ALWAYS supplies this — see {@link resolveHubRelayConfig}.
    */
   hubBaseUrl: string;
   /** Called once per delivered `pending_command` / `play_media` frame. */
@@ -180,15 +189,68 @@ export function parsePendingCommandFrame(raw: unknown): PendingPlayMediaCommand 
 }
 
 /**
- * Build the relay URL: `ws(s)://<host>:8804/syncplay/<server_id>`.
+ * M-TIZEN-06 — the ONLY way a relay dial may ever use plaintext `ws://`.
  *
- * The scheme follows `hubBaseUrl` (`https:` → `wss:`); the port is the relay's
- * own 8804, never the origin's. Exported for tests.
+ * A build-time env flag (the repo's default-off flag convention, same shape as
+ * `VITE_PHLIX_TV_ADMIN`), honest in its name: it exists for LOCAL TESTING of
+ * the hub relay against a plain-http dev hub, and it ships the relay bearer
+ * token UNENCRYPTED to anyone on the LAN. Never enable it in a release build.
+ * README documents it as insecure-dev-only.
  */
-export function buildHubRelayUrl(hubBaseUrl: string, serverId: string): string {
-  const host = new URL(hubBaseUrl).hostname;
-  const scheme = new URL(hubBaseUrl).protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${scheme}//${host}:${HUB_SYNC_PLAY_PORT}/syncplay/${encodeURIComponent(serverId)}`;
+export const HUB_RELAY_INSECURE_DEV_HATCH_ENV = 'VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY';
+
+/** True only when the dev hatch is explicitly set to `'1'` at build time. */
+export function insecureRelayHatchEnabled(): boolean {
+  return import.meta.env[HUB_RELAY_INSECURE_DEV_HATCH_ENV] === '1';
+}
+
+/**
+ * Thrown by {@link buildHubRelayUrl} when a bearer relay dial would silently
+ * downgrade to plaintext. Named so the connect path can distinguish a POLICY
+ * refusal (terminal, actionable) from a transient failure (laddered).
+ */
+export class HubRelayInsecureTransportError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'HubRelayInsecureTransportError';
+  }
+}
+
+/**
+ * Build the relay URL: `wss://<host>:8804/syncplay/<server_id>`.
+ *
+ * The port is the relay's own 8804, never the origin's. The scheme follows
+ * `hubBaseUrl` — but ONLY upward: `https:` → `wss:` is the bearer-transport
+ * law (M-TIZEN-06: a `['bearer', token]` subprotocol presented over plaintext
+ * is a LAN-wide credential broadcast and an open pending_command injection
+ * surface, so a non-https base THROWS {@link HubRelayInsecureTransportError}
+ * instead of silently dialing `ws://`). Plaintext `ws:` emerges only through
+ * the explicitly-built dev hatch {@link HUB_RELAY_INSECURE_DEV_HATCH_ENV}.
+ * An unparsable base throws the `URL` constructor's `TypeError` (the connect
+ * path ladders that — pre-existing malformed-config behavior).
+ *
+ * `allowInsecure` defaults to the build-env hatch read and is injectable for
+ * tests. Exported for tests.
+ */
+export function buildHubRelayUrl(
+  hubBaseUrl: string,
+  serverId: string,
+  allowInsecure: boolean = insecureRelayHatchEnabled(),
+): string {
+  const url = new URL(hubBaseUrl);
+  const secure = url.protocol === 'https:';
+  if (!secure && !allowInsecure) {
+    throw new HubRelayInsecureTransportError(
+      `relay dial to ${url.origin} refused: the hub relay presents a bearer ` +
+        `credential, so wss:// is mandatory and a plaintext base would expose the ` +
+        `relay token (and accept forged pending_command frames) on the local network. ` +
+        `Configure an https:// hub URL; for LOCAL TESTING ONLY you may build with ` +
+        `${HUB_RELAY_INSECURE_DEV_HATCH_ENV}=1, which ships the relay over ` +
+        `unencrypted ws:// and is never release-safe.`,
+    );
+  }
+  const scheme = secure ? 'wss:' : 'ws:';
+  return `${scheme}//${url.hostname}:${HUB_SYNC_PLAY_PORT}/syncplay/${encodeURIComponent(serverId)}`;
 }
 
 // ── relay-token minting (hub S2a endpoint) ───────────────────────────────────
@@ -330,7 +392,12 @@ export interface HubRelayConfigInput {
  * Hub base precedence: persisted `phlix.hubUrl` → build env
  * `VITE_PHLIX_HUB_URL` → the server URL's origin (the common self-hosted
  * layout where the hub shares the server's host — the web ui's own-origin
- * default, transposed to the only host a TV knows).
+ * default, transposed to the only host a TV knows). M-TIZEN-06 note: the
+ * fallback origin is typically plain `http://` on a LAN; resolution stays
+ * permissive, but the relay DIAL is then refused by the TLS law at
+ * {@link buildHubRelayUrl} (loud console error, status `'closed'`, nothing —
+ * including the token mint — rides plaintext), so a usable relay needs an
+ * `https://` hub base outside the dev hatch.
  */
 export function resolveHubRelayConfig(
   input: HubRelayConfigInput,
@@ -428,6 +495,37 @@ export function openHubRelayConnection(config: HubRelayConfig): void {
  */
 function connectHubRelaySocket(): void {
   if (!hubConfig) return;
+
+  // M-TIZEN-06 — the bearer-transport TLS law is checked BEFORE the token
+  // provider is consulted: the provider's S2a mint rides the same hub origin,
+  // so a plaintext-without-hatch base must end this attempt before any
+  // credential (hub JWT or relay token) is put on the wire. A policy refusal
+  // is terminal, not transient: no ladder, no visible-window re-ask — the
+  // config itself must change (https hub URL) and the host re-opens then.
+  let relayUrl: string;
+  try {
+    relayUrl = buildHubRelayUrl(hubConfig.hubBaseUrl, hubConfig.serverId);
+  } catch (error) {
+    if (error instanceof HubRelayInsecureTransportError) {
+      console.error(`[phlix-hub-relay] ${error.message}`);
+      setStatus('closed');
+      return;
+    }
+    // A malformed persisted hub URL (user-editable localStorage slot) must not
+    // crash boot — ladder it (bounded), as before.
+    scheduleHubReconnect();
+    return;
+  }
+  if (!relayUrl.startsWith('wss:')) {
+    // Reachable only via the dev hatch (the builder refuses plaintext otherwise).
+    // Disclose on EVERY dial — this credential is readable on the local network.
+    console.warn(
+      `[phlix-hub-relay] INSECURE DEV HATCH (${HUB_RELAY_INSECURE_DEV_HATCH_ENV}=1): ` +
+        `dialing ${relayUrl} over plaintext ws:// — the relay bearer token is ` +
+        `exposed to the local network. Never ship a build with this enabled.`,
+    );
+  }
+
   setStatus(hubReconnectAttempts > 0 ? 'reconnecting' : 'connecting');
   const token = hubConfig.tokenProvider();
   if (!token) {
@@ -450,10 +548,9 @@ function connectHubRelaySocket(): void {
     // The token travels in the `bearer, <token>` SUBPROTOCOL — the only carrier
     // a Tizen webview WebSocket can present (S237: query-string refused by
     // design). The relay echoes it back (S355), completing the handshake.
-    socket = new WebSocket(buildHubRelayUrl(hubConfig.hubBaseUrl, hubConfig.serverId), ['bearer', token]);
+    socket = new WebSocket(relayUrl, ['bearer', token]);
   } catch {
-    // A malformed persisted hub URL (user-editable localStorage slot) or a
-    // WebSocket constructor failure must not crash boot — ladder it (bounded).
+    // A WebSocket constructor failure must not crash boot — ladder it (bounded).
     scheduleHubReconnect();
     return;
   }

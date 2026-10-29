@@ -5,6 +5,58 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — hub relay bearer transport is TLS-mandatory; plaintext downgrade refused (M-TIZEN-06 / review tizen__exploiter MAJOR-6) — 2026-10-29
+
+- **The silent downgrade closes.** `buildHubRelayUrl` mapped any non-`https:`
+  hub base to bare `ws://` — and the relay dial presents the minted relay
+  token in the `Sec-WebSocket-Protocol: bearer, <token>` handshake, so a
+  plain-http hub config (the LAN-default the boot fallback happily resolves)
+  broadcast that credential to anyone on the TV's network, which then rides
+  the unauthenticated socket as a `pending_command` injector. C27 `d2a5202`
+  was the spatial-nav focus cure (disk-reproved at this tip) — the relay path
+  was NOT already closed; the review's cited line downgraded on the parent.
+- **The law:** `https:` base → `wss:` (unchanged shape); a plaintext base
+  now throws a NAMED `HubRelayInsecureTransportError` whose message is
+  actionable (names the refused origin, demands https, names the only escape
+  hatch). `connectHubRelaySocket` builds the URL FIRST — before the token
+  provider is consulted — so a refusal ends the attempt before ANY
+  credential (the hub JWT mint included) touches the wire; the refusal is
+  terminal (console.error + status `'closed'`, no ladder, no S510 wait — the
+  config must change, transient retry cannot fix it). The malformed-URL →
+  laddered path is byte-preserved (TypeError ≠ policy error).
+- **The hatch** (repo default-off flag convention, `VITE_PHLIX_TV_ADMIN`
+  idiom): `VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY=1` at BUILD time unlocks the
+  `ws://` dial for local testing against a plain-http dev hub, warns on the
+  console with EVERY dial (per-attempt, not one-shot), is declared in
+  `vite-env.d.ts`, and README documents it as insecure-dev-only. Any other
+  value keeps the gate shut.
+- **Scope truth:** `src/syncplayDispatch.ts:66-92` (second cited evidence
+  site) is a store watcher — it assembles NO URL (grep-proven); the only
+  relay builder was `buildHubRelayUrl`, and it is now the single gate. The
+  direct-mode `buildWsUrl` in `src/stores/useSyncPlayStore.ts` (server
+  `:8097`) is the SERVER lane's policy question, not this hub-relay item —
+  reported, untouched. phlix-mobile-client carries the identical downgrade
+  in its own `src/syncplay/hubRelay.ts:159` (grep-proven this lane, read-
+  only) — its own queue item, no cure precedent existed to mirror.
+- Tests: `tests/unit/hubRelay.test.ts` 44 → 54 (+10 exact): builder refusal
+  (named error, message bytes, `ws://` base also refused, TypeError leg
+  stays laddered), hatch-shape unlocks ONLY via explicit allowance, the env
+  default IS the hatch read (stub→unlock→unstub→re-refuse), non-`'1'`
+  values shut; connect-path refusal-before-mint (tokenProvider never called,
+  zero sockets across 600 s of clock, zero visibility listeners), hatch
+  disclosure per-dial, https dials `wss:` quietly. The lifecycle fixtures
+  flipped `http:` → `https:` (the old shape ENCODED the bug — precedent:
+  ui `c81480b9` bug-encoding flips). Red-on-parent: the 7 gate-legs fail on
+  `84bc875`'s `hubRelay.ts` (measured); mutation matrix: builder-gate strip
+  reddens exactly 5, connect-terminal strip exactly 1, disclosure strip
+  exactly 2 — all restored.
+- Suite: 52 files/823 tests → 52/833 (+10 exact, serial self-baseline
+  re-measured on the parent tip this lane); vue-tsc 0, eslint 0, coverage-
+  floor gate green (84.39/74.15/81.18/85.82 vs 72/61/68/73); build +
+  `npm run package` green, committed `package/` carries the cure bytes
+  (`index-BT2qjJ3x.js` contains `wss:// is mandatory`), package tree
+  deterministic ×2 (aggregate md5 `221e6c75afe7e105a1eacd3e3bb6e770`).
+
 ### Fixed — telemetry CLIENT_VERSION joins the stamped carriers; package chain re-ordered sync-first (M-TIZEN-05 r2 / review tizen__devops MAJOR-1) — 2026-10-29
 
 - **The r2 review caught the third silent carrier.** r1 automated the two
