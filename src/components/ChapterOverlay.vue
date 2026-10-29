@@ -502,10 +502,10 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 6px 14px;
   background: rgba(239, 68, 68, 0.9);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--text-2xs); /* M-TIZEN-11: was 12px — half the couch floor */
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -581,7 +581,7 @@ onBeforeUnmount(() => {
   bottom: 100%;
   transform: translateX(-50%);
   margin-bottom: 6px;
-  padding: 4px 8px;
+  padding: 10px 16px;
   background: rgba(0, 0, 0, 0.9);
   border-radius: 4px;
   white-space: nowrap;
@@ -589,7 +589,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
 }
 
 .chapter-overlay__tooltip::after {
@@ -603,13 +603,13 @@ onBeforeUnmount(() => {
 }
 
 .chapter-overlay__tooltip-label {
-  font-size: 12px;
+  font-size: var(--text-xs); /* M-TIZEN-11: was 12px */
   font-weight: 600;
   color: #fff;
 }
 
 .chapter-overlay__tooltip-time {
-  font-size: 10px;
+  font-size: var(--text-2xs); /* M-TIZEN-11: was 10px */
   color: #a1a1aa;
 }
 
@@ -622,10 +622,10 @@ onBeforeUnmount(() => {
   top: -28px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 4px 12px;
+  padding: 6px 16px;
   background: rgba(0, 0, 0, 0.8);
   color: #ffcc00;
-  font-size: 14px;
+  font-size: var(--text-sm); /* M-TIZEN-11: was 14px */
   font-weight: 600;
   border-radius: 4px;
   white-space: nowrap;

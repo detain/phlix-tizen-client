@@ -179,7 +179,14 @@ onBeforeUnmount(() => {
   animation: screensaver-drift 42s ease-in-out infinite alternate;
 }
 .screensaver__wordmark {
-  font: 700 132px/1 ui-sans-serif, system-ui, sans-serif;
+  /* M-TIZEN-11: was `font: 700 132px/1`. Split to longhands so the size is
+   * a plain token reference (one sweep law for every rule, no pending-
+   * substitution validation trap in the shorthand). 144px = --text-5xl at
+   * root 24 on the fixed 1920 canvas. */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: var(--text-5xl);
+  line-height: 1;
   letter-spacing: 0.14em;
   text-transform: none;
   color: transparent;
@@ -206,7 +213,11 @@ onBeforeUnmount(() => {
   background: linear-gradient(90deg, transparent, rgba(245, 165, 36, 0.85) 22% 78%, transparent);
 }
 .screensaver__hint {
-  font: 400 24px/1.5 ui-sans-serif, system-ui, sans-serif;
+  /* M-TIZEN-11: was `font: 400 24px/1.5`; 24px = the couch floor rung. */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  font-size: var(--text-2xs);
+  line-height: 1.5;
   letter-spacing: 0.4em;
   text-transform: uppercase;
   color: #8f94a8;

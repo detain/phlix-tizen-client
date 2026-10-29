@@ -270,26 +270,26 @@ watch(eligible, (active) => {
 }
 .quick-connect__eyebrow {
   margin: 0;
-  font-size: 22px;
+  font-size: var(--text-xs); /* M-TIZEN-11: was 22px */
   letter-spacing: 0.42em;
   text-transform: uppercase;
   color: #8f94a8;
 }
 .quick-connect__title {
   margin: 0;
-  font-size: 44px;
+  font-size: var(--text-xl); /* M-TIZEN-11: was 44px */
   font-weight: 700;
   letter-spacing: 0.01em;
 }
 .quick-connect__lead {
   margin: 0;
-  font-size: 26px;
+  font-size: var(--text-base); /* M-TIZEN-11: was 26px */
   color: #c8ccd8;
 }
 .quick-connect__code {
   margin: 8px 0;
   padding: 26px 44px;
-  font-size: 104px;
+  font-size: var(--text-4xl); /* M-TIZEN-11: was 104px */
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0.16em;
@@ -305,13 +305,13 @@ watch(eligible, (active) => {
 .quick-connect__meta,
 .quick-connect__hint {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--text-sm); /* M-TIZEN-11: was 20px */
   color: #8f94a8;
 }
 .quick-connect__retry {
   margin-top: 6px;
   padding: 16px 40px;
-  font-size: 24px;
+  font-size: var(--text-sm); /* M-TIZEN-11: was 24px */
   font-weight: 600;
   color: #07070d;
   background: #f5a524;
@@ -334,7 +334,7 @@ watch(eligible, (active) => {
 }
 .quick-connect__dismiss {
   padding: 16px 40px;
-  font-size: 24px;
+  font-size: var(--text-sm); /* M-TIZEN-11: was 24px */
   font-weight: 600;
   color: #efece4;
   background: transparent;

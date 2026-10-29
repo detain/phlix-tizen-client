@@ -188,7 +188,7 @@ function handleClose() {
 }
 
 .modal-title {
-  font-size: 1.125rem;
+  font-size: var(--text-md, 1.125rem); /* M-TIZEN-11: was raw rem */
   font-weight: 600;
   color: var(--text, #fafafa);
   margin: 0;
@@ -240,7 +240,7 @@ function handleClose() {
 }
 
 .section-label {
-  font-size: 0.75rem;
+  font-size: var(--text-sm, 0.75rem); /* M-TIZEN-11: was raw rem */
   font-weight: 500;
   color: var(--text-subtle, #71717a);
   text-transform: uppercase;
@@ -260,7 +260,7 @@ function handleClose() {
 }
 
 .hint {
-  font-size: 0.75rem;
+  font-size: var(--text-xs, 0.75rem); /* M-TIZEN-11: was raw rem */
   color: var(--text-subtle, #71717a);
   margin: 0;
 }
@@ -269,7 +269,7 @@ function handleClose() {
   display: inline-block;
   padding: 0.125rem 0.375rem;
   font-family: inherit;
-  font-size: 0.6875rem;
+  font-size: var(--text-2xs, 0.6875rem); /* M-TIZEN-11: was raw rem */
   background-color: var(--bg-elevated, #27272a);
   border: 1px solid var(--border, #3f3f46);
   border-radius: 4px;

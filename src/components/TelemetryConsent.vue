@@ -151,12 +151,20 @@ onBeforeUnmount(() => {
 }
 .telemetry-consent__title {
   margin: 0;
-  font: 700 34px/1.2 ui-sans-serif, system-ui, sans-serif;
+  /* M-TIZEN-11: was `font: 700 34px/1.2` — split longhands, 36px rung. */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 700;
+  font-size: var(--text-lg);
+  line-height: 1.2;
   letter-spacing: 0.01em;
 }
 .telemetry-consent__body {
   margin: 0;
-  font: 400 22px/1.5 ui-sans-serif, system-ui, sans-serif;
+  /* M-TIZEN-11: was `font: 400 22px/1.5` — 30px body rung at couch distance. */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  font-size: var(--text-base);
+  line-height: 1.5;
   color: #b9bdd0;
 }
 .telemetry-consent__actions {
@@ -165,7 +173,11 @@ onBeforeUnmount(() => {
   margin-top: 6px;
 }
 .telemetry-consent__btn {
-  font: 600 24px/1 ui-sans-serif, system-ui, sans-serif;
+  /* M-TIZEN-11: was `font: 600 24px/1` — 28px secondary rung on pills. */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  line-height: 1;
   padding: 16px 34px;
   border-radius: 12px;
   border: 1px solid transparent;

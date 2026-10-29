@@ -174,7 +174,7 @@ const starMask = computed(() => buildStarMask(props.score ?? 0))
 }
 
 .score-label {
-  font-size: 0.875rem;
+  font-size: var(--text-2xs, 0.875rem); /* M-TIZEN-11: was raw rem */
   font-weight: 600;
   color: var(--text-muted, #a1a1aa);
   letter-spacing: 0.01em;

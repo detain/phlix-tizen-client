@@ -49,6 +49,22 @@
         background: #07070d;
         color: #efece4;
       }
+      /*
+       * M-TIZEN-11 — TV root font-size (review tizen__gameux M3).
+       * The fixed-viewport meta above makes 1 CSS px a canvas pixel on the
+       * 1920x1080 TV frame, so the UA's 16px rem base was a DESKTOP base on a
+       * TV canvas: ui's token ladder rendered 11-17px text at couch distance.
+       * Declaring the root here (the fixed-viewport story already starts on
+       * line 5 of this file — same zero-JS first-frame contract as the splash
+       * itself) raises the WHOLE rem system ~1.5x proportionally: controls,
+       * spacing, rem grid tracks and the clamp() display rungs scale without
+       * touching the vendored tree. The sub-floor small rungs are re-tuned in
+       * src/styles/tv-typography.css (imported after the vendor stylesheet).
+       * Pinned by tests/unit/tvTypography.test.ts.
+       */
+      html {
+        font-size: 24px;
+      }
       #phlix-splash {
         position: fixed;
         inset: 0;
@@ -75,7 +91,10 @@
         background: linear-gradient(90deg, transparent, #f5a524 30% 70%, transparent);
       }
       #phlix-splash .phlix-splash__hint {
-        font: 400 22px/1.4 ui-sans-serif, system-ui, sans-serif;
+        /* 24px = the M-TIZEN-11 couch floor; splash text is absolute-canvas
+         * art painted before any stylesheet exists, so px is its honest unit
+         * (allow-listed in tests/unit/tvTypography.test.ts). */
+        font: 400 24px/1.4 ui-sans-serif, system-ui, sans-serif;
         letter-spacing: 0.32em;
         text-transform: uppercase;
         color: #8f94a8;

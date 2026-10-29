@@ -162,7 +162,7 @@ onMounted(() => {
 }
 
 .picker-label {
-  font-size: 0.875rem;
+  font-size: var(--text-sm, 0.875rem); /* M-TIZEN-11: was raw rem */
   font-weight: 500;
   color: var(--text-subtle, #a1a1aa);
 }
@@ -214,7 +214,7 @@ onMounted(() => {
 }
 
 .rating-value {
-  font-size: 0.875rem;
+  font-size: var(--text-sm, 0.875rem); /* M-TIZEN-11: was raw rem */
   font-weight: 600;
   color: var(--text-muted, #a1a1aa);
 }

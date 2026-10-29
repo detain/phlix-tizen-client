@@ -1304,7 +1304,7 @@ onMounted(loadAll);
   border-radius: var(--radius-full, 9999px);
   background: rgba(239, 68, 68, 0.2);
   color: #ef4444;
-  font-size: 1rem;
+  font-size: var(--text-2xs, 1rem); /* M-TIZEN-11: was raw rem */
   line-height: 1;
   cursor: pointer;
   transition: background var(--dur-fast, 150ms) var(--ease-out, ease-out);

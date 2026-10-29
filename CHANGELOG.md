@@ -5,6 +5,45 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — TV-scale typography: rem base raised for the 1920 canvas, px outliers swept (M-TIZEN-11 / review tizen__gameux M3) — 2026-10-29
+
+- **Root cause:** the fixed-viewport widget (`index.html` meta
+  `width=1920`) never declared a root font-size, so `1rem` resolved to the
+  browser default 16px and @phlix/ui's DESKTOP-tuned ladder rendered
+  11–17px body text at couch distance. The splash "scaled fine" only because
+  it hand-tunes absolute px — the idiom never generalized to the app body.
+- **Cure (host-side, vendored files untouched):** `html { font-size: 24px }`
+  in `index.html` — the classic TV-web pattern; every rem (controls, spacing,
+  clamp rungs) scales ×1.5 at once. On top, `src/styles/tv-typography.css`
+  re-floors the six small ladder rungs in `html:root` (specificity 0,1,1
+  beats the vendor `:root` 0,1,0 order-independently):
+  2xs 24 / xs 26 / sm 28 / base 30 / md 32 / lg 36 px. Pure raising could
+  not meet the floor (24 × .6875 = 16.5px); the re-floor is the documented
+  LEAST the ladder needed to sit entirely ≥ 24px on the shipped canvas.
+  Effective ladder end-to-end: body 30px, card titles 32px, rail headers 42px,
+  page headers 60–90px — the six untouched clamp rungs never drop below
+  33.6px at root 24 and render 42–144px on the 1920 canvas (math pinned by
+  test).
+- **Sweep:** every literal px/rem font size in `src/**` now consumes the
+  ladder — ChapterOverlay's four micro rules (10/12/12/14px),
+  QuickConnectPanel (7 rules), ScreenSaver/ActionToast/TelemetryConsent
+  `font:` shorthands split to longhands on tokens, and 8 raw-rem literals in
+  RatingModal/RatingBadge/UserRatingPicker/ParentalControlsPage.
+  `index.html`'s inline splash px stays allow-listed BY VALUE (≥24 verified).
+- **Known residual (upstream):** ~9 vendored @phlix/ui player-chrome rules
+  hardcode 10–13px instead of consuming tokens (`.chapterlist__*`,
+  `.control-btn__label`, player time/kbd micro-readouts). Host-side reach
+  would mean duplicating hash-scoped vendor selectors — the exact fragility
+  the anti-fork law prevents; ticketed for a ui-side tokenization pass.
+- **Laws:** `tests/unit/tvTypography.test.ts` (9 tests) pins root raise in
+  source AND shipped `package/index.html`, the by-value splash allow-list,
+  the floored monotonic ladder, `html:root` specificity + import order, the
+  byte-intact vendor ladder in the bundle (anti-fork), the ≥24px floor for
+  EVERY effective rung resolved at root 24/1920, the src-wide no-literal
+  sweep, and the four named ChapterOverlay anchors. 8/9 red at parent
+  3108866 (the anti-fork pin is parent-green by design).
+  `package/` re-vendored via `npm run package`.
+
 ### Fixed — transport keys: single-tap live, hold throttled, dead vocabulary removed (M-TIZEN-09 / review tizen__gameux M1) — 2026-10-29
 
 - **Single-tap was dead by classification.** `FAST_FORWARD`/`REWIND` were

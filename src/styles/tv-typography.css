@@ -1,0 +1,74 @@
+/**
+ * tv-typography — the TV legibility floor for the vendored @phlix/ui type ladder.
+ * (M-TIZEN-11 / review tizen__gameux M3)
+ *
+ * ROOT CAUSE (measured at the parent): the fixed-viewport build (index.html
+ * meta width=1920) shipped with NO declared root font-size, so 1rem resolved
+ * to the UA default 16px and ui's token ladder — desktop-tuned — rendered
+ * body text at 15px (--text-base .9375rem), card titles at 17px
+ * (--text-md 1.0625rem) and micro labels down to 11px (--text-2xs .6875rem).
+ * A 15px glyph is ~1.4% of the 1080px frame height — roughly half the
+ * smallest text mainstream TV UIs ship as body, and unreadable from a 3m
+ * couch. `[data-tv]` (set by ui on document.documentElement via
+ * defaultTv:true) only re-scaled CONTROL GEOMETRY (--control-h etc.) — the
+ * typography half of the context override never existed.
+ *
+ * THE MECHANISM (two coordinated steps, both host-side — the vendored
+ * @phlix/ui tree stays byte-identical, estate law):
+ *
+ *  1. The root raise lives in index.html's inline <style> (the fixed-viewport
+ *     story starts there; it paints from the first frame with zero JS/bundle
+ *     dependency): `html { font-size: 24px }`. The classic TV-web pattern —
+ *     every rem in the system scales proportionally: ui's rem geometry
+ *     (--control-h 3.25rem → 78px, --space-*, rem grid tracks) lands at
+ *     TV-appropriate sizes, and the clamp()-based display rungs (xl…5xl,
+ *     hero) scale naturally and STAY MONOTONIC without being touched.
+ *
+ *  2. This file floors the small end of the ladder. The raise alone is NOT
+ *     sufficient: base 24px × smallest token ratio .6875 = 16.5px, still
+ *     under the 24px couch-legibility floor, so the six sub-floor rungs get
+ *     explicit values here. This extends ui's OWN established convention —
+ *     `[data-tv]`/context blocks overriding tokens for the TV context; the
+ *     geometry half shipped upstream, the typography half is exactly the
+ *     gap this review proved.
+ *
+ * Selector law: the vendor token block is `:root{--text-…}` (specificity
+ * 0,1,0). `html:root` compounds to 0,1,1 — it wins over the vendor block
+ * ORDER-INDEPENDENTLY, so bundle CSS emission order can never silently
+ * un-floor the ladder. Values are declared in px because a px floor is the
+ * product law (≥ ~24px effective on the fixed 1920×1080 canvas) and px-on-
+ * fixed-canvas is this repo's existing idiom (splash, overlays, virtual-grid
+ * gaps); as rem at root 24 the same numbers would be opaque fractions
+ * (1.0833rem…).
+ *
+ * Rendered ladder after this file + the root raise (smallest → largest):
+ *   2xs 24 · xs 26 · sm 28 · base 30 · md 32 · lg 36 ·
+ *   xl 42 · 2xl 60 · 3xl 90 · 4xl 108 · 5xl 144 · hero 132  (xl+ = untouched
+ *   clamps resolved at root 24 on the 1920 canvas)
+ *
+ * KNOWN RESIDUAL (named, upstream, NOT host-reachable): ~9 vendored player-
+ * chrome rules hardcode px font-sizes instead of consuming these tokens
+ * (.chapterlist__* 11/13px, .control-btn__label 10px, the player-time mono
+ * readout 10px, one kbd-chip 10px). Overriding them host-side requires
+ * duplicating vendored class selectors (hash-fragile, silent-stale on
+ * rename) — the durable cure is ui tokenizing those rules. Full table in
+ * .reviews/fixlog/M-TIZEN-11__fix.md.
+ *
+ * Pinned by tests/unit/tvTypography.test.ts (floor math, monotonicity,
+ * import order, vendor-block byte-integrity, and the src-wide
+ * "no px font-size outside the index.html first-frame allowlist" law).
+ */
+html:root {
+  /* Smallest readable-from-3m class: badges, index numbers, code digits. */
+  --text-2xs: 24px;
+  /* Micro copy: card meta, tabular hints, tooltip secondary lines. */
+  --text-xs: 26px;
+  /* Secondary copy: row counts, rail labels, chapter rows, pill CTAs. */
+  --text-sm: 28px;
+  /* Body copy at couch distance. */
+  --text-base: 30px;
+  /* Card titles. */
+  --text-md: 32px;
+  /* Section titles — kept above md and below xl (42, untouched clamp). */
+  --text-lg: 36px;
+}

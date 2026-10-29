@@ -129,7 +129,11 @@ onMounted(() => {
   border: 1px solid rgba(245, 165, 36, 0.35);
   box-shadow: 0 10px 36px -8px rgba(0, 0, 0, 0.72);
   color: #efece4;
-  font: 500 26px/1.2 ui-sans-serif, system-ui, sans-serif;
+  /* M-TIZEN-11: was `font: 500 26px/1.2` — split longhands, 30px body rung. */
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  font-size: var(--text-base);
+  line-height: 1.2;
   letter-spacing: 0.02em;
   z-index: 9000;
   pointer-events: none;

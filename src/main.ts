@@ -14,6 +14,10 @@ import { createPhlixApp, buildAdminRoutes, LibraryScanPage, ApiClient, LocalStor
 import { buildPhlixHeaders } from '@phlix/contracts';
 import '@phlix/ui/style.css';
 import '@phlix/ui/fonts.css';
+// M-TIZEN-11 — host TV typography layer. MUST stay after the vendor
+// stylesheets: the floor overrides are also belt-and-braces to their
+// `html:root` specificity win (see the file's header for the full story).
+import './styles/tv-typography.css';
 import { resolveAppConfig, pushAddressHistory, sanitizeServerAddress } from './resolveConfig';
 import { createConnectScan } from './discovery/connectScan';
 import { resolveLocale, messagesForLocale } from './i18n';
