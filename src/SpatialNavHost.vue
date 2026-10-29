@@ -27,15 +27,36 @@
 // explicit app exit at root). The modal-close rung dismisses the quality
 // flyout FIRST, so `qualityMenuActive` still tears down on BACK exactly as
 // before — the shared flag keeps gating spatial-nav out while the flyout is up.
+//
+// C27 / review tizen__gameux: an enabled engine with an EMPTY candidate pool is
+// what made the D-pad inert — the ui bundle never invokes `v-focusable`, so
+// nothing ever entered `focusableRegistry`. This host now owns populating it:
+// `spatial/focusCandidates.ts` keeps every currently-interactive element under
+// document.body registered while the host lives, and the engine's `enabled`
+// gate alone decides whether moves are allowed (surface-off = pool idle, never
+// contesting the player or the quality flyout).
+import { onBeforeUnmount, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { useSpatialNav, usePreferencesStore } from '@phlix/ui';
+import { useSpatialNav, usePreferencesStore, focusableRegistry } from '@phlix/ui';
 import { qualityMenuActive } from './tizenBridge';
+import { createFocusCandidateWatcher } from './spatial/focusCandidates';
 
 const route = useRoute();
 const prefs = usePreferencesStore();
 
 useSpatialNav({
   enabled: () => Boolean(prefs.tv) && route.name !== 'player' && !qualityMenuActive.value
+});
+
+let candidateWatcher: ReturnType<typeof createFocusCandidateWatcher> | null = null;
+
+onMounted(() => {
+  candidateWatcher = createFocusCandidateWatcher({ root: document.body, registry: focusableRegistry });
+});
+
+onBeforeUnmount(() => {
+  candidateWatcher?.destroy();
+  candidateWatcher = null;
 });
 </script>
 

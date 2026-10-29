@@ -240,7 +240,12 @@ See [`docs/signing.md`](docs/signing.md) for signing details.
 
 D-pad navigation is handled by `@phlix/ui`'s spatial navigation
 (`useSpatialNav`); transport keys are routed by the Tizen bridge
-(`src/tizenBridge.ts`) to the player and router.
+(`src/tizenBridge.ts`) to the player and router. The engine moves focus between
+its registered candidates; because the ui bundle ships no `v-focusable` call
+sites at the pinned version, the Tizen host keeps that candidate pool populated
+itself — `src/spatial/focusCandidates.ts` registers every currently-interactive
+element under `document.body` (links, buttons, inputs, selects, textareas,
+`tabindex` stops) live as they appear, leave, or become disabled.
 
 | Button | Action |
 |--------|--------|

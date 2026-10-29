@@ -5,6 +5,39 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — spatial engine registers focus candidates on real surfaces (C27 / review tizen__gameux) — 2026-10-29
+
+- **CRITICAL: the D-pad was inert everywhere.** @phlix/ui's `useSpatialNav`
+  moves focus between the elements in its exported `focusableRegistry`, but the
+  ONLY producer of entries there is the opt-in `v-focusable` directive — which
+  no shipped ui template invokes at the pinned v0.99.10 (grep `data-focusable`
+  across the bundle: zero call sites). The registry was provably empty on every
+  surface: the engine's key handler found no candidates, never called
+  `preventDefault`, and the Arrows only scrolled the page.
+- **`src/spatial/focusCandidates.ts` (new)**: the shell registers candidates at
+  the engine boundary instead of forking upstream templates.
+  `createFocusCandidateWatcher({root, registry})` keeps the pool equal to the
+  currently-interactive elements under `root` — the SAME shape the focus trap
+  and row-snap accept (`FOCUSABLE_SELECTOR`, now single-sourced here;
+  `tizenBridge.ts` imports it) — via a full scan on mount plus a coalesced
+  MutationObserver for node churn and in-place `disabled` flips. Shell entries
+  are stamped `data-focusable="auto"` so the directive's own entries (empty
+  string) are never swept or stolen; no `tabindex` is ever written and no focus
+  is ever moved. `destroy()` releases exactly the shell-owned entries.
+- **`src/SpatialNavHost.vue`**: owns the watcher's lifecycle — mount registers
+  `document.body` into ui's `focusableRegistry`, unmount releases it. The
+  `enabled` gate (tv mode / route / quality-menu) alone still decides whether
+  moves happen, so a surface-off pool is idle, never contesting the player or
+  the YELLOW flyout. The Tizen focus law holds: every interactive element on
+  screen is D-pad reachable, including the C16 QuickConnect panel.
+- **Tests**: +10 pins — `tests/unit/focusCandidates.test.ts` ×9 (whole-set
+  initial registration, no-tabindex law, non-interactive/disabled exclusion,
+  add/remove/disabled-flip churn, directive-owned immunity, destroy releases +
+  disconnect, refresh idempotence) + the SpatialNavHost mount-lifecycle
+  regression (a live body element reaches the registry, responds to DOM
+  changes, is released on unmount — red pre-fix, green post). The host suite's
+  mounts are now unmounted in afterEach (watchers must not leak across tests).
+
 ### Fixed — first-run QuickConnect takeover is dismissible (C16 / review tizen__casualgamer) — 2026-10-29
 
 - **`src/quickconnect/QuickConnectPanel.vue` (CRITICAL)**: the pairing takeover was

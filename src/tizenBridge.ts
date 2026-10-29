@@ -22,6 +22,7 @@ import {
   type LayerFocusStack,
   type RowNode
 } from './remote/backPolicy';
+import { FOCUSABLE_SELECTOR } from './spatial/focusCandidates';
 
 // Minimal structural types for the pieces of the RemoteManager singleton, the
 // phlix-ui player store, the vue-router instance, and the current route that
@@ -186,9 +187,9 @@ const SEEK_STEP_SECONDS = 10;
 const SEEK_STEP_REPEAT_SECONDS = 30;
 
 /** The focusable shape @phlix/ui's focus trap itself accepts (useFocusTrap.ts) —
- * row-snap "item 0" focuses the first node a spatial stop could ever land on. */
-const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+ * row-snap "item 0" focuses the first node a spatial stop could ever land on.
+ * Single source now lives in `spatial/focusCandidates.ts` (C27), shared with
+ * the spatial candidate watcher so both consume the identical interactive set. */
 
 /** Attribute @phlix/ui's `useFocusTrap` puts on every modal surface it guards. */
 export const FOCUS_TRAP_SELECTOR = '[data-focus-trap]';
