@@ -26,6 +26,12 @@
  *
  * Census measured 2026-10-29 at master 1d37585 over package/assets/*.js (35 files)
  * + index.html — every figure below re-derived from disk, none from the review prose.
+ *
+ * M-TIZEN-08 adds the CLAIM side of the same contract: the shipped bundle's
+ * ≥ 85 floor and the manifest/docs promises must never diverge (the original
+ * defect was "bundle unparseable below 85 while the surface claims pre-85
+ * support"). See the claim-side describe below for the three laws and why the
+ * platform-version check is a non-claim pin, not a floor computation.
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -207,6 +213,83 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // './polyfills' must be the first import in the entry (before @phlix/ui).
       const firstImport = main.match(/import '([^']+)'/);
       expect(firstImport?.[1]).toBe('./polyfills');
+    });
+  });
+
+  /* ------------------------------------------------------------------------
+   * CLAIM SIDE (M-TIZEN-08 / review tizen__exploiter lineage) — the surface
+   * that SAYS what engines are supported must never undercut the ≥ 85 floor
+   * this file enforces on the bundle itself.
+   *
+   * Why these are three non-numeric laws, not a floor computation: the brief
+   * asked to "parse config.xml required applications, assert implied floor >=
+   * 85". That arithmetic needs a Tizen-platform ↔ Chromium-major mapping, and
+   * the canonical contract REFUSES to fabricate one (docs/runtime-floor.md:
+   * required_version is "a Tizen platform version, not a Chromium version").
+   * Inventing a mapping here would make the test less truthful, not more. So:
+   *  L1 — the manifest can never carry an engine claim (zero Chrome/Chromium
+   *       tokens; required_version stays the pinned platform literal), so it
+   *       can never state a floor below 85 — or above it, either;
+   *  L2 — the adjudication that keeps L1 honest stays on the books: if anyone
+   *       ever attaches a Chromium implication to 6.5 (in either direction),
+   *       the pinned sentence reddens here and the whole trio re-adjudicates;
+   *  L3 — every hand-written doc that SPEAKS engine versions must state the
+   *       bounded contract in the same breath (floor literal + canonical
+   *       pointer), which kills the unbounded "pre-Chrome-98 webviews" reading
+   *       — the actual shipped survivor — from ever living in docs again.
+   * ---------------------------------------------------------------------- */
+  describe('claim side — manifest and docs must never undercut the floor (M-TIZEN-08)', () => {
+    const REPO = join(__dirname, '..', '..');
+
+    it('L1: the .wgt manifest carries no engine claim; required_version stays the pinned platform literal', () => {
+      // A <chrome|chromium> token in the manifest would be an engine-version
+      // promise the repo cannot adjudicate (L2 law) — and a pre-85 one would
+      // directly contradict this file's bundle enforcement. Preventative: no
+      // such token exists today (disclosed green, not red-on-parent).
+      for (const rel of ['app/config.xml', 'package/config.xml']) {
+        const xml = readFileSync(join(REPO, rel), 'utf8');
+        expect(xml.toLowerCase(), `${rel} must not mention Chrome/Chromium`).not.toMatch(
+          /chro?mium|chrome/
+        );
+        const m = xml.match(/required_version="([^"]+)"/);
+        expect(m, `${rel} declares a required_version`).not.toBeNull();
+        // Tizen PLATFORM version (never a Chromium major — see L2). If the
+        // supported device population changes, this pin, docs/runtime-floor.md
+        // and the README rotate together, with attribution (tripwire law).
+        expect(m![1], `${rel} required_version`).toBe('6.5');
+      }
+    });
+
+    it('L2: the floor doc keeps its no-fabricated-mapping adjudication of required_version', () => {
+      // The manifest's install gate is honest ONLY while docs/runtime-floor.md
+      // still declares 6.5 a platform version, not a Chromium version, and
+      // refuses to map it. Reddening this pin forces re-adjudication of L1's
+      // literal and every claim-surface doc (L3) in the same change.
+      const doc = readFileSync(join(REPO, 'docs', 'runtime-floor.md'), 'utf8');
+      expect(doc).toContain('not a Chromium version');
+      expect(doc).toContain('does not fabricate');
+    });
+
+    it('L3: every claim-surface doc that speaks engine versions states the bounded contract', () => {
+      // Corpus: the hand-written user-facing surfaces. Excluded by design:
+      // docs/runtime-floor.md (the contract itself), VERIFICATION.md +
+      // CHANGELOG.md (dated historical records — estate law keeps them
+      // verbatim), AGENTS.md/CLAUDE.md (caliber-managed mirrors), and the
+      // manifest (L1 forbids it speaking engine versions at all).
+      // Trigger = the file makes a numeric engine/version-shaped statement;
+      // obligation = it must simultaneously bound the claim: the ≥ 85 floor
+      // literal AND the canonical pointer. Red-on-parent at e4c81bb was
+      // DEVELOPER.md ("for pre-Chrome-98 Tizen webviews", unbounded);
+      // README.md and src/polyfills.ts were already reconciled (green).
+      const ENGINE_CLAIM = /(pre-?chrome|chrome[- ]?\d|chromium\s*[≥><=]?\s*\d|chrome\d{2,})/i;
+      for (const rel of ['README.md', 'DEVELOPER.md', 'src/polyfills.ts']) {
+        const text = readFileSync(join(REPO, rel), 'utf8');
+        if (!ENGINE_CLAIM.test(text)) continue;
+        const bounded =
+          (text.includes('Chromium ≥ 85') || text.includes('Chromium >= 85')) &&
+          text.includes('docs/runtime-floor.md');
+        expect(bounded, `${rel} speaks engine versions but does not state the Chromium ≥ 85 contract + canonical pointer`).toBe(true);
+      }
     });
   });
 });

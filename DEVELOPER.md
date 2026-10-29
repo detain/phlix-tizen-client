@@ -122,7 +122,14 @@ track sessions/devices via the `X-Phlix-Device-ID` header.
 ### Polyfills (`src/polyfills.ts`)
 
 Installs a `structuredClone` deep-clone fallback (`JSON.parse(JSON.stringify(...))`)
-for pre-Chrome-98 Tizen webviews. `@phlix/ui`'s SettingsForm relies on
+for the pre-Chrome-98 field population **that lies inside** the repo's declared
+runtime contract: the supported engine floor is **Chromium ≥ 85** (canonical:
+[`docs/runtime-floor.md`](docs/runtime-floor.md); tripwire:
+`tests/unit/distApiFloor.test.ts` scans the committed bundle — L3 law pins this
+very bounding). Engines below 85 cannot parse the shipped entry chunk (ES2021
+logical assignment, by design) and are NOT a supported population — on one of
+them the widget never boots past the CSS splash; no client-side polyfill can
+cure a parse failure. `@phlix/ui`'s SettingsForm relies on
 `structuredClone`. This module MUST be the first import in `main.ts`.
 
 ### Spatial navigation (`src/SpatialNavHost.vue`)

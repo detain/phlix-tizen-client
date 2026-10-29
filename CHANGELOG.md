@@ -5,6 +5,53 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — the claim side can no longer undercut the Chromium ≥ 85 engine floor (M-TIZEN-08 / review tizen__exploiter) — 2026-10-29
+
+- **Premise reconciled, nothing fabricated.** The review's pre-85-support chain
+  read `app/config.xml required_version="6.5"` as an engine claim. Per the
+  canonical contract (`docs/runtime-floor.md`, landed `76379f5`) that line is a
+  Tizen PLATFORM version and the repo explicitly refuses to fabricate a
+  Tizen↔Chromium mapping — so the manifest cannot be adjudicated below the
+  floor, and this lane does not invent the arithmetic. Bundle side verified
+  fresh against the committed `package/`: logical-assignment census equals the
+  floor doc's measured table exactly (`||=` 530 / `&&=` 37 / `??=` 1; entry
+  chunk `index-J2WGZPKQ.js` 147 + 3), so the entry chunk ships its ≥ 85 syntax
+  BY DESIGN under the honest contract — no `vite.config.ts`, manifest, or
+  bundle change; the cured-by `d2a5202` was in fact the spatial-nav focus cure,
+  the floor half being `76379f5`.
+- **The real survivors, enumerated both-sides:** `DEVELOPER.md` carried the
+  last unreconciled engine claim — "…for pre-Chrome-98 Tizen webviews" with
+  zero floor bounding anywhere in the file (grep-proven pre-fix); read naively
+  it admits a sub-85 supported population while the shipped entry chunk
+  hard-fails parsing there (permanent CSS splash). `README.md:51` was already
+  bounded (`chrome100` sentence carries the ≥ 85 contract + tripwire +
+  canonical pointer), `src/polyfills.ts` likewise. Examined and excluded:
+  `VERIFICATION.md:187` (names Chromium 100 — above the floor),
+  `VERIFICATION.md:1033/1035` (platform-capability claim for MediaCapabilities
+  with the ui `canPlayType` fallback — no engine-version support claim),
+  `docs/signing.md` (Studio tooling versions only); historical records stay
+  verbatim per estate law.
+- **Cure:** the `DEVELOPER.md` polyfill paragraph now bounds its field intel
+  with the contract — Chromium ≥ 85, pointer to `docs/runtime-floor.md` and
+  the tripwire — and states the honest consequence below the floor: a parse
+  failure, not a polyfillable condition; such engines are NOT a supported
+  population.
+- **Tripwire extension (`tests/unit/distApiFloor.test.ts`, +3 tests):** L1
+  pins the manifest silent about engines (zero Chrome/Chromium tokens in
+  `app/` + `package/config.xml`; `required_version` stays the literal platform
+  `'6.5'`) — preventative, shipped green (no contradiction exists today,
+  disclosed); L2 pins the floor doc's own adjudication sentences ("not a
+  Chromium version" / "does not fabricate") so any future 6.5→Chromium mapping
+  must re-adjudicate through the law; L3 obliges every hand-written
+  claim-surface doc that speaks engine versions (README / DEVELOPER /
+  `src/polyfills.ts`) to state the ≥ 85 floor literal AND the canonical
+  pointer in the same file — red-on-parent measured at `e4c81bb` on
+  `DEVELOPER.md` before the prose fix, green after.
+- **Gates (measured):** vitest full serial 52 files / 871 → 874 tests (+3
+  exact); `vue-tsc --noEmit` clean; `eslint .` clean; `npm run build` rebuilt
+  `dist/` byte-identical (`git status` clean under `dist/`) — docs+tests-only
+  cure, zero bundle bytes moved, `package/` untouched, no `.wgt` churn.
+
 ### Fixed — server/hub address passes an http(s) scheme allow-list at the storage boundary (M-TIZEN-07 / review tizen__exploiter MAJOR-2) — 2026-10-29
 
 - **The persisted-address trust closes.** `phlix.serverUrl` / `phlix.serverHistory`
