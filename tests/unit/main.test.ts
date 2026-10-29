@@ -317,6 +317,79 @@ describe('boot (Tizen renderer entry)', () => {
     ]);
   });
 
+  it('M-TIZEN-07: onConnectionChange REFUSES a poisoned scheme at the storage boundary (clean value intact, history untouched, loud warn)', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mod = await import('@/main');
+    await mod.boot();
+    const cfg = createPhlixApp.mock.calls.at(-1)?.[0] as {
+      onConnectionChange: (url: string | null) => void;
+    };
+    cfg.onConnectionChange('javascript:alert(document.cookie)');
+    cfg.onConnectionChange(' JAVASCRIPT\t:alert(1)');
+    cfg.onConnectionChange('data:text/html,<script>steal()</script>');
+    // Refusing a bad write never destroys the good state, and the poison is
+    // NEVER recorded into the suggestion history either.
+    expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBe('http://tv:8096');
+    expect(globalThis.localStorage.getItem('phlix.serverHistory') ?? '[]').toBe('[]');
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('non-http(s) scheme'));
+    warnSpy.mockRestore();
+  });
+
+  it('M-TIZEN-07: a legacy-poisoned persisted base boots to the EMPTY base (→ Connect screen), never to the poison', async () => {
+    vi.stubEnv('VITE_PHLIX_SERVER_URL', '');
+    globalThis.localStorage.setItem('phlix.serverUrl', 'javascript:alert(1)');
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(createPhlixApp).toHaveBeenLastCalledWith(
+      expect.objectContaining({ app: 'server', apiBase: '', requireConnection: true })
+    );
+  });
+
+  it('M-TIZEN-07: a poisoned persisted hubUrl resolves as UNSET for the relay config (composes with the M-TIZEN-06 TLS law, which stays at the dial)', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
+    globalThis.localStorage.setItem('phlix.hubUrl', 'data:text/html,evil');
+    globalThis.localStorage.setItem('phlix.hubServerId', 'srv-abc123');
+    globalThis.localStorage.setItem('phlix.hubAccessToken', 'hub-jwt');
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(resolveHubRelayConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({ serverUrl: 'http://tv:8096', hubUrl: null, serverId: 'srv-abc123' })
+    );
+  });
+
+  it('M-TIZEN-07: a poisoned persisted base is never a scan candidate, never the sweep anchor, never probed', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'javascript:alert(1)');
+    globalThis.localStorage.setItem('phlix.deviceId', 'tizen-fixed');
+    globalThis.localStorage.setItem(
+      'phlix.serverHistory',
+      JSON.stringify(['http://192.168.1.9:8097'])
+    );
+    const healthSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === 'http://192.168.1.1:8097/health') {
+        return { ok: true, status: 200, json: async () => ({ status: 'ok', version: '9' }) } as Response;
+      }
+      throw new TypeError('opaque network failure');
+    });
+    vi.stubGlobal('fetch', healthSpy);
+
+    const mod = await import('@/main');
+    await mod.boot();
+    const cfg = createPhlixApp.mock.calls.at(-1)?.[0] as {
+      connectScan?: () => Promise<Array<{ url: string; label?: string }>>;
+    };
+    const rows = await cfg.connectScan!();
+    // The persisted poison never reaches the rows…
+    for (const row of rows) expect(row.url).not.toMatch(/javascript/i);
+    // …and the sweep anchored on the most-recent CLEAN history address (the
+    // gateway .1 confirmed it), so every probe URL is a plain http /health GET.
+    for (const call of healthSpy.mock.calls) {
+      expect(String(call[0])).toMatch(/^https?:\/\/[^/]+\/health$/);
+    }
+    expect(rows.map((row) => row.url)).toContain('http://192.168.1.1:8097');
+  });
+
   it('S298: resolves the hub context from the persisted slots at boot', async () => {
     globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
     globalThis.localStorage.setItem('phlix.hubUrl', 'http://hub-tv:8800');

@@ -14,7 +14,7 @@ import { createPhlixApp, buildAdminRoutes, LibraryScanPage, ApiClient, LocalStor
 import { buildPhlixHeaders } from '@phlix/contracts';
 import '@phlix/ui/style.css';
 import '@phlix/ui/fonts.css';
-import { resolveAppConfig, pushAddressHistory } from './resolveConfig';
+import { resolveAppConfig, pushAddressHistory, sanitizeServerAddress } from './resolveConfig';
 import { createConnectScan } from './discovery/connectScan';
 import { resolveLocale, messagesForLocale } from './i18n';
 import { setTizenLocale, tTizen } from './i18n/tizen';
@@ -262,7 +262,13 @@ function wireHubRelayConsumer(
 ): void {
   const hubRelay = resolveHubRelayConfig({
     serverUrl: apiBase,
-    hubUrl: storage.getItem(HUB_URL_KEY),
+    // M-TIZEN-07 — the persisted hub slot rides the same storage-boundary
+    // gate as the server slot: a non-http(s) absolute scheme resolves to
+    // UNSET (the resolver's own precedence then falls to env → server
+    // origin, exactly as for an absent slot). Composition, not replacement:
+    // the M-TIZEN-06 TLS law in api/hubRelay.ts (bearer dial refuses
+    // plaintext) is untouched and still applies to whatever base survives.
+    hubUrl: sanitizeServerAddress(storage.getItem(HUB_URL_KEY)),
     serverId: storage.getItem(HUB_SERVER_ID_KEY),
     envHubUrl: import.meta.env.VITE_PHLIX_HUB_URL ?? null,
     envHubServerId: import.meta.env.VITE_PHLIX_HUB_SERVER_ID ?? null,
@@ -368,11 +374,27 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
     onConnectionChange: (url) => {
       try {
         if (url) {
-          storage.setItem(SERVER_URL_KEY, url);
+          // M-TIZEN-07 — storage-boundary scheme allow-list: an absolute
+          // non-http(s) address (javascript:, data:, file:, raw ws:…) is
+          // REFUSED here, so it can never be persisted and trusted by the next
+          // boot. The honest outcome for the user: this run stays as @phlix/ui
+          // made it, but the poison is not remembered — the next launch
+          // re-seeds the Connect screen. Blanks clear the slot (as before); a
+          // refused scheme leaves the PREVIOUS (clean) value intact — refusing
+          // a bad write is never a reason to destroy good state.
+          const address = sanitizeServerAddress(url);
+          if (address === null) {
+            console.warn(
+              `[phlix] Refused to persist server address with a non-http(s) scheme: ${url}`,
+            );
+            return;
+          }
+          storage.setItem(SERVER_URL_KEY, address);
           // S529 / AD-24 — record the address in the bounded history that seeds
           // the first-run connect suggestions (privilege-honest: this is the
           // data source that replaces a blind subnet sweep — see resolveConfig).
-          pushAddressHistory(storage, url);
+          // Its own gate (M-TIZEN-07) re-checks — one edge, single-source law.
+          pushAddressHistory(storage, address);
         } else storage.removeItem(SERVER_URL_KEY);
       } catch {
         // Persistence failed; the in-memory session value still drives this run.
@@ -389,7 +411,10 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
     // sites, config.xml byte-identical).
     connectScan: createConnectScan({
       storage,
-      currentBase: () => storage.getItem(SERVER_URL_KEY),
+      // M-TIZEN-07 — same gate as every other persisted-address read: a
+      // legacy-poisoned base is UNSET for the scan (never a candidate row,
+      // never a sweep anchor), the clean one passes through trimmed.
+      currentBase: () => sanitizeServerAddress(storage.getItem(SERVER_URL_KEY)),
       fetchImpl
     }),
     // Top-bar nav (incl. the admin-gated "Admin" entry) + the admin section,

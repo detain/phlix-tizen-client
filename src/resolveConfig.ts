@@ -24,12 +24,84 @@ export interface ResolvedAppConfig {
   apiBase: string;
 }
 
+// ---------------------------------------------------------------------------
+// M-TIZEN-07 — SCHEME ALLOW-LIST AT THE STORAGE BOUNDARY (parse, don't trust)
+//
+// The persisted server/hub address is the strongest credential-carrying string
+// in the app: every API call against the base it yields rides the
+// `Authorization: Bearer` header, and the first-run Connect screen re-seeds
+// from it. Before this cure, `phlix.serverUrl` / `phlix.serverHistory` were
+// written verbatim and read verbatim — an entry like `javascript:…` or
+// `data:…` stored once (evil-twin Connect suggestion, hand-edited localStorage,
+// a future ui-side accept) was trusted forever.
+//
+// The law now: an ABSOLUTE URL (one `new URL()` accepts) may only persist and
+// only resolve when its parsed protocol is `http:` or `https:`. The URL parser
+// — not a regex — is the arbiter, so the scheme-case games (`JavaScript:`),
+// the leading/trailing-space tricks, and the embedded-tab/CR tricks the WHATWG
+// parser itself normalizes all classify honestly (protocol comes back
+// lowercased and whitespace-stripped; `java\tscript:` parses as `javascript:`
+// and is refused). Strings `new URL()` REJECTS are not absolute URLs at all:
+// relative bases and scheme-less text keep their existing pass-through
+// semantics (they cannot carry a foreign origin — fetch resolves them against
+// the app's own `file://` page origin, where non-http(s) targets are inert).
+//
+// Enforcement is at BOTH edges of the boundary: writes refuse the poison and
+// reads sanitize legacy-poisoned persisted values (the stored-forever class),
+// so a pre-cure install heals on its next connect. This composes with (never
+// replaces) the M-TIZEN-06 relay TLS law: `http:` stays persistable for LAN
+// servers; the bearer-carrying relay DIAL still additionally requires `https:`
+// in `api/hubRelay.ts`, untouched.
+// ---------------------------------------------------------------------------
+
+/** The ONLY protocols a persisted/resolved server address may carry. */
+const ALLOWED_ADDRESS_PROTOCOLS: readonly string[] = ['http:', 'https:'];
+
+/**
+ * Storage-boundary scheme gate for one address string. `true` = acceptable
+ * (http(s) absolute URL, blank, or non-absolute text whose existing semantics
+ * are preserved); `false` = absolute URL with a disallowed scheme
+ * (`javascript:`, `data:`, `file:`, `ws:` raw, …) — refuse at the edge.
+ */
+export function isAllowedServerAddress(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return true;
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    // Not an absolute URL (relative base, bare host:port, garbage) — the
+    // existing pass-through semantics, untouched by this cure.
+    return true;
+  }
+  return ALLOWED_ADDRESS_PROTOCOLS.includes(parsed.protocol);
+}
+
+/**
+ * Sanitize one address slot read: trims an acceptable value, maps a
+ * non-http(s) absolute scheme to `null` (as good as unset — the caller's
+ * existing `??` chain then falls back exactly as it does for absent storage).
+ */
+export function sanitizeServerAddress(raw: string | null | undefined): string | null {
+  if (raw === null || raw === undefined) return null;
+  const trimmed = raw.trim();
+  if (!isAllowedServerAddress(trimmed)) return null;
+  return trimmed;
+}
+
 /**
  * Decide which base URL the Tizen client talks to.
  *
  * Server mode only: prefer the persisted direct server URL, then the build-time
  * env URL, then an EMPTY base. The `app: 'hub'` member is part of the shared
  * shape for forward-compatibility but is never returned today.
+ *
+ * M-TIZEN-07: the persisted slot passes the storage-boundary gate HERE (the
+ * defensive-normalization edge) — a legacy-poisoned `phlix.serverUrl`
+ * resolves as unset, i.e. down to the env URL or the empty base (→ the Connect
+ * screen re-asks) instead of riding the bearer credential to a `javascript:`
+ * /`data:` "origin". The build-time `envUrl` is compile-time input, not
+ * user-editable storage, and keeps its verbatim pass-through.
  *
  * An empty `apiBase` is intentional: the client no longer guesses
  * `localhost:8096` (nothing is listening there on a TV). Instead `main.ts` passes
@@ -39,7 +111,8 @@ export interface ResolvedAppConfig {
  * re-seeds here on the next launch.
  */
 export function resolveAppConfig(input: ResolveConfigInput): ResolvedAppConfig {
-  const apiBase = input.serverUrl ?? input.envUrl ?? '';
+  const serverUrl = sanitizeServerAddress(input.serverUrl);
+  const apiBase = serverUrl ?? input.envUrl ?? '';
   return { app: 'server', apiBase };
 }
 
@@ -78,7 +151,11 @@ export interface SuggestionStorage {
  * The bounded, deduped (by host) list of addresses this TV has connected to,
  * most-recent-first — the honest stand-in for a subnet sweep. Malformed or
  * absent storage parses to `[]` (never throws: a corrupt history must not
- * reject boot or the connect screen).
+ * reject boot or the connect screen). M-TIZEN-07: entries that are absolute
+ * URLs with a non-http(s) scheme (the legacy-poisoned class — stored before
+ * the write gate existed) are sanitized OUT of the read, so the suggestion
+ * rail and every discovery probe can never carry them; the next successful
+ * connect rewrites storage through this same filter and heals the slot.
  */
 export function readAddressHistory(storage: SuggestionStorage | null): string[] {
   const raw = storage ? storage.getItem(SERVER_HISTORY_KEY) : null;
@@ -90,7 +167,9 @@ export function readAddressHistory(storage: SuggestionStorage | null): string[] 
     return [];
   }
   if (!Array.isArray(parsed)) return [];
-  const entries = parsed.filter((v): v is string => typeof v === 'string' && v.trim() !== '');
+  const entries = parsed.filter(
+    (v): v is string => typeof v === 'string' && v.trim() !== '' && isAllowedServerAddress(v),
+  );
   // buildCandidatesFromHistory de-dupes by host + caps, preserving order.
   return buildCandidatesFromHistory(entries, ADDRESS_HISTORY_CAP);
 }
@@ -98,12 +177,15 @@ export function readAddressHistory(storage: SuggestionStorage | null): string[] 
 /**
  * Record a successfully connected server address: prepend it, drop any older
  * entry for the same host (so a re-connect refreshes rather than duplicates),
- * cap, and persist. Fail-soft — a quota/SecurityError here must never reject
- * the `onConnectionChange` callback @phlix/ui invokes mid-interaction (T-09 law).
+ * cap, and persist. M-TIZEN-07: the address passes the storage-boundary gate
+ * FIRST — a non-http(s) absolute scheme (and blanks, as always) are refused
+ * and nothing is written. Fail-soft — a quota/SecurityError here must never
+ * reject the `onConnectionChange` callback @phlix/ui invokes mid-interaction
+ * (T-09 law).
  */
 export function pushAddressHistory(storage: SuggestionStorage | null, url: string): void {
   if (!storage) return;
-  const base = url.trim();
+  const base = sanitizeServerAddress(url);
   if (!base) return;
   const prior = readAddressHistory(storage);
   const next = buildCandidatesFromHistory([base, ...prior], ADDRESS_HISTORY_CAP);

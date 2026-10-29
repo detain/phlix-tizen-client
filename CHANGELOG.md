@@ -5,6 +5,59 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — server/hub address passes an http(s) scheme allow-list at the storage boundary (M-TIZEN-07 / review tizen__exploiter MAJOR-2) — 2026-10-29
+
+- **The persisted-address trust closes.** `phlix.serverUrl` / `phlix.serverHistory`
+  were written verbatim and read verbatim: the review's coords re-derived at this
+  tip (siblings moved lines) confirmed `resolveAppConfig` passed the stored string
+  through as `apiBase` (the credential-carrying base), `pushAddressHistory`
+  stored any non-blank trim, and `onConnectionChange` persisted raw. The adjacent
+  C27 `d2a5202` was the spatial-nav focus cure and the M6 relay TLS law
+  `e4d8516` guards the relay DIAL — neither gated persistence; disk-reproved open
+  here before this cure.
+- **The law (parse at the boundary, both edges):** one single-source validator
+  in `src/resolveConfig.ts` — `isAllowedServerAddress` / `sanitizeServerAddress`
+  — admits an ABSOLUTE URL only when `new URL()` parses its protocol as
+  `http:`/`https:` (the URL parser, not a regex, is the arbiter: scheme-case
+  `JAVASCRIPT:`, padded `'  javascript:…'`, and tab/CR-split `java\tscript:`
+  all classify honestly); null/undefined stays null, blank stays blank, and
+  NON-absolute strings (relative bases, scheme-less text) keep their existing
+  pass-through semantics. Writes refuse (Connect choice persisted only when it
+  survives the gate; a refusal leaves the previous clean slot intact + warns
+  loud), the resolve read normalizes (a legacy-poisoned base falls to env →
+  empty → the Connect screen re-asks — stored-forever entries cannot drive the
+  bearer base), and the history read sanitizes (suggestion rail + probes
+  never carry poison; the next clean connect rewrites storage through the
+  filter and heals the slot).
+- **Gated edges:** `pushAddressHistory` (history writes), `readAddressHistory`
+  (legacy sanitize, feeds `buildConnectSuggestions` + every scan probe),
+  `resolveAppConfig` (boot resolve), `main.ts` `onConnectionChange` (slot
+  writes), the `phlix.hubUrl` relay read, and the connectScan `currentBase`
+  read. `@phlix/ui`'s own `phlix.connection.apiBase` slot and the M6 relay
+  refusal logic are untouched — composition, not replacement: plaintext
+  `http://` LAN bases stay persistable by design; only non-http(s) ABSOLUTE
+  schemes are refused, and the relay dial still independently demands `https:`.
+- **CSP `connect-src` — assessed, honestly NOT tightened (no theater).** The
+  app origin is `file://` (a `.wgt`), so `'self'` carries no API traffic; the
+  base IS user-configured, arbitrary-origin, plain-`http`-by-default LAN
+  servers — narrowing to `https: wss:` breaks every non-TLS LAN deployment and
+  pinning hosts is impossible. Owner-reel note filed with this close; the
+  disposition is recorded in an `index.html` comment. The credential-theft
+  class the finding describes is cured at the storage boundary, above.
+- **Measured:** full vitest serial 52 files / 833 → 871 tests (+38: scheme-class
+  table 17 refused + 8 accepted classes, resolve-composition 4, history
+  gate/sanitize/heal 5, boot-composition 4 in `main.test`); mutation matrix
+  re-pinned from measured reds — strip resolve gate = 3 red, strip read filter
+  = 3 red (the load-bearing legacy case is host-carrying `ws://evil:8097`;
+  host-less `javascript:`/`data:`/`file:` classes coincide with
+  `prepareCandidates`' empty-host drop, disclosed), strip push gate = 1 red,
+  strip main write/hub/currentBase gates = 4 reds; vue-tsc 0, eslint 0,
+  vite build + `npm run package` clean; served entry chunk `package/assets/
+  index-J2WGZPKQ.js` carries the refusal string, `package/index.html` carries
+  the CSP disposition note; zero new request sites (routeManifest scan stays 27),
+  zero new user strings (i18n law untouched — refusal surfaces through the
+  console idiom the M6 cure established), `app/config.xml` byte-identical.
+
 ### Fixed — hub relay bearer transport is TLS-mandatory; plaintext downgrade refused (M-TIZEN-06 / review tizen__exploiter MAJOR-6) — 2026-10-29
 
 - **The silent downgrade closes.** `buildHubRelayUrl` mapped any non-`https:`

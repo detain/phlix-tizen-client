@@ -3,6 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0, user-scalable=no" />
+    <!--
+      M-TIZEN-07 CSP assessment (review tizen__exploiter M2, second half) —
+      DELIBERATELY SHIPPED UNCHANGED, honestly recorded rather than theater-
+      tightened. `connect-src 'self' https: http: ws: wss:` is wide because
+      this app's entire purpose is talking to USER-CONFIGURED servers at
+      arbitrary LAN origins and ports: the app origin is `file://` (a `.wgt`),
+      so `'self'` carries no API traffic at all, and the default self-hosted
+      phlix server answers plain `http://:8096` / `ws://:8097` on the LAN.
+      Narrowing to `https: wss:` (or to pinned hosts) breaks every non-TLS
+      LAN deployment — that is a product-posture decision (owner-reel note
+      filed with this review's close), not a boundary bug, and a blind CSP
+      edit here would be security theater against the actual attack the
+      finding describes. The shipped cure lives at the STORAGE boundary:
+      persisted server/hub address slots pass an http(s) scheme allow-list on
+      write and on read (src/resolveConfig.ts, M-TIZEN-07), and the bearer
+      hub-relay dial is TLS-mandatory (src/api/hubRelay.ts, M-TIZEN-06), so
+      no `javascript:`/`data:`/`file:` address can be stored, suggested, or
+      resolved into the credential-carrying base — independent of how permissive
+      the fetch-scheme CSP is for legitimate http(s)/ws(s) hosts.
+    -->
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; media-src 'self' https: http: blob:; connect-src 'self' https: http: ws: wss:;"
@@ -74,7 +94,7 @@
         display: none;
       }
     </style>
-    <script type="module" crossorigin src="./assets/index-BT2qjJ3x.js"></script>
+    <script type="module" crossorigin src="./assets/index-J2WGZPKQ.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-DSS28gwf.css">
   </head>
   <body>
