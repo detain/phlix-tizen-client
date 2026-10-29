@@ -5,6 +5,36 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — Signing/install docs cured from fabrications; mirror verified 2026 tooling (M-TIZEN-02 / review tizen__casualgamer) — 2026-10-29
+
+- **`docs/signing.md` rewritten against live-verified sources.** The previous
+  edition's CI examples downloaded the SDK from
+  `https://storage.googleapis.com/tizen-sdk/latest/tizen-sdk.bin` — a bucket
+  that never existed (curl-verified 404). Real distribution is Samsung's
+  `https://download.tizen.org/sdk/Installer/tizen-studio_6.1/` (web-ide /
+  web-cli installers per platform, curl-verified listing) with the official
+  walk-through on developer.samsung.com; the retired `developer.tizen.org`
+  portal now redirects to samsungtizenos.com.
+- **CLI flags de-fabricated**: `tizen package -s` takes a Certificate Manager
+  profile **name** (not a `.p12` path) and there is **no `--password` flag**;
+  the nonexistent `tizen launch` is really `tizen run -p <app-id>`; the
+  on-device `pkgcmd … -s /tmp/author.p12 -c <password>` "alternative" signing
+  recipe never existed on current TVs and is deleted (signing is host-side).
+  README's deployment blocks fixed to match (including the retired Eclipse-era
+  "Window → Preferences → Tizen TV → Devices" path → Tools → Device Manager,
+  and the non-existent `tizen studio` launcher command).
+- **2026 ceremony added**: TV Developer Mode walk-through (App Settings →
+  `12345` → dev-machine IP → full power cycle), sdb port **26101** for Samsung
+  TVs (not the legacy 26159), "Permit to install applications", Certificate
+  Manager wizard incl. distributor-certificate privilege levels and per-TV
+  **DUID** registration, and the **Samsung Certificate Extension ≥ 2.0.73**
+  floor (cert creation broke on older extensions since Sept 2025).
+- **CI section aligned to the shipped pipeline** (`.github/workflows/build.yml`):
+  the published `phlix-tizen-unsigned.wgt` is RAW/UNSIGNED by design; the doc
+  states that plainly and keeps an honest headless-signing sketch (no invented
+  installer flags) for owners with their own keys. Known-issues rewritten to
+  the real failure modes.
+
 ### Added — Connect screen surfaces the LAN scanner + address history (M2 / review tizen__casualgamer) — 2026-10-29
 
 - **`src/discovery/connectScan.ts` (NEW)** — the AD-24 surfacing leg lands. The

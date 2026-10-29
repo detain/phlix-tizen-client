@@ -64,9 +64,14 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 
 ### Samsung TV Development
 
-- **Tizen Studio**: Version 4.0 or higher (for `.wgt` signing + deployment)
-- **Samsung TV SDK**: Tizen TV Extensions
-- **Samsung Smart TV**: Tizen OS device (`config.xml` `required_version` is `6.5`)
+- **Tizen Studio**: current generation (6.1-era, or Tizen SDK 10 + the VS Code
+  Tizen extension) from <https://samsungtizenos.com/tools-download/> — for
+  `.wgt` signing + deployment; see [`docs/signing.md`](docs/signing.md) for the
+  verified install steps (Package Manager → TV Extensions + **Samsung
+  Certificate Extension ≥ 2.0.73**)
+- **Samsung Developer account**: required to create TV author certificates
+- **Samsung Smart TV**: Tizen OS device (`config.xml` `required_version` is
+  `6.5`), in Developer Mode for sideloading
 
 ### Phlix Media Server
 
@@ -203,24 +208,22 @@ npm run lint:fix    # eslint . --fix
 
 ### Option 1: Tizen Studio
 
-1. **Open Tizen Studio**
-   ```bash
-   tizen studio
-   ```
-
+1. **Open Tizen Studio** — launch the Studio GUI from the installation
+   (launcher under `<install>/ide/bin/`; there is no `tizen studio` command)
 2. **Import Project**
    - File → Import → Tizen → Tizen Project
    - Select the `phlix-tizen` directory
    - Choose "TV" as the platform
-
-3. **Connect Device**
-   - Ensure your TV and computer are on the same network
-   - In Tizen Studio, go to Window → Preferences → Tizen TV → Devices
-   - Add your TV's IP address
-
+3. **Connect Device** (2026 flow — the retired Eclipse "Window → Preferences →
+   Tizen TV → Devices" path no longer exists)
+   - On the TV: enable **Developer Mode** (Apps → App Settings → type `12345` →
+     enter your dev machine's IP → full power cycle); see
+     [`docs/signing.md`](docs/signing.md)
+   - In Tizen Studio, go to **Tools → Device Manager → Remote Device Manager**
+   - Add the TV with its IP and port **26101** (not the legacy 26159), then
+     right-click the device → **Permit to install applications**
 4. **Run on Device**
    - Right-click the project → Run As → Tizen TV Application
-   - Or press `Shift + F11` to run
 
 ### Option 2: CLI Deployment
 
@@ -228,9 +231,14 @@ npm run lint:fix    # eslint . --fix
 # Build and package
 npm run package
 
-# Sign package/ into a .wgt with Tizen Studio (or the tizen CLI), then:
-tizen install -n <signed>.wgt -t <TV_IP>
-tizen launch  -n phlix.app.phlixtizen
+# Sign package/ into a .wgt with the tizen CLI (needs a Certificate Manager
+# profile; `-s` is the profile NAME — there is no --password flag):
+<install>/tools/ide/bin/tizen package -t wgt -s <profile-name> -o ./release -- ./package
+
+# Connect the TV (Developer Mode) and install/run:
+sdb connect <TV_IP>:26101
+<install>/tools/ide/bin/tizen install -n ./release/<signed>.wgt -t <TV_IP>:26101 -- ./package
+<install>/tools/ide/bin/tizen run -p phlix.app.phlixtizen -t <TV_IP>:26101
 ```
 
 The app id `phlix.app.phlixtizen` comes from `app/config.xml` (authoritative).
