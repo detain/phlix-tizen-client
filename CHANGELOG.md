@@ -5,6 +5,45 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — signing.md CLI-fallback phantom flag/commands from the partial cure removed; pin arms extended (M-TIZEN-17 / review tizen__writer MAJOR #5) — 2026-10-29
+
+- **The violation, at tip 756e79b.** The reviewer's ORIGINAL fabrics (`sdb
+  push author.p12`, on-device `pkgcmd … -c <password>`, the fabricated
+  `storage.googleapis.com/tizen-sdk` installer URL, `-s <path>.p12
+  --password`) were already gone — cured at 1d37585 (the queue's
+  "cured-by C27 d2a5202" pointer is crossed-label: d2a5202 is a nav commit
+  that never touches signing.md). But that cure had itself introduced new
+  phantoms: `tizen package … -o ./release` (the official CLI reference option
+  table — current AND 2022-era revisions — lists only `-t`, `-s`, `-S` and
+  `--`; the TV CLI page says the signed `.wgt` is written INTO the `--`
+  directory, which pointed at the git-TRACKED, CI-freshness-gated
+  `package/` root), `install -n ./release/<signed>.wgt … -- ./package`
+  (official contract: `-n <bare file name>` + `-- <directory holding it>`),
+  `-t <TV_IP>:26101` conflating sdb's serial column with the target-name
+  column, and `sdb capability | grep -i duid` — no `capability` command
+  exists in the official SDB reference at all.
+- **Cure (docs/signing.md + README Option-2, kept argv-mirrored).** The CLI
+  signing step now signs a COPY (`cp -r package ./build-widget`) and passes
+  `-- ./build-widget`; the prose names the absence of any output-directory
+  flag and the CLI's printed `Package File Location:`; install/run take `-n
+  <signed>.wgt -t <target-name> -- ./build-widget` with the
+  serial-vs-target-name law stated from the SDB reference; the DUID
+  instruction keeps only the officially documented TV menu path and records
+  that no SDB command prints a DUID; the CI headless sketch steps 6–7
+  follow the same shape. Verified against github.com/Samsung/tizen-docs
+  (command-line-interface.md + smart-development-bridge.md) and the TV CLI
+  page signing.md itself links; no repo script or workflow invokes `tizen`.
+- **Gate.** `tests/unit/docsDeployWalk.test.ts` extended with arms (f) and
+  (g): every `tizen package` command line carries only documented flags
+  (no `-o`, no `--password`, a `--` output dir present) and the install
+  contract (`-n` bare name, output dir ≠ tracked `package/`) plus repo-wide
+  bans on `sdb capability` / the Google-Cloud SDK URL. Red-on-parent
+  measured at 756e79b with docs un-cured: exactly the 2 new arms red, the 6
+  M15-era arms green; after the cure 8/8.
+- **Suite.** vitest serial 57 files / 949 tests (M16-era 947 + 2 exact);
+  vue-tsc 0; eslint 0. Docs-only: `package/` rebuild law not triggered
+  (zero src/ or package/ changes).
+
 ### Fixed — README stops documenting the S501-deleted overlays/tests; a doc-citation gate reddens any future fossil (M-TIZEN-16 / review tizen__writer MAJOR-4) — 2026-10-29
 
 - **The violation, at tip 220ea1d.** Four README surfaces still taught the

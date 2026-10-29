@@ -341,17 +341,20 @@ no such directory exists (the clone directory is `phlix-tizen-client`, and
 npm ci
 npm run package
 
-# Sign package/ into a .wgt with the tizen CLI (needs a Certificate Manager
-# profile; `-s` is the profile NAME — there is no --password flag):
-<install>/tools/ide/bin/tizen package -t wgt -s <profile-name> -o ./release -- ./package
+# Sign a COPY into a .wgt with the tizen CLI (needs a Certificate Manager
+# profile; `-s` is the profile NAME — there is no --password flag, and the
+# signed .wgt is written INTO the directory given after `--`, so the tracked,
+# CI-freshness-gated package/ root itself is not the output dir):
+cp -r package ./build-widget
+<install>/tools/ide/bin/tizen package -t wgt -s <profile-name> -- ./build-widget
 
 # Connect the TV — it must be in Developer Mode (walk-through in
 # docs/signing.md); on first install the TV shows a "Permit to install
-# applications" dialog to accept. `sdb devices` lists the target by its
-# <TV_IP>:26101 serial, which is exactly what `-t` takes:
+# applications" dialog to accept. `sdb devices` prints [serialNumber]
+# [state] [targetName]; `-t` takes the target name (or use `-s <serial>`):
 sdb connect <TV_IP>:26101
-<install>/tools/ide/bin/tizen install -n ./release/<signed>.wgt -t <TV_IP>:26101 -- ./package
-<install>/tools/ide/bin/tizen run -p phlix.app.phlixtizen -t <TV_IP>:26101
+<install>/tools/ide/bin/tizen install -n <signed>.wgt -t <target-name> -- ./build-widget
+<install>/tools/ide/bin/tizen run -p phlix.app.phlixtizen -t <target-name>
 ```
 
 The app id `phlix.app.phlixtizen` comes from `app/config.xml` (authoritative).

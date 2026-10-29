@@ -80,9 +80,11 @@ Official walk-through:
    import a previously created `author.p12` with its password.
 5. **Distributor certificate**: create one and pick a **privilege level**:
    - **development** — for sideloading your own TVs; you must register each
-     target TV's **DUID** in the profile. Get a TV's DUID from Menu → Support →
-     Contact Samsung (Unique Device ID) on the TV, or after `sdb connect`:
-     `sdb capability | grep -i duid`.
+     target TV's **DUID** in the profile. Get it on the TV itself: Menu →
+     Support → Contact Samsung (**Unique Device ID**) — the only path the
+     official certificate walk-through documents; no SDB command prints a
+     DUID (the previous edition's `sdb`-capability shortcut was not a real
+     command — it is absent from the official SDB reference).
    - **distribution** — store submission; no DUID list needed.
 6. **Finish**. The profile is now selectable; the `.p12` files live wherever
    the wizard's backup/import path placed them (there is no fixed SDK-managed
@@ -114,10 +116,14 @@ CLI reference:
 # The tizen CLI ships inside the Studio installation:
 TIZEN=<install-dir>/tools/ide/bin/tizen        # `tizen.bat` on Windows
 
+# Sign a COPY, not the tracked widget root: the CLI writes the signed `.wgt`
+# INTO the directory passed after `--` (the TV CLI reference calls it the
+# "Package output path"), and `package/` is git-tracked and byte-fresh-gated
+# by CI — same copy doctrine as the README "Option 1" GUI walk.
+cp -r package ./build-widget
 "$TIZEN" package -t wgt \
   -s <certificate-profile-name> \
-  -o ./release \
-  -- ./package
+  -- ./build-widget
 ```
 
 - `-s` takes the **profile NAME** created in Certificate Manager — not a
@@ -125,7 +131,11 @@ TIZEN=<install-dir>/tools/ide/bin/tizen        # `tizen.bat` on Windows
   the profile. (If your profile was made on another machine, open Certificate
   Manager on this one and import it first. For non-Studio setups the CLI reads
   profiles from `tizen cli-config -g "default.profiles.path=<profiles.xml>"`.)
-- The signed `.wgt` is written to the `-o` output directory.
+- There is **no output-directory flag** — the flag an earlier edition of this
+  doc showed here has never existed in the official CLI reference (its option
+  table lists only `-t`, `-s`, `-S` and `--`, unchanged 2022→2026). The signed
+  `.wgt` lands in the `--` directory; the CLI prints its exact location
+  (`Package File Location:`) in the command output.
 
 ### On-device signing (removed)
 
@@ -150,21 +160,26 @@ Official TV-as-device walk-through:
    phone/wearable devices):
    ```bash
    sdb connect <TV_IP>:26101
-   sdb devices    # target shows as <TV_IP>:26101
+   sdb devices    # prints [serialNumber] [state] [targetName] per device
    ```
    (Or Tizen Studio → **Tools → Device Manager → Remote Device Manager → +**
    with IP `<TV_IP>`, port `26101`.)
 3. **Permit installation**: on first install the TV shows a
    "Allow connection?" / **Permit to install applications** dialog — accept it
    (Device Manager also exposes it as a right-click action on the device).
-4. **Install and launch**:
+4. **Install and launch** (the signed `.wgt` sits in the `build-widget/` copy
+   produced by the CLI signing step above):
    ```bash
-   "$TIZEN" install -n ./release/<signed>.wgt -t <TV_IP>:26101 -- ./package
-   "$TIZEN" run -p phlix.app.phlixtizen -t <TV_IP>:26101
+   "$TIZEN" install -n <signed>.wgt -t <target-name> -- ./build-widget
+   "$TIZEN" run -p phlix.app.phlixtizen -t <target-name>
    ```
-   `-t` is the **target name as shown by `sdb devices`**; `-p` is the
+   `-n` is the **bare file name** of the signed widget and `--` takes the
+   directory holding it (the official install contract: `-n <package file
+   name>` + `-- <package file path>`); `-t` is the **target name printed by
+   `sdb devices`** (its serial works via `-s` instead); `-p` is the
    **application id** from `app/config.xml`
-   (`phlix.app.phlixtizen` — authoritative). The older `tizen launch` command
+   (`phlix.app.phlixtizen` — authoritative; on TV, `-p` takes the application
+   id, not the package id). The older `tizen launch` command
    in this doc's previous edition does not exist; it is `tizen run`.
 
 ---
@@ -205,8 +220,10 @@ unattended mode as documented by the current walk-through):
 # 4. Point the CLI at the profile:
 #    tools/ide/bin/tizen cli-config -g "default.profiles.path=$PWD/profiles.xml"
 # 5. npm ci && npm run build && node scripts/package.js
-# 6. tools/ide/bin/tizen package -t wgt -s <profile-name> -o ./release -- ./package
-# 7. Upload/attach ./release/*.wgt (the SIGNED one) as the release asset.
+# 6. cp -r package ./build-widget
+#    tools/ide/bin/tizen package -t wgt -s <profile-name> -- ./build-widget
+# 7. Upload/attach the signed .wgt from ./build-widget/ (the CLI prints its
+#    exact path as "Package File Location:") as the release asset.
 ```
 
 Store submission (Samsung Apps) additionally needs a **distribution**-privilege
