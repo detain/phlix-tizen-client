@@ -119,6 +119,55 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (review finding #1, M-TIZEN-13) was cured concurrently (1d71fbf, now the
   parent of this entry); this commit adds nothing to those lines.
 
+### Fixed — README "Deployment to TV" becomes completable by a first-timer: import story, real directories, signing.md cross-refs + a runnability gate (M-TIZEN-15 / review tizen__writer MAJOR-3) — 2026-10-29
+
+- **The defect, verified at HEAD.** The review's headline stood at f9329a5:
+  Option 1 told importers to "Select the `phlix-tizen` directory" — no such
+  directory exists (the clone dir is `phlix-tizen-client`; `phlix-tizen` is
+  only the npm package name), and importing the repo root could never work
+  anyway: Tizen web-project imports expect `config.xml` at the project root,
+  which this repo keeps (source-truthfully) in `app/`. The CLI lane's worst
+  halves had already been cured by 1d37585 — `-s` now reads as a profile
+  NAME, the install target is an `sdb`-visible `<TV_IP>:26101` serial with an
+  explicit `sdb connect` step, and `tizen run` replaced the fabricated
+  `launch` — so this cure left those commands byte-untouched (they match
+  docs/signing.md's canonical walk).
+- **Queue label, honestly named.** The ledger's "cured-by: C27 d2a5202" is a
+  crossed label of the same family M-TIZEN-04/13 recorded: d2a5202 is the
+  spatial-nav fix and its README diff touches only Remote-Control prose. The
+  real partial cure is 1d37585 (verified via `git log -L` on the section);
+  the import instruction was never reached until now.
+- **The cure (docs-only).** The section now LEADS with the config.xml-at-
+  project-root fact and names `package/` as the only Tizen-shaped directory
+  (CI's "Assert committed package/ is fresh" keeps it widget-current). Option
+  1 gains runnable steps: `npm ci` → `npm run package` → `cp -r package
+  ../phlix-tv-import` (import a COPY — Studio metadata writes would dirty the
+  tracked dir and redden the freshness gate), import-from-existing as the
+  supported path with create-then-copy as the named fallback, a Certificate
+  Manager step cross-referenced to docs/signing.md, a Developer-Mode/pairing
+  step mirroring signing.md's facts (12345 from App Settings, toggle ON, dev
+  IP, FULL power cycle, 26101 not 26159, the "Permit to install applications"
+  dialog) without duplicating its detail, and "Build Signed Package" (phrase
+  attested in signing.md) before Run As. Install-refusal reality points at
+  signing.md Known Issues — the review's "036" exemplar is deliberately NOT
+  invented into either doc; signing.md names the modes in prose, and the walk
+  cites that prose.
+- **Permanent cure.** `tests/unit/docsDeployWalk.test.ts` (docsPinConsistency
+  idiom, zero runtime imports): bans the fossil instruction, requires the
+  project-root explanation, checks the taught directories exist on disk as a
+  widget project root, pins README↔signing.md argv equality for
+  install/run/package (placeholder-normalized skeletons — the no-duplication-
+  drift law as code), and re-derives the run app id from `app/config.xml`.
+  RED-ON-PARENT measured at f9329a5 with the new suite: the first three arms
+  fail (fossil present, no root-manifest explanation, `package/` never named
+  as the project); the argv/id arms pass at the parent — guards around the
+  1d37585 cure.
+- **Gates.** vitest serial `--no-file-parallelism` 56 files / 933 pass / 0
+  fail (M14-era 55/927 + this lane's +6 arms exact); vue-tsc clean; eslint
+  clean; `npm run build` clean; `npm run package` leaves tracked `package/`
+  byte-identical to HEAD (docs/test-only, zero chunk churn — the rebuild law
+  observed, no renames to commit).
+
 ### Fixed — the direct SyncPlay `:8097` bearer dial is TLS-mandatory; the surviving plaintext lane closes (M-TIZEN-12 / review tizen__secnet MAJOR-1) — 2026-10-29
 
 - **The surviving cleartext path, enumerated.** M-TIZEN-06 (e4d8516) closed

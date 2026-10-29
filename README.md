@@ -273,43 +273,90 @@ npm run lint:fix    # eslint . --fix
 
 ## Deployment to TV
 
+One fact governs both paths below: **the repository directory is not a Tizen
+project.** Tizen Studio's web-project import expects `config.xml` at the
+*project root*, and this repo keeps its widget manifest in `app/config.xml`
+(a version-stamped source file) — the repo root has none. The real Tizen web
+project is **`package/`**: `npm run package` assembles `config.xml`,
+`icon.png`, `index.html` and `assets/` at its root, and the directory is
+committed and kept byte-fresh by CI's "Assert committed package/ is fresh"
+gate. Import or sign *that* — and never a directory called `phlix-tizen`:
+no such directory exists (the clone directory is `phlix-tizen-client`, and
+`phlix-tizen` is only the npm package name inside `package.json`).
+
 ### Option 1: Tizen Studio
 
 1. **Open Tizen Studio** — launch the Studio GUI from the installation
    (launcher under `<install>/ide/bin/`; there is no `tizen studio` command)
-2. **Import Project**
-   - File → Import → Tizen → Tizen Project
-   - Select the `phlix-tizen` directory
-   - Choose "TV" as the platform
-3. **Connect Device** (2026 flow — the retired Eclipse "Window → Preferences →
+2. **Prepare an importable project directory** (from the repo root):
+
+   ```bash
+   npm ci
+   npm run package                    # dist/ + app/config.xml + icon → package/
+   cp -r package ../phlix-tv-import   # import a COPY, never the tracked dir
+   ```
+
+   The copy is deliberate: Tizen Studio writes project metadata into whatever
+   directory you import, and the tracked `package/` must stay clean or CI's
+   freshness gate reddens the build.
+3. **Import the project**
+   - File → Import → Tizen → Tizen Project → select `../phlix-tv-import`
+     (the copy — the repo root imports nowhere, having no root `config.xml`)
+   - Platform **TV**; the profile is dictated by the manifest (`tv-samsung`)
+   - If Import rejects the copy, the fallback is create-then-copy: File →
+     New → Tizen Project → TV → Web → template, then replace the new
+     project's `config.xml`, `index.html`, `icon.png` and `assets/` with the
+     copy's files. Same final tree either way; import-from-existing is the
+     supported path.
+4. **Create the signing profile** — Certificate Manager: author certificate +
+   distributor (development) certificate + a profile name. The full walk, the
+   Samsung Certificate Extension prerequisite, and every failure mode live in
+   [`docs/signing.md`](docs/signing.md) ("Creating the Certificate Profile") —
+   Studio signs with this profile when you build.
+5. **Connect the TV** (2026 flow — the retired Eclipse "Window → Preferences →
    Tizen TV → Devices" path no longer exists)
-   - On the TV: enable **Developer Mode** (Apps → App Settings → type `12345` →
-     enter your dev machine's IP → full power cycle); see
-     [`docs/signing.md`](docs/signing.md)
-   - In Tizen Studio, go to **Tools → Device Manager → Remote Device Manager**
-   - Add the TV with its IP and port **26101** (not the legacy 26159), then
-     right-click the device → **Permit to install applications**
-4. **Run on Device**
+   - On the TV: enable **Developer Mode** — Smart Hub → Apps → **App
+     Settings** → type `12345` on the remote → toggle **Developer mode ON** →
+     enter your development computer's IP → **full power cycle** (standby is
+     not enough on "Instant On" models)
+   - Studio → **Tools → Device Manager → Remote Device Manager → +** →
+     the TV's IP, port **26101** (not the legacy 26159, which is for
+     phone/wearables and fails against TVs)
+   - The TV confirms the pairing, and on first install shows a **"Permit to
+     install applications"** dialog — accept it (or right-click the device →
+     Permit to install applications beforehand)
+6. **Build signed package and run**
+   - Right-click the project → Tizen → **Build Signed Package** (produces the
+     signed `.wgt` — the GUI equivalent of the `tizen package` CLI below)
    - Right-click the project → Run As → Tizen TV Application
+   - Install refused with "invalid author certificate"? The TV is out of
+     Developer Mode, the profile's development distributor certificate does
+     not list the TV's DUID, or the permit dialog was never accepted —
+     [`docs/signing.md`](docs/signing.md) ("Known Issues") names every mode.
 
 ### Option 2: CLI Deployment
 
 ```bash
-# Build and package
+# Build and package (assembles the widget root: package/ with config.xml on top)
+npm ci
 npm run package
 
 # Sign package/ into a .wgt with the tizen CLI (needs a Certificate Manager
 # profile; `-s` is the profile NAME — there is no --password flag):
 <install>/tools/ide/bin/tizen package -t wgt -s <profile-name> -o ./release -- ./package
 
-# Connect the TV (Developer Mode) and install/run:
+# Connect the TV — it must be in Developer Mode (walk-through in
+# docs/signing.md); on first install the TV shows a "Permit to install
+# applications" dialog to accept. `sdb devices` lists the target by its
+# <TV_IP>:26101 serial, which is exactly what `-t` takes:
 sdb connect <TV_IP>:26101
 <install>/tools/ide/bin/tizen install -n ./release/<signed>.wgt -t <TV_IP>:26101 -- ./package
 <install>/tools/ide/bin/tizen run -p phlix.app.phlixtizen -t <TV_IP>:26101
 ```
 
 The app id `phlix.app.phlixtizen` comes from `app/config.xml` (authoritative).
-See [`docs/signing.md`](docs/signing.md) for signing details.
+See [`docs/signing.md`](docs/signing.md) for signing details, the TV-as-device
+walk, and install failure modes.
 
 ## Remote Control
 
