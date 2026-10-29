@@ -231,6 +231,7 @@ const quickConnect = {
   unreachable: 'サーバーに接続できませんでした。',
   expiryNote: '数分で期限切れになります — 急がなくて大丈夫です。',
   tryAgain: 'もう一度お試しください',
+  usePassword: '代わりにパスワードを入力',
   hint: 'スマートフォンでPhlixを開く → テレビにサインイン → コードを入力。',
 };
 

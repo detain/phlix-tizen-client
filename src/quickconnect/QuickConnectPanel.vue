@@ -12,17 +12,31 @@
  * PLACEMENT / SCOPE (honest): mounted as a sibling root app that shares the main
  * app's pinia — the exact pattern every other TV overlay uses — and rendered
  * full-bleed opaque ONLY while `eligible` (server set AND logged out AND still on
- * screen). The empty-base first-run Connect screen stays owned by `@phlix/ui`
- * (nothing to pair against yet); this surface takes over the instant a base
- * exists but a session does not, and retires itself the moment `setTokens` makes
- * `isLoggedIn` true. It introduces no route and touches no `@phlix/ui` internals.
+ * screen AND not dismissed). The empty-base first-run Connect screen stays owned
+ * by `@phlix/ui` (nothing to pair against yet); this surface takes over the
+ * instant a base exists but a session does not, and retires itself the moment
+ * `setTokens` makes `isLoggedIn` true. It introduces no route and touches no
+ * `@phlix/ui` internals.
+ *
+ * DISMISSIBLE (C16 / tizen__casualgamer — a takeover is a door, never a wall):
+ * the ceremony's companion half is not shippable yet (no estate client approves
+ * a code), so the takeover must never bury the ONLY login path beneath it. Two
+ * exits, both remote-operable: a persistent "Enter password instead" control
+ * retires the panel and stops the ceremony, and BACK reaches the same retire
+ * through the S526 ladder — the panel registers itself as a closable layer by
+ * carrying `data-quick-connect-panel` on its takeover root, the bridge rings an
+ * `Escape` keydown bell on it, and THIS component alone decides what closing
+ * means (mirroring the generic focus-trap layer's contract exactly). Dismissal
+ * is per-base: choosing a DIFFERENT server re-offers the pairing code.
  *
  * FOCUS-SAFE (S512 containment doctrine, honored): this never calls `focus()`
- * and never grabs focus on mount — the only keyboard-reachable control is the
- * explicit "Try again" button, present solely in the non-fatal terminal phases,
- * so an idle pairing screen cannot trap or steal D-pad focus. It issues no
- * request while hidden (`isVisible` folds in `document` visibility + the mount
- * + auth state), so a backgrounded or logged-in TV polls zero times.
+ * and never grabs focus on mount — the takeover is never a trap; its controls
+ * (the always-present dismiss button, plus "Try again" in the non-fatal terminal
+ * phases) are plain focusable nodes a D-pad walk reaches, and BACK escapes the
+ * surface even while focus sits invisibly beneath it. It issues no request while
+ * hidden or dismissed (`isVisible` folds in `document` visibility + the mount,
+ * auth and dismissal state), so a backgrounded, logged-in or retired TV polls
+ * zero times.
  *
  * @category TV-Specific Component
  * @duplicate No phlix-ui equivalent — @phlix/ui's Connect screen picks a server;
@@ -41,14 +55,18 @@ const auth = useAuthStore();
 
 const mounted = ref(false);
 const onScreen = ref(true);
+const dismissed = ref(false);
 const code = ref('');
 const expiresAtSeconds = ref<number | null>(null);
 const phase = ref<PairingPhase | null>(null);
 
 let session: PairingSession | null = null;
 
-/** Show + poll only when there is a server to pair against and no session yet. */
-const eligible = computed(() => mounted.value && Boolean(apiBase.value) && !auth.isLoggedIn);
+/** Show + poll only when there is a server to pair against, no session yet,
+ * and the viewer has not retired the takeover for THIS base (C16). */
+const eligible = computed(
+  () => mounted.value && Boolean(apiBase.value) && !auth.isLoggedIn && !dismissed.value
+);
 
 /** Terminal-but-recoverable states that offer a fresh attempt rather than a dead end. */
 const retryable = computed(() => phase.value === 'denied' || phase.value === 'expired' || phase.value === 'error');
@@ -84,7 +102,7 @@ function beginSession(): void {
   session = createPairingSession({
     client,
     identity: { deviceName: 'Phlix for Samsung TV', deviceType: 'samsung-tizen' },
-    isVisible: () => mounted.value && onScreen.value && !auth.isLoggedIn,
+    isVisible: () => mounted.value && onScreen.value && !auth.isLoggedIn && !dismissed.value,
     applyTokens: (tokens) => {
       // The existing auth seam is the ONLY token store; the base we paired
       // against is already the app's server, mirrored back idempotently.
@@ -110,6 +128,13 @@ function onVisibilityChange(): void {
   onScreen.value = document.visibilityState !== 'hidden';
 }
 
+/** Retire the takeover and stop the ceremony — exposes the password sign-in
+ * form the opaque panel was covering (C16). The eligible watcher does the
+ * session teardown; this only flips the per-base dismissal decision. */
+function dismiss(): void {
+  dismissed.value = true;
+}
+
 onMounted(() => {
   mounted.value = true;
   onScreen.value = document.visibilityState !== 'hidden';
@@ -126,6 +151,13 @@ onBeforeUnmount(() => {
   endSession();
 });
 
+// Dismissal retires the panel FOR THE BASE IT WAS MADE AGAINST: choosing a
+// different server is a fresh pairing opportunity, so a new base re-offers the
+// code and the eligible watcher below starts exactly one session as at birth.
+watch(apiBase, () => {
+  dismissed.value = false;
+});
+
 // A base arriving (Connect commit) or the session dropping (logout) starts or
 // stops pairing without a remount; a fresh login (eligible → false) tears it down.
 watch(eligible, (active) => {
@@ -140,7 +172,9 @@ watch(eligible, (active) => {
     class="quick-connect"
     role="dialog"
     aria-live="polite"
+    data-quick-connect-panel
     :aria-label="tTizen('quickConnect.aria')"
+    @keydown.escape="dismiss"
   >
     <div class="quick-connect__card">
       <p class="quick-connect__eyebrow">
@@ -175,15 +209,26 @@ watch(eligible, (active) => {
         {{ tTizen('quickConnect.expiryNote') }}
       </p>
 
-      <button
-        v-if="retryable"
-        type="button"
-        class="quick-connect__retry"
-        data-testid="qc-retry"
-        @click="beginSession"
-      >
-        {{ tTizen('quickConnect.tryAgain') }}
-      </button>
+      <div class="quick-connect__actions">
+        <button
+          v-if="retryable"
+          type="button"
+          class="quick-connect__retry"
+          data-testid="qc-retry"
+          @click="beginSession"
+        >
+          {{ tTizen('quickConnect.tryAgain') }}
+        </button>
+
+        <button
+          type="button"
+          class="quick-connect__dismiss"
+          data-testid="qc-dismiss"
+          @click="dismiss"
+        >
+          {{ tTizen('quickConnect.usePassword') }}
+        </button>
+      </div>
 
       <p class="quick-connect__hint">
         {{ tTizen('quickConnect.hint') }}
@@ -276,6 +321,29 @@ watch(eligible, (active) => {
 }
 .quick-connect__retry:focus-visible {
   outline: 3px solid #efece4;
+  outline-offset: 3px;
+}
+/* C16 exit row: the amber CTA stays the pairing focal action; the persistent
+ * "Enter password instead" escape is a ghost pill — reachable, legible, never
+ * competing. Both live on one flex row so terminal phases sit side by side. */
+.quick-connect__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.quick-connect__dismiss {
+  padding: 16px 40px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #efece4;
+  background: transparent;
+  border: 1px solid rgba(239, 236, 228, 0.4);
+  border-radius: 999px;
+  cursor: pointer;
+}
+.quick-connect__dismiss:focus-visible {
+  outline: 3px solid #f5a524;
   outline-offset: 3px;
 }
 </style>

@@ -5,6 +5,36 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — first-run QuickConnect takeover is dismissible (C16 / review tizen__casualgamer) — 2026-10-29
+
+- **`src/quickconnect/QuickConnectPanel.vue` (CRITICAL)**: the pairing takeover was
+  a non-dismissible wall — self-gated on `mounted && apiBase && !isLoggedIn`,
+  rendered full-bleed opaque (`z-index: 12000`), covering the ONLY sign-in path
+  (`@phlix/ui`'s LoginPage) while the ceremony's companion half
+  (`POST …/quick-connect/{code}/approve`) has no client that can call it, and the
+  BACK ladder registered no closable layer for it (at the app root, quitting the
+  app was the only discoverable "dismiss"). It is now a door: a persistent
+  "Enter password instead" control in EVERY phase stops the ceremony and retires
+  the takeover, and BACK reaches the same retire through the S526 ladder — the
+  panel root carries `data-quick-connect-panel` + `@keydown.escape` (the
+  ring-the-bell contract, exactly the focus-trap layer's), and `tizenBridge.ts`
+  gained `createQuickConnectLayer()` ranked ABOVE the ui trap probe (the
+  full-bleed card is unconditionally topmost while visible). Dismissal is
+  per-base: choosing a DIFFERENT server re-offers the pairing code.
+- **i18n law**: ONE new key `quickConnect.usePassword` ("Enter password instead")
+  mirrored across all seven tizen catalogs (en, es, fr, de, it, pt_BR, ja); the
+  tizen-own key-set pins rotate 197 → 198 (`i18nLocales`, `tizenI18n` verbatim
+  table) and `docs/i18n.md` counts follow.
+- **Tests**: +12 pins (panel C16 dismissal contract ×6 — persistent affordance,
+  click-retires + poll-gate close, Escape-bell receiver, per-base re-offer,
+  selector tripwire vs `tizenBridge.ts`; bridge layer contract ×6 — probe, bell,
+  BACK-at-root closes INSTEAD of exiting, trap outranking, no-fabrication).
+  Red-before measured on the pre-fix `cp -a` scratch: exactly 15 failures
+  (12 new component/bridge pins + the 3 i18n rotation pins). Serial suite
+  47 files 733 → 745 tests, 0 failures; `vue-tsc` and `eslint` exit 0.
+- **Zero new request sites**: the `routeManifest.gate` scan stays at 27 and
+  `app/config.xml` is byte-identical.
+
 ### Changed — ui re-pin v0.99.9 → v0.99.10 — 2026-10-14
 
 - **Pin advance (release-cascade lane, ui tag v0.99.10).** `@phlix/ui` bumped

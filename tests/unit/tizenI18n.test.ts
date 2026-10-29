@@ -204,6 +204,7 @@ const EXPECTED: Record<string, string> = {
   "quickConnect.unreachable": "Could not reach the server.",
   "quickConnect.expiryNote": "Expires in a few minutes — no need to hurry.",
   "quickConnect.tryAgain": "Try again",
+  "quickConnect.usePassword": "Enter password instead",
   "quickConnect.hint": "On your phone, open Phlix → Sign in on TV → type the code.",
   "days.mon": "Mon",
   "days.tue": "Tue",

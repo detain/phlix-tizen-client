@@ -193,6 +193,13 @@ const FOCUSABLE_SELECTOR =
 /** Attribute @phlix/ui's `useFocusTrap` puts on every modal surface it guards. */
 export const FOCUS_TRAP_SELECTOR = '[data-focus-trap]';
 
+/**
+ * Attribute the S520 QuickConnectPanel puts on its full-bleed takeover root
+ * WHILE visible (C16 / tizen__casualgamer). The BACK ladder probes it so the
+ * pairing card is a closable layer, never the wall that forces `exit-app`.
+ */
+export const QUICK_CONNECT_SELECTOR = '[data-quick-connect-panel]';
+
 /** The structural slice of the ambient `tizen` object the EXIT rung may need. */
 interface TizenApplicationLike {
   application?: {
@@ -248,13 +255,39 @@ export function createFocusTrapLayer(): BackLayer {
 }
 
 /**
+ * The quick-connect takeover card (S520 / C16) as a closable BACK layer. The
+ * panel renders full-bleed at `z-index: 12000`, so WHILE it is on screen it is
+ * unconditionally the topmost surface — this layer therefore ranks above the
+ * generic ui focus-trap probe, whose invisible-under-the-takeover modal must
+ * not steal the press. Same ring-the-bell contract as the trap layer: BACK
+ * dispatches an Escape keydown ON the panel root and the panel's own
+ * `@keydown.escape` handler decides what closing means (stop the ceremony,
+ * retire the surface, expose the password form). TV law: BACK always escapes —
+ * a pairing card must never leave `exit-app` as the only "dismiss".
+ */
+export function createQuickConnectLayer(): BackLayer {
+  return {
+    id: 'quick-connect',
+    isOpen(): boolean {
+      return typeof document !== 'undefined' && document.querySelector(QUICK_CONNECT_SELECTOR) !== null;
+    },
+    close(): void {
+      if (typeof document === 'undefined') return;
+      const panel = document.querySelector(QUICK_CONNECT_SELECTOR);
+      if (!panel) return;
+      panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    }
+  };
+}
+
+/**
  * The injectable BACK seams of `wireTizenBridge` — every DOM/platform touch the
  * ladder performs lives behind one of these so unit tests (and the AD-9 ui
  * adopt-leg) can drive each rung with fakes. All optional; the defaults are the
  * production behaviors described above.
  */
 export interface BridgeBack {
-  /** Extra closable layers, TOPMOST FIRST; the trap + quality layers follow. */
+  /** Extra closable layers, TOPMOST FIRST; quick-connect, trap + quality follow. */
   layers?: BackLayer[];
   /** Explicit app exit at the root rung (default: guarded `tizen` exit). */
   exit?: () => void;
@@ -301,7 +334,10 @@ export function wireTizenBridge(
   // Focus memory riding the layer stack + the ladder's own seams.
   const focusMemory = back.focusMemory ?? createLayerFocusStack<Element>();
   // The quality flyout is the ladder's deepest closable layer; host-supplied
-  // layers and the generic ui focus-trap probe sit ABOVE it (topmost first).
+  // layers, the C16 quick-connect takeover and the generic ui focus-trap probe
+  // sit ABOVE it (topmost first). The takeover outranks the trap because the
+  // panel is full-bleed z-12000: whatever trap may idle beneath it, the card
+  // the viewer can SEE is the one a BACK press must answer to first.
   const qualityLayer: BackLayer = {
     id: 'quality-menu',
     isOpen: () => quality.isActive(),
@@ -314,7 +350,12 @@ export function wireTizenBridge(
       if (opener && opener.isConnected) (opener as HTMLElement).focus();
     }
   };
-  const backLayers: BackLayer[] = [...(back.layers ?? []), createFocusTrapLayer(), qualityLayer];
+  const backLayers: BackLayer[] = [
+    ...(back.layers ?? []),
+    createQuickConnectLayer(),
+    createFocusTrapLayer(),
+    qualityLayer,
+  ];
   const findRow = back.findRow ?? activeScrolledRow;
   const snapRow = back.snapRow ?? snapRowToStart;
 

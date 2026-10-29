@@ -227,6 +227,7 @@ const quickConnect = {
   unreachable: 'Der Server konnte nicht erreicht werden.',
   expiryNote: 'Läuft in wenigen Minuten ab — kein Grund zur Eile.',
   tryAgain: 'Erneut versuchen',
+  usePassword: 'Stattdessen Passwort eingeben',
   hint: 'Öffne auf dem Telefon Phlix → Am TV anmelden → Code eingeben.',
 };
 

@@ -10,7 +10,7 @@
  *     (incl. the documented additive exception), diacritics/CJK sanity, and
  *     PIN/hash drift guards against the vendored files (CI-skipped source
  *     leg, see below).
- *  B. TIZEN-OWN: 197-key identity per locale, placeholder parity, the
+ *  B. TIZEN-OWN: 198-key identity per locale, placeholder parity, the
  *     additive-pipe plural doctrine (latin 2-seg on exactly 12 keys), JA zero
  *     pipes + counter phrases, per-locale English-LEAK allow-lists verified
  *     BOTH directions, diacritics aggregates.
@@ -419,12 +419,12 @@ describe('ui bundles — key-set identity and installed coverage', () => {
 // ---------------------------------------------------------------------------
 
 describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
-  it('every locale table has EXACTLY the 197 English keys (both directions)', () => {
+  it('every locale table has EXACTLY the 198 English keys (both directions)', () => {
     const reference = keySet(TIZEN_EN as unknown as Table);
     for (const locale of LOCALES) {
       expect(keySet(TIZEN_TABLES[locale]), `${locale} key set differs from en`).toBe(reference);
     }
-    expect(EN_TIZEN.size).toBe(197);
+    expect(EN_TIZEN.size).toBe(198);
   });
 
   it('every value keeps its key\'s {placeholder} set verbatim', () => {
@@ -548,7 +548,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     expect(nonCjk).toEqual([...EN_LEAK_OK.ja].sort());
   });
 
-  it('the 197-key type law: every locale compiles against TizenCatalog (satisfies)', () => {
+  it('the 198-key type law: every locale compiles against TizenCatalog (satisfies)', () => {
     // Compile-time guarantee, re-asserted at runtime via key-set identity;
     // this it() documents that the `satisfies TizenCatalog` annotations in
     // src/i18n/tizen/locales/*.ts are the FIRST line of that defense.

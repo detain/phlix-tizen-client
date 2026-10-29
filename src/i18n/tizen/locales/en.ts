@@ -257,6 +257,7 @@ const quickConnect = {
   unreachable: 'Could not reach the server.',
   expiryNote: 'Expires in a few minutes — no need to hurry.',
   tryAgain: 'Try again',
+  usePassword: 'Enter password instead',
   hint: 'On your phone, open Phlix → Sign in on TV → type the code.',
 } satisfies Record<string, string>;
 

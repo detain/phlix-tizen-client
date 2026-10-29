@@ -15,6 +15,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { nextTick, reactive, ref } from 'vue';
 import QuickConnectPanel from '@/quickconnect/QuickConnectPanel.vue';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const apiBaseRef = ref('');
 const auth = reactive({
@@ -147,5 +149,110 @@ describe('QuickConnectPanel — placement + token-store seam', () => {
     expect(captured.stopCalls).toBeGreaterThanOrEqual(1);
     expect((captured.deps!.isVisible as () => boolean)()).toBe(false);
     expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C16 (tizen__casualgamer CRITICAL row 17) — the takeover is a door, never a
+// wall. Pins: a persistent dismiss affordance in EVERY phase (pre-fix this was
+// the dead end: undismissable outside terminal phases), click-retires semantics
+// (session stopped, panel gone, the password sign-in beneath no longer covered),
+// the BACK-ladder bell contract (an Escape keydown ON the takeover root retires
+// it), the per-base re-offer, and the literal tripwire joining the panel root's
+// `data-quick-connect-panel` attribute to the selector tizenBridge.ts probes.
+// ---------------------------------------------------------------------------
+describe('QuickConnectPanel — C16 dismissal contract', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    reset();
+  });
+
+  afterEach(() => {
+    while (mounts.length) mounts.pop()!.unmount();
+  });
+
+  it('shows a persistent "Enter password instead" control in the NON-terminal initiating phase', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    const dismiss = wrapper.find('[data-testid="qc-dismiss"]');
+    expect(dismiss.exists()).toBe(true);
+    expect(dismiss.text()).toBe('Enter password instead');
+    // Retry stays phase-gated (terminal-only); the DISMISS control never is —
+    // that asymmetry is precisely what made the pre-fix panel a dead end.
+    expect(wrapper.find('[data-testid="qc-retry"]').exists()).toBe(false);
+  });
+
+  it('the dismiss control is present through pairing AND terminal phases (alongside retry)', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    (captured.deps!.onStatusChange as (p: string) => void)('pairing');
+    await nextTick();
+    expect(wrapper.find('[data-testid="qc-dismiss"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="qc-retry"]').exists()).toBe(false);
+    (captured.deps!.onStatusChange as (p: string) => void)('expired');
+    await nextTick();
+    expect(wrapper.find('[data-testid="qc-retry"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="qc-dismiss"]').exists()).toBe(true);
+  });
+
+  it('clicking dismiss stops the ceremony, retires the panel, and closes its poll gate', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    expect((captured.deps!.isVisible as () => boolean)()).toBe(true);
+    await wrapper.find('[data-testid="qc-dismiss"]').trigger('click');
+    await nextTick();
+    await nextTick();
+    // Takeover gone — the route beneath it (the ui login form) is no longer covered.
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    // The pairing session was STOPPED and its invisibility gate is closed.
+    expect(captured.stopCalls).toBeGreaterThanOrEqual(1);
+    expect((captured.deps!.isVisible as () => boolean)()).toBe(false);
+  });
+
+  it('BACK contract: a bubbling Escape keydown ON the takeover root retires the panel', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    // EXACTLY what the bridge's quick-connect layer close() dispatches (C16 test
+    // in tizenBridge.test.ts pins the sender; this pins the receiver).
+    wrapper
+      .find('[data-quick-connect-panel]')
+      .element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await nextTick();
+    await nextTick();
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    expect(captured.stopCalls).toBeGreaterThanOrEqual(1);
+  });
+
+  it('a DIFFERENT server base re-offers pairing after a dismissal', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    await wrapper.find('[data-testid="qc-dismiss"]').trigger('click');
+    await nextTick();
+    await nextTick();
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    apiBaseRef.value = 'http://other:8097';
+    await nextTick();
+    await nextTick();
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="qc-dismiss"]').exists()).toBe(true);
+    expect(captured.runCalls).toBe(2);
+  });
+
+  it('tripwire: the takeover root attribute matches the selector the BACK ladder probes', async () => {
+    // Panel and bridge speak through this literal contract; drift silently
+    // re-orphans the takeover from the ladder — the exact C16 failure class.
+    const bridge = readFileSync(join(__dirname, '../../src/tizenBridge.ts'), 'utf8');
+    const match = /export const QUICK_CONNECT_SELECTOR = '([^']+)';/.exec(bridge);
+    expect(match, 'QUICK_CONNECT_SELECTOR export').not.toBeNull();
+    expect(match![1]).toBe('[data-quick-connect-panel]');
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    expect(wrapper.find(match![1]).exists()).toBe(true);
   });
 });

@@ -7,6 +7,8 @@ import {
   defaultExitApplication,
   createFocusTrapLayer,
   FOCUS_TRAP_SELECTOR,
+  createQuickConnectLayer,
+  QUICK_CONNECT_SELECTOR,
   type BridgePlayer,
   type BridgeRouter,
   type BridgeRemote,
@@ -802,5 +804,92 @@ describe('S526 createFocusTrapLayer — the generic [data-focus-trap] modal-clos
     trap.addEventListener('keydown', (event: KeyboardEvent) => keys.push(event.key));
     createFocusTrapLayer().close();
     expect(keys).toEqual(['Escape']);
+  });
+});
+
+// C16 (tizen__casualgamer CRITICAL row 17): the first-run QuickConnect takeover
+// must be a closable BACK layer, not the wall whose only "dismiss" is quitting
+// the app. These pin the bridge side of the contract: the probe, the bell, the
+// rung priority, and the root-BACK behavior change (closes the card — no exit).
+describe('C16 createQuickConnectLayer — the pairing takeover as a closable BACK layer', () => {
+  let remote: FakeRemote;
+
+  beforeEach(() => {
+    remote = makeRemote();
+    document.body.innerHTML = '';
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  const rootRoute = (): BridgeRoute => ({ name: 'browse', path: '/app' });
+
+  it('id is quick-connect (diagnostic pin for the ladder)', () => {
+    expect(createQuickConnectLayer().id).toBe('quick-connect');
+  });
+
+  it('isOpen only while the takeover root is on screen', () => {
+    const layer = createQuickConnectLayer();
+    expect(layer.isOpen()).toBe(false);
+    document.body.innerHTML = '<div data-quick-connect-panel></div>';
+    expect(layer.isOpen()).toBe(true);
+  });
+
+  it('close dispatches an Escape keydown ON the panel root (bridge only rings the bell)', () => {
+    document.body.innerHTML = '<div data-quick-connect-panel></div>';
+    const panel = document.querySelector(QUICK_CONNECT_SELECTOR) as HTMLElement;
+    const keys: string[] = [];
+    panel.addEventListener('keydown', (event: KeyboardEvent) => keys.push(event.key));
+    createQuickConnectLayer().close();
+    expect(keys).toEqual(['Escape']);
+  });
+
+  it('BACK at the app root retires the takeover INSTEAD of quitting the app (TV law: BACK always escapes)', () => {
+    document.body.innerHTML = '<div data-quick-connect-panel></div>';
+    const panel = document.querySelector(QUICK_CONNECT_SELECTOR) as HTMLElement;
+    const keys: string[] = [];
+    panel.addEventListener('keydown', (event: KeyboardEvent) => keys.push(event.key));
+    const router = makeRouter();
+    const exit = vi.fn();
+    wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+      exit,
+      findRow: () => null
+    });
+    remote.fire({ key: 'BACK' });
+    expect(keys).toEqual(['Escape']);
+    expect(exit).not.toHaveBeenCalled();
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
+  it('the takeover outranks a ui focus-trap modal for the press (full-bleed card is topmost)', () => {
+    document.body.innerHTML = '<div data-focus-trap></div><div data-quick-connect-panel></div>';
+    const trapKeys: string[] = [];
+    const panelKeys: string[] = [];
+    document
+      .querySelector(FOCUS_TRAP_SELECTOR)!
+      .addEventListener('keydown', (event: Event) => trapKeys.push((event as KeyboardEvent).key));
+    document
+      .querySelector(QUICK_CONNECT_SELECTOR)!
+      .addEventListener('keydown', (event: Event) => panelKeys.push((event as KeyboardEvent).key));
+    const router = makeRouter();
+    wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+      exit: vi.fn(),
+      findRow: () => null
+    });
+    remote.fire({ key: 'BACK' });
+    expect(panelKeys).toEqual(['Escape']);
+    expect(trapKeys).toEqual([]);
+  });
+
+  it('with NO takeover on screen, a root BACK still exits — the layer never fabricates itself', () => {
+    const router = makeRouter();
+    const exit = vi.fn();
+    wireTizenBridge(remote, makePlayer(), router, rootRoute, makeQuality({ active: false }), {
+      exit,
+      findRow: () => null
+    });
+    remote.fire({ key: 'BACK' });
+    expect(exit).toHaveBeenCalledTimes(1);
   });
 });
