@@ -5,6 +5,41 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — Widget version stamping single-sourced to package.json with build-time sync + drift pin (M-TIZEN-05 / review tizen__devops MAJ-2) — 2026-10-29
+
+- **The drift trap closes.** `app/config.xml` and `package.json` both said
+  `1.0.0` and had said so since the initial restructure with zero automation
+  touching either — a bump could silently ship a widget the TV/store still
+  read as `1.0.0` forever. Honest value note: the repo has never shipped a
+  version bump (its only tag is the CI-rolling `latest` prerelease pointer),
+  so `1.0.0` stays as current truth; this cure makes the FIRST real bump a
+  one-line change instead of inventing a release.
+- **NEW `scripts/version-sync.mjs`** — `package.json` "version" (semver-
+  validated, fail-loud) is the single source; the script stamps it into
+  `app/config.xml`'s `<widget version>` and maintains a `generated:
+  run scripts/version-sync` marker comment. Idempotent: an in-sync tree
+  writes nothing (probe: second run logged "in sync", zero diff). Wired into
+  `npm run package` (`build → version-sync → scripts/package.js`), so the CI
+  build leg and the committed `package/config.xml` freshness mirror always
+  carry the stamped bytes; `npm run version:sync` standalone for manual use.
+  Estate siblings stamp the same idea their own way, cited both-sides: the
+  Roku client (`scripts/derive-version.sh` + Makefile build-time manifest
+  injection, gated by `verify-runtime.sh` Check 18) and the Windows client
+  (`build.yml` version-check job, tag == package.json).
+- **NEW tripwire `tests/unit/versionStamping.test.ts` (5 tests)** — equality
+  pin (both manifests vs SSOT), marker pin, mirror pin, and package-chain
+  wiring pin (sync runs before `scripts/package.js`). Teeth are future-drift
+  by disclosed design (the two files are EQUAL today): mutation-proven —
+  bump-without-sync reddened exactly the equality + mirror arms; completing
+  the workflow (sync + re-package copy) re-greened all 5; stripping the
+  marker, hand-editing the mirror, and dropping sync from the chain each
+  reddened exactly their named arm; non-semver SSOT and a version-less
+  `<widget>` each made the script exit 1.
+- Suite: 51 files/816 tests → 52/821 (+5 exact); vue-tsc, eslint and the full
+  `npm run package` leg (build with vue-tsc → sync → assemble → mirror) all
+  green at HEAD. Docs: DEVELOPER.md gains a "Versioning" section (bump
+  procedure in one place), README manifest/package comments point at the SSOT.
+
 ### Fixed — Runtime-compat floor made canonical + enforced; committed-bundle `.at` crash cured; diagnostics-half provenance truth-pass (M-TIZEN-03 / review tizen__crossfe M1) — 2026-10-29
 
 - **The queued M-TIZEN-03 finding lands.** r1 review (M-TIZEN-03__r1.md) ruled

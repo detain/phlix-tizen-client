@@ -132,7 +132,9 @@ client does not post a device profile.
 
 `app/config.xml` is the Tizen widget (`.wgt`) manifest:
 
-- App ID (`phlix.app.phlixtizen`) and version
+- App ID (`phlix.app.phlixtizen`) and version — the version attribute is
+  machine-stamped from `package.json` `"version"` by `scripts/version-sync.mjs`
+  on every `npm run package` (single source; see DEVELOPER.md "Versioning")
 - `required_version` (`6.5`)
 - Network access (`<access origin="*">`) and TV privileges (`internet`, `tv.inputdevice` — S503 keeps only what the code actually exercises)
 - `<tizen:profile name="tv-samsung"/>` and `hwkey-event="enable"` (S503)
@@ -163,7 +165,7 @@ Output is placed in the `dist/` directory (`index.html` + `assets/`).
 ### Packaging for Tizen
 
 ```bash
-npm run package     # npm run build, then node scripts/package.js
+npm run package     # npm run build, node scripts/version-sync.mjs, then node scripts/package.js
 ```
 
 This assembles the `package/` directory (the Vite `dist/` plus `app/config.xml`

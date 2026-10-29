@@ -383,7 +383,7 @@ running app.
 
 ```bash
 npm run build        # vue-tsc --noEmit && vite build → dist/
-npm run package      # build, then node scripts/package.js → package/
+npm run package      # build, then version-sync, then scripts/package.js → package/
 ```
 
 `scripts/package.js` (ESM) copies the Vite `dist/` (index.html + assets) and
@@ -394,6 +394,31 @@ See `docs/signing.md` for the full certificate + signing flow.
 
 > `base: './'` in `vite.config.ts` is MANDATORY — a `.wgt` runs from a `file://`
 > origin on the TV, so absolute `/assets` paths would 404.
+
+### Versioning (single source: package.json)
+
+The widget version the TV and the Samsung store read lives in **one** place:
+`package.json` `"version"`. `npm run package` first runs
+`scripts/version-sync.mjs`, which stamps that value into `app/config.xml`'s
+`<widget version="...">` attribute and maintains the
+`generated: run scripts/version-sync` marker comment there; then
+`scripts/package.js` copies the stamped manifest into the committed
+`package/` mirror. The sync is idempotent — running it on an in-sync tree
+writes nothing, and `npm run version:sync` is available standalone.
+
+**To bump a release:** edit `package.json` `"version"` (one line), run
+`npm run package`, commit `package.json`, `app/config.xml` and `package/config.xml`
+together. `tests/unit/versionStamping.test.ts` fails the build if the two
+manifests ever disagree, if the marker is stripped, or if the package chain
+drops the sync step. (Estate siblings do the same thing differently because
+they can: the Roku client stamps its manifest at build time via
+`scripts/derive-version.sh` + the Makefile and gates with `verify-runtime.sh`
+Check 18; the Windows client asserts tag == package.json in its build workflow.)
+
+> Current truth at the time of writing: `1.0.0`. The repo has never shipped a
+> version bump (its only tag is the CI-rolling `latest` prerelease pointer),
+> so 1.0.0 is honest — the pipeline exists to make the FIRST real bump a
+> one-line change instead of the silent drift this section replaced.
 
 ### Writing tests
 

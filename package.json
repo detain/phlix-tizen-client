@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "package": "npm run build && node scripts/package.js"
+    "version:sync": "node scripts/version-sync.mjs",
+    "package": "npm run build && node scripts/version-sync.mjs && node scripts/package.js"
   },
   "keywords": [
     "phlix",
