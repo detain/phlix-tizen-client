@@ -813,3 +813,118 @@ describe('S523 idle screensaver overlay (AD-21)', () => {
     expect(secondUse).toHaveBeenCalledWith(fakePinia);
   });
 });
+
+// Review tizen__devops M3 — uncaught-error visibility. The ring itself is
+// unit-proven in tests/unit/runtimeDiagnostics.test.ts; THIS file owns the
+// red→green registration chain: boot() wires the capture, an error event
+// becomes a persisted buffer entry, the Vue bridge becomes one, and the
+// boot-failure screen surfaces the tail. jsdom supplies the real `window`
+// and the setup.ts localStorage mock, so the chain runs end-to-end.
+describe('runtime failure visibility (review tizen__devops M3)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    createPhlixApp.mockClear().mockReturnValue(fakeApp);
+    mountSpy.mockClear();
+    secondMount.mockClear();
+    secondUse.mockClear().mockReturnValue(secondApp);
+    resolveHubRelayConfigMock.mockClear().mockReturnValue(null);
+    openHubRelayConnectionMock.mockClear();
+    probeServerMock.mockReset().mockImplementation(async () => true);
+    routerBeforeEach.mockClear().mockReturnValue(routerUnregister);
+    globalThis.localStorage.clear();
+  });
+
+  function readRing(): Array<Record<string, unknown>> {
+    return JSON.parse(globalThis.localStorage.getItem('phlix.runtimeFailures') ?? '[]') as Array<Record<string, unknown>>;
+  }
+
+  it('a healthy boot installs the capture WITHOUT writing the ring', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://my-tv:8096');
+    globalThis.localStorage.setItem('phlix.deviceId', 'tizen-fixed');
+    const mod = await import('@/main');
+    await mod.boot();
+    // Listeners are inert without failures — no diagnostics write on the happy path.
+    expect(globalThis.localStorage.getItem('phlix.runtimeFailures')).toBeNull();
+  });
+
+  it('chain: window error event → ring entry → boot-failure screen quotes it', async () => {
+    // The house renderBootFailure pattern (see the S515/S516 tests above):
+    // REPLACE the body — a leftover #phlix-app from an earlier test would
+    // otherwise win getElementById over an appended second element.
+    document.body.innerHTML = '<div id="phlix-app"></div>';
+    const host = document.getElementById('phlix-app')!;
+    try {
+      globalThis.localStorage.setItem('phlix.serverUrl', 'http://my-tv:8096');
+      globalThis.localStorage.setItem('phlix.deviceId', 'tizen-fixed');
+      const mod = await import('@/main');
+      await mod.boot();
+
+      const errorEvent = new Event('error');
+      Object.defineProperty(errorEvent, 'message', { value: 'TypeError: shelf is undefined' });
+      Object.defineProperty(errorEvent, 'filename', { value: 'app://-/assets/index.js' });
+      Object.defineProperty(errorEvent, 'lineno', { value: 42 });
+      window.dispatchEvent(errorEvent);
+
+      // Every boot() in this file has installed a capture (module-scope boot +
+      // the explicit one); they all record the SAME event and the 1 s
+      // burst-suppression window collapses that to exactly one entry.
+      const ring = readRing();
+      expect(ring).toHaveLength(1);
+      expect(ring[0]).toMatchObject({ kind: 'error', message: 'TypeError: shelf is undefined @ app://-/assets/index.js:42' });
+
+      // The Vue bridge: production Vue console-errors component failures into
+      // the void without app.config.errorHandler — boot must set it (the
+      // vendored ui ships none; proven by grep at v0.99.10).
+      const appCfg = fakeApp.config as { errorHandler?: (err: unknown, vm: unknown, info: string) => void };
+      expect(typeof appCfg.errorHandler).toBe('function');
+      appCfg.errorHandler!(new TypeError('watcher boom'), null, 'app watcher');
+      const ringWithVue = readRing();
+      expect(ringWithVue).toHaveLength(2);
+      expect(ringWithVue[1]).toMatchObject({ kind: 'vue', message: 'TypeError: watcher boom (app watcher)' });
+
+      // Surface: the terminal boot failure renders the plain line PLUS the
+      // quoted prior failures (its own fatal entry excluded — it is quoted
+      // on its own line already).
+      mod.renderBootFailure(new Error('mount exploded'));
+      expect(host.textContent).toContain('Phlix failed to start: mount exploded');
+      expect(host.textContent).toContain('Recent failures:');
+      expect(host.textContent).toMatch(/\[error\] \d\d:\d\d:\d\d TypeError: shelf is undefined @ app:\/\/-\/assets\/index\.js:42/);
+      expect(host.textContent).toMatch(/\[vue\] \d\d:\d\d:\d\d TypeError: watcher boom \(app watcher\)/);
+      expect(host.style.whiteSpace).toBe('pre-line');
+      // The ring persists the fatal too — a TV that hard-dies leaves the
+      // cause readable after relaunch.
+      expect(readRing().at(-1)).toMatchObject({ kind: 'boot-fatal', message: 'mount exploded' });
+    } finally {
+      document.body.innerHTML = '';
+    }
+  });
+
+  it('chain: unhandledrejection → ring entry', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://my-tv:8096');
+    globalThis.localStorage.setItem('phlix.deviceId', 'tizen-fixed');
+    const mod = await import('@/main');
+    await mod.boot();
+
+    const rejection = new Event('unhandledrejection');
+    Object.defineProperty(rejection, 'reason', { value: new Error('pairing poll died') });
+    window.dispatchEvent(rejection);
+
+    const ring = readRing();
+    expect(ring).toHaveLength(1);
+    expect(ring[0]).toMatchObject({ kind: 'rejection', message: 'Error: pairing poll died' });
+    expect(mod).toBeDefined();
+  });
+
+  it('a fatal with an empty ring renders the plain boot-failure line only (honest quiet)', async () => {
+    document.body.innerHTML = '<div id="phlix-app"></div>';
+    const host = document.getElementById('phlix-app')!;
+    try {
+      const mod = await import('@/main');
+      await mod.boot(); // healthy → ring untouched
+      mod.renderBootFailure(new Error('config exploded'));
+      expect(host.textContent).toBe('Phlix failed to start: config exploded');
+    } finally {
+      document.body.innerHTML = '';
+    }
+  });
+});

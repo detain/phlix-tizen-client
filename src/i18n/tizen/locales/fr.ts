@@ -57,6 +57,7 @@ const menu = {
 
 const boot = {
   failedStart: 'Échec du démarrage de Phlix : {message}',
+  recentFailures: 'Échecs récents :',
   splashHint: 'Démarrage',
 };
 

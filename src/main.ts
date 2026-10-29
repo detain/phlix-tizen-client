@@ -23,6 +23,7 @@ import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import { installGamepadBridge } from './remote/gamepadBridge';
 import { resolveHubRelayConfig, openHubRelayConnection } from './api/hubRelay';
+import { installRuntimeFailureCapture, recordRuntimeFailure, readRuntimeFailures, describeThrown, formatRuntimeFailureLine } from './runtimeDiagnostics';
 import { useSyncPlayStore } from './stores/useSyncPlayStore';
 import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
 import { buildTelemetryDeps, getConsent, startTelemetry } from './telemetry';
@@ -189,20 +190,43 @@ export function probeStorage(): StorageLike {
   }
 }
 
+/** How many PRIOR captured failures the boot-failure screen quotes. */
+const BOOT_FAILURE_TAIL_COUNT = 3;
+
 /**
  * T-09 white-screen guard: the terminal `.catch` for `boot()`. Any throw past
  * the storage probe (config resolution, app creation, mount) surfaces here as a
  * minimal readable message in the mount point instead of an unhandled rejection
  * behind a blank `#phlix-app`.
+ *
+ * Review tizen__devops M3 — this screen is ALSO the surfacing point for the
+ * on-device failure ring: the fatal is recorded (`boot-fatal`) and the last
+ * few failures captured BEFORE it (by `./runtimeDiagnostics`) are quoted
+ * underneath, so a support conversation starts from what actually died, not
+ * from a blank TV. The entry just written is always last, so the tail drops
+ * it and shows only prior context; raw `[kind] HH:MM:SS message` lines stay
+ * untranslated data under one translated label (the catalog's own ja.ts
+ * precedent: "developer-facing diagnostic quoted from code, translated only
+ * in prose").
  */
 export function renderBootFailure(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
   console.error('[phlix] Fatal boot failure:', error);
+  const storage = probeStorage();
+  recordRuntimeFailure({ storage, now: () => Date.now() }, { kind: 'boot-fatal', message });
+  const prior = readRuntimeFailures(storage).slice(0, -1).slice(-BOOT_FAILURE_TAIL_COUNT);
+  const lines = [tTizen('boot.failedStart', { message })];
+  if (prior.length > 0) {
+    lines.push(tTizen('boot.recentFailures'));
+    for (const failure of prior) lines.push(formatRuntimeFailureLine(failure));
+  }
+  const text = lines.join('\n');
   try {
-    const host = document.getElementById('phlix-app');
-    const text = tTizen('boot.failedStart', { message });
-    if (host) host.textContent = text;
-    else document.body.textContent = text;
+    const host = document.getElementById('phlix-app') ?? document.body;
+    // The splash CSS never set white-space; textContent + pre-line keeps the
+    // multi-line diagnostic readable instead of collapsed onto one line.
+    host.style.whiteSpace = 'pre-line';
+    host.textContent = text;
   } catch {
     // The DOM itself is unavailable — there is nothing left to render into.
   }
@@ -295,6 +319,13 @@ function wireHubRelayConsumer(
 export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   const storage = probeStorage();
 
+  // Review tizen__devops M3 — window-level uncaught-error + unhandled-rejection
+  // capture is installed FIRST, before anything else can throw, and persists to
+  // the same bounded-localStorage idiom as the S529 address history. Zero
+  // network, zero request sites (routeManifest scan unchanged); a healthy boot
+  // writes NOTHING (pin-tested). renderBootFailure is the surfacing leg.
+  const diagnostics = installRuntimeFailureCapture({ storage });
+
   const serverUrl = storage.getItem(SERVER_URL_KEY);
   const envUrl = import.meta.env.VITE_PHLIX_SERVER_URL ?? null;
   const deviceId = resolveDeviceId(storage);
@@ -372,6 +403,18 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
     // (no privileged tizen.systeminfo call — see src/i18n/index.ts doctrine).
     messages: messagesForLocale(locale)
   });
+
+  // Review tizen__devops M3 — the Vue bridge. Production Vue routes component
+  // render/watcher/lifecycle errors to `app.config.errorHandler`, and WITHOUT
+  // one it ends in a bare invisible `console.error` — the estate's largest
+  // silent-death channel, and window.onerror never sees it. The vendored
+  // @phlix/ui v0.99.10 sets NO handler (grep-proven: zero
+  // "config.errorHandler" in the bundle), so this overrides nothing; it feeds
+  // the SAME ring as the window listeners. Never rethrows, never surfaces a
+  // UI itself — the boot-failure screen is the surfacing point.
+  application.config.errorHandler = (error: unknown, _instance: unknown, info: string) => {
+    diagnostics.record({ kind: 'vue', message: `${describeThrown(error)} (${String(info)})` });
+  };
 
   // S515 AD-3 — probe said unreachable: land the user on @phlix/ui's existing
   // D-pad-operable Connect screen instead of a live but silently-failing app.

@@ -64,6 +64,10 @@ const menu = {
 
 const boot = {
   failedStart: 'Phlix failed to start: {message}',
+  // Label for the raw on-device failure ring quoted under the boot-failure
+  // screen (review tizen__devops M3). The entries themselves stay untranslated
+  // engine text (ja.ts precedent: translate the prose, quote the diagnostic).
+  recentFailures: 'Recent failures:',
   // Static S515 AD-3 CSS-only splash (index.html): rendered with ZERO JS, so it
   // cannot call tTizen without violating the splash design. Cataloged anyway —
   // byte-pinned against index.html by tests/unit/tizenI18n.test.ts — so a future

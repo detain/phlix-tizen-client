@@ -72,6 +72,7 @@ const EXPECTED: Record<string, string> = {
   "menu.parentalControls": "Parental Controls",
   "menu.admin": "Admin",
   "boot.failedStart": "Phlix failed to start: {message}",
+  "boot.recentFailures": "Recent failures:",
   "boot.splashHint": "Booting",
   "hub.pausedNotice": "Hub connection paused — resumes when you open the app again",
   "skip.controlsAria": "Skip controls",

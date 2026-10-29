@@ -58,6 +58,7 @@ const menu = {
 
 const boot = {
   failedStart: 'Falha ao iniciar o Phlix: {message}',
+  recentFailures: 'Falhas recentes:',
   splashHint: 'Inicializando',
 };
 

@@ -5,6 +5,66 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — Uncaught-error visibility: on-device runtime-failure ring, zero phantom telemetry (M-TIZEN-03 / review tizen__devops M3) — 2026-10-29
+
+- **NEW `src/runtimeDiagnostics.ts` — the estate never had crash telemetry and
+  still does not: this is visibility, not reporting.** Before this change every
+  uncaught-error path in the widget died silently behind the TV: a throwing
+  watcher or a rejected promise ended in an invisible `console.error` (the
+  vendored `@phlix/ui` v0.99.10 registers no `app.config.errorHandler` and no
+  window listeners — grep-proven; `src/telemetry.ts` is the separate S521
+  opt-IN heartbeat, not an error path). `boot()` now installs
+  `installRuntimeFailureCapture` at its very head (window `'error'` +
+  `'unhandledrejection'`, handlers try/caught so diagnostics can never become
+  the failure) and bridges Vue's production error channel through
+  `application.config.errorHandler` (kind `vue`; overrides nothing — the vendored
+  ui ships none). Failures are summarized `{kind, message, at}` — no stacks (PII
+  posture) — into a BOUNDED ring: `MAX_RECORDED_FAILURES = 20` oldest-evicted,
+  `FAILURE_MESSAGE_LIMIT = 300` per entry, consecutive-identical burst
+  suppression inside `DUPLICATE_SUPPRESSION_MS = 1000`, persisted to
+  `localStorage['phlix.runtimeFailures']` through the same bounded-localStorage
+  idiom as the S529 address history. A healthy run writes NOTHING (pin-tested).
+- **Persistence is localStorage because the manifest mask makes log FILES
+  impossible**: `app/config.xml` grants only `internet` + `tv.inputdevice`
+  (S503; TN-2 law — privileges fold in only with their feature), so
+  `tizen.filesystem`/`application.log` cannot be reached without privilege
+  creep. The cure therefore adds ZERO privileges, ZERO dependencies and ZERO
+  request sites: `routeManifest.gate` scan stays 27, the manifest fixture is
+  byte-identical, and source greps in the new suite pin the absence of
+  `fetch(`/`XMLHttpRequest`/`sendBeacon`/`WebSocket`/`navigator.` and `tizen.`.
+- **Surfacing rides the error-state UI that already exists**:
+  `renderBootFailure` (the T-09 terminal screen) now records the fatal as
+  `boot-fatal` and quotes up to `BOOT_FAILURE_TAIL_COUNT = 3` PRIOR captured
+  failures beneath a new `boot.recentFailures` label (raw `[kind] HH:MM:SS
+  message` lines stay untranslated data under the translated label — the
+  catalog's own ja.ts precedent), rendered with `white-space: pre-line`. A TV
+  that hard-dies leaves its cause of death readable after relaunch.
+- **Old-webview API floor honored** (vite `target: 'chrome100'` lowers syntax
+  only; `polyfills.ts` documents pre-Chrome-98 field webviews): the module uses
+  only `addEventListener`/JSON/index-`slice`/`Number.isFinite`/
+  `Date#toISOString` and reads event fields via `typeof` guards — never the
+  `ErrorEvent`/`PromiseRejectionEvent` constructors, never `.at(`/
+  `Object.hasOwn`/`structuredClone` (a grep describe pins the floor against the
+  shipped source).
+- **i18n**: `boot.recentFailures` added across all seven catalogs — tizen-own
+  catalog 198 → 199 keys (the four census pins in `i18nLocales.test.ts` and the
+  three in `docs/i18n.md` rotated to 199 from measurement; `tizenI18n.test.ts`
+  byte-pin extended).
+- **Tests measured from this repo state**: baseline 49 files / 769 tests →
+  50 files / 801 tests (+28 `runtimeDiagnostics.test.ts`, +4
+  `main.test.ts` M3 chain block: healthy-boot-stays-quiet, window-error → ring
+  → boot-failure surface end-to-end, unhandledrejection leg, honest-quiet
+  single-line fatal), serial `--no-file-parallelism` 0 failures (the lone
+  `skipped` in the isolated-run tail is the vendored-bundle parity gate's
+  documented sibling-absent skip — it executes in the pristine main tree and
+  SKIPS in CI per its own header). `vue-tsc --noEmit` 0 errors; `eslint .` 0.
+- **`package/` companion REBUILT from the committed state only** (an isolated
+  detached worktree at 1d37585 + this lane's files, so concurrent in-flight
+  work elsewhere in the tree could not be baked in): 30 asset renames +
+  `index.html`, aggregate md5 `3dcde87474bf834401fd665b4703ee35` identical
+  across two consecutive `npm run package` builds — satisfying the repo CI's
+  'Assert committed package/ is fresh' gate.
+
 ### Fixed — Signing/install docs cured from fabrications; mirror verified 2026 tooling (M-TIZEN-02 / review tizen__casualgamer) — 2026-10-29
 
 - **`docs/signing.md` rewritten against live-verified sources.** The previous
