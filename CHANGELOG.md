@@ -5,6 +5,53 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — the direct SyncPlay `:8097` bearer dial is TLS-mandatory; the surviving plaintext lane closes (M-TIZEN-12 / review tizen__secnet MAJOR-1) — 2026-10-29
+
+- **The surviving cleartext path, enumerated.** M-TIZEN-06 (e4d8516) closed
+  the hub-relay lane and M-TIZEN-07 (e4c81bb) scheme-allowlisted the
+  storage boundary, but the review's MAJOR-1 family had one transport left
+  ungated: `buildWsUrl` derived `ws:`/`wss:` purely from `apiBase.protocol`
+  and `connectWs` then presented the full bearer JWT in the
+  `Sec-WebSocket-Protocol` handshake of a plain `ws://` dial — with the
+  replayable SHA-256 group password hash (join frame) and every
+  group/playback frame following it unencrypted. A HEAD sweep of every
+  outbound URL construction: the two `new WebSocket` sites (this one and the
+  already-gated relay), the REST clients (all ride the persisted base —
+  M-TIZEN-07's ratified boundary law keeps `http:` persistable for LAN
+  browsing; that half is dispositioned, not re-litigated here), and the
+  unauthenticated `/health` discovery probes (no credentials). The bearer
+  DIAL was the gap.
+- **Cure (the M-TIZEN-06 idiom transposed, coords cited in-file):**
+  `buildWsUrl` now only moves the scheme UPWARD — `https:` → `wss:` is the
+  law, any other base throws the named `SyncPlayInsecureTransportError`
+  BEFORE `connectWs` constructs a socket. A policy refusal is terminal (no
+  reconnect ladder behind it — the base must change), loud on the console
+  with the refused origin named, and surfaced actionably on the store's
+  `wsError` channel that the room UI already renders. The escape hatch is
+  the repo's default-off build-env convention:
+  `VITE_PHLIX_DEV_ALLOW_INSECURE_SYNCPLAY=1` (declared `vite-env.d.ts`,
+  documented README-insecure-only) permits the plaintext dial and warns on
+  EVERY attempt — deliberately a separate var from the relay hatch, so one
+  env flag never unlocks two bearer transports.
+- **Tests:** `tests/unit/useSyncPlayStore.test.ts` +10 (full suite
+  53 files 892 → 902, measured from the stashed-parent run; the file
+  itself 53 → 63). Builder law (refusal message names the error, the
+  mandatory-wss law, the hatch env and the refused origin; `ws://` base
+  refused; unparsable base keeps the `''` bail; https→wss pin), the
+  hatch-default-is-the-env-read lock + the exactly-`'1'` convention, the
+  terminal no-socket connect refusal, per-attempt hatch disclosure, and the
+  silent https path. Mutation probe: stripping the gate condition reddens
+  exactly 5 law tests (58 pass around them) — including the behavioral
+  `connectWs` no-socket test, which dials against the parent's silent
+  downgrade and is the red-on-parent for the surviving path itself.
+- **Laws:** `routeManifest.gate` untouched (zero new request sites — the
+  `:8097` site predates this change; only its scheme law moved); CSP stays
+  permissive per the M-TIZEN-07 recorded posture; the vendored
+  `@phlix/ui` REST credential lanes (`useAuthStore` login, `client.ts`
+  refresh) remain the same dispositioned REST class — enforcement there is
+  an @phlix/ui-side decision, out of this repo's edit scope per the
+  thin-consumer rule.
+
 ### Fixed — TV-scale typography: rem base raised for the 1920 canvas, px outliers swept (M-TIZEN-11 / review tizen__gameux M3) — 2026-10-29
 
 - **Root cause:** the fixed-viewport widget (`index.html` meta

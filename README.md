@@ -139,6 +139,28 @@ permits the plaintext `ws://` dial and warns on the console with every attempt.
 It ships the relay bearer token **unencrypted to anyone on your network** and is
 **never release-safe** — do not build a `.wgt` for distribution with it set.
 
+**SyncPlay transport is TLS-mandatory (M-TIZEN-12).** The direct watch-party
+socket (`:8097`) presents the bearer JWT in its opening handshake — and the
+group-join frame that follows carries the replayable SHA-256 group password
+hash — so that dial requires an **`https://` server base** (`wss://`): the
+M-TIZEN-06 relay law transposed to the surviving lane. A plaintext base is
+refused at connect with a loud, actionable console error and a short
+"needs an https:// server URL" notice on the SyncPlay error channel; the
+socket is never constructed, while browsing and REST on the persisted LAN
+address stay untouched (the M-TIZEN-07 boundary law keeps `http:` persistable).
+For **LOCAL TESTING ONLY** (a dev server on plain http), the build-time escape
+hatch
+
+```bash
+VITE_PHLIX_DEV_ALLOW_INSECURE_SYNCPLAY=1 npm run build
+```
+
+permits the plaintext `ws://` dial and warns on the console with every attempt.
+It ships the session credential **unencrypted to anyone on your network** and is
+**never release-safe** — do not build a `.wgt` for distribution with it set. The
+two hatches are deliberately SEPARATE env vars: enabling one never unlocks the
+other bearer transport.
+
 The client sends `X-Phlix-Device-Type: samsung-tizen` and a stable
 `X-Phlix-Device-ID` (persisted as `phlix.deviceId`). **The server** maps the
 device-type header to the appropriate streaming/transcode quality profile — the

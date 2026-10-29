@@ -1,7 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
 import { SyncPlayClient } from '@phlix/syncplay';
-import { useSyncPlayStore } from '@/stores/useSyncPlayStore';
+import {
+  useSyncPlayStore,
+  buildWsUrl,
+  insecureSyncPlayHatchEnabled,
+  SyncPlayInsecureTransportError,
+  SYNCPLAY_INSECURE_DEV_HATCH_ENV,
+} from '@/stores/useSyncPlayStore';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -640,6 +646,130 @@ describe('useSyncPlayStore', () => {
       expect(store.members.map((m) => m.id).sort()).toEqual(['member_guest', 'member_host']);
       // Room view keeps the dict the store folds from.
       expect(Object.keys(store.currentRoom?.members ?? {}).sort()).toEqual(['member_guest', 'member_host']);
+    });
+  });
+
+  // ── M-TIZEN-12 — bearer transport TLS gate at the dial boundary ────────────
+  // The direct `:8097` lane's sibling of the hub-relay M-TIZEN-06 gate
+  // (see this suite's shape in tests/unit/hubRelay.test.ts): same law, same
+  // named-error / default-off-hatch / per-attempt-disclosure idiom, deliberately
+  // SEPARATE opt-in env so no one unlocks two bearer transports by accident.
+  describe('M-TIZEN-12 — the :8097 bearer dial never rides plaintext', () => {
+    it('buildWsUrl REFUSES a plaintext base with the named, actionable error', () => {
+      // Red-on-parent: the pre-cure builder returned `ws://…` verbatim.
+      let caught: unknown;
+      try {
+        buildWsUrl('http://api.example.test', 'room-1', false);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(SyncPlayInsecureTransportError);
+      const message = (caught as Error).message;
+      expect((caught as Error).name).toBe('SyncPlayInsecureTransportError');
+      expect(message).toContain('wss:// is mandatory');
+      expect(message).toContain(SYNCPLAY_INSECURE_DEV_HATCH_ENV); // the escape hatch is NAMED
+      expect(message).toContain('http://api.example.test'); // actionable: which origin was refused
+      // The former silent-downgrade shape must be UNREACHABLE without the hatch.
+    });
+
+    it('refuses a bare ws:// base too — only an https origin is secure', () => {
+      expect(() => buildWsUrl('ws://api.example.test', 'room-1', false)).toThrow(
+        SyncPlayInsecureTransportError,
+      );
+    });
+
+    it('an unparsable base still returns the empty bail (the invalid-URL path), not the TLS throw', () => {
+      expect(buildWsUrl('not a url', 'room-1', false)).toBe('');
+    });
+
+    it('https base → wss:// unchanged (the upward-only law predates the cure and holds)', () => {
+      expect(buildWsUrl('https://api.example.test', 'room 1')).toBe(
+        'wss://api.example.test:8097?room=room%201',
+      );
+    });
+
+    it('ships ws:// ONLY through the explicit insecure allowance', () => {
+      expect(buildWsUrl('http://api.example.test', 'room-1', true)).toBe(
+        'ws://api.example.test:8097?room=room-1',
+      );
+    });
+
+    it('the allowInsecure default IS the build-env hatch read (unlock → ws:, re-lock → refuse)', () => {
+      expect(insecureSyncPlayHatchEnabled()).toBe(false); // hatch unset in the test env
+      expect(() => buildWsUrl('http://api.example.test', 'room-1')).toThrow(
+        SyncPlayInsecureTransportError,
+      );
+      vi.stubEnv(SYNCPLAY_INSECURE_DEV_HATCH_ENV, '1');
+      expect(insecureSyncPlayHatchEnabled()).toBe(true);
+      expect(buildWsUrl('http://api.example.test', 'room-1')).toBe(
+        'ws://api.example.test:8097?room=room-1',
+      );
+      vi.unstubAllEnvs();
+      expect(insecureSyncPlayHatchEnabled()).toBe(false);
+      expect(() => buildWsUrl('http://api.example.test', 'room-1')).toThrow(
+        SyncPlayInsecureTransportError,
+      );
+    });
+
+    it('any hatch value other than exactly "1" keeps the gate shut (TV_ADMIN convention)', () => {
+      vi.stubEnv(SYNCPLAY_INSECURE_DEV_HATCH_ENV, 'true');
+      expect(insecureSyncPlayHatchEnabled()).toBe(false);
+      expect(() => buildWsUrl('http://api.example.test', 'room-1')).toThrow(
+        SyncPlayInsecureTransportError,
+      );
+      vi.unstubAllEnvs();
+    });
+
+    it('connectWs, plaintext base, no hatch: NO socket, loud actionable console, terminal wsError', () => {
+      // Red-on-parent: the pre-cure store dialed `ws://` with the bearer JWT.
+      const store = useSyncPlayStore();
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      expect(() => store.connectWs('http://api.example.test', 'room-1', 'jwt-token')).not.toThrow();
+      // Bearer custody: the refusal precedes the constructor — the JWT never
+      // reaches a socket, so nothing is offered, requested, or exposed.
+      expect(MockWebSocket.instances).toHaveLength(0);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      const logged = String(errorSpy.mock.calls[0][0]);
+      expect(logged).toContain('SyncPlay dial to http://api.example.test refused');
+      expect(logged).toContain('wss:// is mandatory');
+      expect(logged).toContain(SYNCPLAY_INSECURE_DEV_HATCH_ENV);
+      // A POLICY refusal is terminal, not transient: no reconnect state, and
+      // the config itself must change (https server URL) before any dial.
+      expect(store.wsReconnecting).toBe(false);
+      expect(store.wsError).toBe(
+        'Secure connection required — SyncPlay needs an https:// server URL',
+      );
+    });
+
+    it('connectWs through the dev hatch dials ws:// and DISCLOSES on every attempt', () => {
+      vi.stubEnv(SYNCPLAY_INSECURE_DEV_HATCH_ENV, '1');
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, 'error');
+      const store = useSyncPlayStore();
+      store.connectWs('http://api.example.test', 'room-1', 'jwt-token');
+      expect(lastSocket().url).toBe('ws://api.example.test:8097?room=room-1');
+      expect(lastSocket().protocols).toEqual(['bearer', 'jwt-token']);
+      expect(errorSpy).not.toHaveBeenCalled(); // hatch-on is a disclosure, not a refusal
+      store.disconnectWs();
+      store.connectWs('http://api.example.test', 'room-1', 'jwt-token'); // re-dial re-discloses
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+      expect(String(warnSpy.mock.calls[0][0])).toContain('INSECURE DEV HATCH');
+      expect(String(warnSpy.mock.calls[0][0])).toContain(SYNCPLAY_INSECURE_DEV_HATCH_ENV);
+      store.disconnectWs();
+      vi.unstubAllEnvs();
+    });
+
+    it('connectWs on an https base stays silent — the default law needs no hatch noise', () => {
+      const store = useSyncPlayStore();
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      store.connectWs('https://api.example.test', 'room-1', 'jwt-token');
+      expect(lastSocket().url).toBe('wss://api.example.test:8097?room=room-1');
+      expect(lastSocket().protocols).toEqual(['bearer', 'jwt-token']);
+      expect(warnSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+      expect(store.wsError).toBeNull();
+      store.disconnectWs();
     });
   });
 });

@@ -18,6 +18,15 @@ interface ImportMetaEnv {
    *  on the LAN). For local relay testing against a dev hub ONLY — never
    *  ship a release .wgt built with this set. See README → Configuration. */
   readonly VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY?: string;
+  /** M-TIZEN-12 — INSECURE DEV-ONLY SyncPlay transport hatch (the direct
+   *  `:8097` lane's sibling of `VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY`). Set to
+   *  '1' to let the SyncPlay socket dial plaintext `ws://` when the server
+   *  base is not `https:`. Default-off: without it a bearer-carrying SyncPlay
+   *  connection to a non-https server is REFUSED before the dial (the JWT and
+   *  the replayable group password hash would be readable on the LAN). For
+   *  local watch-party testing against a plain-http dev server ONLY — never
+   *  ship a release .wgt built with this set. See README → Configuration. */
+  readonly VITE_PHLIX_DEV_ALLOW_INSECURE_SYNCPLAY?: string;
   /** Build-time locale override for the client i18n seam (src/i18n). Wins over
    *  navigator.language, loses to an explicit runtime value. Unset/'en' keeps
    *  the byte-identical English ui defaults (the catalog ships an empty 'en'

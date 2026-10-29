@@ -22,7 +22,10 @@
  *     The handshake JWT rides the bearer subprotocol carrier
  *     (`new WebSocket(url, ['bearer', token])`), never a URL query param
  *     (estate policy WEBSOCKET_URL_QUERY_REFUSED; server phlix-server
- *     424c14d0 — see `buildWsUrl` for the full law).
+ *     424c14d0 — see `buildWsUrl` for the full law). That carrier makes the
+ *     dial a credential-bearing transport, so it is also TLS-mandatory
+ *     (`wss://`, review tizen__secnet M-TIZEN-12, the `src/api/hubRelay.ts`
+ *     M-TIZEN-06 law transposed — see `buildWsUrl` below).
  *   - All field names are snake_case; positions/durations are MILLISECONDS
  *     (SPEC.md:91). The store applies wire positions verbatim on receive and
  *     on state adoption (S293: receive side untouched); only the `sendCommand`
@@ -469,6 +472,38 @@ class SyncPlayApiClient {
 // ---- WebSocket URL ---------------------------------------------------------
 
 /**
+ * M-TIZEN-12 — the ONLY way a SyncPlay dial may ever use plaintext `ws://`.
+ *
+ * The direct lane's sibling of {@link HUB_RELAY_INSECURE_DEV_HATCH_ENV}
+ * (`src/api/hubRelay.ts`, M-TIZEN-06): a build-time env flag on the repo's
+ * default-off convention (same shape as `VITE_PHLIX_TV_ADMIN`), honest in its
+ * name — it exists for LOCAL TESTING against a plain-http dev server, and it
+ * ships the bearer JWT and every group/playback frame UNENCRYPTED to anyone on
+ * the LAN. Never enable it in a release build; README documents it as
+ * insecure-dev-only. Kept SEPARATE from the relay hatch on purpose: each
+ * bearer transport is opted into plaintext explicitly, never in one blast.
+ */
+export const SYNCPLAY_INSECURE_DEV_HATCH_ENV = 'VITE_PHLIX_DEV_ALLOW_INSECURE_SYNCPLAY';
+
+/** True only when the dev hatch is explicitly set to `'1'` at build time. */
+export function insecureSyncPlayHatchEnabled(): boolean {
+  return import.meta.env[SYNCPLAY_INSECURE_DEV_HATCH_ENV] === '1';
+}
+
+/**
+ * Thrown by {@link buildWsUrl} when a bearer-carrying SyncPlay dial would
+ * silently downgrade to plaintext. Named so the connect path can distinguish a
+ * POLICY refusal (terminal, actionable — the base must become https) from a
+ * transient failure, mirroring `HubRelayInsecureTransportError`.
+ */
+export class SyncPlayInsecureTransportError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SyncPlayInsecureTransportError';
+  }
+}
+
+/**
  * Build the SyncPlay WebSocket URL for a group.
  *
  * The server listens for SyncPlay on port 8097 of the API host (spec §3;
@@ -496,18 +531,49 @@ class SyncPlayApiClient {
  * ACCEPTED server-side (priority 2, RETIRING) while old client builds age
  * out — this client has moved and emits no query token; the token-less
  * `buildWsUrl` signature below makes re-introducing one a type error.
+ *
+ * Carrier law has a transport half (M-TIZEN-12, review tizen__secnet
+ * MAJOR-1): a bearer subprotocol presented over plaintext `ws://` is a
+ * LAN-wide credential broadcast — and the join frame that follows rides the
+ * replayable SHA-256 group password hash, so even a token-less dial is
+ * credential-bearing from its first frame. The scheme therefore only moves
+ * UPWARD (`https:` → `wss:`); a non-https base THROWS
+ * {@link SyncPlayInsecureTransportError} instead of silently dialing
+ * plaintext. This is the {@link HUB_RELAY_INSECURE_DEV_HATCH_ENV} gate
+ * (`src/api/hubRelay.ts`, M-TIZEN-06) transposed to the direct lane: same
+ * named-error, same default-off build-hatch escape, same per-attempt
+ * disclosure — and the same ratified boundary from M-TIZEN-07 still holds
+ * (`http:` remains persistable for LAN REST browsing; it is the BEARER DIAL
+ * that requires TLS). Exported for tests, mirroring `buildHubRelayUrl`.
  */
-function buildWsUrl(apiBase: string, roomId: string): string {
+export function buildWsUrl(
+  apiBase: string,
+  roomId: string,
+  allowInsecure: boolean = insecureSyncPlayHatchEnabled(),
+): string {
   let hostname = '';
-  let protocol = 'ws:';
+  let origin = '';
+  let secure: boolean;
   try {
     const url = new URL(apiBase);
     hostname = url.hostname;
-    protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    origin = url.origin;
+    secure = url.protocol === 'https:';
   } catch {
     // Fail fast: an unparsable apiBase cannot produce a socket URL.
     return '';
   }
+  if (!secure && !allowInsecure) {
+    throw new SyncPlayInsecureTransportError(
+      `SyncPlay dial to ${origin} refused: the :8097 handshake presents a bearer ` +
+        `credential, so wss:// is mandatory and a plaintext base would expose the JWT (and ` +
+        `the replayable group password hash that follows) to the local network. Configure an ` +
+        `https:// server URL; for LOCAL TESTING ONLY you may build with ` +
+        `${SYNCPLAY_INSECURE_DEV_HATCH_ENV}=1, which ships SyncPlay over unencrypted ws:// ` +
+        `and is never release-safe.`,
+    );
+  }
+  const protocol = secure ? 'wss:' : 'ws:';
   return `${protocol}//${hostname}:8097?room=${encodeURIComponent(roomId)}`;
 }
 
@@ -588,10 +654,36 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
       disconnectWs();
     }
 
-    const url = buildWsUrl(apiBase, roomId);
+    // M-TIZEN-12 — bearer transport TLS law at the dial boundary, the
+    // connectHubRelaySocket idiom (src/api/hubRelay.ts, M-TIZEN-06): the
+    // refusal fires BEFORE any socket is constructed, and a POLICY refusal is
+    // terminal — no reconnect ladder is armed (the base itself must change to
+    // https, and re-dialing the same plaintext base can only re-refuse). The
+    // full actionable reason goes to the console; the short one to the store's
+    // error channel, which the room UI already renders escaped.
+    let url: string;
+    try {
+      url = buildWsUrl(apiBase, roomId);
+    } catch (e) {
+      if (e instanceof SyncPlayInsecureTransportError) {
+        console.error(`[phlix-syncplay] ${e.message}`);
+        wsError.value = 'Secure connection required — SyncPlay needs an https:// server URL';
+        return;
+      }
+      throw e; // no other throw path exists in buildWsUrl; fail loud if one appears
+    }
     if (!url) {
       wsError.value = 'Invalid server URL — cannot open SyncPlay WebSocket';
       return;
+    }
+    if (!url.startsWith('wss:')) {
+      // Reachable only via the dev hatch (the builder refuses plaintext otherwise).
+      // Disclose on EVERY dial — this credential is readable on the local network.
+      console.warn(
+        `[phlix-syncplay] INSECURE DEV HATCH (${SYNCPLAY_INSECURE_DEV_HATCH_ENV}=1): ` +
+          `dialing ${url} over plaintext ws:// — the bearer JWT and every group/playback ` +
+          `frame are exposed to the local network. Never ship a build with this enabled.`,
+      );
     }
 
     try {
