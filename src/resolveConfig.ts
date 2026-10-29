@@ -89,6 +89,95 @@ export function sanitizeServerAddress(raw: string | null | undefined): string | 
   return trimmed;
 }
 
+// ---------------------------------------------------------------------------
+// M-TIZEN-12 r2 — SCHEME GATE AT THE RESOLVE BOUNDARY (review tizen__secnet
+// M12r2). The M-TIZEN-07 allow-list above CLASSIFIES schemes (http/https
+// survive, `javascript:`/`data:` are poison); it never asked whether the
+// SURVIVING base is about to present CREDENTIAL traffic. r1 (39f4c7a) gated
+// the :8097 dial itself, but the boundary kept resolving a persisted
+// `http://`-literal serverUrl verbatim and `main.ts` handed that plaintext
+// base straight to the credential-transport consumers (the hub-relay
+// server-origin fallback today, any bearer consumer tomorrow) — a refusal
+// living ONLY at one dial is one new caller away from leaking again. The law
+// now reads from the edge it guards: `resolveCredentialBase` is the resolve
+// boundary FOR HUB/CREDENTIAL TRAFFIC. It reuses the M-TIZEN-07 read
+// sanitize (the legacy-poisoned class falls back as for an absent slot),
+// then REFUSES an absolute `http:` base with the named
+// {@link CredentialTransportInsecureError} — refusal with an honest error is
+// the ratified estate posture (the e4d8516 gate idiom: `buildHubRelayUrl`
+// throws, it never silently upgrades; scheme moves UPWARD only). Blank,
+// absent, and non-absolute values keep their existing pass-through
+// semantics — the builders' own parse-bail still governs what `new URL()`
+// rejects. The M-TIZEN-07 persistence law is NOT re-litigated: `http:`
+// remains persistable for LAN REST browsing via `resolveAppConfig`, which is
+// unchanged; only credential traffic is gated here. The consumer's dev hatch
+// (`allowInsecure`, threaded by callers from their OWN documented
+// VITE_PHLIX_DEV_ALLOW_INSECURE_* flag) relaxes the boundary ONLY so the
+// dial-side per-attempt disclosure keeps firing — no third flag exists.
+// ---------------------------------------------------------------------------
+
+/** Named boundary refusal for a plaintext base about to carry credentials. */
+export class CredentialTransportInsecureError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'CredentialTransportInsecureError';
+  }
+}
+
+/**
+ * The ONE scheme predicate the credential-transport law reads from: `true`
+ * iff `raw` (after WHATWG trim/case-normalize) parses as an ABSOLUTE URL with
+ * protocol `http:`. Non-absolute text, https, and every non-http scheme are
+ * `false` here for different reasons — those stay governed by the edges that
+ * already refuse them (the M-TIZEN-07 allow-list for poison schemes, the
+ * builders' own parse/guard for raw `ws:` and relatives).
+ */
+export function isPlaintextCredentialBase(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+  try {
+    return new URL(trimmed).protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolve the base for HUB/CREDENTIAL traffic (bearer dials, relay-token
+ * mints — anything presenting the JWT or the group password hash).
+ * Precedence and read-sanitize are IDENTICAL to {@link resolveAppConfig};
+ * the delta is the scheme gate: a surviving absolute `http:` base is REFUSED
+ * unless the caller threads its own dev hatch. Returns `''` for the
+ * nothing-resolved case exactly like `resolveAppConfig` (the Connect gate /
+ * resolvers' own blank handling then owns it).
+ */
+export function resolveCredentialBase(
+  input: ResolveConfigInput,
+  allowInsecure = false,
+): string {
+  const serverUrl = sanitizeServerAddress(input.serverUrl);
+  const base = serverUrl ?? input.envUrl ?? '';
+  if (!allowInsecure && isPlaintextCredentialBase(base)) {
+    // The predicate just parsed successfully; the second parse is for the
+    // honest origin in the message and cannot realistically disagree.
+    let origin = base;
+    try {
+      origin = new URL(base.trim()).origin;
+    } catch {
+      /* keep the raw text if the platform parser disagrees with itself */
+    }
+    throw new CredentialTransportInsecureError(
+      `Credential transport base ${origin} refused at the resolve boundary: a persisted ` +
+        `http:// server URL must never present hub/credential traffic in plaintext. ` +
+        `Configure an https:// server URL (http:// stays valid for LAN browsing per ` +
+        `the M-TIZEN-07 boundary law). For LOCAL TESTING ONLY the consumer's ` +
+        `VITE_PHLIX_DEV_ALLOW_INSECURE_* hatch (exactly '1') relaxes this gate — it ` +
+        `ships credentials unencrypted and is never release-safe.`,
+    );
+  }
+  return base;
+}
+
 /**
  * Decide which base URL the Tizen client talks to.
  *

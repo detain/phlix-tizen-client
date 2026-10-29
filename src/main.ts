@@ -18,7 +18,7 @@ import '@phlix/ui/fonts.css';
 // stylesheets: the floor overrides are also belt-and-braces to their
 // `html:root` specificity win (see the file's header for the full story).
 import './styles/tv-typography.css';
-import { resolveAppConfig, pushAddressHistory, sanitizeServerAddress } from './resolveConfig';
+import { resolveAppConfig, pushAddressHistory, sanitizeServerAddress, resolveCredentialBase, CredentialTransportInsecureError } from './resolveConfig';
 import { createConnectScan } from './discovery/connectScan';
 import { resolveLocale, messagesForLocale } from './i18n';
 import { setTizenLocale, tTizen } from './i18n/tizen';
@@ -26,7 +26,7 @@ import { probeBootBase } from './bootProbe';
 import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import { installGamepadBridge } from './remote/gamepadBridge';
-import { resolveHubRelayConfig, openHubRelayConnection } from './api/hubRelay';
+import { resolveHubRelayConfig, openHubRelayConnection, insecureRelayHatchEnabled } from './api/hubRelay';
 import { installRuntimeFailureCapture, recordRuntimeFailure, readRuntimeFailures, describeThrown, formatRuntimeFailureLine } from './runtimeDiagnostics';
 import { useSyncPlayStore } from './stores/useSyncPlayStore';
 import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
@@ -258,6 +258,33 @@ export function renderBootFailure(error: unknown): void {
  * the bare media id through the app's real ApiClient and drives the shared
  * @phlix/ui player.
  */
+/**
+ * M-TIZEN-12 r2 — resolve-boundary scheme gate for the relay's server-origin
+ * fallback. An `http://`-literal base must never present hub/credential
+ * traffic: the boundary REFUSES it (e4d8516 idiom — refusal, never a silent
+ * upgrade), the refusal is disclosed loudly once at boot, and the resolver
+ * is fed `''` (precedence then treats the fallback as absent — no doomed
+ * config, no relay-token mint, no dial attempt). The relay's OWN documented
+ * dev hatch (`VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY`, read via
+ * `insecureRelayHatchEnabled()`) threads through so the existing
+ * hatch-on dev flow (dial over ws:// + per-attempt disclosure) is untouched.
+ * An EXPLICIT persisted/env `phlix.hubUrl` slot is deliberately NOT gated
+ * here: demoting a configured origin would silently repoint the relay at a
+ * DIFFERENT host — the M-TIZEN-06 dial-side refusal at `buildHubRelayUrl`
+ * (untouched) stays that slot's honest edge.
+ */
+function credentialRelayFallback(apiBase: string): string {
+  try {
+    return resolveCredentialBase({ serverUrl: apiBase }, insecureRelayHatchEnabled());
+  } catch (e) {
+    if (e instanceof CredentialTransportInsecureError) {
+      console.error(`[phlix] ${e.message}`);
+      return '';
+    }
+    throw e; // no other throw path exists in resolveCredentialBase; fail loud if one appears
+  }
+}
+
 function wireHubRelayConsumer(
   pinia: Pinia,
   apiBase: string,
@@ -265,7 +292,7 @@ function wireHubRelayConsumer(
   deviceHeaders: Record<string, string>,
 ): void {
   const hubRelay = resolveHubRelayConfig({
-    serverUrl: apiBase,
+    serverUrl: credentialRelayFallback(apiBase),
     // M-TIZEN-07 — the persisted hub slot rides the same storage-boundary
     // gate as the server slot: a non-http(s) absolute scheme resolves to
     // UNSET (the resolver's own precedence then falls to env → server

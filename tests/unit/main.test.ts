@@ -84,7 +84,10 @@ const resolveHubRelayConfigMock = vi.fn();
 const openHubRelayConnectionMock = vi.fn();
 vi.mock('@/api/hubRelay', () => ({
   resolveHubRelayConfig: (...args: unknown[]) => resolveHubRelayConfigMock(...args),
-  openHubRelayConnection: (...args: unknown[]) => openHubRelayConnectionMock(...args)
+  openHubRelayConnection: (...args: unknown[]) => openHubRelayConnectionMock(...args),
+  // M-TIZEN-12 r2 — main.ts threads the relay's own hatch read through the
+  // resolve-boundary gate; the boot tests run it OFF (the shipped posture).
+  insecureRelayHatchEnabled: () => false
 }));
 
 const wirePendingPlayMediaDispatcherMock = vi.fn(() => () => {});
@@ -346,16 +349,26 @@ describe('boot (Tizen renderer entry)', () => {
     );
   });
 
-  it('M-TIZEN-07: a poisoned persisted hubUrl resolves as UNSET for the relay config (composes with the M-TIZEN-06 TLS law, which stays at the dial)', async () => {
+  it('M-TIZEN-07 + r2: a poisoned persisted hubUrl resolves as UNSET; the http server-origin fallback is refused at the boundary (dial law unchanged)', async () => {
+    // r2 law flip (disclosed): at r1 boot fed `serverUrl: 'http://tv:8096'`
+    // VERBATIM to the credential-transport resolver — the permissive feed
+    // M-TIZEN-12r2 closes. The poison slot still sanitizes to null exactly as
+    // M-TIZEN-07 pinned; the plaintext fallback now arrives as '' with a loud
+    // one-time boot disclosure instead of a doomed dial-side config.
     globalThis.localStorage.setItem('phlix.serverUrl', 'http://tv:8096');
     globalThis.localStorage.setItem('phlix.hubUrl', 'data:text/html,evil');
     globalThis.localStorage.setItem('phlix.hubServerId', 'srv-abc123');
     globalThis.localStorage.setItem('phlix.hubAccessToken', 'hub-jwt');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mod = await import('@/main');
     await mod.boot();
     expect(resolveHubRelayConfigMock).toHaveBeenCalledWith(
-      expect.objectContaining({ serverUrl: 'http://tv:8096', hubUrl: null, serverId: 'srv-abc123' })
+      expect.objectContaining({ serverUrl: '', hubUrl: null, serverId: 'srv-abc123' })
     );
+    expect(errorSpy.mock.calls.map((c) => String(c[0])).join('\n')).toContain(
+      'Credential transport base http://tv:8096 refused at the resolve boundary'
+    );
+    errorSpy.mockRestore();
   });
 
   it('M-TIZEN-07: a poisoned persisted base is never a scan candidate, never the sweep anchor, never probed', async () => {
@@ -396,12 +409,17 @@ describe('boot (Tizen renderer entry)', () => {
     globalThis.localStorage.setItem('phlix.hubServerId', 'srv-abc123');
     globalThis.localStorage.setItem('phlix.hubAccessToken', 'hub-jwt');
 
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mod = await import('@/main');
     await mod.boot();
 
     expect(resolveHubRelayConfigMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        serverUrl: 'http://tv:8096',
+        // M-TIZEN-12 r2: the plaintext server-origin fallback is refused at
+        // the boundary (''), while the EXPLICIT hubUrl slot keeps the M06
+        // precedence (demoting a configured origin would repoint the relay at
+        // another host — its TLS refusal stays at the dial, untouched).
+        serverUrl: '',
         hubUrl: 'http://hub-tv:8800',
         serverId: 'srv-abc123',
         envHubUrl: null,
@@ -410,6 +428,27 @@ describe('boot (Tizen renderer entry)', () => {
       })
     );
     expect(resolveHubRelayConfigMock.mock.calls[0][0].accessTokenProvider()).toBe('hub-jwt');
+    // The fallback refusal is still disclosed (honest posture: the persisted
+    // server URL IS plaintext), but it changes nothing here — the EXPLICIT
+    // hubUrl slot above keeps its M06 precedence and its dial-side law.
+    expect(errorSpy.mock.calls.map((c) => String(c[0])).join('\n')).toContain(
+      'Credential transport base http://tv:8096 refused at the resolve boundary'
+    );
+    errorSpy.mockRestore();
+  });
+
+  it('M-TIZEN-12 r2: an https server-origin fallback survives the boundary verbatim (legit config, zero disclosure noise)', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'https://tv.example:8096');
+    globalThis.localStorage.setItem('phlix.hubServerId', 'srv-abc123');
+    globalThis.localStorage.setItem('phlix.hubAccessToken', 'hub-jwt');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const mod = await import('@/main');
+    await mod.boot();
+    expect(resolveHubRelayConfigMock).toHaveBeenCalledWith(
+      expect.objectContaining({ serverUrl: 'https://tv.example:8096', hubUrl: null })
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 
   it('S298: opens the hub-relay consumer + wires the dispatch point when a hub context resolves', async () => {

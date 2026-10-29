@@ -164,6 +164,19 @@ It ships the session credential **unencrypted to anyone on your network** and is
 two hatches are deliberately SEPARATE env vars: enabling one never unlocks the
 other bearer transport.
 
+**The plaintext refusal also lives at the resolve boundary (M-TIZEN-12 r2).**
+`resolveConfig.resolveCredentialBase` is the scheme gate HUB/CREDENTIAL traffic
+resolves through: a persisted (or build-env) `http://`-literal server URL is
+REFUSED there with a named, honest error — the e4d8516 idiom refuses, it never
+silently upgrades — and the hub-relay server-origin fallback is never fed a
+plaintext base (a refused fallback is disclosed once at boot; the consumer stays
+closed exactly as the dial-side law already decided). Legacy-poisoned entries
+(`javascript:`/`data:`/raw-scheme storage) are sanitized on read at the same
+edge. This is defense-in-depth, not a replacement: `http:` remains persistable
+for LAN browsing (M-TIZEN-07 law, unchanged), and both dial builders keep their
+own named refusals. Each consumer's documented `VITE_PHLIX_DEV_ALLOW_INSECURE_*`
+hatch threads through the boundary too — still exactly one flag per transport.
+
 The client sends `X-Phlix-Device-Type: samsung-tizen` and a stable
 `X-Phlix-Device-ID` (persisted as `phlix.deviceId`). **The server** maps the
 device-type header to the appropriate streaming/transcode quality profile — the

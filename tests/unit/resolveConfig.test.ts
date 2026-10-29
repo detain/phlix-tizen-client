@@ -9,7 +9,12 @@ import {
   SERVER_HISTORY_KEY,
   ADDRESS_HISTORY_CAP,
   CONNECT_SUGGESTION_CAP,
+  resolveCredentialBase,
+  isPlaintextCredentialBase,
+  CredentialTransportInsecureError,
 } from '@/resolveConfig';
+import { buildWsUrl, SyncPlayInsecureTransportError } from '@/stores/useSyncPlayStore';
+import { buildHubRelayUrl, HubRelayInsecureTransportError } from '@/api/hubRelay';
 
 /** A minimal in-memory SuggestionStorage stand-in for the history tests. */
 function memStore(seed: Record<string, string> = {}) {
@@ -219,5 +224,113 @@ describe('M-TIZEN-07 address history — write gate + legacy-read sanitize', () 
       [SERVER_HISTORY_KEY]: JSON.stringify(['ws://evil:8097', 'http://ok:8096']),
     });
     expect(buildConnectSuggestions(store)).toEqual(['http://ok:8096']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// M-TIZEN-12 r2 — scheme gate at the RESOLVE BOUNDARY (review tizen__secnet
+// M12r2). The M-TIZEN-07 allow-list classifies schemes (http/https survive,
+// javascript:/data: are poison); it never asked whether the SURVIVING base is
+// about to present CREDENTIAL traffic — so a persisted `http://`-literal
+// serverUrl resolved verbatim and main.ts handed it straight to the hub-relay
+// fallback. r2 refuses the plaintext base at the boundary for credential
+// consumers (the e4d8516 idiom REFUSES, it does not upgrade), sanitizes the
+// legacy-poisoned class on read exactly as M-TIZEN-07 does, and leaves the
+// ratified LAN-REST persistence law untouched.
+// ---------------------------------------------------------------------------
+describe('resolveCredentialBase — M-TIZEN-12 r2 resolve-boundary scheme gate', () => {
+  it('refuses a planted persisted http:// serverUrl with the named error (reviewer repro as a test)', () => {
+    // Red-on-parent: at r1 this same storage value resolved VERBATIM and was
+    // fed to the credential-transport consumers — the leak this r2 closes.
+    expect(() => resolveCredentialBase({ serverUrl: 'http://nas.lan:8096', envUrl: null })).toThrow(
+      CredentialTransportInsecureError,
+    );
+    let caught: unknown;
+    try {
+      resolveCredentialBase({ serverUrl: 'http://nas.lan:8096', envUrl: null });
+    } catch (e) {
+      caught = e;
+    }
+    expect((caught as Error).name).toBe('CredentialTransportInsecureError');
+    const message = String((caught as Error).message);
+    expect(message).toContain('http://nas.lan:8096'); // actionable: WHICH base was refused
+    expect(message).toContain('https://'); // actionable: what the fix is
+    expect(message).toContain('VITE_PHLIX_DEV_ALLOW_INSECURE'); // the documented dev escape
+  });
+
+  it('passes an https:// persisted base verbatim (the credential-clean config)', () => {
+    expect(resolveCredentialBase({ serverUrl: 'https://tv.example:8096 ', envUrl: null })).toBe(
+      'https://tv.example:8096',
+    );
+  });
+
+  it('sanitizes the legacy-poisoned class on read before the scheme gate (M-TIZEN-07 edge reused)', () => {
+    // javascript: is POISON, not merely plaintext: it falls to envUrl exactly
+    // as resolveAppConfig treats it — the boundary never “refuses” what it
+    // first sanitizes away.
+    expect(resolveCredentialBase({ serverUrl: 'javascript:alert(1)', envUrl: 'https://env.example' })).toBe(
+      'https://env.example',
+    );
+    expect(resolveCredentialBase({ serverUrl: 'data:text/html,evil', envUrl: null })).toBe('');
+  });
+
+  it('the build-time env http:// literal is refused too — env URLs earn no plaintext credential pass', () => {
+    expect(() => resolveCredentialBase({ serverUrl: null, envUrl: 'http://ci.example' })).toThrow(
+      CredentialTransportInsecureError,
+    );
+  });
+
+  it('the caller-threaded dev hatch keeps the plaintext base verbatim (disclosure stays at the dial)', () => {
+    // Mirrors the shipped hatches: the gate relaxes ONLY for the consumer
+    // that owns its per-attempt INSECURE DEV HATCH warning (relay / :8097).
+    expect(
+      resolveCredentialBase({ serverUrl: 'http://dev.lan:8096', envUrl: null }, true),
+    ).toBe('http://dev.lan:8096');
+  });
+
+  it('blank, absent, and non-absolute bases keep their existing pass-through semantics', () => {
+    expect(resolveCredentialBase({ serverUrl: null, envUrl: null })).toBe('');
+    expect(resolveCredentialBase({ serverUrl: '   ', envUrl: null })).toBe('');
+    // Non-absolute text cannot carry an http:// credential origin; the
+    // builders' own parse-bail (→ '' / invalid-URL refusal) still governs.
+    expect(resolveCredentialBase({ serverUrl: 'lan.local', envUrl: null })).toBe('lan.local');
+    expect(resolveCredentialBase({ serverUrl: '/relative/base', envUrl: null })).toBe('/relative/base');
+    // And the WHATWG parser's dot-scheme class ('lan.local:' IS a scheme) is
+    // M-TIZEN-07 POISON, not a pass-through: it sanitizes to the fallback.
+    expect(resolveCredentialBase({ serverUrl: 'lan.local:8096', envUrl: null })).toBe('');
+    expect(isPlaintextCredentialBase('lan.local:8096')).toBe(false);
+  });
+
+  it('ONE planted value, BOTH credential builders refused — the boundary and the dials agree', () => {
+    // Reviewer ask: cover both URL builders. The :8097 wsUrl path and the
+    // :8804 hub-relay path each keep their own named dial-side refusal (r1 /
+    // M-TIZEN-06, law-pinned unmodified); the r2 boundary refuses the SAME
+    // value before any consumer config exists. One law, three edges.
+    const planted = 'http://nas.lan:8096';
+    expect(() => resolveCredentialBase({ serverUrl: planted, envUrl: null })).toThrow(
+      CredentialTransportInsecureError,
+    );
+    expect(() => buildWsUrl(planted, 'room-1', false)).toThrow(SyncPlayInsecureTransportError);
+    expect(() => buildHubRelayUrl(planted, 'srv-abc', false)).toThrow(HubRelayInsecureTransportError);
+    // …and all three agree the https sibling is fine.
+    expect(resolveCredentialBase({ serverUrl: 'https://nas.lan:8096', envUrl: null })).toBe(
+      'https://nas.lan:8096',
+    );
+    expect(buildWsUrl('https://nas.lan:8096', 'room-1', false)).toBe('wss://nas.lan:8097?room=room-1');
+    expect(buildHubRelayUrl('https://nas.lan:8096', 'srv-abc', false)).toBe(
+      'wss://nas.lan:8804/syncplay/srv-abc',
+    );
+  });
+
+  it('isPlaintextCredentialBase is the one scheme predicate (matrix)', () => {
+    expect(isPlaintextCredentialBase('http://x')).toBe(true);
+    expect(isPlaintextCredentialBase('  http://x  ')).toBe(true); // WHATWG trims
+    expect(isPlaintextCredentialBase('HTTP://X')).toBe(true); // parser lowercases the scheme
+    expect(isPlaintextCredentialBase('https://x')).toBe(false);
+    expect(isPlaintextCredentialBase('ws://x')).toBe(false); // not http:; the builder's own guard refuses
+    expect(isPlaintextCredentialBase('javascript:alert(1)')).toBe(false); // poison, not plaintext-http
+    expect(isPlaintextCredentialBase('lan:8096')).toBe(false); // parses as the unknown scheme `lan:` — not http:
+    expect(isPlaintextCredentialBase('')).toBe(false);
+    expect(isPlaintextCredentialBase('   ')).toBe(false);
   });
 });

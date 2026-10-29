@@ -5,6 +5,51 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — the http-literal persisted server URL is refused at the RESOLVE BOUNDARY for credential traffic (M-TIZEN-12 r2 / review tizen__secnet M12r2) — 2026-10-29
+
+- **The r1 gap, honestly stated.** r1 (39f4c7a) gated the direct `:8097`
+  bearer DIAL (`buildWsUrl`) — that cure is real and untouched. But the
+  resolve boundary kept classifying schemes WITHOUT asking what the surviving
+  base was about to carry: `resolveAppConfig` handed a persisted
+  `http://`-literal `phlix.serverUrl` verbatim to `main.ts`, and
+  `wireHubRelayConsumer` fed that plaintext base straight into the hub-relay
+  `serverUrl` fallback (`resolveHubRelayConfig`). A refusal living only at one
+  dial is one new bearer caller away from leaking again.
+- **Cure (the e4d8516 idiom — it REFUSES, never silently upgrades).**
+  `src/resolveConfig.ts` gains the credential-transport boundary: named
+  `CredentialTransportInsecureError`, the one scheme predicate
+  `isPlaintextCredentialBase`, and `resolveCredentialBase(input,
+  allowInsecure)` — reusing the M-TIZEN-07 legacy-poison read sanitize,
+  keeping the persisted→env precedence, and refusing an absolute `http:` base
+  with an honest actionable message unless the caller threads its OWN
+  documented `VITE_PHLIX_DEV_ALLOW_INSECURE_*` hatch (no third flag exists).
+  `src/main.ts` resolves the relay fallback through it: a refused plaintext
+  server-origin fallback is disclosed loudly once at boot and the resolver is
+  fed `''` — no doomed config, no relay-token mint, no dial attempt; the
+  consumer reaches the same closed end-state the dial-side law already chose,
+  one edge earlier.
+- **What deliberately did NOT move.** An EXPLICIT persisted/env `phlix.hubUrl`
+  slot stays ungated at boot (demoting a configured origin would silently
+  repoint the relay at a DIFFERENT host — its TLS refusal stays at
+  `buildHubRelayUrl`, M-TIZEN-06 law byte-held); both dial builders keep their
+  own named consumer errors (`connectWs` still distinguishes terminal policy
+  refusals — r1's law tests green UNMODIFIED = extraction proof); the ratified
+  M-TIZEN-07 persistence law (http persistable for LAN REST browsing) is
+  composed with, never re-litigated.
+- **Tests.** Boundary suite in `tests/unit/resolveConfig.test.ts` (the
+  reviewer's planted-http repro, poison-read sanitize, env-only refusal,
+  hatch pass-through, non-absolute semantics, the WHATWG dot-scheme poison
+  class, and a one-value/both-builders agreement composite) plus boot-level
+  pins in `tests/unit/main.test.ts` (refused fallback → resolver sees `''` +
+  disclosure; https fallback survives verbatim + silent; the relay's hatch
+  stays an explicit module seam). One existing permissive-feed pin (the
+  M-TIZEN-07 relay test) flips to the new law — disclosed: it encoded the
+  r1-era feed this item closes; the S298 explicit-slot pin records the
+  precedence unchanged. Full serial: parent (`9c04556`, stash-proven) 54
+  files/909 tests → tip 54/918 (+9 exact, 0 failed). Mutations: boundary gate
+  stripped → exactly 5 named reds; r1 dial gate stripped → its 5 law reds +
+  the composite (the cross-edge agrees).
+
 ### Fixed — the install-workflow doc claims are cured to the CI-shipped truth (M-TIZEN-13 / review tizen__writer MAJOR-1) — 2026-10-29
 
 - **The fossil, enumerated.** README §Install claimed "CI uses `npm install`
