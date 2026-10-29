@@ -5,6 +5,35 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — the install-workflow doc claims are cured to the CI-shipped truth (M-TIZEN-13 / review tizen__writer MAJOR-1) — 2026-10-29
+
+- **The fossil, enumerated.** README §Install claimed "CI uses `npm install`
+  (not `npm ci`) — `package-lock.json` is gitignored", and DEVELOPER
+  §Prerequisites repeated it. Both halves have been untrue since audit
+  W105 T-01 committed the lock: all four CI install legs run
+  `npm ci --allow-git=all` (`test.yml`, `lint.yml` ×2, `build.yml`) and
+  `package-lock.json` is TRACKED (`.gitignore` carries only a comment saying
+  so). The claim was a prose fossil of d6b8bee (May 2026, the no-lock era):
+  W105 T-01 moved CI back to `npm ci` and updated AGENTS.md, CLAUDE.md and the
+  DEVELOPER version-stamping section, but these two lines were left behind —
+  now contradicting DEVELOPER.md's own "TRACKED `package-lock.json` … a stale
+  lock makes CI's `npm ci` fail loudly" prose 57 lines below. A contributor
+  following them would skip committing lockfile changes and trust a floating
+  resolve: a hit on the repo's reproducibility law.
+- **Cure.** Both claims rewritten to the shipped truth (CI =
+  `npm ci --allow-git=all` from the TRACKED lock, W105 T-01 attribution;
+  regenerate with `npm install` on a pin change). The local-setup
+  `npm install` command lines stay — they are the correct local workflow per
+  the lock-regeneration law.
+- **Regression pin.** `tests/unit/installWorkflowDocs.test.ts` (claim-side
+  family of `distApiFloor`): the docs never repeat the gitignored/`npm install`
+  claims and always carry the `npm ci --allow-git=all` truth with attribution;
+  plus a workflows cross-check — if CI ever moves off `npm ci`, docs and
+  pin must rotate in the same change. Red-on-parent measured at 39f4c7a.
+- **Queue note.** The ledger lines "cured-by: C27 d2a5202" on M-TIZEN-04 and
+  M-TIZEN-13 are crossed labels — d2a5202 is the spatial-nav candidate fix and
+  touched no install prose; the cure never landed until now.
+
 ### Fixed — the direct SyncPlay `:8097` bearer dial is TLS-mandatory; the surviving plaintext lane closes (M-TIZEN-12 / review tizen__secnet MAJOR-1) — 2026-10-29
 
 - **The surviving cleartext path, enumerated.** M-TIZEN-06 (e4d8516) closed

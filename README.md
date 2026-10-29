@@ -93,7 +93,10 @@ cd phlix-tizen-client
 npm install
 ```
 
-> CI uses `npm install` (not `npm ci`) — `package-lock.json` is gitignored.
+> CI installs with `npm ci --allow-git=all` from the TRACKED `package-lock.json`
+> (audit W105 T-01 — every git-dep resolution is pinned to an exact commit SHA).
+> Whenever a `package.json` pin changes, regenerate the lock with `npm install`
+> and commit it; a stale lock makes CI's `npm ci` fail loudly.
 
 ### 3. Start the Dev Server
 

@@ -361,7 +361,7 @@ AES).
 ### Prerequisites
 
 - Node.js 22.12+ (`engines.node` is `>=22.12.0`)
-- npm (CI uses `npm install`, not `npm ci` — `package-lock.json` is gitignored)
+- npm (CI installs with `npm ci --allow-git=all` from the TRACKED `package-lock.json` — audit W105 T-01; on a `package.json` pin change, regenerate with `npm install` and commit the lock)
 - Tizen Studio (for `.wgt` signing + TV deployment)
 
 ### Setup
