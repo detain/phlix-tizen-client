@@ -78,6 +78,46 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Queue note.** The ledger lines "cured-by: C27 d2a5202" on M-TIZEN-04 and
   M-TIZEN-13 are crossed labels — d2a5202 is the spatial-nav candidate fix and
   touched no install prose; the cure never landed until now.
+### Fixed — version-pinning claims unified to the shipped workflow across the five documents + a drift gate (M-TIZEN-14 / review tizen__writer MAJOR-2) — 2026-10-29
+
+- **The drift.** "Five documents, four answers, none current": at 39f4c7a the
+  `@phlix/ui` pin was stated as `v0.99.1` (README badge + Tech Stack), `v0.99.0`
+  (DEVELOPER header, with contracts `#v0.4.3` and syncplay omitted ENTIRELY),
+  `v0.99.8` (docs/i18n.md heading, AGENTS.md, CLAUDE.md) — against the actual
+  `package.json` pins `#v0.99.10` / `#v0.5.3` / `#v0.1.5`. A sixth fossil
+  answer hid in DEVELOPER's troubleshooting ("`@phlix/ui` v0.74.0 must export",
+  predating the 0.99 lineage). Every re-pin cascade lane updated the CHANGELOG
+  and the pins, never the prose, so drift compounded release over release.
+  The i18n heading was also a CONFLATION: `v0.99.8` was the vendored locale
+  bundles' own PIN ref (`a580410f`), not the installed seam pin — the two axes
+  are now named distinctly. (docs/i18n.md's v0.99.4/v0.99.5 strictness HISTORY
+  narrative is verbatim and untouched; history is not a current claim.)
+- **The single truth, traced at HEAD.** `package.json` is the one source for
+  BOTH version axes: the widget `"version"` stamped into `app/config.xml` +
+  `src/telemetry.ts` by `scripts/version-sync.mjs` (TIZEN-05 law, already
+  documented + drift-pinned by `versionStamping.test.ts`), and the three
+  `@phlix/*` github TAG pins frozen to exact commits by the TRACKED
+  `package-lock.json` and installed by CI's `npm ci --allow-git=all` in all
+  three workflows. Neither the `tizen` CLI nor Tizen Studio participates in
+  versioning — CI never invokes them (build.yml zips an UNSIGNED `.wgt`;
+  signing/deploy stay local duties). README/DEVELOPER now state that whole
+  story; AGENTS.md/CLAUDE.md carry current numbers.
+- **Permanent cure.** `tests/unit/docsPinConsistency.test.ts` (versionStamping
+  idiom, zero runtime imports — reads FILE TEXT): every CURRENT pin claim in
+  the five docs must equal the `package.json` tag; historical narrative stays
+  out of scope by anchoring on structured claim surfaces only. RED-ON-PARENT
+  measured 8/9 arms failing at 39f4c7a with the docs unchanged; green after
+  the rewrite. A re-pin that forgets a doc surface reddens exactly the missed
+  arm — the doc currency a re-pin cascade lane owes is now machine law.
+- **Gates.** vue-tsc clean; vitest serial on the rebased tip 55 files / 926 pass
+  + 1 skip (pre-M14 baseline 53/901+1; this lane adds exactly +9 arms, the
+  concurrent install-docs lane +16 — both law suites coexist green);
+  `npm run package` x2 leaves `package/`, `app/config.xml` and
+  `src/telemetry.ts` byte-identical to HEAD (docs/test-only change, zero
+  bundle churn — determinism re-proven).
+- **Out of scope named:** README/DEVELOPER's npm-install/gitignore claim pair
+  (review finding #1, M-TIZEN-13) was cured concurrently (1d71fbf, now the
+  parent of this entry); this commit adds nothing to those lines.
 
 ### Fixed — the direct SyncPlay `:8097` bearer dial is TLS-mandatory; the surviving plaintext lane closes (M-TIZEN-12 / review tizen__secnet MAJOR-1) — 2026-10-29
 

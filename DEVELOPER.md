@@ -11,7 +11,7 @@ The Tizen client is a **thin Vue 3 consumer of `@phlix/ui`**. It does not contai
 
 It mirrors the Windows/Electron client's thin-consumer shape (`electronBridge` ↔ `tizenBridge`, `resolveConfig` ↔ `resolveConfig`). To change a screen, a feature, theming, or the player, edit **`phlix-ui`** — not this repo.
 
-Pinned dependencies: `@phlix/ui` `github:detain/phlix-ui#v0.99.0`, `@phlix/contracts` `#v0.4.3`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
+Pinned dependencies (source of truth: `package.json`; drift-gated by `tests/unit/docsPinConsistency.test.ts`): `@phlix/ui` `github:detain/phlix-ui#v0.99.10`, `@phlix/contracts` `github:detain/phlix-contracts#v0.5.3`, `@phlix/syncplay` `github:detain/phlix-syncplay#v0.1.5`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
 
 ## Architecture Overview
 
@@ -431,6 +431,18 @@ at build time via `scripts/derive-version.sh` + the Makefile and gates with
 `verify-runtime.sh` Check 18; the Windows client asserts tag == package.json
 in its build workflow.)
 
+**Library pins ride the same law on the other axis.** The `@phlix/*` dependency
+versions live ONLY in `package.json` `dependencies` — exact GitHub tag references
+(`github:detain/phlix-ui#v...`-style; no branches, no loose ranges) — and the
+TRACKED `package-lock.json` freezes every tag to its exact commit SHA, so all
+three CI workflows install reproducible bytes with `npm ci --allow-git=all`.
+Neither the `tizen` CLI nor Tizen Studio participates in versioning — CI never
+invokes them; it builds `package/` and zips an UNSIGNED `.wgt` (signing and TV
+deployment are local duties, see `docs/signing.md`). Docs that quote pin numbers
+(README, DEVELOPER, docs/i18n.md, AGENTS.md, CLAUDE.md) are copies kept honest
+by `tests/unit/docsPinConsistency.test.ts`; **a re-pin must update all five doc
+surfaces in the same commit.**
+
 > Current truth at the time of writing: `1.0.0`. The repo has never shipped a
 > version bump (its only tag is the CI-rolling `latest` prerelease pointer),
 > so 1.0.0 is honest — the pipeline exists to make the FIRST real bump a
@@ -528,7 +540,7 @@ Set `localStorage['phlix.serverUrl']` (runtime) or `VITE_PHLIX_SERVER_URL`
 
 ### Build / typecheck failures referencing `@phlix/ui`
 
-`@phlix/ui` v0.74.0 must export `createPhlixApp`, `useSpatialNav`,
+The pinned `@phlix/ui` tag must export `createPhlixApp`, `useSpatialNav`,
 `usePreferencesStore`, `usePlayerStore`, and `QualityMenu`'s trigger markup
 (`.quality-menu .phlix-select__trigger` with `aria-expanded`), and accept
 `playerHlsConfig` + `defaultTv` in its app config. If the pinned tag lacks one,

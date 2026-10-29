@@ -4,7 +4,7 @@
 [![Lint](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml/badge.svg)](https://github.com/detain/phlix-tizen-client/actions/workflows/lint.yml)
 [![Vue 3](https://img.shields.io/badge/Vue-3-42b883?logo=vuedotjs&logoColor=white)](https://vuejs.org/)
 ![Platform](https://img.shields.io/badge/platform-Samsung%20Tizen-1428A0?logo=samsung&logoColor=white)
-[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.99.1-f5a524)](https://github.com/detain/phlix-ui)
+[![@phlix/ui](https://img.shields.io/badge/%40phlix%2Fui-v0.99.10-f5a524)](https://github.com/detain/phlix-ui)
 
 Samsung Smart TV client application for Phlix Media Server, built with Tizen SDK.
 
@@ -45,9 +45,20 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 ## Tech Stack
 
 - **Vue 3** + **Pinia** + **vue-router** (peer dependencies)
-- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.99.1` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
-- **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.4.6` — `buildPhlixHeaders` (device headers)
-- **[`@phlix/syncplay`](https://github.com/detain/phlix-syncplay)** `v0.1.4` — SyncPlay frame client used by `src/stores/useSyncPlayStore.ts`
+- **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.99.10` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
+- **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.5.3` — `buildPhlixHeaders` (device headers)
+- **[`@phlix/syncplay`](https://github.com/detain/phlix-syncplay)** `v0.1.5` — SyncPlay frame client used by `src/stores/useSyncPlayStore.ts`
+
+> Pin source of truth: `package.json` — the three libraries above are declared as
+> exact GitHub tag pins (`github:detain/phlix-*#v...`), and the tracked
+> `package-lock.json` freezes each tag to its exact commit, so CI's
+> `npm ci --allow-git=all` installs reproducible bytes. The numbers in this README
+> (badge + list) are copies, kept honest by `tests/unit/docsPinConsistency.test.ts`:
+> a re-pin must update all five doc surfaces (README, DEVELOPER, docs/i18n.md,
+> AGENTS.md, CLAUDE.md) in the same commit or the test suite reddens. The widget's
+> OWN version (what the TV and store read) is single-sourced from `package.json`
+> `"version"` and stamped by `scripts/version-sync.mjs` — see DEVELOPER.md
+> "Versioning" and `tests/unit/versionStamping.test.ts`.
 - **Vite** + `@vitejs/plugin-vue` (build target `chrome100` — an esbuild *syntax ceiling*, not the engine floor; the runtime contract is Chromium ≥ 85, enforced by `tests/unit/distApiFloor.test.ts`, canonical in [`docs/runtime-floor.md`](docs/runtime-floor.md); `base: './'`)
 - **Vitest** + jsdom + `@vue/test-utils` (tests)
 - **TypeScript** + `vue-tsc` (typecheck)
