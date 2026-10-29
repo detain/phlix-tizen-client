@@ -259,7 +259,7 @@ npm run test:watch
 
 ```bash
 npx vitest run tests/unit/tizenBridge.test.ts
-npx vitest run tests/unit/UpNextOverlay.test.ts
+npx vitest run tests/unit/SkipIntroOverlay.test.ts
 npx vitest run tests/unit/routeManifest.gate.test.ts
 npx vitest run -t "BACK"
 ```
@@ -416,10 +416,10 @@ briefly suppressed) so the D-pad can select a rung.
 
 ```
 phlix-tizen-client/
-├── index.html               # Vite entry (repo root); mounts #phlix-app, #phlix-spatial-host + 5 overlay hosts
+├── index.html               # Vite entry (repo root); mounts #phlix-app, #phlix-spatial-host + 7 overlay hosts
 ├── vite-env.d.ts            # VITE_PHLIX_SERVER_URL / VITE_PHLIX_HUB_URL / VITE_PHLIX_HUB_SERVER_ID
 ├── src/
-│   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host + 5 overlay apps; TIZEN_HLS_CONFIG, buildMenu, buildExtraRoutes
+│   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host + 7 overlay apps; TIZEN_HLS_CONFIG, buildMenu, buildExtraRoutes
 │   ├── polyfills.ts         # structuredClone fallback (imported first)
 │   ├── resolveConfig.ts     # pure resolveAppConfig({serverUrl, envUrl})
 │   ├── deviceId.ts          # pure resolveDeviceId(storage) → persisted phlix.deviceId
@@ -428,7 +428,7 @@ phlix-tizen-client/
 │   ├── tizenBridge.ts       # RemoteManager 'action' → usePlayerStore + router; Yellow/Back drive the QualityMenu
 │   ├── api/
 │   │   └── hubRelay.ts      # hub-relay pending_command WebSocket consumer (ws://<hub>:8804)
-│   ├── components/          # TV overlays (ChapterOverlay, SleepTimerOverlay, SkipIntroOverlay, PiPController, UpNextOverlay) + D-pad lists/cards
+│   ├── components/          # TV overlays (ChapterOverlay, SkipIntroOverlay, PiPController, ActionToastOverlay, TelemetryConsent, ScreenSaverOverlay) + D-pad lists/cards
 │   ├── pages/               # ChaptersPage, AudioTracksPage, SubtitleTracksPage, MusicPage, ParentalControlsPage
 │   ├── screens/             # RecommendationsScreen
 │   ├── stores/              # useMusicStore, useSyncPlayStore (Pinia)
@@ -449,7 +449,7 @@ phlix-tizen-client/
 │       ├── tizenBridge.test.ts
 │       ├── SpatialNavHost.test.ts
 │       ├── RemoteManager.test.ts
-│       ├── UpNextOverlay.test.ts
+│       ├── ChapterOverlay.test.ts
 │       ├── hubRelay.test.ts
 │       ├── syncplayDispatch.test.ts
 │       ├── routeManifest.gate.test.ts
@@ -483,10 +483,24 @@ phlix-tizen-client/
 2. Quality/transcode decisions are made server-side from the `X-Phlix-Device-Type: samsung-tizen` header
 3. Check server logs for codec/transcode warnings
 
-### Overlay Missing (chapters, skip intro, sleep timer, PiP, up next)
+### Overlay Missing (chapters, skip intro, PiP, action toast, quick connect, telemetry, screensaver)
 
-1. Each overlay is its own mounted app — confirm its host `<div>` exists in `index.html` and the matching `createApp(...).mount(...)` call is present in `src/main.ts`
-2. Marker/chapter/up-next overlays need their endpoints (`GET /api/v1/media/{id}/chapters`, `/markers`, and `GET /api/v1/users/me/next-up`) to return data for the current media id
+1. Each Tizen-hosted overlay is its own mounted app — confirm its host `<div>`
+   exists in `index.html` (`#phlix-chapter-overlay`, `#phlix-skip-intro-overlay`,
+   `#phlix-pip-overlay`, `#phlix-action-toast-overlay`, `#phlix-quick-connect`,
+   `#phlix-telemetry-consent`, `#phlix-screensaver`) and the matching
+   `createApp(...).mount(...)` call is present in `src/main.ts`
+2. The chapter and skip-intro overlays need their endpoints
+   (`GET /api/v1/media/{id}/chapters` and `/markers`) to return data for the
+   current media id
+
+Sleep timer and the end-of-video "Up next" card are **not** Tizen-hosted. Since
+S501 they render from `@phlix/ui`'s PlayerPage bundle — the former
+`SleepTimerOverlay.vue` / `UpNextOverlay.vue` mount apps were unreachable
+duplicates and were deleted (their `index.html` host divs are gone, so a
+host-div check for them can never succeed). If either is missing on the player
+screen, suspect the pinned `@phlix/ui` bundle's player route, not this repo's
+mount list.
 
 ### Remote Not Working
 

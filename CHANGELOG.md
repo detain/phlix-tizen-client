@@ -5,6 +5,42 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — README stops documenting the S501-deleted overlays/tests; a doc-citation gate reddens any future fossil (M-TIZEN-16 / review tizen__writer MAJOR-4) — 2026-10-29
+
+- **The violation, at tip 220ea1d.** Four README surfaces still taught the
+  pre-S501 world: the single-file example ran
+  `npx vitest run tests/unit/UpNextOverlay.test.ts` (file absent since S501
+  T-04), the tree listed `SleepTimerOverlay`/`UpNextOverlay` in
+  `src/components/` and `UpNextOverlay.test.ts` in `tests/unit/`, and the
+  "Overlay Missing" debug walk demanded a host `<div>` for overlays whose
+  Tizen apps were deleted — a check that can never succeed for the two
+  PlayerPage-bundled features it named. TWO tree lines carried the pre-S501
+  "5" mount count ("5 overlay apps" on the main.ts line, "5 overlay hosts" on
+  the index.html line); main.ts now mounts seven (S516/S520/S521/S523 added
+  four after S501 deleted two).
+  One fossil survived outside the README: `.claude/rules/test-conventions.md`
+  still cited `tests/unit/UpNextOverlay.test.ts` as the SFC-suite example.
+- **Cure.** All six README sites corrected to tip truth (example command
+  → `SkipIntroOverlay.test.ts`; components tree line → the six live
+  `src/components/` overlays; main.ts line → 7 overlay apps; index.html line
+  → 7 overlay hosts; tests tree →
+  `ChapterOverlay.test.ts`; Overlay Missing rewritten to split Tizen-hosted
+  mounts — with the seven real `#phlix-*` div ids — from the
+  `@phlix/ui` PlayerPage-bundled sleep timer / up next, whose absence is now
+  a bundle question, not a host-div question). Rules-file example swapped to
+  the existing `ChapterOverlay.test.ts`.
+- **Gate.** NEW `tests/unit/docsTestListings.test.ts` (14 tests, zero-runtime
+  docsPinConsistency/docsDeployWalk idiom): (a) every `*.test.ts` name cited
+  by README/DEVELOPER/AGENTS/CLAUDE/.claude-rules must exist; (b) every
+  `npx vitest run <path>` command target exists; (c) README's "N overlay
+  apps" count is derived from main.ts `createApp(...).mount(...)` calls minus
+  the spatial host; (d) host-div parity index.html ↔ main.ts, and the
+  Overlay Missing walk may only name real div ids. Red-on-parent measured at
+  220ea1d with the cures stashed: exactly 4 reds (arms a×2, b, c), 10 green.
+- **Queue note.** This is the third crossed "cured-by: C27 d2a5202" label
+  after M-TIZEN-04 and M-TIZEN-13 (see the M13 entry): d2a5202 is the
+  spatial-nav candidate fix and touched none of these lines.
+
 ### Fixed — the http-literal persisted server URL is refused at the RESOLVE BOUNDARY for credential traffic (M-TIZEN-12 r2 / review tizen__secnet M12r2) — 2026-10-29
 
 - **The r1 gap, honestly stated.** r1 (39f4c7a) gated the direct `:8097`
