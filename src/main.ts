@@ -199,7 +199,7 @@ const BOOT_FAILURE_TAIL_COUNT = 3;
  * minimal readable message in the mount point instead of an unhandled rejection
  * behind a blank `#phlix-app`.
  *
- * Review tizen__devops M3 — this screen is ALSO the surfacing point for the
+ * Error-visibility brief — this screen is ALSO the surfacing point for the
  * on-device failure ring: the fatal is recorded (`boot-fatal`) and the last
  * few failures captured BEFORE it (by `./runtimeDiagnostics`) are quoted
  * underneath, so a support conversation starts from what actually died, not
@@ -319,7 +319,7 @@ function wireHubRelayConsumer(
 export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   const storage = probeStorage();
 
-  // Review tizen__devops M3 — window-level uncaught-error + unhandled-rejection
+  // Error-visibility brief — window-level uncaught-error + unhandled-rejection
   // capture is installed FIRST, before anything else can throw, and persists to
   // the same bounded-localStorage idiom as the S529 address history. Zero
   // network, zero request sites (routeManifest scan unchanged); a healthy boot
@@ -404,7 +404,7 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
     messages: messagesForLocale(locale)
   });
 
-  // Review tizen__devops M3 — the Vue bridge. Production Vue routes component
+  // Error-visibility brief — the Vue bridge. Production Vue routes component
   // render/watcher/lifecycle errors to `app.config.errorHandler`, and WITHOUT
   // one it ends in a bare invisible `console.error` — the estate's largest
   // silent-death channel, and window.onerror never sees it. The vendored

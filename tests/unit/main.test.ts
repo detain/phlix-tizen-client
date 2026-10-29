@@ -814,13 +814,15 @@ describe('S523 idle screensaver overlay (AD-21)', () => {
   });
 });
 
-// Review tizen__devops M3 — uncaught-error visibility. The ring itself is
+// Error-visibility brief (truth-pass r1: the original 'review tizen__devops M3'
+// tag was fabricated provenance — see src/runtimeDiagnostics.ts header).
+// The ring itself is
 // unit-proven in tests/unit/runtimeDiagnostics.test.ts; THIS file owns the
 // red→green registration chain: boot() wires the capture, an error event
 // becomes a persisted buffer entry, the Vue bridge becomes one, and the
 // boot-failure screen surfaces the tail. jsdom supplies the real `window`
 // and the setup.ts localStorage mock, so the chain runs end-to-end.
-describe('runtime failure visibility (review tizen__devops M3)', () => {
+describe('runtime failure visibility (error-visibility brief)', () => {
   beforeEach(() => {
     vi.resetModules();
     createPhlixApp.mockClear().mockReturnValue(fakeApp);

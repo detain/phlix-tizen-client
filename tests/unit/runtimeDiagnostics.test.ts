@@ -1,5 +1,6 @@
 /**
- * tests/unit/runtimeDiagnostics.test.ts — review tizen__devops M3 cure.
+ * tests/unit/runtimeDiagnostics.test.ts — error-visibility brief cure
+ * (truth-pass r1: re-badged from a fabricated 'review tizen__devops M3' tag).
  *
  * Pins the on-device failure ring: bounded writes, parse-validated reads,
  * burst suppression, the NEVER-THROW capture posture (hostile storage,

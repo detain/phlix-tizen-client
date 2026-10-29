@@ -1,5 +1,10 @@
 /**
- * On-device runtime-failure visibility — review tizen__devops M3.
+ * On-device runtime-failure visibility — orchestrator brief: error visibility.
+ * (Provenance truth-pass per r1 review: this shipped under a fabricated
+ * "[review tizen__devops M3]" tag — no such finding exists in tizen__devops.md;
+ * the briefed title is a crosswire, closest real on-disk analogue M-ROKU-11 /
+ * roku__devops. The queue ID M-TIZEN-03 itself belongs to the runtime-compat
+ * floor cure, landed alongside in r2. History never rewritten; fixed forward.)
  *
  * ## The problem this cures
  *

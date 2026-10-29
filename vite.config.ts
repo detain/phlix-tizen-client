@@ -11,6 +11,10 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    // NOTE: `target` is esbuild's SYNTAX CEILING, not the engine floor. It never
+    // polyfills nor forbids runtime APIs. The enforced runtime contract is
+    // Chromium >= 85 — canonical: docs/runtime-floor.md, tripwire:
+    // tests/unit/distApiFloor.test.ts (scans the committed package/ bundle).
     target: 'chrome100',
     sourcemap: false,
     rollupOptions: {

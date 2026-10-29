@@ -48,7 +48,7 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 - **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.99.1` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
 - **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.4.6` — `buildPhlixHeaders` (device headers)
 - **[`@phlix/syncplay`](https://github.com/detain/phlix-syncplay)** `v0.1.4` — SyncPlay frame client used by `src/stores/useSyncPlayStore.ts`
-- **Vite** + `@vitejs/plugin-vue` (build target `chrome100`, `base: './'`)
+- **Vite** + `@vitejs/plugin-vue` (build target `chrome100` — an esbuild *syntax ceiling*, not the engine floor; the runtime contract is Chromium ≥ 85, enforced by `tests/unit/distApiFloor.test.ts`, canonical in [`docs/runtime-floor.md`](docs/runtime-floor.md); `base: './'`)
 - **Vitest** + jsdom + `@vue/test-utils` (tests)
 - **TypeScript** + `vue-tsc` (typecheck)
 - **Flat ESLint** (`eslint.config.mjs`)

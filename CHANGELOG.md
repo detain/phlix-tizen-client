@@ -5,7 +5,64 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-### Fixed — Uncaught-error visibility: on-device runtime-failure ring, zero phantom telemetry (M-TIZEN-03 / review tizen__devops M3) — 2026-10-29
+### Fixed — Runtime-compat floor made canonical + enforced; committed-bundle `.at` crash cured; diagnostics-half provenance truth-pass (M-TIZEN-03 / review tizen__crossfe M1) — 2026-10-29
+
+- **The queued M-TIZEN-03 finding lands.** r1 review (M-TIZEN-03__r1.md) ruled
+  the *briefed* error-visibility half excellent but established the queue
+  authority: M-TIZEN-03 = "Runtime-compat floor is undocumented and
+  self-contradictory; committed dist calls APIs above the repo's own stated
+  floor" (tizen__crossfe M1). Every named defect was live at HEAD: the shipped
+  `package/` bundle carried **3 raw `Array.prototype.at(-1)` call sites** (the
+  vendored ui `PosterPicker` chunk; Chrome 92 — above the repo's real floor)
+  with NO polyfill installed, and the three "floor" artifacts (vite
+  `target: 'chrome100'`, `config.xml required_version="6.5"`, polyfills.ts
+  header prose) never triangulated into one contract.
+- **NEW `docs/runtime-floor.md` — the SINGLE canonical statement: Chromium
+  ≥ 85**, measured from the committed bundle at 1d37585 (parse census:
+  logical-assignment `||=`/`&&=`/`??=` present at 530/37/1 — *that* sets the
+  parse floor; static blocks/BigInt/private-brand = 0, pinned absent), with a
+  per-API adjudication table: `Array.prototype.at` (3 live sites) **polyfilled**;
+  `structuredClone` (2 tokens = guard only) **polyfilled**; `toSorted`/
+  `toReversed`/`toSpliced` + `findLast`/`findLastIndex` (Vue 3.5 reactive-array
+  patcher defs) **inert-pinned** with zero external callers; `Error(msg,
+  {cause})` (1 live site, hls.js formatter) kept as a count-pinned
+  **graceful-degradation exception** (pre-93 engines ignore the options bag —
+  the Error still constructs); `Object.hasOwn` pinned absent. The honest
+  refusal: no Tizen 6.5↔Chromium mapping table is fabricated — none exists.
+- **NEW tripwire `tests/unit/distApiFloor.test.ts` (11 tests)** scans the
+  committed `package/` byte-tree — the same tree the 'Assert committed
+  package/ is fresh' CI gate rebuilds — pinning floor agreement between all
+  four artifacts, syntax-absence of above-floor *syntax*, and
+  polyfilled-or-inert for every above-floor *runtime API* (live `.at(` caller
+  count 3 → 0 at bundle level via the polyfill; def-shape + per-file location
+  pins; rotation law: silent number rotation forbidden, every moved pin
+  carries attribution). `src/polyfills.ts` gains the spec-faithful guarded
+  `Array.prototype.at` install (`defineProperty`, non-enumerable — negative
+  indices from the end, out-of-range undefined; the local `declare global`
+  keeps tsconfig lib ES2020), and documents the sanctioned-polyfill-point
+  doctrine; `tests/unit/polyfills.test.ts` +4 install/behavior pins;
+  README/vite.config gain the floor pointer (chrome100 = syntax CEILING, not
+  an engine floor). `src/main.ts` untouched — the polyfill import was already
+  first.
+- **Provenance truth-pass (r1 Issue 2, forward-fix — history never rewritten):**
+  the error-visibility half (01500bd/355f6f6) shipped citing "review
+  tizen__devops M3" — that finding ID does not exist in `tizen__devops.md`
+  (numbered MAJ-1/MAJ-2/MIN-*/INF-*; grep-proven). All docblocks, the
+  `main.test.ts` suite name, the AGENTS.md architecture line and the heading
+  below are re-badged to the true banner: "error-visibility brief" (crosswire;
+  closest real on-disk analogue M-ROKU-11 / roku__devops). The two commit
+  *subjects* carry the stale tag immutably by the no-rewrite law; this entry is
+  the permanent record's correction.
+- **Tests measured at this state:** baseline (this session start) 49 files /
+  769 tests → 01500bd+355f6f6: 50 / 801 → **r2: 51 files / 816 tests, serial
+  `--no-file-parallelism` 0 failures 0 skips** (+15 = 11 distApiFloor + 4
+  polyfills additions), vue-tsc 0 errors, eslint 0. **`package/` REBUILT from
+  this exact source**: entry + 29 chunk renames + index.html; deterministic
+  (two consecutive `npm run package` builds byte-identical, aggregate md5
+  `42e25fe16d40c8e07191f63517d70feb`); the PosterPicker chunk now ships beside
+  the installed polyfill and the diagnostics ring code.
+
+### Fixed — Uncaught-error visibility: on-device runtime-failure ring, zero phantom telemetry (M-TIZEN-03 / error-visibility brief — re-badged by r1 truth-pass; original "review tizen__devops M3" tag was fabricated provenance) — 2026-10-29
 
 - **NEW `src/runtimeDiagnostics.ts` — the estate never had crash telemetry and
   still does not: this is visibility, not reporting.** Before this change every

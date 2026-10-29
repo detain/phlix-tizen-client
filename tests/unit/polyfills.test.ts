@@ -205,4 +205,91 @@ describe('polyfills', () => {
       expect(globalThis.structuredClone).toBe(sentinel);
     });
   });
+
+  // M-TIZEN-03 (review tizen__crossfe M1): Array.prototype.at (Chromium 92,
+  // above the repo's ≥85 runtime floor — docs/runtime-floor.md) must be
+  // installed by src/polyfills.ts because the vendored ui PosterPicker chunk
+  // calls `.at(-1)` at three live sites the client cannot edit. jsdom/Node 24
+  // has a NATIVE at, so — exactly like the structuredClone family above —
+  // the native is hidden via defineProperty and the REAL module re-imported.
+  describe('src/polyfills.ts Array.prototype.at fallback (M-TIZEN-03)', () => {
+    const nativeAt = Object.getOwnPropertyDescriptor(Array.prototype, 'at');
+
+    afterEach(() => {
+      Object.defineProperty(Array.prototype, 'at', {
+        ...nativeAt,
+        configurable: true,
+        writable: true,
+      });
+      vi.resetModules();
+    });
+
+    async function importWithAbsentAt(): Promise<void> {
+      vi.resetModules();
+      Object.defineProperty(Array.prototype, 'at', {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      });
+      await import('@/polyfills');
+    }
+
+    it('installs a function when native Array.prototype.at is absent', async () => {
+      await importWithAbsentAt();
+      const at = (Array.prototype as unknown as { at?: unknown }).at;
+      expect(typeof at).toBe('function');
+    });
+
+    it('matches native semantics across the spec-relevant index shapes', async () => {
+      await importWithAbsentAt();
+      const at = (Array.prototype as { at(index: number): unknown }).at;
+      expect([1, 2, 3].at(-1)).toBe(3); // negative counts from the end
+      expect([1, 2, 3].at(0)).toBe(1);
+      expect([1, 2, 3].at(2)).toBe(3);
+      expect([1, 2, 3].at(3)).toBeUndefined(); // out of range → undefined
+      expect([1, 2, 3].at(-4)).toBeUndefined();
+      expect([1, 2, 3].at(1.9)).toBe(2); // truncates toward zero
+      expect([1, 2, 3].at(-1.9)).toBe(3); // -1.9 -> -1 -> from the end
+      expect([1, 2, 3].at(NaN)).toBe(1); // ToIntegerOrInfinity(NaN) = +0
+      expect([1, 2, 3].at(Infinity)).toBeUndefined();
+      expect([1, 2, 3].at(-Infinity)).toBeUndefined();
+      expect([].at(0)).toBeUndefined();
+      // eslint-disable-next-line no-sparse-arrays
+      expect([1, , 3].at(1)).toBeUndefined(); // holes stay holes
+      // Cross-check against the native (present under Node 24) on the same grid.
+      const nativeGrid = [1, 2, 3];
+      for (const i of [-4, -3, -2, -1, 0, 1, 2, 3, 1.9, -1.9, NaN]) {
+        expect(at.call(nativeGrid, i)).toBe(nativeGrid.at(i));
+      }
+    });
+
+    it('installs non-enumerable with a writable+configurable descriptor (native parity)', async () => {
+      await importWithAbsentAt();
+      const d = Object.getOwnPropertyDescriptor(Array.prototype, 'at');
+      expect(d).toBeDefined();
+      expect(d!.enumerable).toBe(false);
+      expect(d!.writable).toBe(true);
+      expect(d!.configurable).toBe(true);
+      const seen: string[] = [];
+      for (const k in [1, 2, 3]) seen.push(k);
+      expect(seen).toEqual(['0', '1', '2']); // 'at' must NOT appear
+      expect(Object.keys([1, 2, 3])).toEqual(['0', '1', '2']);
+    });
+
+    it('does not overwrite an already-present native at', async () => {
+      vi.resetModules();
+      const sentinel = function sentinelAt(this: unknown, _index: number): unknown {
+        return this;
+      };
+      Object.defineProperty(Array.prototype, 'at', {
+        value: sentinel,
+        configurable: true,
+        writable: true,
+      });
+
+      await import('@/polyfills');
+
+      expect((Array.prototype as unknown as { at: unknown }).at).toBe(sentinel);
+    });
+  });
 });
