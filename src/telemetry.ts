@@ -43,8 +43,15 @@ export const CONSENT_KEY = 'phlix.telemetry.consent';
 /** localStorage slot holding the UNIX-ms stamp of the last SUCCESSFUL heartbeat. */
 export const LAST_SENT_KEY = 'phlix.telemetry.lastSentAt';
 
-/** Shipped client build version, mirrored from package.json. Pinned by test. */
-export const CLIENT_VERSION = '1.0.0';
+/**
+ * Shipped client build version — the value every opted-in TV POSTs to the
+ * server as `version` AND `build` on the heartbeat. Stamped from package.json
+ * (single source) by scripts/version-sync.mjs — which runs FIRST in the
+ * package chain so the built bundle carries it too — and drift-pinned by
+ * tests/unit/versionStamping.test.ts (equality vs package.json + the trailing
+ * generated marker). Do not hand-edit; bump package.json and run the sync.
+ */
+export const CLIENT_VERSION = '1.0.0'; // generated: stamped from package.json by scripts/version-sync (single source); do not hand-edit
 
 /** Coarse wake cadence for the throttle check (survey-c: "hourly tick"). */
 export const HEARTBEAT_TICK_MS = 60 * 60 * 1000;

@@ -5,6 +5,51 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed — telemetry CLIENT_VERSION joins the stamped carriers; package chain re-ordered sync-first (M-TIZEN-05 r2 / review tizen__devops MAJOR-1) — 2026-10-29
+
+- **The r2 review caught the third silent carrier.** r1 automated the two
+  manifest files but left `src/telemetry.ts` `CLIENT_VERSION = '1.0.0'` a
+  hand-maintained mirror — neither stamped nor pinned — while the heartbeat
+  POSTs it to the server as `version` AND `build`. Dynamic proof at r1's tip:
+  bump package.json → 1.0.1, run version-sync, and all 5 versionStamping
+  tests stayed GREEN while the telemetry constant still read 1.0.0 — every
+  TV's server-side version report would have gone stale forever.
+- **`scripts/version-sync.mjs` now stamps TWO carriers**: the `<widget
+  version>` manifest (unchanged) and the `CLIENT_VERSION` literal in
+  `src/telemetry.ts`, each with its own trailing/`<!-- -->` `generated:`
+  marker (the telemetry marker rides ON the stamped line, single-sourced as
+  an export the test imports — same idiom as r1's `GENERATED_MARKER`).
+  Fail-loud: a renamed constant exits 1 (`found 0`) and a duplicated
+  declaration exits 1 (`found 2`), both probed. Idempotent: the in-sync tree
+  logs "already stamped at 1.0.0 (in sync, nothing written)" and writes
+  nothing (probe-proven after the source edits landed).
+- **Chain order is now `version-sync → build → package.js`** — telemetry.ts
+  is a BUILD INPUT, so the r1 order (`build → sync → package`) would have
+  bundled a stale constant on every bump even with the stamp. Counterfactual
+  probe at package.json 1.0.1: old order → shipped bundle still said
+  `"1.0.0"`; new order → bundle says `"1.0.1"`.
+- **`tests/unit/versionStamping.test.ts` 5 → 7 tests**: telemetry equality vs
+  the SSOT (reads the literal from the FILE TEXT by regex — the r1 critique
+  that a pin importing the symbol as its own expectation is self-reference is
+  cured exactly as the review prescribed), telemetry marker arm, and the
+  wiring arm strengthened to pin sync-before-build-before-assemble.
+  Mutation matrix: bump-without-sync reddened exactly the 3 equality arms;
+  completing the workflow (sync + re-copy mirror) re-greened 7/7; hand-
+  editing the constant reddened 1; stripping the marker reddened 1;
+  re-ordering the chain back reddened 1.
+- Suite: 52 files/821 tests → 52/823 (+2 exact; parent 32ab266^ re-measured
+  in a scratch worktree at 51/816); vue-tsc 0, eslint 0, coverage-floor gate
+  green (84.44/74.02/81.29/85.88 vs 72/61/68/73); full `npm run package` on
+  the new chain green with the committed `package/` tree byte-identical to
+  the build output (zero `git status` diff — the minifier strips the added
+  comments and no value bytes move).
+- Docs: DEVELOPER.md "Versioning" now enumerates every carrier and the
+  sync-first chain (the "one place" claim is true after this commit, not
+  just scoped); the bump procedure gained the missing `npm install
+  --package-lock-only` step for the tracked lockfile (review MINOR-2 — CI's
+  `npm ci` self-defends loudly, but the procedure now says so); and
+  `src/telemetry.ts`'s "Pinned by test" docblock sentence is literally true.
+
 ### Fixed — Widget version stamping single-sourced to package.json with build-time sync + drift pin (M-TIZEN-05 / review tizen__devops MAJ-2) — 2026-10-29
 
 - **The drift trap closes.** `app/config.xml` and `package.json` both said

@@ -383,7 +383,7 @@ running app.
 
 ```bash
 npm run build        # vue-tsc --noEmit && vite build → dist/
-npm run package      # build, then version-sync, then scripts/package.js → package/
+npm run package      # version-sync, then build, then scripts/package.js → package/
 ```
 
 `scripts/package.js` (ESM) copies the Vite `dist/` (index.html + assets) and
@@ -397,23 +397,32 @@ See `docs/signing.md` for the full certificate + signing flow.
 
 ### Versioning (single source: package.json)
 
-The widget version the TV and the Samsung store read lives in **one** place:
-`package.json` `"version"`. `npm run package` first runs
-`scripts/version-sync.mjs`, which stamps that value into `app/config.xml`'s
-`<widget version="...">` attribute and maintains the
-`generated: run scripts/version-sync` marker comment there; then
-`scripts/package.js` copies the stamped manifest into the committed
-`package/` mirror. The sync is idempotent — running it on an in-sync tree
-writes nothing, and `npm run version:sync` is available standalone.
+The version lives in **one** hand-written place — `package.json` `"version"` —
+and `scripts/version-sync.mjs` stamps it into every generated carrier:
+`app/config.xml`'s `<widget version="...">` attribute (the version the TV and
+the Samsung store read, plus the `generated: run scripts/version-sync` marker
+comment) and the `CLIENT_VERSION` literal in `src/telemetry.ts` (the version
+every opted-in TV POSTs to the server as `version` and `build` on the
+heartbeat, plus a trailing `generated:` marker on the stamped line).
+`npm run package` runs the sync FIRST — before `npm run build` — so the Vite
+bundle too carries the stamped constant, then `scripts/package.js` copies the
+stamped manifest into the committed `package/` mirror. The sync is idempotent
+— running it on an in-sync tree writes nothing — and `npm run version:sync` is
+available standalone.
 
 **To bump a release:** edit `package.json` `"version"` (one line), run
-`npm run package`, commit `package.json`, `app/config.xml` and `package/config.xml`
-together. `tests/unit/versionStamping.test.ts` fails the build if the two
-manifests ever disagree, if the marker is stripped, or if the package chain
-drops the sync step. (Estate siblings do the same thing differently because
-they can: the Roku client stamps its manifest at build time via
-`scripts/derive-version.sh` + the Makefile and gates with `verify-runtime.sh`
-Check 18; the Windows client asserts tag == package.json in its build workflow.)
+`npm install --package-lock-only` (refreshes the root `version` fields in the
+TRACKED `package-lock.json`; a stale lock makes CI's `npm ci` fail loudly, so
+this step is required, not optional), then `npm run package`, and commit
+`package.json`, `package-lock.json`, `app/config.xml`, `src/telemetry.ts` and
+the regenerated `package/` tree together.
+`tests/unit/versionStamping.test.ts` fails the build if any carrier ever
+disagrees with the SSOT, if a marker is stripped, or if the package chain
+drops the sync step or re-orders it after the build. (Estate siblings do the
+same thing differently because they can: the Roku client stamps its manifest
+at build time via `scripts/derive-version.sh` + the Makefile and gates with
+`verify-runtime.sh` Check 18; the Windows client asserts tag == package.json
+in its build workflow.)
 
 > Current truth at the time of writing: `1.0.0`. The repo has never shipped a
 > version bump (its only tag is the CI-rolling `latest` prerelease pointer),

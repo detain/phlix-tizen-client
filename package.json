@@ -14,7 +14,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "version:sync": "node scripts/version-sync.mjs",
-    "package": "npm run build && node scripts/version-sync.mjs && node scripts/package.js"
+    "package": "node scripts/version-sync.mjs && npm run build && node scripts/package.js"
   },
   "keywords": [
     "phlix",
