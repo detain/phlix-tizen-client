@@ -31,9 +31,11 @@
  * `discoverServers` engine drives any explicit, user-initiated scan. The bounded
  * `sameSubnetCandidates` helper is provided and unit-pinned for that
  * user-initiated path but is deliberately NOT run automatically. The ui
- * Connect-screen "Scan" affordance that surfaces these results is the AD-24
- * surfacing leg (a separate ui train slot) — named honestly, never silently
- * dropped. This step introduces ZERO request sites (the scanner only counts
+ * Connect-screen "Scan" affordance that surfaces these results — the AD-24
+ * surfacing leg — LANDED in `@phlix/ui` S532 and is WIRED by the host through
+ * `discovery/connectScan.ts` (review tizen__casualgamer M2): the Connect screen
+ * shows a D-pad-operable Scan button whose rows are confirmed servers first,
+ * then this TV's known addresses, with typed entry as the fallback. This step introduces ZERO request sites (the scanner only counts
  * `@phlix/ui` `client.<verb>` / SyncPlay `this.request` shapes; a plain
  * `fetch` to root `health` is neither, and never carries the versioned prefix),
  * so the vendored route manifest stays byte-identical (md5 unchanged) and the

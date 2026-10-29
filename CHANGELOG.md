@@ -5,6 +5,43 @@ based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — Connect screen surfaces the LAN scanner + address history (M2 / review tizen__casualgamer) — 2026-10-29
+
+- **`src/discovery/connectScan.ts` (NEW)** — the AD-24 surfacing leg lands. The
+  client shipped a tested LAN scanner (`lanDiscovery.ts`) and a bounded
+  address-history suggester (`resolveConfig.buildConnectSuggestions`) with ZERO
+  consumers, so the first-run TV still hand-typed `http://192.168.x.x:8097` on a
+  D-pad while both sat dead in the same widget. `@phlix/ui` v0.99.10's Connect
+  screen carries the host seam they were built for (`PhlixAppConfig.connectScan`
+  — omitted ⇒ the Scan affordance hides); `main.ts` now injects
+  `createConnectScan({storage, currentBase})`, so pick-from-list is the day-1
+  path and typed entry is the collapsed fallback.
+- **Honest row law**: rows render ONLY on the user's Scan press (nothing
+  auto-sweeps at mount); probed-confirmed servers lead (annotated `v<version>` —
+  server-sent data, zero new UI strings, so no tizen-catalog keys and no locale
+  pin rotation); a known address (persisted base ∪ capped history) that did NOT
+  confirm still shows — a CORS-shy or sleeping host must not blind the suggester,
+  and the page's own guards re-validate on row select; an unconfirmed subnet
+  GUESS never shows — no fabricated IPs. Sweep stays inside the S503 mask (plain
+  root-`/health` fetches; `app/config.xml` byte-identical) and inside the engine's
+  bounded caps (≤ 6 known + ≤ 16 siblings, dedup-by-host, `MAX_CANDIDATES_PER_SWEEP`).
+  A throwing storage REJECTS by contract — the page's documented inline "scan
+  failed" note beats a fake empty list.
+- **D-pad law**: rows are plain `<button>`s, so the C27 focus-candidate watcher
+  registers them through `FOCUSABLE_SELECTOR` automatically — every row is a
+  spatial stop with no engine change.
+- **Tests**: `tests/unit/connectScan.test.ts` (+13: assembly ordering/label/
+  dedup law, first-run pick-from-list through all-failed probes, confirmed vs
+  dropped guesses, anchor precedence, known-base coverage for pre-history
+  installs, zero-spray, bounded probe counts, fail-loud rejection, platform-API
+  greps) + 1 boot wiring pin in `main.test.ts` driving the REAL module through
+  the injected config. Red-before measured on a pre-fix scratch: exactly 2
+  failures (config-pin + wiring leg).
+- **Zero new request sites**: the `routeManifest.gate` scan stays at 27; the
+  manifest fixture and `app/config.xml` are byte-identical. `AGENTS.md` and the
+  `lanDiscovery` header carry the surfacing-leg truth (the "separate ui train
+  slot" it named has landed and is now wired).
+
 ### Fixed — spatial engine registers focus candidates on real surfaces (C27 / review tizen__gameux) — 2026-10-29
 
 - **CRITICAL: the D-pad was inert everywhere.** @phlix/ui's `useSpatialNav`

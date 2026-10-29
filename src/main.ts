@@ -15,6 +15,7 @@ import { buildPhlixHeaders } from '@phlix/contracts';
 import '@phlix/ui/style.css';
 import '@phlix/ui/fonts.css';
 import { resolveAppConfig, pushAddressHistory } from './resolveConfig';
+import { createConnectScan } from './discovery/connectScan';
 import { resolveLocale, messagesForLocale } from './i18n';
 import { setTizenLocale, tTizen } from './i18n/tizen';
 import { probeBootBase } from './bootProbe';
@@ -344,6 +345,20 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
         // Persistence failed; the in-memory session value still drives this run.
       }
     },
+    // Review tizen__casualgamer M2 (S529/AD-24 surfacing leg) — inject the
+    // scanner + address-history suggester into @phlix/ui's Connect screen:
+    // the page renders a D-pad-operable "Scan" button whose rows pick a server
+    // (confirmed first, known addresses always offered, guesses only when
+    // probed), collapsing typed-URL entry to the fallback it should be. The
+    // scan runs ONLY on the user's Scan press over bounded candidates — the
+    // privilege-honest close from discovery/connectScan.ts (plain root
+    // `/health` fetches inside the granted `internet` mask; zero manifest
+    // sites, config.xml byte-identical).
+    connectScan: createConnectScan({
+      storage,
+      currentBase: () => storage.getItem(SERVER_URL_KEY),
+      fetchImpl
+    }),
     // Top-bar nav (incl. the admin-gated "Admin" entry) + the admin section,
     // mirroring the server web-ui. Without these the shell shows no nav at all.
     menu: buildMenu(),

@@ -154,6 +154,50 @@ describe('boot (Tizen renderer entry)', () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('M2 cure: the wired config.connectScan surfaces LAN-known servers as pick-from-list rows', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'http://192.168.1.40:8097');
+    globalThis.localStorage.setItem('phlix.deviceId', 'tizen-fixed');
+    globalThis.localStorage.setItem(
+      'phlix.serverHistory',
+      JSON.stringify(['http://192.168.1.40:8097', 'http://192.168.1.9:8097'])
+    );
+    // .40 answers phlix /health; .9 (CORS-shy) is network-opaque; the swept
+    // gateway .1 answers {status:'ok'} without a version.
+    const healthSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === 'http://192.168.1.40:8097/health') {
+        return { ok: true, status: 200, json: async () => ({ status: 'ok', version: '1.2.3' }) } as Response;
+      }
+      if (url === 'http://192.168.1.1:8097/health') {
+        return { ok: true, status: 200, json: async () => ({ status: 'ok' }) } as Response;
+      }
+      throw new TypeError('opaque network failure');
+    });
+    vi.stubGlobal('fetch', healthSpy);
+
+    const mod = await import('@/main');
+    await mod.boot();
+    const cfg = createPhlixApp.mock.calls.at(-1)?.[0] as {
+      connectScan?: () => Promise<Array<{ url: string; label?: string }>>;
+    };
+    expect(typeof cfg.connectScan).toBe('function');
+
+    const rows = await cfg.connectScan!();
+    // Confirmed rows lead (the known .40 with its version, then the swept
+    // gateway .1); the unconfirmed-but-known .9 is still offered last; the
+    // other silent sweep guesses never appear. Typing stays the fallback.
+    expect(rows).toEqual([
+      { url: 'http://192.168.1.40:8097', label: 'v1.2.3' },
+      { url: 'http://192.168.1.1:8097' },
+      { url: 'http://192.168.1.9:8097' },
+    ]);
+    // Privilege-honest transport: every probe is a plain root /health GET.
+    for (const call of healthSpy.mock.calls) {
+      expect(String(call[0])).toMatch(/\/health$/);
+    }
   });
 
   it('builds samsung-tizen headers, creates a TV app with HLS config, mounts + bridges', async () => {
@@ -178,7 +222,10 @@ describe('boot (Tizen renderer entry)', () => {
         defaultTheme: 'nocturne',
         branding: { wordmark: 'Phlix' },
         requireConnection: true,
-        onConnectionChange: expect.any(Function)
+        onConnectionChange: expect.any(Function),
+        // Review tizen__casualgamer M2 — the connect-scan seam MUST be present:
+        // omitting it silently hides the ui Scan affordance (the whole cure).
+        connectScan: expect.any(Function)
       })
     );
 
