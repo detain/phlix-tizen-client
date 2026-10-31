@@ -6,10 +6,11 @@ import { RemoteManager } from '@/remote/RemoteManager';
 // a synthesized `keyCode`) to assert the generic suppression hook. An absent
 // `target` means "no typing target" — the S535 digit branch treats it like
 // normal focus (which is exactly what the buffer pins below rely on).
-function fakeKeyEvent(keyCode: number, target?: EventTarget): KeyboardEvent {
+function fakeKeyEvent(keyCode: number, target?: EventTarget, repeat?: boolean): KeyboardEvent {
   return {
     keyCode,
     target,
+    ...(repeat === undefined ? {} : { repeat }),
     preventDefault: vi.fn(),
     stopImmediatePropagation: vi.fn()
   } as unknown as KeyboardEvent;
@@ -356,6 +357,88 @@ describe('RemoteManager key repeat', () => {
     // …and stays at that cadence — not the parent's 100 ms machine-gun.
     vi.advanceTimersByTime(1500);
     expect(handler.mock.calls.length).toBe(countAfterSecond + 3);
+    rm.destroy();
+  });
+});
+
+// M-TIZEN-26 (review tizen__gameux m2) — the immediate-action floor. The
+// webview fires auto-repeat keydowns while a key is held; pre-cure EVERY one
+// re-emitted the immediate action (a held key = an event storm) and the
+// repeatable branch re-armed the hold delay every 30 ms (hold cadence
+// unreachable). Fake timers fake Date.now, so the 250 ms floor is driven
+// deterministically by advancing time.
+describe('RemoteManager immediate-action floor (M-TIZEN-26)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('a held FF burst of unflagged auto-repeats emits ONE tap step AND still reaches the HOLD cadence', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    rm.onKeyDown(fakeKeyEvent(417)); // FAST_FORWARD tap at t=0
+    for (let i = 0; i < 7; i++) {
+      vi.advanceTimersByTime(30); // t=30..210 — inside the 250 ms floor
+      rm.onKeyDown(fakeKeyEvent(417));
+    }
+    // Mutation tooth: strip the floor and eight ±10 s tap steps fire here.
+    expect(handler.mock.calls.map((c) => c[0])).toEqual([{ key: 'FAST_FORWARD' }]);
+    // The hold timer armed by the FIRST press survived every suppressed
+    // repeat (a re-arming branch would restart it at t=30..210): delay 500 +
+    // interval 500 ⇒ the first HOLD step lands at exactly t=1000.
+    vi.advanceTimersByTime(790); // t = 1000
+    expect(handler).toHaveBeenLastCalledWith({ key: 'FAST_FORWARD', repeat: true });
+    rm.destroy();
+  });
+
+  it('a NATIVE repeat-flagged keydown never emits even after the floor window passed', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    rm.onKeyDown(fakeKeyEvent(415)); // PLAY at t=0 — one emit
+    vi.advanceTimersByTime(300); // past the 250 ms floor: a flag-less press WOULD emit
+    const held = fakeKeyEvent(415, undefined, true); // auto-repeat, flag set
+    rm.onKeyDown(held);
+    expect(handler).toHaveBeenCalledTimes(1); // the flag alone suppresses
+    // Handled semantics are UNCHANGED by suppression — still preventDefaulted
+    // (immediate + handled branches): the webview must not type/scroll instead.
+    expect(held.preventDefault).toHaveBeenCalledTimes(2);
+    rm.destroy();
+  });
+
+  it('the floor is PER KEY — a different immediate key inside 250 ms still emits', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    rm.onKeyDown(fakeKeyEvent(415)); // PLAY at t=0
+    rm.onKeyDown(fakeKeyEvent(19)); // PAUSE at t=0 — different key, not floored
+    expect(handler.mock.calls.map((c) => c[0])).toEqual([{ key: 'PLAY' }, { key: 'PAUSE' }]);
+    rm.destroy();
+  });
+
+  it('a genuine mash past the floor window registers the next press', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    rm.onKeyDown(fakeKeyEvent(415)); // emit at t=0
+    vi.advanceTimersByTime(260); // 260 > 250 floor — a real second press
+    rm.onKeyDown(fakeKeyEvent(415));
+    expect(handler).toHaveBeenCalledTimes(2);
+    rm.destroy();
+  });
+
+  it('disabling clears the floor window: re-enabling starts fresh', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    rm.onKeyDown(fakeKeyEvent(415)); // emit at t=0
+    rm.setEnabled(false);
+    rm.setEnabled(true);
+    rm.onKeyDown(fakeKeyEvent(415)); // t=0, but the window was cleared
+    expect(handler).toHaveBeenCalledTimes(2);
     rm.destroy();
   });
 });

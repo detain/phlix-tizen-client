@@ -174,9 +174,26 @@ describe('wireTizenBridge', () => {
 
   it('STOP closes the player', () => {
     const player = makePlayer(true);
-    wireTizenBridge(remote, player, makeRouter(), browseRoute);
+    const router = makeRouter();
+    wireTizenBridge(remote, player, router, browseRoute);
     remote.fire({ key: 'STOP' });
     expect(player.closePlayer).toHaveBeenCalledTimes(1);
+    // M-TIZEN-02/33: off the player route, STOP stays a pure player
+    // teardown — the viewer was never on it, so there is nothing to back out of.
+    expect(router.back).not.toHaveBeenCalled();
+  });
+
+  it('STOP on the player route closes the player AND backs out of it (M-TIZEN-02/33)', () => {
+    // Mutation tooth: reverting to the bare `player.closePlayer()` leaves the
+    // viewer parked on the blanked player route — this pin goes red exactly
+    // when the navigation half disappears (and the sibling above goes red if
+    // the back ever becomes unconditional).
+    const player = makePlayer(true);
+    const router = makeRouter();
+    wireTizenBridge(remote, player, router, playerRoute);
+    remote.fire({ key: 'STOP' });
+    expect(player.closePlayer).toHaveBeenCalledTimes(1);
+    expect(router.back).toHaveBeenCalledTimes(1);
   });
 
   it('FAST_FORWARD seeks +10 on tap and +30 when held', () => {

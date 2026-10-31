@@ -22,12 +22,34 @@
  * repeatable-only set to immediate (each press is one discrete step — a
  * 10 Hz track-skip storm was the parent's only emission path), and the
  * repeatable set is FF/REW alone. `keyRepeatInterval` 100 → 500 ms.
+ *
+ * M-TIZEN-26 (review tizen__gameux m2): held-key auto-repeat no longer storms
+ * the action channel. A keydown the host flags `repeat` never emits an
+ * immediate action, and unflagged same-key presses are floored to one emit
+ * per 250 ms. Suppressed keydowns also skip the hold-timer re-arm, so a held
+ * seek accelerator REACHES its 500 ms hold cadence instead of restarting
+ * under every repeat — a tap is ONE step, a hold is the designed ±30 s
+ * cadence, and a held PLAY/STOP/BACK/VOLUME key is one press, not an event
+ * per repeat.
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
 
 import KeyMapping, { type ActionName } from './KeyMapping';
 import { createDigitBuffer, isTypingTarget, type DigitBuffer } from './DigitBuffer';
+
+/**
+ * M-TIZEN-26 (review tizen__gameux m2): floor between EMITTED immediate
+ * actions for the same key. The Tizen webview fires auto-repeat keydowns
+ * while a key is held (see the repeat branch in `onKeyDown`); without a
+ * floor every repeat re-emitted the immediate action — a held PLAY/STOP/
+ * BACK/VOLUME key became a storm instead of one press. `event.repeat` is
+ * honored first (the webview sets it on its own auto-repeats); this floor is
+ * the defense for hosts that deliver unflagged repeats. The window is
+ * measured against the last EMIT, so a genuine mash faster than the floor
+ * still registers one step per window (bounded 4 per second per key).
+ */
+const IMMEDIATE_ACTION_FLOOR_MS = 250;
 
 export interface ActionEvent {
   key: ActionName;
@@ -74,6 +96,13 @@ export class RemoteManager {
   suppressPropagation: ((mappedKey: ActionName, _event: KeyboardEvent) => boolean) | null = null;
   private activeKeyRepeat: ReturnType<typeof setTimeout> | ReturnType<typeof setInterval> | null =
     null;
+  /**
+   * M-TIZEN-26: per-action-name timestamp of the last EMITTED immediate
+   * action. Written only on emission (a suppressed press never refreshes it),
+   * read by the floor predicate in `onKeyDown`. Cleared with the rest of the
+   * runtime state on disable/destroy.
+   */
+  private readonly lastImmediateAt = new Map<ActionName, number>();
   /**
    * THE single digit-commit buffer (S535 ONE-buffer law). Keydowns routed here
    * by `onKeyDown` and voice digits routed here by `pressDigit` share it; its
@@ -122,25 +151,47 @@ export class RemoteManager {
       this.pressDigit(mappedKey);
     }
 
+    // M-TIZEN-26: suppression law for the immediate-action branches below —
+    // a keydown the host flags `repeat` never re-emits, and an unflagged
+    // same-key press inside IMMEDIATE_ACTION_FLOOR_MS of the last EMIT
+    // doesn't either. Raw `keydown` subscribers (above) and digits (the S535
+    // buffer has its own window) are untouched; the event is still
+    // preventDefaulted — only the action emission and the hold-timer re-arm
+    // are gated, so the FIRST press arms the hold timer and repeats leave it
+    // alone: a held seek accelerator finally reaches its 500 ms hold cadence
+    // instead of restarting under every auto-repeat keydown.
+    const suppressedImmediate =
+      KeyMapping.isImmediate(mappedKey) &&
+      (event.repeat === true ||
+        Date.now() - (this.lastImmediateAt.get(mappedKey) ?? Number.NEGATIVE_INFINITY) <
+          IMMEDIATE_ACTION_FLOOR_MS);
+
     // Held-key repeat (seek-accelerator hold: FAST_FORWARD/REWIND). Clear any
-    // prior repeat timer first — a host that fires auto-repeat keydowns while
-    // a key is held would otherwise orphan the previous timer. (M-TIZEN-09:
-    // FF/REW are ALSO immediate now — under such a host they tap-step ±10 per
-    // keydown exactly like every other immediate key already does; on the
-    // tvinputdevice path one press is one keydown, which is the shipped
-    // doctrine — see remote/registerKeys.ts.)
+    // prior repeat timer first — a genuine new press re-arms cleanly. A
+    // SUPPRESSED keydown (M-TIZEN-26) must NOT re-arm: re-arming on every
+    // auto-repeat is how a held key restarted its 500 ms delay forever and
+    // never reached the hold cadence. (M-TIZEN-09: FF/REW are ALSO immediate
+    // now — under such a host they tap-step ±10 per keydown exactly like
+    // every other immediate key already does; on the tvinputdevice path one
+    // press is one keydown, which is the shipped doctrine — see
+    // remote/registerKeys.ts.)
     if (KeyMapping.isRepeatable(mappedKey)) {
       event.preventDefault();
-      this.stopKeyRepeat();
-      this.activeKeyRepeat = setTimeout(() => {
-        this.startKeyRepeat(mappedKey);
-      }, this.keyRepeatDelay);
+      if (!suppressedImmediate) {
+        this.stopKeyRepeat();
+        this.activeKeyRepeat = setTimeout(() => {
+          this.startKeyRepeat(mappedKey);
+        }, this.keyRepeatDelay);
+      }
     }
 
     // Immediate action keys (PLAY/STOP/PAUSE/BACK/HOME/etc.).
     if (KeyMapping.isImmediate(mappedKey)) {
       event.preventDefault();
-      this.emit('action', { key: mappedKey });
+      if (!suppressedImmediate) {
+        this.lastImmediateAt.set(mappedKey, Date.now());
+        this.emit('action', { key: mappedKey });
+      }
     }
 
     // preventDefault for handled keys (arrows + ENTER are NOT handled → pass
@@ -196,6 +247,9 @@ export class RemoteManager {
       // A disabled manager queues nothing and commits nothing (S535): drop the
       // pending burst WITHOUT emitting — same posture as stopping key repeat.
       this.digitBuffer.clear();
+      // M-TIZEN-26: re-enabling must not inherit a floor window from before
+      // the disable — the next press is a fresh first press.
+      this.lastImmediateAt.clear();
     }
   }
 
@@ -253,6 +307,7 @@ export class RemoteManager {
   destroy(): void {
     this.stopKeyRepeat();
     this.digitBuffer.clear();
+    this.lastImmediateAt.clear();
     if (typeof document !== 'undefined') {
       document.removeEventListener('keydown', this.boundKeyDown);
       document.removeEventListener('keyup', this.boundKeyUp);

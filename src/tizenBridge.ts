@@ -458,7 +458,18 @@ export function wireTizenBridge(
         player.pause();
         break;
       case 'STOP':
+        // M-TIZEN-02/M-TIZEN-33 (review tizen__gameux / tizen__crossfe): STOP
+        // that only tears the player down leaves the viewer standing on a
+        // blanked player route — a dead screen with no visible way onward.
+        // TV law: STOP leaves the player, so when the player route is the
+        // current one, STOP follows its own close with the ladder's
+        // history-back rung (same `closePlayer(); router.back()` shape BACK
+        // uses at `getRoute().name === 'player'`). Off the player route,
+        // STOP stays what it always was: a player teardown, no navigation.
         player.closePlayer();
+        if (getRoute().name === 'player') {
+          router.back();
+        }
         break;
       case 'FAST_FORWARD':
         // M-TIZEN-09: the bare (non-repeat) press is now REACHABLE — FF/REW
@@ -587,14 +598,15 @@ export function installTizenBridge(
   // first): the player/route being left, which tears the player — and its
   // QualityMenu trigger — out from under an open menu with no `aria-expanded`
   // transition for that observer to see. HOME (`router.push('/app')`) is the
-  // motivating case. Note STOP is NOT one of these: `player.closePlayer()`
-  // only clears the player store and does not navigate, so `afterEach` never
-  // fires for it — the menu, if open, is simply left open and dismissible via
-  // BACK/YELLOW/rung-select as normal; this guard exists purely for
-  // route-changing exits. A single router.afterEach guard clears quality mode
-  // whenever navigation leaves the player route, so a stuck `qualityMenuActive`
-  // can never disable D-pad navigation app-wide. Guarded so the helper still
-  // works against a fake router with no afterEach in tests.
+  // motivating case; STOP reaches it too when the player route is current
+  // (M-TIZEN-02/33: STOP backs out of the player, so this guard then tears
+  // down quality mode along with the route). A STOP fired off the player
+  // route performs no navigation, so the menu — if open — stays open and
+  // dismissible via BACK/YELLOW/rung-select as normal; this guard exists
+  // purely for route-changing exits. A single router.afterEach guard clears
+  // quality mode whenever navigation leaves the player route, so a stuck
+  // `qualityMenuActive` can never disable D-pad navigation app-wide. Guarded
+  // so the helper still works against a fake router with no afterEach in tests.
   const removeRouteGuard =
     typeof router.afterEach === 'function'
       ? router.afterEach((to) => {

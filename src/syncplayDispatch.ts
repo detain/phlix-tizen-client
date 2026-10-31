@@ -7,7 +7,8 @@
  * (which predates the ui's `resolvePendingMedia` player prop), so this module
  * is the Tizen half of the ui's Player.vue load path: a watcher over the
  * store's `pendingPlayMedia` slot that resolves the id to a `MediaItem` and
- * drives the shared `@phlix/ui` player store.
+ * drives the shared `@phlix/ui` player store. Port ledger + mirror-lag duties
+ * (M-TIZEN-08): `docs/ui-port-divergence.md`.
  *
  * - With a working `resolveMedia`, the id resolves to a `MediaItem`,
  *   `player.setCurrent()` loads it, `player.play()` starts it, and the store

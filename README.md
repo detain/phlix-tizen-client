@@ -382,7 +382,7 @@ element under `document.body` (links, buttons, inputs, selects, textareas,
 | Back | Walks the four-rung BACK ladder (`src/remote/backPolicy.ts`): snap a panned shelf row back to its start, else close the topmost open layer (quick-connect, rating modal, `@phlix/ui` modal, quality picker), else navigate back (on the player this closes playback first), else at the home route exit the app |
 | Home | Return to the home route (`/app`) |
 | Play / Pause | Toggle playback |
-| Stop | Close the player |
+| Stop | Close the player; when the player route is what's on screen, also returns to where you came from (off the player route it is a plain player teardown, no navigation) |
 | Fast Forward | Seek forward 10s (30s when held) |
 | Rewind | Seek backward 10s (30s when held) |
 | Yellow | On the player route, open/close the on-screen stream-quality picker (only when the active stream has ≥2 ABR rungs to choose from); while open, Left/Right/Up/Down/Enter drive the picker instead of seek/volume |
@@ -461,7 +461,10 @@ phlix-tizen-client/
 │       ├── routeManifest.gate.test.ts
 │       └── main.test.ts
 ├── docs/
-│   └── signing.md           # certificate + .wgt signing guide
+│   ├── signing.md           # certificate + .wgt signing guide
+│   ├── runtime-floor.md     # engine-floor contract (syntax target vs runtime)
+│   ├── i18n.md              # locale catalogs + vendored ui-locale story
+│   └── ui-port-divergence.md # local ports of sealed @phlix/ui surfaces (M-TIZEN-08)
 ├── .github/workflows/
 │   ├── test.yml             # npm test (vitest)
 │   └── lint.yml             # npm run lint + npm run build

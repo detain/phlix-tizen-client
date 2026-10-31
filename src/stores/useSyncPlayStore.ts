@@ -13,6 +13,9 @@
  * vocabulary lives on `SyncPlayGroupListItem`, and the five REST envelopes
  * are declared) and framed by `@phlix/syncplay` v0.1.4.
  *
+ * Port ledger (M-TIZEN-08): this file is one of the sealed-ui local ports —
+ * mirror-lag duties and the re-pin law live in `docs/ui-port-divergence.md`.
+ *
  * Wire contract (authority: phlix-syncplay/SPEC.md):
  *   - HTTP surface is exactly five routes under `/api/v1/syncplay/groups`
  *     (list / create / get / join / leave). There is no `/rooms`, no
@@ -37,6 +40,7 @@
 
 import { defineStore } from 'pinia';
 import { ref, computed, toRaw } from 'vue';
+import { LocalStorageTokenStore } from '@phlix/ui';
 import type {
   SyncPlayGroup,
   SyncPlayGroupListItem,
@@ -798,6 +802,27 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   const MAX_RECONNECT_ATTEMPTS = 5;
   const BASE_RECONNECT_DELAY = 1000;
 
+  /**
+   * M-TIZEN-36 (review tizen__secnet): the relay ladder's own in-repo law —
+   * `src/api/hubRelay.ts` re-reads its token on EVERY attempt precisely
+   * because tokens are short-lived and a captured one goes stale mid-session
+   * (ui auth-refresh rotates `access_token` while the SyncPlay socket lives).
+   * The reconnect lane must not be the one dial site left behind that law:
+   * at re-dial time the ui token store is the live source. When it holds
+   * nothing (anonymous dial, storage-less context) the captured token is the
+   * honest fallback — the ladder keeps exactly its pre-cure shape. A slot
+   * that dialed anonymously and has since logged in re-dials authenticated:
+   * the same credential the next manual dial would present.
+   */
+  function liveAccessTokenForReconnect(): string | null {
+    try {
+      const live = new LocalStorageTokenStore().getAccessToken();
+      return live ? live : null;
+    } catch {
+      return null; // no storage in this context — the captured token decides
+    }
+  }
+
   function scheduleReconnect(apiBase: string, roomId: string, token: string): void {
     // Fail fast if max attempts reached
     if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
@@ -812,7 +837,11 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
 
     reconnectTimeout = setTimeout(() => {
       if (isInRoom.value) {
-        connectWs(apiBase, roomId, token);
+        // M-TIZEN-36: re-read the live token at DIAL TIME — the closure token
+        // is only the fallback (see liveAccessTokenForReconnect). The ladder
+        // itself is untouched: URL, carrier, and bail shapes all live inside
+        // connectWs, exactly as before.
+        connectWs(apiBase, roomId, liveAccessTokenForReconnect() ?? token);
       }
     }, delay);
   }

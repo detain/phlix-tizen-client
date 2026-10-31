@@ -5,7 +5,8 @@
  * relay WebSocket (`ws://<hub>:8804/syncplay/{server_id}`). This module is the
  * Tizen TV's consumer. It is a faithful port of the proven `@phlix/ui` v0.99.0+
  * consumer (`src/api/hubRelay.ts` in phlix-ui, S298 ui half) adapted to the
- * Tizen boot glue:
+ * Tizen boot glue. Port ledger + mirror-lag duties (M-TIZEN-08):
+ * `docs/ui-port-divergence.md`.
  *
  * - **URL** — `wss://<hub-host>:8804/syncplay/<server_id>` (the path the
  *   relay's `onWebSocketConnect()` parses the server id from). M-TIZEN-06:

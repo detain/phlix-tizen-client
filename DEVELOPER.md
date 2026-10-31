@@ -202,7 +202,7 @@ Action map:
 |-------------------|---------------------------------------------------------------------|
 | `PLAY` / `PLAY_PAUSE` | toggle: `player.playing ? pause() : play()`                     |
 | `PAUSE`           | `player.pause()`                                                    |
-| `STOP`            | `player.closePlayer()`                                              |
+| `STOP`            | `player.closePlayer()`, then — when `route.name === 'player'` — `router.back()` (M-TIZEN-02/33: STOP leaves the player, it does not park the viewer on a blanked player route; off the player route it stays a pure teardown) |
 | `FAST_FORWARD`    | `player.seekBy(repeat ? 30 : 10)`                                   |
 | `REWIND`          | `player.seekBy(repeat ? -30 : -10)`                                 |
 | `BACK`            | four-rung ladder via `remote/backPolicy.decideBackRung`: row-snap a panned shelf → close the TOPMOST open `BackLayer` (quick-connect, rating modal, generic ui focus-trap, quality picker — quality close restores the pre-open focus) → history-back (on `route.name === 'player'` this means `closePlayer()` + `router.back()`) → at the app root, `tizen.application.getCurrentApplication().exit()` (never a blind `history.back()` on an empty stack) |
@@ -385,6 +385,43 @@ npm run lint:fix     # eslint . --fix
 Set `VITE_PHLIX_SERVER_URL` (e.g. in a `.env` / shell env) to point the dev
 server at a real Phlix server, or set `localStorage['phlix.serverUrl']` in the
 running app.
+
+### Developing without a TV
+
+`npm run dev` in a desktop browser is the normal loop; the platform seams are
+built to vanish off-device:
+
+- Every `tizen.*` touchpoint feature-detects and installs as a silent no-op
+  when the API is absent: `remote/registerKeys.ts` (no `tvinputdevice` —
+  registration is skipped and keys only arrive as ordinary DOM events),
+  `voiceControl.ts` (no `voicecontrol`), the screensaver's idle-control half
+  (privilege/API verdict in `src/screensaver.ts`; the overlay still mounts),
+  and the app-exit rung of BACK — the platform exit resolves through a full
+  optional chain (`tizenGlobal?.application?.getCurrentApplication?.()?.exit?.()`),
+  so a root BACK press in a browser simply does nothing beyond the ladder's
+  earlier rungs. `main.ts` calls these unconditionally; the guards live inside.
+- The remote does not exist in a browser — and there is deliberately NO
+  browser-keyboard equivalent of Samsung's `BACK`: `KeyMapping` maps the
+  platform code `10009` alone, never plain `Backspace` (code 8), so editing a
+  search field can never pop your route. Two honest substitutes:
+  - **Gamepad** — `remote/gamepadBridge.ts` (S522, dev/manual-QA posture)
+    translates a standard W3C gamepad: D-pad/left-stick → arrows, A → Enter,
+    B → synthetic `10009` BACK. It installs as a silent no-op where
+    `navigator.getGamepads` is absent, and is the closest thing to a remote a
+    desk setup gets.
+  - **DevTools dispatch** — from the browser console:
+    `document.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 10009 }))`
+    reaches `RemoteManager` exactly like the TV's event would. The same seam
+    drives any other transport key using the codes in `KeyMapping`.
+- The Tizen Studio **TV Simulator** ships for Windows and macOS only (it is a
+  VirtualBox VM) — there is no Linux host build. On a Linux workstation the
+  browser loop above plus the fake-driven test suite is the development
+  surface; the sign/install/on-device walks then need real hardware — see
+  `docs/signing.md` for the TV-as-device walk, including the `sdb` DevTools
+  debug port (26101) for inspecting the app ON the TV.
+
+None of the CI gates (`npm run test` / `typecheck` / `lint` / `build`) ever
+require a device: the whole suite drives these seams with fakes.
 
 ### Production build + packaging
 

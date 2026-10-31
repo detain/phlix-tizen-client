@@ -574,8 +574,10 @@ describe('useSyncPlayStore', () => {
     });
 
     it('reconnect lane re-enters connectWs with the token — the ladder never rebuilds the URL itself', async () => {
-      // scheduleReconnect closes over (apiBase, roomId, token) and calls
-      // connectWs again, so the bearer carrier rides every rung by construction.
+      // scheduleReconnect re-enters connectWs(apiBase, roomId, <token>) and the
+      // bearer carrier rides every rung. With no live token in storage
+      // (M-TIZEN-36 re-read finds nothing here) this is the captured-token
+      // fallback — exactly the pre-cure shape, kept green on purpose.
       // This is also the regression pin for the onclose identity guard: the
       // harness's plain-class MockWebSocket IS proxied by vue's reactive()
       // (toStringTag '[object Object]'), so without the `toRaw` unwrap the
@@ -599,6 +601,33 @@ describe('useSyncPlayStore', () => {
         expect(reconnectSocket.url).toBe('wss://api.example.com:8097?room=room-1');
         expect(reconnectSocket.protocols).toEqual(['bearer', 'token-abc']);
       } finally {
+        store.disconnectWs(); // clear any armed reconnect timer
+      }
+    });
+
+    it('M-TIZEN-36: the reconnect rung re-reads the LIVE token — a rotated JWT rides the next dial', async () => {
+      // Mutation tooth: strip the liveAccessTokenForReconnect() re-read and
+      // the ladder dials the closure-captured (now revoked) 'stale-token' —
+      // this pin goes red on exactly that protocol mismatch.
+      const store = useSyncPlayStore();
+      store.connectWs('https://api.example.com', 'room-1', 'stale-token');
+      // @ts-expect-error - setting directly for test
+      store.currentRoom = { group_id: 'room-1' };
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing' };
+      // The ui auth-refresh flow rotated the JWT mid-session (same storage
+      // seam LocalStorageTokenStore reads — single source, no key literal here).
+      localStorage.setItem('access_token', 'rotated-token');
+      const pending = globalThis.setTimeout;
+      try {
+        lastSocket().onclose?.({ code: 1006 }); // unexpected close → ladder arms
+        expect(store.wsReconnecting).toBe(true);
+        await new Promise<void>((resolve) => pending(resolve, 1100)); // real 1 s first rung
+        const reconnectSocket = MockWebSocket.instances.at(-1)!;
+        expect(reconnectSocket.protocols).toEqual(['bearer', 'rotated-token']);
+        expect(reconnectSocket.url).toBe('wss://api.example.com:8097?room=room-1'); // credential-free
+      } finally {
+        localStorage.removeItem('access_token');
         store.disconnectWs(); // clear any armed reconnect timer
       }
     });
