@@ -34,27 +34,27 @@
     "@phlix/contracts": "github:detain/phlix-contracts#v0.5.3",
     "@phlix/syncplay": "github:detain/phlix-syncplay#v0.1.5",
     "@phlix/ui": "github:detain/phlix-ui#v0.99.10",
-    "pinia": "^3.0.0",
-    "vue": "^3.5.0",
-    "vue-router": "^5.0.0"
+    "pinia": "^4.1.0",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "@types/node": "^22.20.0",
-    "@vitejs/plugin-vue": "^6.0.0",
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "@vitejs/plugin-vue": "^6.0.10",
     "@vitest/coverage-v8": "^5.0.5",
-    "@vue/test-utils": "^2.4.0",
+    "@vue/test-utils": "^2.5.1",
     "@vue/tsconfig": "^0.9.0",
-    "eslint": "^9.0.0",
-    "eslint-plugin-vue": "^10.0.0",
-    "globals": "^16.0.0",
-    "jsdom": "^29.1.1",
-    "typescript": "^5.3.0",
-    "typescript-eslint": "^8.0.0",
-    "vite": "^7.3.2",
+    "eslint": "^10.13.0",
+    "eslint-plugin-vue": "^10.12.0",
+    "globals": "^17.13.0",
+    "jsdom": "^30.1.3",
+    "typescript": "^7.0.2",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5",
     "vitest": "^5.0.5",
     "vue-eslint-parser": "^10.0.0",
-    "vue-tsc": "^3.0.0"
+    "vue-tsc": "^3.3.13"
   },
   "engines": {
     "node": ">=22.12.0"
