@@ -23,9 +23,12 @@ at this commit, not from memory:
 - **SyncPlay socket hint seam (`wsUrl` / `wsPath`, ui v0.99.11 era).** The ui
   gained a `socketHint` seam so hosts can point the player's SyncPlay dial at
   a custom URL/path. The vendored v0.99.10 bundle has none of it (grep
-  `socketHint` → zero hits), and the local `connectWs` does not yet accept a
-  host-supplied dial override. PORT AT THE NEXT UI RE-PIN, or record here why
-  the override is not wanted.
+  `socketHint` → zero hits). Interim host-side seam SHIPPED (M-TIZEN-07,
+  W-min171): `src/endpointOverrides.ts` validates `phlix.syncplayPort` /
+  `phlix.relayPort` / `phlix.relayPath` storage rows at every dial — the
+  manual, tizen-local equivalent of the env seam the hub uses. PORT AT THE
+  NEXT UI RE-PIN to the `socketHint` prop and retire the storage vocabulary
+  (or record here why the override should stay host-side).
 - **Playlist manageability gating (`canManagePlaylist`, ui v0.99.11 era,
   `playlistPermissions.ts`).** Playlist UI ships from the bundle, so this lag
   closes itself at the next re-pin — listed here so the re-pin lane CHECKS it

@@ -573,6 +573,31 @@ describe('useSyncPlayStore', () => {
       expect(store.wsError).toBeNull(); // happy anonymous dial, not the error path
     });
 
+    // M-TIZEN-07 (W-min171): the operator port override — read live at EVERY
+    // dial; poison can move nothing. jsdom localStorage is per-file here, so
+    // the rows are removed in finally (a leaked 18097 would tilt later dials).
+    it('M-TIZEN-07: a valid phlix.syncplayPort row re-points every dial', () => {
+      globalThis.localStorage.setItem('phlix.syncplayPort', '18097');
+      try {
+        const store = useSyncPlayStore();
+        store.connectWs('https://api.example.com', 'room-123', 'tok');
+        expect(lastSocket().url).toBe('wss://api.example.com:18097?room=room-123');
+      } finally {
+        globalThis.localStorage.removeItem('phlix.syncplayPort');
+      }
+    });
+
+    it('M-TIZEN-07: a poison port row leaves :8097 standing (validate-or-default)', () => {
+      globalThis.localStorage.setItem('phlix.syncplayPort', '8097;rm');
+      try {
+        const store = useSyncPlayStore();
+        store.connectWs('https://api.example.com', 'room-123', 'tok');
+        expect(lastSocket().url).toBe('wss://api.example.com:8097?room=room-123');
+      } finally {
+        globalThis.localStorage.removeItem('phlix.syncplayPort');
+      }
+    });
+
     it('reconnect lane re-enters connectWs with the token — the ladder never rebuilds the URL itself', async () => {
       // scheduleReconnect re-enters connectWs(apiBase, roomId, <token>) and the
       // bearer carrier rides every rung. With no live token in storage
@@ -720,6 +745,139 @@ describe('useSyncPlayStore', () => {
       lastSocket().onmessage?.({ data: seekFrame('200') });
       lastSocket().onmessage?.({ data: seekFrame('0') });
       expect(store.currentSession?.playbackPosition).toBe(0);
+    });
+  });
+
+  // ── M-TIZEN-06 (W-min171) — spent ladder waits for the visible window ─────
+  describe('M-TIZEN-06 — budget exhaustion re-asks on one hidden→visible edge', () => {
+    // The S510 port from src/api/hubRelay.ts: fake timers walk the capped
+    // 5-rung ladder at BASE*2^n without burning 31 real seconds; the fake
+    // visibility source is the same contract the relay tests drive.
+    interface FakeSource {
+      visibilityState: string;
+      handlers: Array<() => void>;
+      addEventListener(type: 'visibilitychange', cb: () => void): void;
+      removeEventListener(type: 'visibilitychange', cb: () => void): void;
+      fire(state: string): void;
+    }
+    function fakeVisibility(): FakeSource {
+      const src: FakeSource = {
+        visibilityState: 'hidden',
+        handlers: [],
+        addEventListener(_type, cb) {
+          src.handlers.push(cb);
+        },
+        removeEventListener(_type, cb) {
+          const i = src.handlers.indexOf(cb);
+          if (i >= 0) src.handlers.splice(i, 1);
+        },
+        fire(state) {
+          src.visibilityState = state;
+          src.handlers.slice().forEach((h) => h());
+        },
+      };
+      return src;
+    }
+
+    function walkToExhaustion(): void {
+      // Each close rides one ladder rung; advance exactly that rung's delay.
+      for (let rung = 0; rung < 5; rung += 1) {
+        lastSocket().onclose?.({ code: 1006 });
+        vi.advanceTimersByTime(1000 * 2 ** rung + 1);
+      }
+      // Rung six: the budget is spent → the wait arms (no socket dialed).
+      lastSocket().onclose?.({ code: 1006 });
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('exhaustion WITHOUT a visibility source keeps the pre-cure terminal give-up byte-identically', () => {
+      const store = useSyncPlayStore();
+      store.setSyncPlayVisibilitySource(null); // explicit opt-out
+      store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+      // @ts-expect-error - setting directly for test
+      store.currentRoom = { group_id: 'room-1' };
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing' };
+      walkToExhaustion();
+      expect(store.wsError).toBe('Failed to reconnect after multiple attempts');
+      expect(store.wsReconnecting).toBe(false);
+      expect(store.reconnectVisibilityReset).toBe(false);
+      store.disconnectWs();
+    });
+
+    it('exhaustion WITH a source waits (no dead message, exactly one listener), a visible edge re-dials and disarms', () => {
+      const src = fakeVisibility();
+      const store = useSyncPlayStore();
+      store.setSyncPlayVisibilitySource(src);
+      store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+      // @ts-expect-error - setting directly for test
+      store.currentRoom = { group_id: 'room-1' };
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing' };
+      walkToExhaustion();
+      // Five capped rungs were walked; the sixth close ARMS THE WAIT —
+      // nothing more may dial while the panel is away.
+      const resting = MockWebSocket.instances.length;
+      expect(resting).toBe(6); // 1 initial dial + 5 ladder rungs, then stillness
+
+      expect(store.wsError).toBeNull(); // NOT the terminal give-up anymore
+      expect(store.wsReconnecting).toBe(false); // the timer walk is over
+      expect(store.reconnectVisibilityReset).toBe(true);
+      expect(src.handlers).toHaveLength(1); // never double-listens
+
+      // A hidden→hidden (or hidden→prerender) beat must not re-ask:
+      src.fire('hidden');
+      expect(MockWebSocket.instances.length).toBe(resting);
+
+      // The TV comes back to the foreground: ONE fresh dial, wait released.
+      src.fire('visible');
+      expect(MockWebSocket.instances.length).toBe(resting + 1);
+      expect(MockWebSocket.instances.at(-1)!.url).toBe('wss://api.example.com:8097?room=room-1');
+      expect(store.reconnectVisibilityReset).toBe(false);
+      expect(src.handlers).toHaveLength(0); // listener paired away
+      store.disconnectWs();
+    });
+
+    it('a leave or an explicit disconnect releases the armed wait (nothing re-dials behind the user)', () => {
+      const src = fakeVisibility();
+      const store = useSyncPlayStore();
+      store.setSyncPlayVisibilitySource(src);
+      store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+      // @ts-expect-error - setting directly for test
+      store.currentRoom = { group_id: 'room-1' };
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing' };
+      walkToExhaustion();
+      expect(src.handlers).toHaveLength(1);
+      store.disconnectWs();
+      expect(src.handlers).toHaveLength(0);
+      const dialed = MockWebSocket.instances.length;
+      src.fire('visible');
+      expect(MockWebSocket.instances.length).toBe(dialed); // superseded wait is DEAD
+    });
+
+    it('a visible edge after the user left the room dials nothing (isInRoom gate)', () => {
+      const src = fakeVisibility();
+      const store = useSyncPlayStore();
+      store.setSyncPlayVisibilitySource(src);
+      store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+      // @ts-expect-error - setting directly for test
+      store.currentRoom = { group_id: 'room-1' };
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing' };
+      walkToExhaustion();
+      // @ts-expect-error - setting directly for test
+      store.currentSession = null; // left while hidden
+      const dialed = MockWebSocket.instances.length;
+      src.fire('visible');
+      expect(MockWebSocket.instances.length).toBe(dialed);
+      store.disconnectWs();
     });
   });
 

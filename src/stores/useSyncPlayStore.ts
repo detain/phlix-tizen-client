@@ -53,7 +53,8 @@ import type {
   SyncPlayPermission,
 } from '@phlix/contracts';
 import { SyncPlayClient, serializeMessage } from '@phlix/syncplay';
-import type { PendingPlayMediaCommand } from '../api/hubRelay';
+import type { PendingPlayMediaCommand, HubRelayVisibilitySource } from '../api/hubRelay';
+import { parsePortOverride, SYNCPLAY_PORT_KEY } from '../endpointOverrides';
 import { tTizen } from '../i18n/tizen';
 
 // ---- Types -----------------------------------------------------------------
@@ -573,6 +574,7 @@ export function buildWsUrl(
   apiBase: string,
   roomId: string,
   allowInsecure: boolean = insecureSyncPlayHatchEnabled(),
+  portOverride: number | null = null,
 ): string {
   let hostname = '';
   let origin = '';
@@ -597,10 +599,16 @@ export function buildWsUrl(
     );
   }
   const protocol = secure ? 'wss:' : 'ws:';
-  return `${protocol}//${hostname}:8097?room=${encodeURIComponent(roomId)}`;
+  // M-TIZEN-07: `phlix.syncplayPort` moves the PORT only (validated at the
+  // reader); the host is by construction the apiBase hostname, so the
+  // override can never repoint bearer traffic at a foreign origin.
+  return `${protocol}//${hostname}:${portOverride ?? 8097}?room=${encodeURIComponent(roomId)}`;
 }
 
 // ---- Store Definition -----------------------------------------------------
+
+/** The room socket reuses the relay's visibility-source contract verbatim. */
+type SyncPlayVisibilitySource = HubRelayVisibilitySource;
 
 export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   // ---- State ---------------------------------------------------------------
@@ -686,7 +694,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     // error channel, which the room UI already renders escaped.
     let url: string;
     try {
-      url = buildWsUrl(apiBase, roomId);
+      url = buildWsUrl(apiBase, roomId, undefined, liveSyncPlayPortOverride());
     } catch (e) {
       if (e instanceof SyncPlayInsecureTransportError) {
         console.error(`[phlix-syncplay] ${e.message}`);
@@ -766,6 +774,9 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
         // @phlix/ui) — a server that recovered on rung three must not carry its
         // used rungs into the next outage.
         reconnectAttempts = 0;
+        // M-TIZEN-06: recovered — drop any dormant visible-window wait so a
+        // stale listener can never fire a second live dial (listener-paired).
+        disarmVisibleWindowRetry();
         // (Re)join the group over the socket once connected.
         client.joinGroup(roomId);
       };
@@ -800,8 +811,16 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
         wsConnected.value = false;
         client.onDisconnect();
 
-        // Auto-reconnect on unexpected close (not manual disconnect)
-        if (event.code !== 1000 && event.code !== 1001 && isInRoom.value && !wsReconnecting.value) {
+        // Auto-reconnect on unexpected close (not manual disconnect).
+        // M-TIZEN-06: the old `!wsReconnecting.value` term here froze the walk
+        // after ONE rung — a re-dial's socket closing while the retry flag
+        // still stood scheduled NOTHING, so the budget never even reached the
+        // give-up branch (the stall the review described as a "dead socket"
+        // symptom — measured worse in code than in its prose). The walk now
+        // advances rung by rung; double-scheduling is closed by the toRaw
+        // identity guard above plus the in-flight timer guard in
+        // scheduleReconnect.
+        if (event.code !== 1000 && event.code !== 1001 && isInRoom.value) {
           scheduleReconnect(apiBase, roomId, token);
         }
       };
@@ -833,6 +852,20 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
    * that dialed anonymously and has since logged in re-dials authenticated:
    * the same credential the next manual dial would present.
    */
+  /**
+   * M-TIZEN-07 (W-min171): `phlix.syncplayPort` read + validated at DIAL time
+   * (same liveness law as the token re-read above — an operator edit takes
+   * effect on the next attempt, no rebuild). Invalid/absent → null → the
+   * shipped :8097 default, byte-identically.
+   */
+  function liveSyncPlayPortOverride(): number | null {
+    try {
+      return parsePortOverride(globalThis.localStorage.getItem(SYNCPLAY_PORT_KEY));
+    } catch {
+      return null; // no storage in this context — the shipped default decides
+    }
+  }
+
   function liveAccessTokenForReconnect(): string | null {
     try {
       const live = new LocalStorageTokenStore().getAccessToken();
@@ -842,11 +875,80 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     }
   }
 
-  function scheduleReconnect(apiBase: string, roomId: string, token: string): void {
-    // Fail fast if max attempts reached
-    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+  // ── M-TIZEN-06 (W-min171) — the spent ladder waits for a visible window ───
+  // Port of the hub-relay S510 law (src/api/hubRelay.ts armVisibleWindowRetry,
+  // whose exported visibility-source contract type is reused — one vocabulary,
+  // same platform signal) to the room socket: exhausting the 5-rung budget
+  // used to be TERMINAL —
+  // "Failed to reconnect after multiple attempts" stayed set forever, even
+  // when the TV woke back into the foreground (the reviewer's dead-socket
+  // scenario: router reboot past the ladder while the panel was off). Now the
+  // budget resets and the store waits for ONE hidden→visible edge to re-ask
+  // under a fresh capped ladder. Same shapes as the relay half: injectable
+  // source (null = opted out → the classic terminal message byte-identically),
+  // never double-listens, and every reset point disarms (listener-paired law).
+  const reconnectVisibilityReset = ref(false);
+
+  let reconnectVisibilityCleanup: (() => void) | null = null;
+  let syncPlayVisibilitySource: SyncPlayVisibilitySource | null | undefined;
+
+  function resolveSyncPlayVisibilitySource(): SyncPlayVisibilitySource | null {
+    if (syncPlayVisibilitySource !== undefined) return syncPlayVisibilitySource;
+    return typeof document !== 'undefined'
+      ? (document as unknown as SyncPlayVisibilitySource)
+      : null;
+  }
+
+  function disarmVisibleWindowRetry(): void {
+    reconnectVisibilityCleanup?.();
+    reconnectVisibilityCleanup = null;
+    reconnectVisibilityReset.value = false;
+  }
+
+  function armVisibleWindowRetry(apiBase: string, roomId: string, token: string): void {    if (reconnectVisibilityCleanup !== null) return; // already waiting — never double-listen
+    const source = resolveSyncPlayVisibilitySource();
+    if (!source) {
+      // No visibility signal in this context: the pre-cure terminal give-up,
+      // byte-identical (pinned by the fallback test).
       wsError.value = 'Failed to reconnect after multiple attempts';
       wsReconnecting.value = false;
+      return;
+    }
+    reconnectVisibilityReset.value = true;
+    const onVisibilityChange = () => {
+      if (source.visibilityState !== 'visible') return; // only a hidden→visible edge re-asks
+      disarmVisibleWindowRetry();
+      if (!isInRoom.value || wsConnection.value !== null) return; // superseded or left
+      // Fresh capped ladder, live credential — the same dial shape the timer
+      // rung would have taken one step later.
+      connectWs(apiBase, roomId, liveAccessTokenForReconnect() ?? token);
+    };
+    source.addEventListener('visibilitychange', onVisibilityChange);
+    reconnectVisibilityCleanup = () => source.removeEventListener('visibilitychange', onVisibilityChange);
+  }
+
+  /**
+   * Test/operator seam mirroring the relay's `visibilitySource` option:
+   * a source object to observe, `null` to opt out (classic terminal give-up),
+   * `undefined` for the default (`document` when one exists).
+   */
+  function setSyncPlayVisibilitySource(source: SyncPlayVisibilitySource | null | undefined): void {
+    syncPlayVisibilitySource = source;
+  }
+
+  function scheduleReconnect(apiBase: string, roomId: string, token: string): void {
+    // One rung in flight at a time (a stale-rung close could otherwise stack a
+    // second timer against the first; the toRaw identity guard upstream stops
+    // cross-handle scheduling, this guard serializes same-handle re-entry).
+    if (reconnectTimeout !== null) return;
+    // M-TIZEN-06: budget spent is no longer terminal — replenish the ladder
+    // and wait for ONE hidden→visible edge to re-ask (S510 port; with no
+    // visibility source in reach, armVisibleWindowRetry falls back to the
+    // pre-cure give-up message byte-identically — pin-tested both ways).
+    if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      reconnectAttempts = 0;
+      wsReconnecting.value = false;
+      armVisibleWindowRetry(apiBase, roomId, token);
       return;
     }
 
@@ -855,6 +957,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     reconnectAttempts++;
 
     reconnectTimeout = setTimeout(() => {
+      reconnectTimeout = null;
       if (isInRoom.value) {
         // M-TIZEN-36: re-read the live token at DIAL TIME — the closure token
         // is only the fallback (see liveAccessTokenForReconnect). The ladder
@@ -875,6 +978,9 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     }
     reconnectAttempts = 0;
     wsReconnecting.value = false;
+    // M-TIZEN-06: an explicit disconnect cancels the dormant visible-window
+    // wait too — the user left; nothing may re-dial behind their back.
+    disarmVisibleWindowRetry();
 
     if (syncPlayClient) {
       syncPlayClient.leaveGroup();
@@ -1175,6 +1281,10 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     // WebSocket state
     wsConnected,
     wsReconnecting,
+    // M-TIZEN-06 (W-min171): the visible-window retry seam + its observable
+    // wait flag (tests drive a fake source; UI may show 'waiting' semantics).
+    reconnectVisibilityReset,
+    setSyncPlayVisibilitySource,
     wsError,
     // T-15: cumulative count of frames outside the canonical syncplay_* set
     // (forward-compat signal; 0 means the hub only speaks known vocabulary).

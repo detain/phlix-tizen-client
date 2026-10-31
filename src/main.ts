@@ -30,6 +30,7 @@ import { resolveDeviceId } from './deviceId';
 import { installTizenBridge } from './tizenBridge';
 import { installGamepadBridge } from './remote/gamepadBridge';
 import { resolveHubRelayConfig, openHubRelayConnection, insecureRelayHatchEnabled } from './api/hubRelay';
+import { RELAY_PATH_KEY, RELAY_PORT_KEY } from './endpointOverrides';
 import { installRuntimeFailureCapture, recordRuntimeFailure, readRuntimeFailures, describeThrown, formatRuntimeFailureLine } from './runtimeDiagnostics';
 import { installMediaActivityProbe } from './mediaActivity';
 import { applyTvMotionClass } from './tvMotion';
@@ -199,6 +200,37 @@ export function probeStorage(): StorageLike {
   }
 }
 
+/**
+ * M-TIZEN-37 (review tizen__secnet MINOR-3): logout reconciliation at boot.
+ *
+ * The sealed ui auth store clears EXACTLY its own three rows on logout
+ * (`access_token`, `refresh_token`, `user` — LocalStorageTokenStore.clear(),
+ * key constants not exported at this pin, so the literals are pinned here by
+ * the boot test). Host-owned phlix.* rows therefore OUTLIVE the session — the
+ * one that matters is the CREDENTIAL row `phlix.hubAccessToken` (a hub bearer
+ * JWT the hub-relay dials send): a TV left signed out must not keep holding a
+ * live hub credential. Connection PREFERENCES (`phlix.serverUrl`,
+ * `phlix.hubUrl`, `phlix.hubServerId`, history, idle/motion overrides) are
+ * deliberately KEPT — re-pairing convenience is their purpose and none is a
+ * secret. Written as a boot-time reconciliation (not a logout hook) because
+ * logout happens inside the sealed bundle: no seam to intercept, but every
+ * post-logout launch passes HERE. At this commit the hub-mode writer of the
+ * row is future work (hubRelay's provider reads it; nothing writes it yet) —
+ * the reconciliation stands so that when it lands, an orphaned JWT can never
+ * outlive the ui session it was minted beside. RE-KEE NOTE for that future
+ * lane: if a hub-mode session ever stores its OWN session token in this slot
+ * WITHOUT a ui `access_token` row, the liveness anchor here is wrong for that
+ * mode and must key on that session's real signal — do not let a companion-
+ * credential wipe orphan the session itself.
+ */
+export function reconcileHostCredentialRows(storage: StorageLike): boolean {
+  const sessionAlive = (storage.getItem('access_token') ?? '') !== '';
+  if (sessionAlive) return false;
+  if ((storage.getItem(HUB_ACCESS_TOKEN_KEY) ?? '') === '') return false;
+  storage.removeItem(HUB_ACCESS_TOKEN_KEY);
+  return true;
+}
+
 /** How many PRIOR captured failures the boot-failure screen quotes. */
 const BOOT_FAILURE_TAIL_COUNT = 3;
 
@@ -308,6 +340,10 @@ function wireHubRelayConsumer(
     serverId: storage.getItem(HUB_SERVER_ID_KEY),
     envHubUrl: import.meta.env.VITE_PHLIX_HUB_URL ?? null,
     envHubServerId: import.meta.env.VITE_PHLIX_HUB_SERVER_ID ?? null,
+    // M-TIZEN-07 — raw operator rows; resolveHubRelayConfig validates them at
+    // the boundary (invalid → the :8804 / `/syncplay` defaults stand).
+    relayPort: storage.getItem(RELAY_PORT_KEY),
+    relayPath: storage.getItem(RELAY_PATH_KEY),
     accessTokenProvider: () => storage.getItem(HUB_ACCESS_TOKEN_KEY),
   });
   if (!hubRelay) return;
@@ -362,6 +398,12 @@ function wireHubRelayConsumer(
 
 export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   const storage = probeStorage();
+
+  // M-TIZEN-37: drop a host-owned hub credential that outlived its ui session
+  // (the sealed logout clears only its own three rows). Runs BEFORE the
+  // hub-relay wiring reads the slot, so a signed-out boot never dials with a
+  // stale hub JWT. Reconcile, not clear-everything: prefs are user state.
+  reconcileHostCredentialRows(storage);
 
   // Error-visibility brief — window-level uncaught-error + unhandled-rejection
   // capture is installed FIRST, before anything else can throw, and persists to

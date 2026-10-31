@@ -62,7 +62,12 @@
  */
 
 /** The hub relay's SyncPlay WebSocket port (SyncPlayRelayWorker::DEFAULT_PORT). */
+import { parsePathOverride, parsePortOverride } from '../endpointOverrides';
+
 export const HUB_SYNC_PLAY_PORT = 8804;
+
+/** Default relay-lane mount path; `phlix.relayPath` replaces it (M-TIZEN-07). */
+export const SYNC_PLAY_WS_PATH = '/syncplay';
 
 /**
  * Connection states surfaced via `onStatusChange`.
@@ -108,6 +113,12 @@ export interface PendingPlayMediaCommand {
 }
 
 export interface HubRelayConfig {
+  /** M-TIZEN-07: validated `phlix.relayPort` replacement for the :8804 listen
+   *  port, or null (default). Parsed once at the config boundary. */
+  relayPortOverride?: number | null;
+  /** M-TIZEN-07: validated `phlix.relayPath` replacement for `/syncplay`,
+   *  or null (default). */
+  relayPathOverride?: string | null;
   /** Server the hub relay socket is bound to (the `/syncplay/{server_id}` path
    *  AND the token's server scope). The media ids in delivered commands belong
    *  to this server. */
@@ -237,6 +248,8 @@ export function buildHubRelayUrl(
   hubBaseUrl: string,
   serverId: string,
   allowInsecure: boolean = insecureRelayHatchEnabled(),
+  portOverride: number | null = null,
+  pathOverride: string | null = null,
 ): string {
   const url = new URL(hubBaseUrl);
   const secure = url.protocol === 'https:';
@@ -251,7 +264,11 @@ export function buildHubRelayUrl(
     );
   }
   const scheme = secure ? 'wss:' : 'ws:';
-  return `${scheme}//${url.hostname}:${HUB_SYNC_PLAY_PORT}/syncplay/${encodeURIComponent(serverId)}`;
+  // M-TIZEN-07: operator overrides (validated at the config boundary —
+  // Law 2: numbers/strings in here are already trusted; null = default).
+  const port = portOverride ?? HUB_SYNC_PLAY_PORT;
+  const path = pathOverride ?? SYNC_PLAY_WS_PATH;
+  return `${scheme}//${url.hostname}:${port}${path}/${encodeURIComponent(serverId)}`;
 }
 
 // ── relay-token minting (hub S2a endpoint) ───────────────────────────────────
@@ -376,6 +393,10 @@ export interface HubRelayConfigInput {
   /** Build-time env values (VITE_PHLIX_HUB_URL / VITE_PHLIX_HUB_SERVER_ID). */
   envHubUrl?: string | null;
   envHubServerId?: string | null;
+  /** M-TIZEN-07 — RAW persisted `phlix.relayPort` / `phlix.relayPath` rows;
+   *  validated here at the boundary, never downstream. */
+  relayPort?: string | null;
+  relayPath?: string | null;
   /** Test seam — defaults to the global fetch. */
   fetchImpl?: typeof fetch;
 }
@@ -428,6 +449,10 @@ export function resolveHubRelayConfig(
   return {
     serverId,
     hubBaseUrl: hubUrl,
+    // M-TIZEN-07 — parse (and forget) the raw rows right here: everything
+    // past this boundary holds validated values or null defaults.
+    relayPortOverride: parsePortOverride(input.relayPort),
+    relayPathOverride: parsePathOverride(input.relayPath),
     tokenProvider,
     canRetryToken: tokenProvider.canRetry,
   };
@@ -505,7 +530,13 @@ function connectHubRelaySocket(): void {
   // config itself must change (https hub URL) and the host re-opens then.
   let relayUrl: string;
   try {
-    relayUrl = buildHubRelayUrl(hubConfig.hubBaseUrl, hubConfig.serverId);
+    relayUrl = buildHubRelayUrl(
+      hubConfig.hubBaseUrl,
+      hubConfig.serverId,
+      undefined,
+      hubConfig.relayPortOverride ?? null,
+      hubConfig.relayPathOverride ?? null,
+    );
   } catch (error) {
     if (error instanceof HubRelayInsecureTransportError) {
       console.error(`[phlix-hub-relay] ${error.message}`);

@@ -37,6 +37,7 @@ import {
   parsePendingCommandFrame,
   buildHubRelayUrl,
   HUB_SYNC_PLAY_PORT,
+  SYNC_PLAY_WS_PATH,
   mintHubRelayToken,
   createRelayTokenProvider,
   resolveHubRelayConfig,
@@ -174,6 +175,43 @@ afterEach(() => {
   vi.unstubAllEnvs(); // M-TIZEN-06 hatch legs must not leak into later files
 });
 
+// ── M-TIZEN-07 (W-min171) — the resolver parses raw override rows at the ────
+// ── trust boundary (Law 2: strings come in from storage, typed decide) ───────
+describe('resolveHubRelayConfig — relay endpoint override parsing', () => {
+  const baseInput = {
+    serverUrl: 'https://api.example.test',
+    hubUrl: 'https://hub.example.test',
+    serverId: SERVER_ID,
+    accessTokenProvider: () => 'jwt',
+  };
+
+  it('honours validated port and path rows', () => {
+    const resolved = resolveHubRelayConfig({
+      ...baseInput,
+      relayPort: '9443',
+      relayPath: '/relay/ws',
+    });
+    expect(resolved!.relayPortOverride).toBe(9443);
+    expect(resolved!.relayPathOverride).toBe('/relay/ws');
+  });
+
+  it('poison rows resolve to null — the dial keeps the constants', () => {
+    const resolved = resolveHubRelayConfig({
+      ...baseInput,
+      relayPort: 'not-a-port',
+      relayPath: '//evil.example/x',
+    });
+    expect(resolved!.relayPortOverride).toBeNull();
+    expect(resolved!.relayPathOverride).toBeNull();
+  });
+
+  it('absent rows are plain nulls (no override in play)', () => {
+    const resolved = resolveHubRelayConfig(baseInput);
+    expect(resolved!.relayPortOverride).toBeNull();
+    expect(resolved!.relayPathOverride).toBeNull();
+  });
+});
+
 // ── url construction ──────────────────────────────────────────────────────────
 
 describe('buildHubRelayUrl — the relay URL shape + M-TIZEN-06 TLS law', () => {
@@ -193,6 +231,28 @@ describe('buildHubRelayUrl — the relay URL shape + M-TIZEN-06 TLS law', () => 
   it('encodes the server id in the path', () => {
     const url = new URL(buildHubRelayUrl('https://hub.example.test', 'srv with spaces'));
     expect(url.pathname).toBe('/syncplay/srv%20with%20spaces');
+  });
+
+  // M-TIZEN-07 (W-min171): operator endpoint escape hatches. The defaults stay
+  // the constants (no override → byte-ident URL); a validated override moves
+  // the PORT and/or the MOUNT PATH — never the host (hubUrl carries that).
+  it('M-TIZEN-07: honours a validated port+path override', () => {
+    const url = new URL(buildHubRelayUrl('https://hub.example.test', SERVER_ID, false, 9443, '/relay/ws'));
+    expect(url.port).toBe('9443');
+    expect(url.pathname).toBe(`/relay/ws/${SERVER_ID}`);
+    expect(url.protocol).toBe('wss:'); // the TLS law is override-proof
+  });
+
+  it('M-TIZEN-07: nulls keep the constants verbatim (the default shape is untouched)', () => {
+    const url = new URL(buildHubRelayUrl('https://hub.example.test', SERVER_ID, false, null, null));
+    expect(url.port).toBe(String(HUB_SYNC_PLAY_PORT));
+    expect(url.pathname).toBe(`${SYNC_PLAY_WS_PATH}/${SERVER_ID}`);
+  });
+
+  it('M-TIZEN-07: path-only override leaves the port at 8804', () => {
+    const url = new URL(buildHubRelayUrl('https://hub.example.test', SERVER_ID, false, null, '/mount'));
+    expect(url.port).toBe(String(HUB_SYNC_PLAY_PORT));
+    expect(url.pathname).toBe(`/mount/${SERVER_ID}`);
   });
 
   it('REFUSES a plaintext hub base with the named, actionable error', () => {

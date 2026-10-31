@@ -149,6 +149,22 @@ its own context from `localStorage['phlix.hubUrl']`, `['phlix.hubServerId']` and
 and `VITE_PHLIX_HUB_SERVER_ID` (all env vars are declared in `vite-env.d.ts`).
 Without a hub context nothing opens.
 
+**Operator endpoint overrides (M-TIZEN-07, W-min171).** A deployment whose
+SyncPlay endpoints do not answer the baked defaults can set three runtime rows
+in `localStorage` (read live at each dial — no rebuild, mirrors the hub's
+`HUB_WS_URL`/`HUB_WS_PATH` seam and the server's ListenEndpoints config):
+
+| Row | Default | Moves |
+|---|---|---|
+| `phlix.syncplayPort` | `8097` | the direct room-socket port (host follows the configured server origin — the port row alone) |
+| `phlix.relayPort` | `8804` | the hub-relay port (host stays the `phlix.hubUrl` host) |
+| `phlix.relayPath` | `/syncplay` | the hub-relay mount path |
+
+Every row is validated at the trust boundary (`src/endpointOverrides.ts`:
+plain-decimal 1–65535; absolute single-slash path with no query/fragment/
+whitespace) — a poison value falls back to the default rather than dialing
+somewhere surprising, and none of the three can move the HOST.
+
 **Relay transport is TLS-mandatory (M-TIZEN-06).** The relay socket presents a
 bearer credential in its opening handshake (`Sec-WebSocket-Protocol: bearer, …`),
 so the dial requires an **`https://` hub base** (`wss://`). A plaintext hub base

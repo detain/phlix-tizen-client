@@ -359,6 +359,9 @@ describe('boot (Tizen renderer entry)', () => {
     globalThis.localStorage.setItem('phlix.hubUrl', 'data:text/html,evil');
     globalThis.localStorage.setItem('phlix.hubServerId', 'srv-abc123');
     globalThis.localStorage.setItem('phlix.hubAccessToken', 'hub-jwt');
+    // M-TIZEN-37 liveness anchor — the companion hub JWT survives boot only
+    // beside a ui session row (orphan reconciliation, see reconcileHostCredentialRows).
+    globalThis.localStorage.setItem('access_token', 'ui-session-jwt');
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mod = await import('@/main');
     await mod.boot();
@@ -408,6 +411,9 @@ describe('boot (Tizen renderer entry)', () => {
     globalThis.localStorage.setItem('phlix.hubUrl', 'http://hub-tv:8800');
     globalThis.localStorage.setItem('phlix.hubServerId', 'srv-abc123');
     globalThis.localStorage.setItem('phlix.hubAccessToken', 'hub-jwt');
+    // M-TIZEN-37 liveness anchor — the companion hub JWT survives boot only
+    // beside a ui session row (orphan reconciliation, see reconcileHostCredentialRows).
+    globalThis.localStorage.setItem('access_token', 'ui-session-jwt');
 
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mod = await import('@/main');
@@ -441,6 +447,9 @@ describe('boot (Tizen renderer entry)', () => {
     globalThis.localStorage.setItem('phlix.serverUrl', 'https://tv.example:8096');
     globalThis.localStorage.setItem('phlix.hubServerId', 'srv-abc123');
     globalThis.localStorage.setItem('phlix.hubAccessToken', 'hub-jwt');
+    // M-TIZEN-37 liveness anchor — the companion hub JWT survives boot only
+    // beside a ui session row (orphan reconciliation, see reconcileHostCredentialRows).
+    globalThis.localStorage.setItem('access_token', 'ui-session-jwt');
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const mod = await import('@/main');
     await mod.boot();
@@ -1039,6 +1048,86 @@ describe('runtime failure visibility (error-visibility brief)', () => {
       expect(host.textContent).toBe('Phlix failed to start: config exploded');
     } finally {
       document.body.innerHTML = '';
+    }
+  });
+});
+
+  // M-TIZEN-07 (W-min171): boot threads the RAW persisted rows into the
+  // resolver — validation belongs at the trust boundary (hubRelay's
+  // resolveHubRelayConfig), so boot passes storage values uncooked.
+  it('M-TIZEN-07: raw relay override rows ride to the resolver', async () => {
+    globalThis.localStorage.setItem('phlix.serverUrl', 'https://tv.example:8096');
+    globalThis.localStorage.setItem('phlix.hubUrl', 'https://hub.example.test');
+    globalThis.localStorage.setItem('phlix.hubServerId', 'srv-abc123');
+    globalThis.localStorage.setItem('access_token', 'ui-session-jwt');
+    globalThis.localStorage.setItem('phlix.relayPort', '9443');
+    globalThis.localStorage.setItem('phlix.relayPath', '/relay/ws');
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const mod = await import('@/main');
+      await mod.boot();
+      const input = resolveHubRelayConfigMock.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+      expect(input.relayPort).toBe('9443');
+      expect(input.relayPath).toBe('/relay/ws');
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+// ── M-TIZEN-37 — boot reconciliation of host-owned credential rows ──────────
+describe('reconcileHostCredentialRows (logout orphan JWT)', () => {
+  function fakeStorage(initial: Record<string, string> = {}) {
+    const map = new Map<string, string>(Object.entries(initial));
+    const removed: string[] = [];
+    return {
+      removed,
+      storage: {
+        getItem: (key: string) => map.get(key) ?? null,
+        setItem: (key: string, value: string) => {
+          map.set(key, value);
+        },
+        removeItem: (key: string) => {
+          map.delete(key);
+          removed.push(key);
+        },
+      },
+    };
+  }
+
+  it('drops phlix.hubAccessToken when the ui session row is gone', async () => {
+    const { reconcileHostCredentialRows } = await import('@/main');
+    const h = fakeStorage({ 'phlix.hubAccessToken': 'stale-hub-jwt', 'phlix.serverUrl': 'http://s:8096' });
+    expect(reconcileHostCredentialRows(h.storage)).toBe(true);
+    expect(h.removed).toEqual(['phlix.hubAccessToken']);
+  });
+
+  it('keeps it while the ui session lives (reconcile is not a clear-out)', async () => {
+    const { reconcileHostCredentialRows } = await import('@/main');
+    const h = fakeStorage({ 'phlix.hubAccessToken': 'live-hub-jwt', access_token: 'ui-jwt' });
+    expect(reconcileHostCredentialRows(h.storage)).toBe(false);
+    expect(h.removed).toEqual([]);
+  });
+
+  it('an empty-string session row is GONE, not alive (ui clear() semantics)', async () => {
+    const { reconcileHostCredentialRows } = await import('@/main');
+    const h = fakeStorage({ 'phlix.hubAccessToken': 'jwt', access_token: '' });
+    expect(reconcileHostCredentialRows(h.storage)).toBe(true);
+  });
+
+  it('no-op without the credential row; connection preferences are never touched', async () => {
+    const { reconcileHostCredentialRows } = await import('@/main');
+    const prefs = {
+      'phlix.serverUrl': 'http://s:8096',
+      'phlix.hubUrl': 'https://hub.example',
+      'phlix.hubServerId': 'uuid-1',
+    };
+    const h = fakeStorage(prefs);
+    expect(reconcileHostCredentialRows(h.storage)).toBe(false);
+    const h2 = fakeStorage({ ...prefs, 'phlix.hubAccessToken': 'jwt' });
+    expect(reconcileHostCredentialRows(h2.storage)).toBe(true);
+    expect(h2.removed).toEqual(['phlix.hubAccessToken']); // ONLY the credential
+    for (const key of Object.keys(prefs)) {
+      expect(h2.storage.getItem(key), key).toBe(prefs[key as keyof typeof prefs]);
     }
   });
 });
