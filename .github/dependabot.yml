@@ -1,0 +1,17 @@
+# In-repo Dependabot scope (M-TIZEN-13 / review tizen__devops MIN-3): before this
+# file existed, dependency PRs (e.g. #119, commit 7c88559, "the npm_and_yarn
+# group") arrived from ORGANIZATION-level config that no repo reader could see
+# or review as an artifact. The manifest below declares the same effective
+# scope in-repo: the root npm ecosystem, grouped so multi-package bumps arrive
+# as one PR like the observed history. scripts/audit-gate.mjs is the
+# backstop for what Dependabot's window lets age.
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"

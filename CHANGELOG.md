@@ -3,7 +3,61 @@
 All notable changes to **phlix-tizen-client** are documented here. The format is
 based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+**Shape law (declared 2026-10-30, M-TIZEN-42 — this repo's actual release
+mechanics, not a drift from the above).** The widget ships as a rolling
+prerelease: the only git tag is the floating `latest` pointer that the CI
+release leg re-points on every master push (docs/signing.md — "rolling
+prerelease era"), and no semver release has ever been cut. Consequences this
+ledger accepts deliberately:
+- Everything lives under a single `## [Unreleased]` heading, because nothing
+  has been *released* in the Keep-a-Changelog sense. Date-stamped `###` entry
+  headings carry the chronology that release headings would otherwise hold;
+  they are per-entry by design, not misplaced version headings.
+- No `[Unreleased]: …compare/…` link definition exists or can exist: compare
+  links need two semver endpoints and there is only the floating tag. The
+  first tagged release (a store/OTA event, owner-gated) converts the ledger:
+  entries above it move under a version heading at that moment, not before.
+- Historical section titles written before this law was declared stand
+  verbatim (including the non-KaC `### Prior era snapshot — …` grouping deep
+  in the file) — estate history-verbatim law; corrections append, never
+  rewrite.
+- Forward-entry law for every lane landing here: lead each entry with the
+  **user-visible delta**, then the mechanism; internal churn belongs in the
+  body, not the heading.
+
 ## [Unreleased]
+
+### Security — dev-chain advisory clear + retroactive log of three shipped dependency/CI moves (M-TIZEN-41 / review tizen__writer #1) — 2026-10-30
+
+- **What users see:** nothing — every commit below is dev-chain/CI surface;
+  the shipped widget bytes are unchanged by this entry.
+- **Retroactive log (landed unlogged, ancestors of this ledger's tip, found by
+  `git log` at the W-min169 sweep — M-TIZEN-41):**
+  - 2026-10-20, `7c88559` (Dependabot PR #119, npm_and_yarn group):
+    `postcss-selector-parser` 7.1.4→7.1.6 and `source-map-js` bumped in-range
+    — both advisory-driven dev-chain bumps.
+  - 2026-10-20, `ec4240d` (dep-sec-patcher): `@vue/server-renderer` → 3.5.42 —
+    security patch release taken in range.
+- **Fresh gate (W-min169, M-TIZEN-13):** in-range clears `vite` 7.3.6→7.3.7
+  (5 GHSA ids, dev-server era), `vitest`+`@vitest/coverage-v8` 5.0.1→5.0.5
+  (`@vitest/mocker` 2 ids), `undici` 7.29.1→7.30.1 via jsdom (8 ids). Two
+  dev-chain advisories with NO in-range fix survive under the new
+  `scripts/audit-gate.mjs` allow-list (minimatch `GHSA-g3hv-75wg-m249` —
+  patched only at 11.x, no parent admits it; glob `GHSA-3g3m-2fjr-6pw4` —
+  patched only at 14.x, js-beautify still declares ^13). Neither reaches the
+  bundle. The 2026-10-08 CI-runner pin is logged under Changed below.
+
+### Changed — CI runners pinned to ubuntu-26.04; in-repo Dependabot scope declared (M-TIZEN-41 / M-TIZEN-13) — landed 2026-10-08, logged 2026-10-30
+
+- **What users see:** nothing — CI/infra only.
+- 2026-10-08, `b8d84a1`: build/test/lint Linux jobs moved from
+  `ubuntu-latest` to explicit `ubuntu-26.04` ahead of the runner rollover
+  (estate-wide deliberate migration; action pins already current-major).
+- 2026-10-30: `.github/dependabot.yml` now declares the repo's own update
+  scope (weekly grouped npm, root ecosystem) — the same effective behavior
+  that previously arrived invisibly from organization config (M-TIZEN-13),
+  and `test.yml` gained a final `Security audit` step running
+  `node scripts/audit-gate.mjs`.
 
 ### Fixed — rating-modal key hint matches remote reality; the modal joins the BACK ladder (M-TIZEN-18 / review tizen__writer MAJOR #6) — 2026-10-29
 

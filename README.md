@@ -461,7 +461,8 @@ phlix-tizen-client/
 ├── app/
 │   └── config.xml           # Tizen .wgt manifest (privileges, app id, version)
 ├── scripts/
-│   └── package.js           # assembles package/ from dist/ + config.xml (ESM)
+│   ├── package.js           # assembles package/ from dist/ + config.xml (ESM)
+│   └── audit-gate.mjs       # npm-audit allow-list gate (CI Test final step; M-TIZEN-13)
 ├── tests/
 │   ├── test-setup.ts        # in-memory localStorage mock
 │   ├── fixtures/

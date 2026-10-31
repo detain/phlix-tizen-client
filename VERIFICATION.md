@@ -322,14 +322,16 @@
 **Code Changes**: None
 
 ## Step 5.4 - useResumeSync
-**Decision**: NOT USED (HIGH priority)
-**Rationale**: `useResumeSync` is the cross-device resume READ path - fetches server-side resume positions from `GET /api/v1/users/me/continue-watching` and merges them into `usePlayerStore.mergeServerResume()`. The @phlix/ui PlayerPage does call syncResume on mount, but tizen does NOT explicitly integrate useResumeSync. This means cross-device resume (web→TV) would NOT work - the TV wouldn't fetch server resume positions when the player loads. Tizen has LOCAL resume via usePlayerStore's localStorage-backed resumeMap, but no server sync. HIGH priority: critical for "continue where you left off" across devices.
-**Code Changes**: None (would need implementation for cross-device resume)
+**Decision**: USED — inside the sealed bundle (supersedes the audit-era "NOT USED", corrected 2026-10-30 at the v0.99.10 pin; see the note below)
+**Rationale**: `useResumeSync` is the cross-device resume READ path - fetches server-side resume positions from `GET /api/v1/users/me/continue-watching` and merges them into `usePlayerStore.mergeServerResume()`. The audit-era text below concluded web→TV resume "would NOT work" because tizen source never imports `useResumeSync` — that grep premise is simply not how this seam ships: the call site lives in `@phlix/ui`'s own PlayerPage, which runs verbatim inside the vendored bundle (`package/assets/index-*.js` carries `continue-watching` at this pin — grep 1 hit, re-derived 2026-10-30). The TV fetches server resume positions when the player loads; no tizen-side integration is possible or needed behind the seal.
+**Audit-era text (kept for the record)**: "The @phlix/ui PlayerPage does call syncResume on mount, but tizen does NOT explicitly integrate useResumeSync. This means cross-device resume (web→TV) would NOT work." — FALSE at this pin: calling the bundled PlayerPage IS integrating it.
+**Code Changes**: None needed (the sealed bundle owns the path; every ui re-pin re-greps the marker per docs/ui-port-divergence.md law)
 
 ## Step 5.5 - useResumeReporter
-**Decision**: NOT USED (HIGH priority)
-**Rationale**: `useResumeReporter` is the cross-device resume WRITE path - reports playback position to server via `POST /api/v1/sessions` and `POST /api/v1/sessions/{id}/progress`. Tizen does NOT report playback position to server. This means TV→web resume would not work - positions watched on TV don't sync back to server for other devices. Often paired with useResumeSync - if 5.4 needs implementation, 5.5 likely does too.
-**Code Changes**: None (would need implementation for cross-device resume)
+**Decision**: USED — inside the sealed bundle (supersedes the audit-era "NOT USED", corrected 2026-10-30 at the v0.99.10 pin; see the note below)
+**Rationale**: `useResumeReporter` is the cross-device resume WRITE path - reports playback position to server via `POST /api/v1/sessions` and `POST /api/v1/sessions/{id}/progress`. The audit-era text below ("Tizen does NOT report playback position to server") is FALSE at this pin: `@phlix/ui`'s PhlixApp provides the reporter app-wide (`provide('resumeReporter', useResumeReporter())` — ui@18c76eb0 src/app/PhlixApp.vue:197), the Player injects it, and the shipped bundle carries the endpoint (`/api/v1/sessions` — grep 4 hits in `package/assets/index-*.js`, re-derived 2026-10-30). TV→web resume DOES sync back: positions watched on TV reach the server for other devices.
+**Audit-era text (kept for the record)**: "Tizen does NOT report playback position to server. This means TV→web resume would not work - positions watched on TV don't sync back to server for other devices." — FALSE at this pin for the same sealed-bundle reason as 5.4.
+**Code Changes**: None needed (the sealed bundle owns the path; every ui re-pin re-greps the marker per docs/ui-port-divergence.md law)
 
 ## Step 5.6 - useCommandPaletteHotkey
 **Decision**: NOT TV-APPLICABLE

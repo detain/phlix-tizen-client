@@ -38,3 +38,13 @@ jobs:
           name: test-results-node-${{ matrix.node-version }}
           path: coverage/
           retention-days: 7
+
+      # M-TIZEN-13 (review tizen__devops MIN-3): npm-audit gate. Placed LAST so
+      # a supply-chain red never masks (or is masked by) test results. Raw exit
+      # code, no `|| true`: passes only while every reported advisory id is
+      # explicitly justified in scripts/audit-gate.mjs's ALLOWED_ADVISORIES,
+      # and a broken/injectable audit output exits STRUCTURE-ERROR (2), never
+      # silently 0. The bare `npm audit --audit-level=high` it replaces hides
+      # every sub-high advisory; this gate sees all severities.
+      - name: Security audit
+        run: node scripts/audit-gate.mjs
