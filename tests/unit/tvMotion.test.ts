@@ -56,9 +56,9 @@ describe('tvMotion — pure posture decide (M-TIZEN-35)', () => {
 
   it('apply toggles the agreed class and mirrors the decide verdict', () => {
     const body = fakeBody();
-    expect(applyTvMotionClass(store(null), body)).toBe(true);
+    expect(applyTvMotionClass(store(null), body as unknown as Pick<HTMLElement, "classList">)).toBe(true);
     expect(body._classes.has(TV_MOTION_LITE_CLASS)).toBe(true);
-    expect(applyTvMotionClass(store('full'), body)).toBe(false);
+    expect(applyTvMotionClass(store('full'), body as unknown as Pick<HTMLElement, "classList">)).toBe(false);
     expect(body._classes.has(TV_MOTION_LITE_CLASS)).toBe(false);
   });
 

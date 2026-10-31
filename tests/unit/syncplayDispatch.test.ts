@@ -13,10 +13,11 @@
  * @license MIT
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { reactive, nextTick } from 'vue';
 import { wirePendingPlayMediaDispatcher, type PendingPlayMediaStore, type PendingPlayMediaPlayer } from '@/syncplayDispatch';
 import type { PendingPlayMediaCommand } from '@/api/hubRelay';
+import type { MediaItem } from '@phlix/ui';
 
 function command(over: Partial<PendingPlayMediaCommand> = {}): PendingPlayMediaCommand {
   return {
@@ -54,8 +55,14 @@ function fakeStore(): PendingPlayMediaStore {
   };
 }
 
-function fakePlayer(): PendingPlayMediaPlayer & { setCurrent: ReturnType<typeof vi.fn>; play: ReturnType<typeof vi.fn> } {
-  return { setCurrent: vi.fn(), play: vi.fn() };
+function fakePlayer(): PendingPlayMediaPlayer & {
+  setCurrent: Mock<(media: MediaItem, opts?: { resetPosition?: boolean; streamUrl?: string }) => void>;
+  play: Mock<() => void>;
+} {
+  return {
+    setCurrent: vi.fn<(media: MediaItem, opts?: { resetPosition?: boolean; streamUrl?: string }) => void>(),
+    play: vi.fn<() => void>(),
+  };
 }
 
 beforeEach(() => {
@@ -70,7 +77,7 @@ describe('wirePendingPlayMediaDispatcher — the load-a-new-title path', () => {
   it('loads the resolved title: setCurrent + play + consume', async () => {
     const store = fakeStore();
     const player = fakePlayer();
-    const item = { id: 'media-9', name: 'Inception', type: 'movie' };
+    const item = { id: 'media-9', name: 'Inception', type: 'movie' } as MediaItem;
     const resolveMedia = vi.fn(async () => item);
     const unwatch = wirePendingPlayMediaDispatcher(store, { resolveMedia, player });
     try {
@@ -132,10 +139,10 @@ describe('wirePendingPlayMediaDispatcher — the load-a-new-title path', () => {
     const player = fakePlayer();
     // One resolver per command so the test can settle the FIRST (stale) one
     // independently of the second (current) one.
-    const resolvers = new Map<string, (item: unknown) => void>();
+    const resolvers = new Map<string, (item: MediaItem) => void>();
     const resolveMedia = vi.fn(
       ({ mediaId }: { mediaId: string }) =>
-        new Promise((r) => {
+        new Promise<MediaItem>((r) => {
           resolvers.set(mediaId, r);
         }),
     );
@@ -146,7 +153,7 @@ describe('wirePendingPlayMediaDispatcher — the load-a-new-title path', () => {
       // A newer command replaces the pending one while resolution is in flight.
       store.pendingPlayMedia = command({ mediaId: 'media-10', title: 'Tenet' });
       await nextTick();
-      resolvers.get('media-9')?.({ id: 'media-9', name: 'Inception' });
+      resolvers.get('media-9')?.({ id: 'media-9', name: 'Inception' } as MediaItem);
       await nextTick();
       await nextTick();
 
@@ -162,7 +169,7 @@ describe('wirePendingPlayMediaDispatcher — the load-a-new-title path', () => {
   it('does nothing when the slot is cleared', async () => {
     const store = fakeStore();
     const player = fakePlayer();
-    const resolveMedia = vi.fn(async () => ({ id: 'media-9' }));
+    const resolveMedia = vi.fn(async () => ({ id: 'media-9' }) as MediaItem);
     const unwatch = wirePendingPlayMediaDispatcher(store, { resolveMedia, player });
     try {
       store.pendingPlayMedia = null;

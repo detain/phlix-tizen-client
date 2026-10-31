@@ -38,14 +38,14 @@ class FakeTransport {
     return this;
   }
 
-  get(endpoint: string, _params?: Record<string, string>): Promise<unknown> {
+  get<T = unknown>(endpoint: string, _params?: Record<string, string>): Promise<T> {
     this.calls.push({ method: 'GET', endpoint });
-    return this.settle(endpoint);
+    return this.settle(endpoint) as Promise<T>;
   }
 
-  post(endpoint: string, data?: unknown): Promise<unknown> {
+  post<T = unknown>(endpoint: string, data?: unknown): Promise<T> {
     this.calls.push({ method: 'POST', endpoint, data });
-    return this.settle(endpoint);
+    return this.settle(endpoint) as Promise<T>;
   }
 
   private settle(endpoint: string): Promise<unknown> {

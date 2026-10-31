@@ -62,7 +62,11 @@ class FakeTransport implements HeartbeatTransport {
   }
 }
 
-function makeDeps(over: Partial<TelemetryDeps> = {}) {
+function makeDeps(
+  // The transport slot takes FakeTransport (not the wider HeartbeatTransport)
+  // so tests can read the recording fields; TelemetryDeps.transport accepts it.
+  over: Partial<Omit<TelemetryDeps, 'transport'>> & { transport?: FakeTransport } = {},
+) {
   const storage = over.storage ?? new FakeStorage();
   const transport = over.transport ?? new FakeTransport();
   const armed: { fn?: () => void; ms?: number; cancel: number } = { cancel: 0 };

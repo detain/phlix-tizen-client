@@ -155,11 +155,10 @@ describe('useSyncPlayStore', () => {
     describe('onlineMembers', () => {
       it('filters members by isOnline', () => {
         const store = useSyncPlayStore();
-        // @ts-expect-error - setting directly for test
         store.members = [
-          { id: '1', name: 'User 1', isOnline: true },
-          { id: '2', name: 'User 2', isOnline: false },
-          { id: '3', name: 'User 3', isOnline: true }
+          { id: '1', name: 'User 1', profileId: 0, role: 'owner', isOnline: true, lastSeen: '2026-01-01T00:00:00.000Z' },
+          { id: '2', name: 'User 2', profileId: 0, role: 'contributor', isOnline: false, lastSeen: '2026-01-01T00:00:00.000Z' },
+          { id: '3', name: 'User 3', profileId: 0, role: 'none', isOnline: true, lastSeen: '2026-01-01T00:00:00.000Z' }
         ];
         expect(store.onlineMembers).toHaveLength(2);
       });
@@ -197,9 +196,7 @@ describe('useSyncPlayStore', () => {
   describe('clearError', () => {
     it('clears both error and wsError', () => {
       const store = useSyncPlayStore();
-      // @ts-expect-error - setting directly for test
       store.error = 'Some error';
-      // @ts-expect-error - setting directly for test
       store.wsError = 'WebSocket error';
       store.clearError();
       expect(store.error).toBeNull();
@@ -282,7 +279,7 @@ describe('useSyncPlayStore', () => {
       const store = useSyncPlayStore();
       // @ts-expect-error - setting directly for test
       store.currentSession = { id: 'session-1', state: 'paused' };
-      const command = { type: 'play', position: 100 };
+      const command = { type: 'play', position: 100 } as const;
       store.onRemoteCommand(command);
       expect(store.currentSession?.state).toBe('playing');
     });
@@ -291,7 +288,7 @@ describe('useSyncPlayStore', () => {
       const store = useSyncPlayStore();
       // @ts-expect-error - setting directly for test
       store.currentSession = { id: 'session-1', state: 'playing' };
-      const command = { type: 'pause' };
+      const command = { type: 'pause' } as const;
       store.onRemoteCommand(command);
       expect(store.currentSession?.state).toBe('paused');
     });
@@ -300,7 +297,7 @@ describe('useSyncPlayStore', () => {
       const store = useSyncPlayStore();
       // @ts-expect-error - setting directly for test
       store.currentSession = { id: 'session-1', state: 'playing', playbackPosition: 50 };
-      const command = { type: 'seek', position: 200 };
+      const command = { type: 'seek', position: 200 } as const;
       store.onRemoteCommand(command);
       expect(store.currentSession?.playbackPosition).toBe(200);
     });
@@ -309,7 +306,7 @@ describe('useSyncPlayStore', () => {
       const store = useSyncPlayStore();
       // @ts-expect-error - setting directly for test
       store.currentSession = { id: 'session-1', state: 'playing', playbackPosition: 50, playbackRate: 1.0 };
-      const command = { type: 'sync', position: 300, rate: 1.5 };
+      const command = { type: 'sync', position: 300, rate: 1.5 } as const;
       store.onRemoteCommand(command);
       expect(store.currentSession?.playbackPosition).toBe(300);
       expect(store.currentSession?.playbackRate).toBe(1.5);
@@ -385,7 +382,6 @@ describe('useSyncPlayStore', () => {
 
     it('clears error at start', async () => {
       const store = useSyncPlayStore();
-      // @ts-expect-error - setting directly for test
       store.error = 'Previous error';
 
       mockFetch.mockResolvedValueOnce({
@@ -922,7 +918,6 @@ describe('useSyncPlayStore', () => {
       // @ts-expect-error - setting directly for test
       store.currentSession = { id: 'session-1', state: 'playing' };
       walkToExhaustion();
-      // @ts-expect-error - setting directly for test
       store.currentSession = null; // left while hidden
       const dialed = MockWebSocket.instances.length;
       src.fire('visible');

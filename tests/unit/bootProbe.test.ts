@@ -37,7 +37,7 @@ describe('probeBootBase (S515 AD-3)', () => {
       probeBootBase('http://my-tv-server:8096', fetchSpy as unknown as typeof fetch)
     ).resolves.toBe('reachable');
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    const [url, init] = fetchSpy.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('http://my-tv-server:8096/health');
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });

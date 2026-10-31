@@ -33,7 +33,7 @@ function cspContent(source: string): string {
   const match = /http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(source)
     ?? /content="([^"]+)"\s+http-equiv="Content-Security-Policy"/.exec(source);
   expect(match, 'CSP meta tag present').not.toBeNull();
-  return match[1];
+  return match![1];
 }
 
 describe('cspPolicy — script-src strictness (M-TIZEN-22)', () => {

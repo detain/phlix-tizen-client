@@ -19,7 +19,6 @@ import { useSyncPlayStore } from '@/stores/useSyncPlayStore';
  * pins reddened under that implementation and hold the honest one.
  */
 
-// @ts-expect-error - test-local fetch mock, mirrors useSyncPlayStore.test.ts
 const mockFetch = vi.fn();
 globalThis.fetch = mockFetch;
 

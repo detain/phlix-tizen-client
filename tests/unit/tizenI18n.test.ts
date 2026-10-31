@@ -139,22 +139,6 @@ const EXPECTED: Record<string, string> = {
   "subtitleTracks.languageNote": "Subtitles are matched by language — rows sharing a language behave identically.",
   "tracks.durationAria": "{title} — {duration}",
   "tracks.playAria": "Play {title}",
-  "ratings.badgeAria": "Rating: {score} out of 10",
-  "ratings.unrated": "unrated",
-  "ratings.modalTitle": "Rate This Title",
-  "ratings.modalCloseAria": "Close rating modal",
-  "ratings.communityRating": "Community Rating",
-  "ratings.yourRatingHeading": "Your Rating",
-  "ratings.pressBackPrefix": "Press ",
-  "ratings.pressBackKey": "Back",
-  "ratings.pressBackSuffix": " to close (or Esc on a keyboard)",
-  "ratings.pickerAria": "Rate this media",
-  "ratings.yourRatingLabel": "Your rating",
-  "ratings.currentRatingAria": "Current rating: {rating} of 10",
-  "ratings.starAria": "{stars} star ({score} of 10)",
-  "ratings.starsAria": "{stars} stars ({score} of 10)",
-  "ratings.notRated": "Not rated",
-  "ratings.saveFailedToast": "Failed to save rating: {message}",
   "recommendations.cardAria": "{title} ({year}) — {percent}% match",
   "recommendations.cardAriaNoYear": "{title} — {percent}% match",
   "recommendations.posterAlt": "Poster for {title}",
@@ -274,14 +258,15 @@ describe('tizen-own catalog — integrity', () => {
   });
 
   it('every value is a non-empty trimmed-ish string', () => {
-    const ALLOWED_EDGE_SPACE = new Set(['ratings.pressBackPrefix', 'ratings.pressBackSuffix']);
+    // W-min173 truth-rotation: the ratings.pressBack pair was the ONLY
+    // edge-space holder in the catalog; it left with the orphaned rating
+    // trio (M-TIZEN-04), so the exception list is gone and the law is now
+    // unconditional trim.
     for (const [key, value] of Object.entries(actual)) {
       expect(typeof value).toBe('string');
       expect(value.length, key).toBeGreaterThan(0);
-      if (!ALLOWED_EDGE_SPACE.has(key)) {
-        expect(value, `leading space at ${key}`).toBe(value.trimStart());
-        expect(value, `trailing space at ${key}`).toBe(value.trimEnd());
-      }
+      expect(value, `leading space at ${key}`).toBe(value.trimStart());
+      expect(value, `trailing space at ${key}`).toBe(value.trimEnd());
       expect(value, `double space at ${key}`).not.toContain('  ');
       expect(value, `tab at ${key}`).not.toContain('\t');
     }

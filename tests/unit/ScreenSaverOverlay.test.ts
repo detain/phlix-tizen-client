@@ -267,11 +267,11 @@ describe('ScreenSaverOverlay — reduced motion keeps burn-in protection (M-TIZE
   it('the survival mechanism is STEPPED motion: discrete repositioning, nothing sweeps', () => {
     const driftRule = /\.screensaver__drift\s*\{([^}]*)\}/.exec(reduceBlock);
     expect(driftRule).not.toBeNull();
-    expect(driftRule[1]).toContain('steps(1, end)');
+    expect(driftRule![1]).toContain('steps(1, end)');
     // Still the same drift keyframes and cadence — only the timing FUNCTION
     // changes from smooth to teleporting between the two safe offsets.
-    expect(driftRule[1]).toContain('42s');
-    expect(driftRule[1]).toContain('infinite alternate');
+    expect(driftRule![1]).toContain('42s');
+    expect(driftRule![1]).toContain('infinite alternate');
   });
 
   it('the photosensitivity triggers stay OFF: halo breathe and the entry fade do not animate under reduce', () => {

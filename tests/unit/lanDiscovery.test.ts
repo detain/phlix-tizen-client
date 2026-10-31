@@ -142,7 +142,7 @@ describe('probeHealth (per-host verdict)', () => {
     expect(res.base).toBe('http://h:8096');
     expect(res.version).toBe('1.2.3');
     expect(res.status).toBe('ok');
-    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    const [url, init] = spy.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('http://h:8096/health');
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });

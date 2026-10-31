@@ -31,6 +31,17 @@ jobs:
       - name: Run unit tests (with coverage floor gate — S501 T-13)
         run: npx vitest run --coverage
 
+      # M-TIZEN-12 (review tizen__devops MIN-2): tests/ and scripts/ typecheck.
+      # The prod `vue-tsc --noEmit` gate covers src/ only, so type drift in test
+      # fixtures and dev scripts (vitest mock generics, JSDoc on the .mjs/.js
+      # tooling) previously surfaced only at runtime. `npm run typecheck:tests`
+      # checks everything else with the same strict settings; the only files
+      # outside it are the shrink-only ledger in tsconfig.tests.json's
+      # "exclude" (vitest v5 mock-typing migration owed) — enforced by
+      # tests/unit/testsTypecheckLedger.test.ts.
+      - name: Type-check tests and scripts
+        run: npm run typecheck:tests
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v7

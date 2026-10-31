@@ -20,11 +20,15 @@
 // cannot be edited client-side).
 
 // `at` is ES2022 (tsconfig lib is ES2020); declare the polyfilled shape
-// locally instead of widening the whole lib. If a future lib bump supplies
-// `at` for real, this optional member merges without conflict.
+// locally instead of widening the whole lib. DECLARED NON-OPTIONAL ON PURPOSE:
+// this module IS the existence guarantee — it installs `at` before any import
+// sees it (the file is main.ts's first import), and a future lib bump supplies
+// the identical member for real. The optional spelling (`at?`) made every
+// test-side call site a TS2722 "possibly undefined" with no way to be honest,
+// which the W-min173 tests-tsconfig gate measured.
 declare global {
   interface Array<T> {
-    at?(index: number): T | undefined;
+    at(index: number): T | undefined;
   }
 }
 

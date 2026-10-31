@@ -154,25 +154,6 @@ const tracks = {
   playAria: '{title}を再生',
 };
 
-const ratings = {
-  badgeAria: '評価: {score} / 10',
-  unrated: '未評価',
-  modalTitle: 'この作品を評価',
-  modalCloseAria: '評価モーダルを閉じる',
-  communityRating: 'コミュニティ評価',
-  yourRatingHeading: 'あなたの評価',
-  pressBackPrefix: '閉じるには ',
-  pressBackKey: '戻る',
-  pressBackSuffix: ' キー（キーボードでは Esc）を押します',
-  pickerAria: 'このメディアを評価',
-  yourRatingLabel: 'あなたの評価',
-  currentRatingAria: '現在の評価: {rating} / 10',
-  starAria: '星{stars}（{score} / 10）',
-  starsAria: '星{stars}（{score} / 10）',
-  notRated: '評価されていません',
-  saveFailedToast: '評価を保存できませんでした: {message}',
-};
-
 const recommendations = {
   cardAria: '{title}（{year}年）— 一致度{percent}%',
   cardAriaNoYear: '{title} — 一致度{percent}%',
@@ -300,7 +281,6 @@ export const JA_TIZEN_MESSAGES = {
   audioTracks,
   subtitleTracks,
   tracks,
-  ratings,
   recommendations,
   music,
   quickConnect,

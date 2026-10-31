@@ -10,10 +10,16 @@ import { join, extname, basename } from 'node:path';
 const COPYRIGHT = ' * @copyright 2026 Joe Huss <detain@interserver.net>';
 
 const EXCLUDE_DIRS = new Set(['node_modules', 'dist', 'vendor', '.git', 'coverage', '.github', 'build']);
+/** @type {Set<string>} */
 const EXCLUDE_FILES = new Set([]);
 const TS_EXTS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const VUE_EXT = '.vue';
 
+/**
+ * @param {string} dir
+ * @param {string[]} files
+ * @returns {string[]}
+ */
 function walk(dir, files = []) {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
@@ -30,11 +36,17 @@ function walk(dir, files = []) {
   return files;
 }
 
+/** @param {string} line */
 function isShebang(line) {
   return line.startsWith('#!');
 }
 
 // Find the line index (0-based) where a TS/JS docblock ends (contains star-slash)
+/**
+ * @param {string[]} lines
+ * @param {number} start
+ * @returns {number}
+ */
 function findDocblockEnd(lines, start) {
   for (let i = start; i < lines.length; i++) {
     if (lines[i].includes('*/')) return i;
@@ -46,6 +58,7 @@ function findDocblockEnd(lines, start) {
 // Returns null if no top-level docblock OR copyright already present.
 // Only considers /** at the very start of the file (after optional shebang)
 // to avoid misinterpreting TypeScript type expressions like `TokenTarget & { */ }`.
+/** @param {string} content @returns {string | null} */
 function injectTsDocblock(content) {
   const lines = content.split('\n');
 
@@ -76,6 +89,7 @@ function injectTsDocblock(content) {
 }
 
 // Prepend a new TS/JS docblock at the top (after any shebang).
+/** @param {string} content */
 function prependTsDocblock(content) {
   const lines = content.split('\n');
   let offset = 0;
@@ -93,6 +107,7 @@ function prependTsDocblock(content) {
   return [...lines.slice(0, offset), ...docblock, ...lines.slice(offset)].join('\n');
 }
 
+/** @param {string} filepath @returns {string | null} */
 function processTsFile(filepath) {
   const content = readFileSync(filepath, 'utf8');
   if (content.toLowerCase().includes('detain@interserver.net')) return null;
@@ -101,6 +116,7 @@ function processTsFile(filepath) {
 
 // Inject copyright into an existing Vue <script> block.
 // Finds the <script> tag, then looks for a docblock inside.
+/** @param {string} content @returns {string | null} */
 function injectVueScriptDocblock(content) {
   const lines = content.split('\n');
 
@@ -160,6 +176,7 @@ function injectVueScriptDocblock(content) {
 }
 
 // Prepend a docblock at the start of the <script> block content
+/** @param {string} content */
 function prependVueScriptDocblock(content) {
   const lines = content.split('\n');
 
@@ -196,6 +213,7 @@ function prependVueScriptDocblock(content) {
   return out.join('\n');
 }
 
+/** @param {string} filepath @returns {string | null} */
 function processVueFile(filepath) {
   const content = readFileSync(filepath, 'utf8');
   if (content.toLowerCase().includes('detain@interserver.net')) return null;

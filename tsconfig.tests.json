@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": { "@/*": ["src/*"] },
+    "types": ["vite/client", "node", "vitest/globals"],
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": ["src", "vite-env.d.ts", "tests", "scripts"],
+  "exclude": ["tests/unit/tizenBridge.test.ts", "tests/unit/main.test.ts"],
+  "references": []
+}

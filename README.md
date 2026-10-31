@@ -261,7 +261,10 @@ webviews (`maxBufferLength`, `capLevelToPlayerSize`, `enableSoftwareAES`, etc.).
 ### Type-check
 
 ```bash
-npm run typecheck   # vue-tsc --noEmit
+npm run typecheck        # vue-tsc --noEmit (src/)
+npm run typecheck:tests  # vue-tsc -p tsconfig.tests.json (src/, tests/, scripts/ —
+                         # same strict base; shrink-only ledger excludes two
+                         # vitest-v5-era files, see testsTypecheckLedger.test.ts)
 ```
 
 ### Production Build

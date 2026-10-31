@@ -152,25 +152,6 @@ const tracks = {
   playAria: 'Lire {title}',
 };
 
-const ratings = {
-  badgeAria: 'Note : {score} sur 10',
-  unrated: 'non noté',
-  modalTitle: 'Noter ce titre',
-  modalCloseAria: 'Fermer la fenêtre de notation',
-  communityRating: 'Note de la communauté',
-  yourRatingHeading: 'Votre note',
-  pressBackPrefix: 'Appuyez sur ',
-  pressBackKey: 'Retour',
-  pressBackSuffix: ' pour fermer (ou Esc au clavier)',
-  pickerAria: 'Noter ce média',
-  yourRatingLabel: 'Votre note',
-  currentRatingAria: 'Note actuelle : {rating} sur 10',
-  starAria: '{stars} étoile ({score} sur 10)',
-  starsAria: '{stars} étoiles ({score} sur 10)',
-  notRated: 'Non noté',
-  saveFailedToast: 'Échec de l’enregistrement de la note : {message}',
-};
-
 const recommendations = {
   cardAria: '{title} ({year}) — correspondance à {percent} %',
   cardAriaNoYear: '{title} — correspondance à {percent} %',
@@ -297,7 +278,6 @@ export const FR_TIZEN_MESSAGES = {
   audioTracks,
   subtitleTracks,
   tracks,
-  ratings,
   recommendations,
   music,
   quickConnect,

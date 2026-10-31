@@ -182,25 +182,6 @@ const tracks = {
   playAria: 'Play {title}',
 } satisfies Record<string, string>;
 
-const ratings = {
-  badgeAria: 'Rating: {score} out of 10',
-  unrated: 'unrated',
-  modalTitle: 'Rate This Title',
-  modalCloseAria: 'Close rating modal',
-  communityRating: 'Community Rating',
-  yourRatingHeading: 'Your Rating',
-  pressBackPrefix: 'Press ',
-  pressBackKey: 'Back',
-  pressBackSuffix: ' to close (or Esc on a keyboard)',
-  pickerAria: 'Rate this media',
-  yourRatingLabel: 'Your rating',
-  currentRatingAria: 'Current rating: {rating} of 10',
-  starAria: '{stars} star ({score} of 10)',
-  starsAria: '{stars} stars ({score} of 10)',
-  notRated: 'Not rated',
-  saveFailedToast: 'Failed to save rating: {message}',
-} satisfies Record<string, string>;
-
 const recommendations = {
   cardAria: '{title} ({year}) — {percent}% match',
   cardAriaNoYear: '{title} — {percent}% match',
@@ -335,7 +316,6 @@ export const TIZEN_EN = {
   audioTracks,
   subtitleTracks,
   tracks,
-  ratings,
   recommendations,
   music,
   quickConnect,

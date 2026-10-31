@@ -40,8 +40,8 @@ describe('widgetSecurityPolicy — config.xml manifest (M-TIZEN-23 / M-TIZEN-38)
       const code = source.replace(/<!--[\s\S]*?-->/g, '');
       const setting = /<tizen:setting\b[^>]*?\/>/.exec(code);
       expect(setting, 'tizen:setting row present').not.toBeNull();
-      expect(setting[0]).toContain('encryption="enable"');
-      expect(setting[0]).not.toContain('encryption="disable"');
+      expect(setting![0]).toContain('encryption="enable"');
+      expect(setting![0]).not.toContain('encryption="disable"');
     });
 
     it(`${carrier}: the flip carries its tradeoff comment (re-login cost recorded, not hidden)`, () => {

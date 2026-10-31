@@ -22,7 +22,7 @@ const createTrack = (overrides: Partial<SubtitleTrack> = {}): SubtitleTrack => (
   ...overrides
 });
 
-function mountComponent(props: {
+function mountComponent(props?: {
   tracks?: SubtitleTrack[];
   activeTrackId?: string | null;
   onSelect?: (track: SubtitleTrack | null) => void;

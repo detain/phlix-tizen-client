@@ -379,6 +379,7 @@ npm install
 npm run dev          # vite dev server at :8080
 npm run test:watch   # vitest in watch mode
 npm run typecheck    # vue-tsc --noEmit
+npm run typecheck:tests  # vue-tsc -p tsconfig.tests.json (src/ + tests/ + scripts/)
 npm run lint         # eslint .
 npm run lint:fix     # eslint . --fix
 ```
@@ -421,7 +422,7 @@ built to vanish off-device:
   `docs/signing.md` for the TV-as-device walk, including the `sdb` DevTools
   debug port (26101) for inspecting the app ON the TV.
 
-None of the CI gates (`npm run test` / `typecheck` / `lint` / `build`) ever
+None of the CI gates (`npm run test` / `typecheck` / `typecheck:tests` / `lint` / `build`) ever
 require a device: the whole suite drives these seams with fakes.
 
 ### Production build + packaging

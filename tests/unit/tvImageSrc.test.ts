@@ -11,7 +11,9 @@
  *
  * NOTE: src/pages/MusicPage.vue is an ORPHAN at this pin (not routed by
  * main.ts — the live music surface ships inside the sealed ui bundle; same
- * family as the unconsumed RatingModal/SubtitleTrackList components). It is
+ * family as the former unconsumed RatingModal components — DELETED at
+ * W-min173/M-TIZEN-04 — and the still-unconsumed SubtitleTrackList
+ * component). It is
  * guarded anyway: source honesty — if it is ever wired, it must not be the
  * one door left open.
  *

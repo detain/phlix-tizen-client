@@ -10,7 +10,7 @@
  *     (incl. the documented additive exception), diacritics/CJK sanity, and
  *     PIN/hash drift guards against the vendored files (CI-skipped source
  *     leg, see below).
- *  B. TIZEN-OWN: 200-key identity per locale, placeholder parity, the
+ *  B. TIZEN-OWN: 184-key identity per locale, placeholder parity, the
  *     additive-pipe plural doctrine (latin 2-seg on exactly 12 keys), JA zero
  *     pipes + counter phrases, per-locale English-LEAK allow-lists verified
  *     BOTH directions, diacritics aggregates.
@@ -122,7 +122,10 @@ const CJK = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/;
 const LATIN_SPECS: Record<string, { re: RegExp; min: number }> = {
   es: { re: /[áéíóúüñ¿¡]/, min: 50 },
   fr: { re: /[àâäéèêëîïôùûüçœ]/, min: 50 },
-  de: { re: /[äöüß]/, min: 40 },
+  de: { re: /[äöüß]/, min: 39 }, // W-min173: 40→39 measured-at-red — the orphaned rating
+  // trio's deletion (M-TIZEN-04) removed one accented ratings value from the
+  // de mirror; floors here are measured anti-rot minimums, re-derived at the
+  // red they caused (all other locales still clear their pins).
   it: { re: /[àèéìòù]/, min: 4 },
   pt_BR: { re: /[ãõáâàéêíóôúçü]/, min: 30 },
 };
@@ -421,12 +424,12 @@ describe('ui bundles — key-set identity and installed coverage', () => {
 // ---------------------------------------------------------------------------
 
 describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
-  it('every locale table has EXACTLY the 200 English keys (both directions)', () => {
+  it('every locale table has EXACTLY the 184 English keys (both directions)', () => {
     const reference = keySet(TIZEN_EN as unknown as Table);
     for (const locale of LOCALES) {
       expect(keySet(TIZEN_TABLES[locale]), `${locale} key set differs from en`).toBe(reference);
     }
-    expect(EN_TIZEN.size).toBe(200);
+    expect(EN_TIZEN.size).toBe(184);
   });
 
   it('every value keeps its key\'s {placeholder} set verbatim', () => {
@@ -513,11 +516,9 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     }
   });
 
-  it('values are trimmed except the shared pressBack edge-space pair', () => {
-    const EDGE_SPACES = new Set(['ratings.pressBackPrefix', 'ratings.pressBackSuffix']);
+  it('values are trimmed (W-min173: the former pressBack edge-space pair left with the rating trio)', () => {
     for (const locale of LOCALES) {
       for (const [key, value] of flat(TIZEN_TABLES[locale])) {
-        if (EDGE_SPACES.has(key)) continue;
         expect(value, `${locale} ${key} edge whitespace`).toBe(value.trim());
       }
     }
@@ -550,7 +551,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     expect(nonCjk).toEqual([...EN_LEAK_OK.ja].sort());
   });
 
-  it('the 200-key type law: every locale compiles against TizenCatalog (satisfies)', () => {
+  it('the 184-key type law: every locale compiles against TizenCatalog (satisfies)', () => {
     // Compile-time guarantee, re-asserted at runtime via key-set identity;
     // this it() documents that the `satisfies TizenCatalog` annotations in
     // src/i18n/tizen/locales/*.ts are the FIRST line of that defense.

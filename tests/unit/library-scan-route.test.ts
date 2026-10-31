@@ -40,11 +40,11 @@ function libraryScanRouteBlock(): string {
 
 describe('/app/library/scan route gate (L-4)', () => {
   it('carries meta.requiresAdmin === true in source', () => {
-    expect(libraryScanRouteBlock()).toMatch(
-      /meta:\s*\{\s*requiresAdmin:\s*true\s*\}/,
+    expect(
+      libraryScanRouteBlock(),
       'the library-scan route must set `meta: { requiresAdmin: true }` — ' +
         'the exact key the vendored ui authGuard checks',
-    );
+    ).toMatch(/meta:\s*\{\s*requiresAdmin:\s*true\s*\}/);
   });
 
   it('uses the SAME meta shape the vendored admin section carries (live cross-check)', () => {

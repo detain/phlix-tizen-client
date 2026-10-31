@@ -305,11 +305,20 @@ export function createQuickConnectLayer(): BackLayer {
  * Attribute the RatingModal overlay root carries WHILE visible (M-TIZEN-18).
  * The BACK ladder probes it so the rating dialog is a closable layer — the
  * hint on its footer names the Back key, and this is what makes that true.
+ * W-min173 truth-note (M-TIZEN-04): the client-owned `RatingModal.vue` that
+ * produced this attribute was deleted as an orphan — no code path ever
+ * mounted it, and the live rating surface ships inside the sealed ui
+ * MediaDetailPage chunk. The probe is therefore INERT today and kept
+ * deliberately: if a rating modal ever renders again (client-side or from a
+ * future ui bundle carrying the attribute), the closable-layer semantics
+ * must already be in the ladder, not re-derived.
  */
 export const RATING_MODAL_SELECTOR = '[data-rating-modal]';
 
 /**
- * The rating modal (client-owned, z-9999) as a closable BACK layer
+ * The rating modal (historically the client-owned RatingModal.vue at z-9999;
+ * INERT since W-min173 — see the RATING_MODAL_SELECTOR note above for why the
+ * layer is kept) as a closable BACK layer
  * (M-TIZEN-18, tizen__writer MAJOR #6). Same ring-the-bell contract as the
  * quick-connect layer: BACK dispatches an Escape keydown ON the overlay root
  * and the modal's own document-level Escape handler decides what closing

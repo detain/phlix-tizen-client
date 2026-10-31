@@ -115,12 +115,12 @@ class FakeVisibilitySource {
   addCount = 0;
   removeCount = 0;
 
-  addEventListener(type: 'visibilitychange', listener: () => void): void {
+  addEventListener(_type: 'visibilitychange', listener: () => void): void {
     this.listeners.push(listener);
     this.addCount++;
   }
 
-  removeEventListener(type: 'visibilitychange', listener: () => void): void {
+  removeEventListener(_type: 'visibilitychange', listener: () => void): void {
     this.listeners = this.listeners.filter((l) => l !== listener);
     this.removeCount++;
   }

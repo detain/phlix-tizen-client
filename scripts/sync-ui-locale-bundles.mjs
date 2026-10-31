@@ -62,16 +62,23 @@ const SOURCE_IMPORT_LINE = "import type { PhlixMessages } from '../messages';\n"
 /** Its client-side replacement: the same type, exported by the installed package. */
 const VENDORED_IMPORT_LINE = "import type { PhlixMessages } from '@phlix/ui';\n";
 
+/** @param {string} text @returns {string} */
 function sha256(text) {
   return createHash('sha256').update(text, 'utf8').digest('hex');
 }
 
+/**
+ * @param {string} flag
+ * @param {string} fallback
+ * @returns {string}
+ */
 function arg(flag, fallback) {
   const i = process.argv.indexOf(flag);
   return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
 /** Deterministic source→vendored rewrite (the single transform; docblock has the why). */
+/** @param {string} file @param {string} source @returns {string} */
 function vendored(file, source) {
   if (!source.includes(SOURCE_IMPORT_LINE.trim())) {
     throw new Error(`${file}: the pinned '../messages' PhlixMessages import is gone upstream — update the script`);
@@ -133,6 +140,7 @@ for (const file of FILES) {
   process.stdout.write(`vendored ${file} (${out.length} bytes)\n`);
 }
 
+/** @param {string} gitRepo @param {string} gitRef @param {string} file @returns {string} */
 function execFileSyncText(gitRepo, gitRef, file) {
   try {
     return execFileSync('git', ['-C', gitRepo, 'show', `${gitRef}:${SOURCE_DIR}/${file}`], {

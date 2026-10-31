@@ -31,6 +31,11 @@ const MARK = { r: 242, g: 193, b: 78, a: 255 }; // #F2C14E
 const TRANSPARENT = { r: 0, g: 0, b: 0, a: 0 };
 
 /** True when (x,y) lies inside the rounded-square widget tile. */
+/**
+ * @param {number} x
+ * @param {number} y
+ * @returns {boolean}
+ */
 function insideRoundedSquare(x, y) {
   const r = CORNER_RADIUS;
   if (x < r || y < r || x > SIZE - 1 - r || y > SIZE - 1 - r) {
@@ -47,10 +52,24 @@ function insideRoundedSquare(x, y) {
 }
 
 /** Barycentric sign test for a right-pointing play triangle. */
+/**
+ * @param {number} x
+ * @param {number} y
+ * @returns {boolean}
+ */
 function insidePlayMark(x, y) {
   const ax = 50, ay = 42;
   const bx = 50, by = 86;
   const cx = 92, cy = 64;
+  /**
+   * @param {number} px
+   * @param {number} py
+   * @param {number} qx
+   * @param {number} qy
+   * @param {number} rx
+   * @param {number} ry
+   * @returns {number}
+   */
   const sign = (px, py, qx, qy, rx, ry) =>
     (px - rx) * (qy - ry) - (qx - rx) * (py - ry);
   const d1 = sign(x, y, ax, ay, bx, by);
@@ -61,6 +80,11 @@ function insidePlayMark(x, y) {
   return !(hasNeg && hasPos);
 }
 
+/**
+ * @param {number} x
+ * @param {number} y
+ * @returns {{ r: number, g: number, b: number, a: number }}
+ */
 function pixelAt(x, y) {
   if (!insideRoundedSquare(x, y)) return TRANSPARENT;
   if (insidePlayMark(x, y)) return MARK;
@@ -94,12 +118,14 @@ const CRC_TABLE = (() => {
   return table;
 })();
 
+/** @param {Buffer | Uint8Array} buf @returns {number} */
 function crc32(buf) {
   let c = 0xffffffff;
   for (let n = 0; n < buf.length; n++) c = CRC_TABLE[c ^ buf[n]] ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
 }
 
+/** @param {string} type @param {Buffer} data @returns {Buffer} */
 function chunk(type, data) {
   const length = Buffer.alloc(4);
   length.writeUInt32BE(data.length, 0);

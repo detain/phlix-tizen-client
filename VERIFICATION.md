@@ -53,6 +53,7 @@
 **Decision**: ALREADY SUFFICIENT (partial usage)
 **Rationale**: The store is actively functional in UserRatingPicker.vue with proper error handling (toast.error() on rating save failure with 4s auto-dismiss). Partial usage is sufficient for tizen's needs - the store provides all toast capability currently required. No gaps identified in tizen's toast usage.
 **Code Changes**: None (already integrated via @phlix/ui - no code needed)
+**Currency (W-min173, 2026-10-30)**: UserRatingPicker.vue was DELETED at W-min173 (MINORS M-TIZEN-04, review tizen__casualgamer m4) — it was born-orphaned, never mounted by any code path. The historical rationale above is preserved verbatim per the ledger's history-verbatim law; this audit-era text no longer describes live code.
 
 ## Step 4.11 - usePreferencesStore
 **Decision**: ALREADY SUFFICIENT (partial usage)
@@ -104,6 +105,7 @@
 **Status**: TV-SPECIFIC (justified) - No action needed
 **Finding**: No phlix-ui equivalent found. This is a TV-specific modal component combining RatingBadge and UserRatingPicker.
 **Code Changes**: None (comment added)
+**Currency (W-min173, 2026-10-30)**: Steps 2.2.1-2.2.3 above (RatingBadge/UserRatingPicker/RatingModal) are superseded — the trio was DELETED as born-orphaned (nothing ever imported or mounted it; the live rating surface is the sealed @phlix/ui MediaDetailPage chunk's own controls). MINORS M-TIZEN-04; `createRatingModalLayer` in tizenBridge.ts stays as the documented inert forward probe. History preserved verbatim per this ledger's law.
 
 ## Step 2.3.1 - ChapterList.vue
 **Status**: TV-SPECIFIC (justified)
@@ -853,6 +855,7 @@ This category examines Music API endpoints, data structures, and whether they ma
 **Finding**: `UserRatingPicker.vue` (line 79) correctly calls `await auth.client.setRating(props.mediaId, finalRating)` via the ApiClient. The component provides half-star precision (via `starState()` function at line 64-68), D-pad navigation, optimistic UI with error toast on failure. This is a TV-SPECIFIC reimplementation of phlix-ui's UserRatingPicker which lacks half-star support. The `setRating` API integration is correct and functional.
 **Code Changes**: None (already correctly integrated)
 **Evidence**: `UserRatingPicker.vue:79` - `await auth.client.setRating(props.mediaId, finalRating)`
+**Currency (W-min173, 2026-10-30)**: The cited call site no longer exists — `UserRatingPicker.vue` was deleted as born-orphaned (MINORS M-TIZEN-04; see the 2.2.1-2.2.3 currency note). The line anchors above were true at audit time and are kept verbatim per ledger law.
 
 ## Step 8.6 - markWatched / markUnwatched
 **Decision**: NOT TV-APPLICABLE
@@ -888,7 +891,7 @@ This category examines Music API endpoints, data structures, and whether they ma
 | 8.8 | Music library redirect | ALREADY SUFFICIENT | Works through createPhlixApp base routing |
 
 **Decision Distribution**:
-- **ALREADY SUFFICIENT**: 1 step (8.5) — correctly integrated (both line anchors re-verified at tip: UserRatingPicker.vue:64 starState, :79 setRating)
+- **ALREADY SUFFICIENT**: 1 step (8.5) — correctly integrated (both line anchors re-verified at tip: UserRatingPicker.vue:64 starState, :79 setRating) [W-min173 currency: the re-verified anchors' file was later deleted as orphaned — see the 8.5 currency note; distribution text kept verbatim]
 - **SUPERSEDED / restated by S424**: 8.1 (helpers adopted), 8.2 (paged TV load-more), 8.7 (bug RESOLVED at tip), 8.8 (still ALREADY SUFFICIENT — route list restated to 6)
 - **TV-SPECIFIC**: 1 step (8.3 — store now 331 lines at tip)
 - **NOT TV-APPLICABLE**: 2 steps (8.4, 8.6) — features not relevant to TV UX; re-verified 0 hits at tip for favorites/watched in the store
@@ -1551,6 +1554,7 @@ This category audits 22 features added between v0.81.0 (old stale version) and v
 ## Step 16.7 - MediaBackdropRow view mode (v0.98.31)
 **Decision**: NOT FOUND
 **Rationale**: No `MediaBackdropRow` component found in the codebase. grep for "backdrop" only matched CSS `backdrop-filter` in RatingModal.vue. `MediaListRow` exists (Step 16.6) but may serve different purpose. May not have been implemented or uses different naming.
+**Currency (W-min173, 2026-10-30)**: that grep's sole hit (`RatingModal.vue`) is gone with the deleted orphan trio — the observation is now "0 backdrop hits in src/" (the sealed ui bundle's CSS is outside this audit's grep scope, as it was then).
 **Code Changes**: None (component doesn't exist)
 **Evidence**: grep "MediaBackdropRow|DownRow" src/ → 0 hits; grep "backdrop" src/ → only CSS backdrop-filter matches
 

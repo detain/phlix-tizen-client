@@ -27,6 +27,54 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Removed — dead rating UI trio and its 16 catalog strings (M-TIZEN-04 / review tizen__casualgamer m4) — 2026-10-30
+
+- **What users see:** nothing renders differently — that is the finding.
+  The detail-page rating surface users actually interact with is shipped
+  inside the sealed `@phlix/ui` `MediaDetailPage` chunk (which carries its
+  own rating UI); the tizen-side trio never mounted anywhere.
+- `RatingModal.vue`, `RatingBadge.vue`, `UserRatingPicker.vue` were
+  born-orphaned — `git log -S` over the full history of `main.ts` and every
+  page/screen shows ZERO mount sites ever. Deleted with their three unit
+  suites and the 16-key `ratings.*` group across all seven locale catalogs
+  (200 keys / 18 groups → 184 keys / 17 groups; the tizenI18n integrity law
+  "every key has a real call site" is now satisfied by deletion, and the two
+  whitespace-exclusion ledgers that existed only for `ratings.*` values
+  retired to unconditional law).
+- The `tizenBridge` TV-keyboard ladder layer (`RATING_MODAL_SELECTOR`,
+  reviewed majors fix M-TIZEN-18) stays as the documented INERT forward
+  probe its docblock always said it was — the producer was removed here; the
+  note now carries that truth. Docs currency: `docs/i18n.md` counts rotated,
+  `VERIFICATION.md` carries appended currency notes (history-verbatim law),
+  `AGENTS.md`/`CLAUDE.md` suite enumerations fixed (both fossilized below
+  reality; corrected counts measured at W-min173).
+
+### Added — tests/ and scripts/ typecheck gate with a shrink-only exclusion ledger (M-TIZEN-12 / review tizen__devops MIN-2) — 2026-10-30
+
+- **What users see:** nothing — dev-chain. Type drift in test fixtures and
+  dev scripts now fails CI where it used to surface only at runtime.
+- `npm run typecheck:tests` = `vue-tsc -p tsconfig.tests.json` (covers
+  `src/`, `tests/` and `scripts/` with `allowJs`+`checkJs` for the .mjs/.js
+  tooling, same strict base config) wired as a blocking step in the Test
+  workflow. The existing prod `vue-tsc --noEmit` gate is untouched.
+- Migration landed here: `src/polyfills.ts` global `Array.at` declaration
+  made non-optional (the module IS the existence guarantee), vitest v5
+  `Mock`-generic fake player in `syncplayDispatch.test`, `makeDeps` transport
+  slot typed as the `FakeTransport` it returns in `telemetry.test`,
+  `as const` on the `onRemoteCommand` verb literals + completed
+  `LocalSyncPlayMember` fixture + five lying `@ts-expect-error` directives
+  pruned in `useSyncPlayStore.test`, JSDoc parameter/return annotations
+  through `add-copyright.mjs`/`sync-ui-locale-bundles.mjs`/`make-icon.js`, and
+  a `scripts/version-sync.d.mts` declaration sidecar (audit-gate.d.mts
+  precedent) for the stamping helpers.
+- LEDGER (named follow-up): `tests/unit/tizenBridge.test.ts` (FakeRemote
+  interface no longer structurally extends the vitest v5 `BridgeRemote`) and
+  `tests/unit/main.test.ts` (vi-mock call-tuple assertion drift) are excluded
+  — 50 + 28 errors in two single-root-cause era-drift families.
+  `tests/unit/testsTypecheckLedger.test.ts` pins the exclude array EXACTLY
+  (additions red, mutation-proven) and requires every entry to exist on disk:
+  the ledger may only shrink.
+
 ### Fixed — a remote sync command can no longer force the player to an absurd rate (M-TIZEN-40 / review tizen__secnet MINOR-6) — 2026-10-30
 
 - **What users see:** if a group member (or a compromised server
