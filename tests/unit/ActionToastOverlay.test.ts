@@ -166,6 +166,21 @@ describe('ActionToastOverlay (S516 AD-13)', () => {
     wrapper.unmount();
   });
 
+  it('M-TIZEN-32 — a DIGIT_COMMIT drain captions nothing (no consumer yet), real actions still caption', async () => {
+    const wrapper = mountOverlay(pinia);
+    // The digit buffer draining is NOT a viewer-facing action: echoing
+    // "Digits" would toast nothing. The skip must be silent, not a clobber.
+    remoteManager.emit('action', { key: 'DIGIT_COMMIT', value: '7' });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toBe('');
+    expect(useActionToastStore().caption).toBeNull();
+    // The caption layer stays alive: the next real action still echoes.
+    remoteManager.emit('action', { key: 'PLAY' });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toBe('Play');
+    wrapper.unmount();
+  });
+
   it('AC2 — showing a caption never steals focus and the root is inert chrome', async () => {
     const wrapper = mountOverlay(pinia);
     remoteManager.emit('action', { key: 'STOP' });

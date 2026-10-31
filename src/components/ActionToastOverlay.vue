@@ -55,8 +55,15 @@ const toast = useActionToastStore();
 // action shape carries `key`. (onAction() is typed but discards the
 // unsubscribe fn — this app lives for the whole session yet registers the
 // same T-05-cleanable way as every other listener.)
+/**
+ * M-TIZEN-32: DIGIT_COMMIT is not a thing the viewer did — it is the digit
+ * buffer draining a burst into a value that has NO consumer yet (go-to-time
+ * is the named follow-on). Toasting "Digits" for it would echo nothing, so
+ * the caption layer stays silent until some surface adopts the action.
+ */
 function captionAction(event: ActionEvent | KeyEvent): void {
-  if ('key' in event) toast.show(KeyMapping.getDisplayName(event.key));
+  if (!('key' in event) || event.key === KeyMapping.DIGIT_COMMIT) return;
+  toast.show(KeyMapping.getDisplayName(event.key));
 }
 
 function describeFocusTarget(target: EventTarget | null): string {

@@ -9,7 +9,7 @@ export default tseslint.config(
     ignores: [
       'dist/**',
       'node_modules/**',
-      'app/**', // legacy vanilla-JS UI, retained only for reference
+      'app/**', // widget manifest source (config.xml + icon.png, copied by scripts/package.js) — not lintable TS/JS
       'package/**',
       'coverage/**',
       '.logs/**'

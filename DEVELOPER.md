@@ -205,7 +205,7 @@ Action map:
 | `STOP`            | `player.closePlayer()`                                              |
 | `FAST_FORWARD`    | `player.seekBy(repeat ? 30 : 10)`                                   |
 | `REWIND`          | `player.seekBy(repeat ? -30 : -10)`                                 |
-| `BACK`            | if the quality picker is open: dismiss it (`quality.deactivate()`), player untouched; else on `route.name === 'player'`: `closePlayer()` + `router.back()`; else `router.back()` |
+| `BACK`            | four-rung ladder via `remote/backPolicy.decideBackRung`: row-snap a panned shelf → close the TOPMOST open `BackLayer` (quick-connect, rating modal, generic ui focus-trap, quality picker — quality close restores the pre-open focus) → history-back (on `route.name === 'player'` this means `closePlayer()` + `router.back()`) → at the app root, `tizen.application.getCurrentApplication().exit()` (never a blind `history.back()` on an empty stack) |
 | `HOME`            | `router.push('/app')`                                               |
 | `YELLOW`          | on the player route only, and only when the picker actually has a menu to show (`quality.isAvailable()`): toggle quality-selection mode (`quality.activate()` / `deactivate()`) |
 | arrows / ENTER / other color keys / etc. | **not bridged directly** — spatial-nav + native focus own them, EXCEPT while quality mode is active (see below) |

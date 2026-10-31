@@ -19,7 +19,10 @@ Samsung Smart TV client application for Phlix Media Server, built with Tizen SDK
 - [Building the App](#building-the-app)
 - [Testing](#testing)
 - [Deployment to TV](#deployment-to-tv)
+- [Remote Control](#remote-control)
 - [Supported Codecs](#supported-codecs)
+- [Project Structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
 - [License](#license)
 
 ## Overview
@@ -201,8 +204,8 @@ client does not post a device profile.
   machine-stamped from `package.json` `"version"` by `scripts/version-sync.mjs`
   on every `npm run package` (single source; see DEVELOPER.md "Versioning")
 - `required_version` (`6.5`)
-- Network access (`<access origin="*">`) and TV privileges (`internet`, `tv.inputdevice` — S503 keeps only what the code actually exercises)
-- `<tizen:profile name="tv-samsung"/>` and `hwkey-event="enable"` (S503)
+- Network access (`<access origin="*">`) and TV privileges (`internet`, `tv.inputdevice` — only what the code actually exercises is granted; a privilege folds in with its feature, never pre-added)
+- `<tizen:profile name="tv-samsung"/>` and `hwkey-event="enable"` (without the hwkey flag the webview never delivers remote key events to the app)
 - Landscape / maximized viewmode
 
 ### HLS Tuning
@@ -376,7 +379,7 @@ element under `document.body` (links, buttons, inputs, selects, textareas,
 |--------|--------|
 | Arrow Up/Down/Left/Right | Spatial navigation between focusable items |
 | OK / Enter | Activate the focused item (native focus) |
-| Back | Dismiss the quality picker if it's open (see Yellow below); otherwise leave the player (and go back), or navigate back |
+| Back | Walks the four-rung BACK ladder (`src/remote/backPolicy.ts`): snap a panned shelf row back to its start, else close the topmost open layer (quick-connect, rating modal, `@phlix/ui` modal, quality picker), else navigate back (on the player this closes playback first), else at the home route exit the app |
 | Home | Return to the home route (`/app`) |
 | Play / Pause | Toggle playback |
 | Stop | Close the player |
@@ -391,29 +394,29 @@ briefly suppressed) so the D-pad can select a rung.
 
 ## Supported Codecs
 
+This client does not decode media by itself: `@phlix/ui`'s player feeds
+streams to the Samsung webview's native decoder, and the server maps the
+`X-Phlix-Device-Type: samsung-tizen` header to a transcode profile targeting
+what those webviews handle (see Troubleshooting → Playback Issues). The list
+below is therefore the **server-assisted working set** — what the profile
+aims at — not a guarantee of native playback on every model or region.
+
 ### Video
-- H.264 (AVC)
-- H.265 (HEVC)
-- VP9
+- H.264 (AVC) — natively decoded on Tizen TVs
+- H.265 (HEVC) — hardware-dependent per model/region; the server transcodes where the profile says so
 
 ### Audio
-- AAC
-- AC3 (Dolby Digital)
-- EAC3 (Dolby Digital Plus)
-- DTS
-- FLAC
+- AAC — the default HLS audio track
+- AC3 (Dolby Digital) / EAC3 (Dolby Digital Plus) — hardware-dependent; transcode fallback applies
 - MP3
 
-### Containers
-- MP4
-- MKV
-- WebM
-- TS (MPEG Transport Stream)
+### Delivery
+- HLS (HTTP Live Streaming) via `@phlix/ui`'s hls.js player, RAM-bounded by `TIZEN_HLS_CONFIG`
+- Progressive HTTP download of server-chosen direct-play streams
 
-### Streaming
-- HLS (HTTP Live Streaming)
-- MPEG-DASH
-- Progressive HTTP download
+Container/codec combinations outside the device's native support are the
+server's transcode decision; nothing in this repository adds or removes a
+decodable format.
 
 ## Project Structure
 
@@ -497,8 +500,8 @@ phlix-tizen-client/
    (`GET /api/v1/media/{id}/chapters` and `/markers`) to return data for the
    current media id
 
-Sleep timer and the end-of-video "Up next" card are **not** Tizen-hosted. Since
-S501 they render from `@phlix/ui`'s PlayerPage bundle — the former
+Sleep timer and the end-of-video "Up next" card are **not** Tizen-hosted. They
+render from `@phlix/ui`'s PlayerPage bundle — the former
 `SleepTimerOverlay.vue` / `UpNextOverlay.vue` mount apps were unreachable
 duplicates and were deleted (their `index.html` host divs are gone, so a
 host-div check for them can never succeed). If either is missing on the player
