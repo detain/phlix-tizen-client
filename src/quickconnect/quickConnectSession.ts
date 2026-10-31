@@ -60,6 +60,27 @@ const HIDDEN_RECHECK_MS = 1_000;
 /** Ceiling for transient-error backoff, so a long outage stops at a slow trickle. */
 const MAX_BACKOFF_MS = 60_000;
 
+/**
+ * M-TIZEN-25 (review tizen__exploiter): the poll cadence is SERVER-CONTROLLED
+ * (`offer.intervalSeconds`), and the pre-cure code multiplied it into
+ * `sleep()` unclamped — a malicious or merely misconfigured server answering
+ * `0` (or negative) turned the pairing loop into a tight fetch storm
+ * (`backoffMs` on a zero base is still zero). The allow-list: floor 1000 ms
+ * (no server needs a sub-second status ping; excess polling is the attack),
+ * ceiling 60 000 ms (the same slow-trickle contract the error backoff honors
+ * — a server asking for minutes-long polls waits AT MOST a minute here, which
+ * only ever delays pairing completion, never harms). Out-of-range values are
+ * clamped, not rejected: the server stays authoritative inside its sandbox.
+ */
+const MIN_POLL_MS = 1_000;
+const MAX_POLL_MS = 60_000;
+
+function clampPollMs(rawSeconds: number): number {
+  if (!Number.isFinite(rawSeconds)) return DEFAULT_POLL_INTERVAL_SECONDS * 1_000;
+  const ms = rawSeconds * 1_000;
+  return Math.min(Math.max(ms, MIN_POLL_MS), MAX_POLL_MS);
+}
+
 /** Consecutive network faults tolerated before the attempt is called dead. */
 const MAX_CONSECUTIVE_NETWORK_ERRORS = 6;
 
@@ -143,8 +164,9 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
       deps.onCode(offer.code, offer.expiresAtSeconds);
       emit('pairing');
 
-      const baseMs =
-        (deps.intervalSeconds ?? offer.intervalSeconds ?? DEFAULT_POLL_INTERVAL_SECONDS) * 1_000;
+      const baseMs = clampPollMs(
+        deps.intervalSeconds ?? offer.intervalSeconds ?? DEFAULT_POLL_INTERVAL_SECONDS,
+      );
 
       let consecutiveErrors = 0;
       while (!stopped) {

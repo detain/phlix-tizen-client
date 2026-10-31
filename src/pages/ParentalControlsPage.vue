@@ -31,7 +31,27 @@ const router = useRouter();
 const apiBase = useApiBase();
 const authStore = useAuthStore();
 
-const profileId = computed(() => (authStore.user as AuthUser)?.profileId ?? 0);
+// The sealed AuthUser type does not declare profileId (unknown value space);
+// the runtime shape from the login response is number|string. Narrow it here
+// so the URL builders (M-TIZEN-28 seg()) receive a typed segment, never `{}`.
+const profileId = computed<string | number>(() => {
+  const raw = (authStore.user as AuthUser)?.profileId;
+  return typeof raw === 'string' || typeof raw === 'number' ? raw : 0;
+});
+
+/**
+ * M-TIZEN-28 (review tizen__exploiter): path-segment encoding at the URL
+ * boundary. `profileId` arrives from the LOGIN RESPONSE and schedule/tag ids
+ * from the server's list rows — all server-controlled strings. A crafted id
+ * carrying `/` or `?` would re-point the authenticated request (carrying the
+ * bearer token) at a DIFFERENT endpoint (`profiles/2%2F..%2Fother` stays one
+ * segment; a raw `/` would not). encodeURI-Component is a no-op for the real
+ * vocabulary (integers and UUIDs), so this is pure boundary hygiene — and it
+ * makes the safe shape the only shape this page can write.
+ */
+function seg(value: string | number): string {
+  return encodeURIComponent(String(value));
+}
 
 // ── State ──────────────────────────────────────────────────────────────────
 
@@ -125,7 +145,7 @@ async function saveSchedule(): Promise<void> {
       // travels in the URL, and it reads ONLY the snake_case keys below
       // (camelCase would arrive as "No valid fields to update" → 400).
       await client.put(
-        `/api/v1/profiles/${pid}/schedules/${editingSchedule.value.id}`,
+        `/api/v1/profiles/${seg(pid)}/schedules/${seg(editingSchedule.value.id)}`,
         {
           name: scheduleForm.value.name,
           start_time: scheduleForm.value.startTime,
@@ -135,7 +155,7 @@ async function saveSchedule(): Promise<void> {
         }
       );
     } else {
-      await client.post(`/api/v1/profiles/${pid}/schedules`, {
+      await client.post(`/api/v1/profiles/${seg(pid)}/schedules`, {
         name: scheduleForm.value.name,
         start_time: scheduleForm.value.startTime,
         end_time: scheduleForm.value.endTime,
@@ -158,7 +178,7 @@ async function deleteSchedule(scheduleId: number): Promise<void> {
 
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
-    await client.delete(`/api/v1/profiles/${pid}/schedules/${scheduleId}`);
+    await client.delete(`/api/v1/profiles/${seg(pid)}/schedules/${seg(scheduleId)}`);
     await loadSchedules();
   } catch {
     // Silently fail delete
@@ -180,7 +200,7 @@ async function addTag(): Promise<void> {
   addingTag.value = true;
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
-    await client.post(`/api/v1/profiles/${pid}/tags`, {
+    await client.post(`/api/v1/profiles/${seg(pid)}/tags`, {
       tag,
       // S325b: canonical spelling — the server's key. `tagType` was the S234
       // defect shape, kept alive only by the server's additive acceptance.
@@ -201,7 +221,7 @@ async function removeTag(tagId: number): Promise<void> {
 
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
-    await client.delete(`/api/v1/profiles/${pid}/tags/${tagId}`);
+    await client.delete(`/api/v1/profiles/${seg(pid)}/tags/${seg(tagId)}`);
     await loadTags();
   } catch {
     // Silently fail
@@ -236,7 +256,7 @@ async function saveLimit(): Promise<void> {
   savingLimit.value = true;
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
-    await client.put(`/api/v1/profiles/${pid}/stream-limits`, {
+    await client.put(`/api/v1/profiles/${seg(pid)}/stream-limits`, {
       maxConcurrentStreams: limitForm.value.maxConcurrentStreams,
       maxTotalBandwidthKbps: limitForm.value.maxTotalBandwidthKbps
     });
@@ -264,7 +284,7 @@ async function loadSchedules(): Promise<void> {
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
     const data = await client.get<{ schedules: AccessSchedule[] }>(
-      `/api/v1/profiles/${pid}/schedules`
+      `/api/v1/profiles/${seg(pid)}/schedules`
     );
     schedules.value = data.schedules ?? [];
   } catch (e) {
@@ -288,7 +308,7 @@ async function loadTags(): Promise<void> {
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
     const data = await client.get<{ tags: ProfileTag[] }>(
-      `/api/v1/profiles/${pid}/tags`
+      `/api/v1/profiles/${seg(pid)}/tags`
     );
     blockedTags.value = (data.tags ?? []).filter(t => t.tag_type === 'blocked');
   } catch (e) {
@@ -312,7 +332,7 @@ async function loadStreamLimit(): Promise<void> {
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
     const data = await client.get<ProfileStreamLimit>(
-      `/api/v1/profiles/${pid}/stream-limits`
+      `/api/v1/profiles/${seg(pid)}/stream-limits`
     );
     streamLimit.value = data;
   } catch (e) {

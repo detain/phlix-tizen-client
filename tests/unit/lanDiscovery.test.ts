@@ -19,6 +19,7 @@ import {
   healthUrl,
   isPhlixHealth,
   hostKey,
+  isProbeableBase,
   prepareCandidates,
   chunk,
   probeHealth,
@@ -72,6 +73,18 @@ describe('hostKey / prepareCandidates (dedup + cap)', () => {
     expect(prepareCandidates(many, 5)).toHaveLength(5);
     expect(prepareCandidates(['', '  ', 'http://x'])).toEqual(['http://x']);
   });
+
+  it('M-TIZEN-29: non-probeable candidates are dropped before the pool is built', () => {
+    // A persisted file:// or protocol-relative row must never occupy a probe
+    // slot (it could never answer a health GET as shipped).
+    const out = prepareCandidates([
+      'file:///api/x',
+      '//cdn.example',
+      'http://ok:8096',
+      'data:text/plain,y',
+    ]);
+    expect(out).toEqual(['http://ok:8096']);
+  });
   it('hostKey lowercases and falls back for non-URL strings', () => {
     expect(hostKey('http://HOST:8096/')).toBe('host:8096');
     expect(hostKey('')).toBe('');
@@ -84,11 +97,41 @@ describe('chunk', () => {
   });
 });
 
+// ── M-TIZEN-29 — the scheme gate in front of every probe fetch ───────────────
+describe('isProbeableBase (scheme allow-list at the probe boundary)', () => {
+  it('accepts exactly the http(s) family (canonicalized)', () => {
+    expect(isProbeableBase('http://h:8096')).toBe(true);
+    expect(isProbeableBase('https://h')).toBe(true);
+    expect(isProbeableBase('HTTP://Upper.Example')).toBe(true); // URL canonicalizes case
+  });
+
+  it('refuses every non-network shape a persisted serverHistory row can hold', () => {
+    // Pre-cure, these reached fetch on a file:// widget origin and silently
+    // became local FILE:// reads (or parse-then-throw paths) — the row is
+    // attacker-influenced (LAN discovery writes candidates), so the gate is
+    // input validation at the trust boundary, not paranoia.
+    expect(isProbeableBase('file:///wgt/res/index.html')).toBe(false);
+    expect(isProbeableBase('data:text/html,x')).toBe(false);
+    expect(isProbeableBase('javascript:alert(1)')).toBe(false);
+    expect(isProbeableBase('//cdn.example/x')).toBe(false); // protocol-relative
+    expect(isProbeableBase('relative/path')).toBe(false);
+    expect(isProbeableBase('')).toBe(false);
+  });
+});
+
 describe('probeHealth (per-host verdict)', () => {
   it('empty base never touches the network', async () => {
     const spy = vi.fn();
     const res = await probeHealth('', { fetchImpl: spy as unknown as typeof fetch });
     expect(res).toEqual({ base: '', url: '', ok: false, error: 'empty' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('M-TIZEN-29: a non-http(s) base is refused with error:scheme and ZERO network', async () => {
+    const spy = vi.fn();
+    const res = await probeHealth('file:///api/x', { fetchImpl: spy as unknown as typeof fetch });
+    expect(res.ok).toBe(false);
+    expect(res.error).toBe('scheme');
     expect(spy).not.toHaveBeenCalled();
   });
 

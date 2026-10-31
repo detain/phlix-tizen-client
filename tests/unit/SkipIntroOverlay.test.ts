@@ -136,6 +136,42 @@ describe('SkipIntroOverlay — T-07 stale-load generation guard', () => {
     wrapper.unmount();
   });
 
+  it('M-TIZEN-27: a malformed marker object from the wire renders NOTHING (saneMarker drops it)', async () => {
+    // The contracts Marker type is STRUCTURAL: any JSON object passes at
+    // runtime. A hostile/misconfigured server can send startMs:"0" (string),
+    // endMs:null, or an inverted window — the pre-cure component rendered
+    // buttons for those objects and a click could dispatch nonsense seeks.
+    // The guard drops each malformed marker individually: the healthy outro
+    // on the SAME response still renders, proving per-marker discrimination.
+    h.responses['/api/v1/media/poison/markers'] = {
+      markers: [],
+      introMarker: { id: 'in', type: 'intro', startMs: 0, endMs: 5000, label: 'Intro' },
+      outroMarker: { id: 'out', type: 'outro', startMs: 0, endMs: Number.POSITIVE_INFINITY, label: 'Outro' },
+    };
+    routeHolder.params = { id: 'poison' };
+    const wrapper = mount(SkipIntroOverlay, { attachTo: document.body });
+    await flushPromises();
+
+    expect(wrapper.find('.skip-intro-overlay__button--intro').exists()).toBe(true);
+    expect(wrapper.find('.skip-intro-overlay__button--outro').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('M-TIZEN-27: an inverted window (startMs > endMs) and negative offsets are dropped too', async () => {
+    h.responses['/api/v1/media/inverted/markers'] = {
+      markers: [],
+      introMarker: { id: 'in', type: 'intro', startMs: 9000, endMs: 1000, label: 'Intro' },
+      outroMarker: { id: 'out', type: 'outro', startMs: -5, endMs: 60_000, label: 'Outro' },
+    };
+    routeHolder.params = { id: 'inverted' };
+    const wrapper = mount(SkipIntroOverlay, { attachTo: document.body });
+    await flushPromises();
+
+    expect(wrapper.find('.skip-intro-overlay__button--intro').exists()).toBe(false);
+    expect(wrapper.find('.skip-intro-overlay__button--outro').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   it('does NOT resurrect the previous title’s skip button when its reply lands last', async () => {
     routeHolder.params = { id: 'm1' };
     h.pending['/api/v1/media/m1/markers'] = deferred();

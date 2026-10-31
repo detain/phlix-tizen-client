@@ -271,6 +271,34 @@ describe('quickConnectSession — orchestrator', () => {
     expect(h.sleeper.delays).not.toContain(9_000);
   });
 
+  // ── M-TIZEN-25 — server-published cadence is clamped to a sane window ─────
+  it('M-TIZEN-25: a server interval of 0 cannot hammer the poll endpoint (floor 1 s)', async () => {
+    const client = new FakeTransport();
+    client.respond({ code: 'ABCD-1234', interval: 0 }, { status: 'pending' }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
+    const h = harness(client);
+    await expect(h.session.run()).resolves.toBe('approved');
+    expect(h.sleeper.delays).toContain(1_000); // floored, never 0
+    expect(h.sleeper.delays).not.toContain(0);
+  });
+
+  it('M-TIZEN-25: a giant server interval is ceilinged at 60 s (the flow cannot freeze)', async () => {
+    const client = new FakeTransport();
+    client.respond({ code: 'ABCD-1234', interval: 1_000_000_000 }, { status: 'pending' }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
+    const h = harness(client);
+    await expect(h.session.run()).resolves.toBe('approved');
+    expect(h.sleeper.delays).toContain(60_000);
+    expect(Math.max(...h.sleeper.delays)).toBeLessThanOrEqual(60_000);
+  });
+
+  it('M-TIZEN-25: a non-finite override falls back to the exported default cadence', async () => {
+    const client = new FakeTransport();
+    client.respond({ code: 'ABCD-1234', interval: 9 }, { status: 'pending' }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
+    const h = harness(client, { intervalSeconds: Number.NaN });
+    await h.session.run();
+    expect(h.sleeper.delays).toContain(DEFAULT_POLL_INTERVAL_SECONDS * 1000);
+    expect(h.sleeper.delays).not.toContain(9_000);
+  });
+
   it('DEFAULT cadence is the exported fallback', () => {
     expect(DEFAULT_POLL_INTERVAL_SECONDS).toBeGreaterThan(0);
   });

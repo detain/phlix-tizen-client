@@ -46,7 +46,7 @@
  */
 
 /** Verdict of a single host health probe. */
-export type HealthProbeError = 'empty' | 'http' | 'shape' | 'network' | 'timeout';
+export type HealthProbeError = 'empty' | 'scheme' | 'http' | 'shape' | 'network' | 'timeout';
 
 /** Result of probing one candidate base's health endpoint. */
 export interface HealthProbeResult {
@@ -100,6 +100,27 @@ export function normalizeBase(base: string): string {
   return base.trim().replace(/\/+$/, '');
 }
 
+/**
+ * M-TIZEN-29 (review tizen__exploiter): the SCHEME allow-list for anything
+ * this module will fetch. Discovery candidates are persisted, server-adjacent
+ * strings (`phlix.serverHistory` rows survive from arbitrary past pairings) —
+ * pre-cure a `file:///…` or `javascript:…` row was only caught by the
+ * browser's own rejection, landing in the 'network' bucket: inert, but never
+ * PARSED, and `//host:8096` (protocol-relative) silently became a FILE:// GET
+ * against the widget origin. One vocabulary decides probeability; both entry
+ * points (`probeHealth` direct + `prepareCandidates` sweeps) enforce it.
+ */
+export function isProbeableBase(base: string): boolean {
+  const canonical = normalizeBase(base);
+  if (!canonical) return false;
+  try {
+    const { protocol } = new URL(canonical);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false; // unparseable, relative, or protocol-relative — never fetchable here
+  }
+}
+
 /** The exact health URL probed for a base. Empty base → empty string (never
  *  probes root-relative on the app origin). */
 export function healthUrl(base: string): string {
@@ -123,6 +144,9 @@ export function isPhlixHealth(body: unknown): boolean {
  * Probe ONE candidate's health endpoint. Pure over the injected `fetchImpl`;
  * defaults to the webview's `fetch`. Classifies every failure honestly:
  * - empty base → `error:'empty'`, no network.
+ * - non-http(s) / unparseable base → `error:'scheme'`, no network (M-TIZEN-29
+ *   allow-list: a persisted `file://`/`javascript:`/`//host` row is REJECTED
+ *   here, never handed to fetch).
  * - non-2xx → `error:'http'`.
  * - 2xx but unrecognized body → `error:'shape'`.
  * - AbortController deadline hit → `error:'timeout'`.
@@ -138,6 +162,9 @@ export async function probeHealth(
   const canonical = normalizeBase(base);
   const url = healthUrl(canonical);
   if (!canonical) return { base: '', url: '', ok: false, error: 'empty' };
+  if (!isProbeableBase(canonical)) {
+    return { base: canonical, url, ok: false, error: 'scheme' };
+  }
 
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_HEALTH_TIMEOUT_MS;
@@ -188,9 +215,11 @@ export function hostKey(base: string): string {
 }
 
 /**
- * Dedup + bound a candidate list for one sweep: drop empties, collapse by
- * {@link hostKey} (first spelling wins), and cap at `limit` so a caller can
- * never trigger an unbounded request storm.
+ * Dedup + bound a candidate list for one sweep: drop empties, drop
+ * non-probeable schemes (M-TIZEN-29 — never fetch a persisted `file://` or
+ * `javascript:` row, and never let `//host` resolve against the widget's own
+ * file:// origin), collapse by {@link hostKey} (first spelling wins), and cap
+ * at `limit` so a caller can never trigger an unbounded request storm.
  */
 export function prepareCandidates(bases: readonly string[], limit = MAX_CANDIDATES_PER_SWEEP): string[] {
   const seen = new Set<string>();
@@ -198,6 +227,7 @@ export function prepareCandidates(bases: readonly string[], limit = MAX_CANDIDAT
   for (const base of bases) {
     const canonical = normalizeBase(base);
     if (!canonical) continue;
+    if (!isProbeableBase(canonical)) continue;
     const key = hostKey(canonical);
     if (!key || seen.has(key)) continue;
     seen.add(key);

@@ -83,6 +83,23 @@ const showSkipOutro = computed(() => {
 
 const hasMarkers = computed(() => introMarker.value !== null || outroMarker.value !== null);
 
+/**
+ * M-TIZEN-27 (review tizen__secnet MINOR-6, marker half): boundary parse for
+ * the server's marker rows. `Marker` types the shape, but the runtime JSON is
+ * whatever a (mis)configured server answers — the declared `endMs` could be
+ * null/NaN/a string, and `skipIntro()` would seek to NaN. An invalid marker
+ * degrades to `null` (the button just does not offer itself): a silently
+ * missing skip prompt is honest, a poisoned seek is not.
+ */
+function saneMarker(raw: Marker | null | undefined): Marker | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+  const { startMs, endMs } = raw as { startMs?: unknown; endMs?: unknown };
+  if (typeof startMs !== 'number' || typeof endMs !== 'number') return null;
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null;
+  if (startMs < 0 || endMs < startMs) return null;
+  return raw;
+}
+
 async function loadMarkers(): Promise<void> {
   const id = mediaId.value;
   if (!id) return;
@@ -96,8 +113,8 @@ async function loadMarkers(): Promise<void> {
       `/api/v1/media/${encodeURIComponent(id)}/markers`,
     );
     if (gen !== markerLoadGen) return; // superseded by a newer load — drop stale reply
-    introMarker.value = response.introMarker ?? null;
-    outroMarker.value = response.outroMarker ?? null;
+    introMarker.value = saneMarker(response.introMarker);
+    outroMarker.value = saneMarker(response.outroMarker);
   } catch {
     if (gen !== markerLoadGen) return;
     introMarker.value = null;

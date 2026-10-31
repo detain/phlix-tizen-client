@@ -30,9 +30,12 @@
  *     (`wss://`, review tizen__secnet M-TIZEN-12, the `src/api/hubRelay.ts`
  *     M-TIZEN-06 law transposed — see `buildWsUrl` below).
  *   - All field names are snake_case; positions/durations are MILLISECONDS
- *     (SPEC.md:91). The store applies wire positions verbatim on receive and
- *     on state adoption (S293: receive side untouched); only the `sendCommand`
- *     position input is SECONDS, converted to ms at the send boundary.
+ *     (SPEC.md:91). The store applies wire positions verbatim as NUMBERS on
+ *     receive and on state adoption (S293: no unit rescaling on the receive
+ *     side); only the `sendCommand` position input is SECONDS, converted to ms
+ *     at the send boundary. M-TIZEN-27 added the COMMAND-rail finite/non-
+ *     negative guard on top (poisoned positions are DROPPED, never coerced to
+ *     a seek) — that is input validation, not rescaling: S293 still holds.
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
@@ -222,6 +225,22 @@ function num(value: unknown, fallback = 0): number {
     return Number(value);
   }
   return fallback;
+}
+
+/**
+ * M-TIZEN-27 (review tizen__secnet MINOR-6): the command-position guard.
+ * Group-state rails already coerce through num(); the COMMAND rail is the
+ * last unprotected mile — a hostile group member (or a compromised server
+ * rebroadcast) must not be able to drive the TV player to NaN/absurd seeks.
+ * A missing position stays missing (undefined — the consumer treats it as
+ * "no position in this command"); a NON-FINITE or NEGATIVE one is DROPPED
+ * (not zeroed — seeking to 0 would silently restart the movie, a worse lie
+ * than ignoring a poisoned field).
+ */
+function optFiniteMs(value: unknown): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  const n = num(value, Number.NaN);
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
 /** Unix SECONDS (the server's unit) → ISO 8601. */
@@ -707,9 +726,9 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
         memberId: memberId ?? (memberId = `member_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`),
         onState: (group) => applyGroupState(group),
         onPlaybackCommand: (command) =>
-          onRemoteCommand({ type: command.type, position: command.position }),
+          onRemoteCommand({ type: command.type, position: optFiniteMs(command.position) }),
         onPlaybackSync: (_memberId, position, isPlaying) =>
-          onRemoteCommand({ type: isPlaying ? 'play' : 'pause', position }),
+          onRemoteCommand({ type: isPlaying ? 'play' : 'pause', position: optFiniteMs(position) }),
         onError: (code, message) => {
           wsError.value = `${code}: ${message}`;
         },
@@ -908,7 +927,8 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
    * Handle a remote playback command from another member of the group.
    * Updates local session state based on the command type. Receive-side
    * application is intentionally untouched by the seconds→ms boundary work
-   * (S293 scope); positions are applied verbatim.
+   * (S293 scope); finite positions are applied verbatim — the command rail's
+   * optFiniteMs guard (M-TIZEN-27) runs at the socket boundary above.
    */
   function onRemoteCommand(command: RemotePlaybackCommand): void {
     if (!currentSession.value) return;

@@ -678,6 +678,51 @@ describe('useSyncPlayStore', () => {
     });
   });
 
+  // ── M-TIZEN-27 — the wire-position input guard at the socket boundary ──────
+  describe('M-TIZEN-27 — JSON numeric poison is dropped, never applied as a position', () => {
+    // The frames ride the REAL vendored client (SyncPlayClient is not mocked
+    // here): JSON number literals that survive parse as Infinity (1e999) or
+    // negatives pass the library's typeof-number check and arrive at the
+    // store callback verbatim — the pre-cure seam applied them straight onto
+    // playbackPosition. optFiniteMs is the boundary that drops them.
+    const seekFrame = (position: string) =>
+      `{"type":"syncplay_playback_seek","to_position":${position}}`;
+
+    function armedStore() {
+      const store = useSyncPlayStore();
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing', playbackPosition: 50 };
+      store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+      return store;
+    }
+
+    it('a clean numeric seek position still applies verbatim (the guard is not a clamp)', () => {
+      const store = armedStore();
+      lastSocket().onmessage?.({ data: seekFrame('200') });
+      expect(store.currentSession?.playbackPosition).toBe(200);
+    });
+
+    it('1e999 (JSON.parse → Infinity) is dropped — the prior position survives', () => {
+      const store = armedStore();
+      lastSocket().onmessage?.({ data: seekFrame('1e999') });
+      // Not Infinity, not 0, not a crash: the stale finite value stands.
+      expect(store.currentSession?.playbackPosition).toBe(50);
+    });
+
+    it('a negative finite position is dropped (pre-buffer seeks are not a state)', () => {
+      const store = armedStore();
+      lastSocket().onmessage?.({ data: seekFrame('-50') });
+      expect(store.currentSession?.playbackPosition).toBe(50);
+    });
+
+    it('position 0 is a legitimate seek-to-start and applies (guard is >=0, not truthiness)', () => {
+      const store = armedStore();
+      lastSocket().onmessage?.({ data: seekFrame('200') });
+      lastSocket().onmessage?.({ data: seekFrame('0') });
+      expect(store.currentSession?.playbackPosition).toBe(0);
+    });
+  });
+
   // ── M-TIZEN-12 — bearer transport TLS gate at the dial boundary ────────────
   // The direct `:8097` lane's sibling of the hub-relay M-TIZEN-06 gate
   // (see this suite's shape in tests/unit/hubRelay.test.ts): same law, same
