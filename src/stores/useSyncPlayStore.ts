@@ -264,9 +264,9 @@ const RATE_ENVELOPE_MAX = 4;
  * server's nudge `suggested_rate` never reaches this store. The guard
  * protects the store's PUBLIC seam (`onRemoteCommand` is exported) against
  * callers that do pass a rate, and stands ready for a future library that
- * forwards one — tests/unit/sourcePinSocketRateRail.test.ts pins the rail's
- * rate-free shape so a re-pin that starts forwarding `rate` turns that pin
- * red and forces a deliberate look at this envelope.
+ * forwards one — the source pin in tests/unit/useSyncPlayStore.test.ts pins
+ * the rail's rate-free shape so a re-pin that starts forwarding `rate` turns
+ * that pin red and forces a deliberate look at this envelope.
  */
 function optFiniteRate(value: unknown): number | undefined {
   if (value === undefined || value === null) return undefined;
