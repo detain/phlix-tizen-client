@@ -9,8 +9,7 @@
  * - The registry key is the region tag `pt_BR` itself (see normalizeLocaleTag
  *   in src/i18n/index.ts — every `pt-*` device signal resolves here).
  * - Brands/technical tokens kept verbatim: Phlix, Samsung TV, PiP, SDH, Mono,
- *   AM/PM, kbps, tag, and the API phrase '(state: none; actions:
- *   setSubtitle/setQuality only)'.
+ *   AM/PM, kbps, tag.
  * - "Picture-in-picture" → "imagem na imagem" (Apple pt-BR convention).
  * - "legenda" is the pt-BR word for subtitles (not "subtítulo" calques);
  *   audio keeps "faixa de áudio".
@@ -33,7 +32,7 @@ const common = {
   goBack: 'Voltar',
   loading: 'Carregando…',
   loadMore: 'Carregar mais',
-  noMediaId: 'Nenhum ID de mídia fornecido',
+  noMediaId: 'Nada para exibir — abra isso a partir de um título.',
   unknown: 'Desconhecido',
   edit: 'Editar',
   delete: 'Excluir',
@@ -128,7 +127,7 @@ const audioTracks = {
   headingOther: '{count} Faixas de áudio',
   preferredNote: 'Preferida para este título: {language}',
   rememberedNote: '{language} foi definido como seu idioma de áudio preferido para este título.',
-  applyRefusal: 'A escolha da faixa de áudio não pode ser aplicada: o player store do @phlix/ui não expõe uma interface para trocar de faixa (state: none; actions: setSubtitle/setQuality only).',
+  applyRefusal: 'Este player ainda não pode trocar de faixa de áudio — sua escolha será lembrada para a próxima.',
 };
 
 const subtitleTracks = {

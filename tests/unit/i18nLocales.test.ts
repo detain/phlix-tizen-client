@@ -19,7 +19,9 @@
  *     tTizen(); untouched hypothetical keys stay English.
  *
  * CI NOTE (anti-phantom, verified against .github/workflows/test.yml): CI
- * clones ONLY ../phlix-contracts. The vendored SOURCE leg therefore skips
+ * clones NOTHING outside this repo — the former floating ../phlix-contracts
+ * checkout was dead weight (zero readers) and is gone. The vendored SOURCE
+ * leg therefore skips
  * (loudly, by name) when ../phlix-ui is absent and hard-fails on dev machines
  * — drift protection there rides the local gate plus the re-pin cascade
  * (docs/i18n.md). The PIN↔disk leg needs no sibling and runs everywhere.

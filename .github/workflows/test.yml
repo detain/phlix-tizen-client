@@ -19,9 +19,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Checkout phlix-contracts
-        run: git clone --depth 1 https://github.com/detain/phlix-contracts.git ../phlix-contracts
-
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:

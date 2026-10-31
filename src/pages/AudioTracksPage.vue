@@ -29,8 +29,7 @@ export async function fetchPlaybackInfoTracks(
 }
 
 /**
- * S407 NAMED REFUSAL (audio tracks). The vendored `@phlix/ui#v0.99.0` player
- * store (dist/stores/usePlayerStore.d.ts) exposes NO audio-track surface: no
+ * S407 NAMED REFUSAL (audio tracks). The vendored `@phlix/ui` player store (dist/stores/usePlayerStore.d.ts) exposes NO audio-track surface: no
  * `audioTracks`/`currentAudioTrackId` state, no `setAudioTrack`/
  * `switchAudioTrack`/`setAudioTrackId` action, and no `hls` instance (only
  * `hlsMasterUrl`). The pre-S407 `onSelectTrack` duck-probed exactly those four
@@ -38,9 +37,12 @@ export async function fetchPlaybackInfoTracks(
  * probes are replaced by this stated limit — `TrackApplyBoundary.test.ts`
  * asserts the real store surface, so if a genuine audio API lands, the
  * boundary test goes RED and this refusal must be retired with it.
+ * (W-min167 copy cure: this API inventory used to sit in the RENDERED string;
+ * a TV viewer gets plain language — the store names live in this comment,
+ * where developers read them.)
  */
 export const AUDIO_TRACK_APPLY_UNSUPPORTED_UI_STORE =
-  'Audio track choice cannot be applied: the @phlix/ui player store exposes no audio-track switching surface (state: none; actions: setSubtitle/setQuality only).';
+  'This player can’t switch audio tracks yet — your choice is remembered for next time.';
 // i18n: this export stays the English ANCHOR the boundary tests import; the
 // rendered refusal goes through the own-catalog (audioTracks.applyRefusal),
 // whose value is pinned byte-identical to this constant by tizenI18n.test.ts.

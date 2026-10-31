@@ -73,7 +73,7 @@ style="display:none">`); its only job is to call `useSpatialNav` with an
 5. `createPhlixApp({ app, apiBase, deviceHeaders, defaultTv: true, defaultTheme: 'nocturne', branding: { wordmark: 'Phlix' }, playerHlsConfig: TIZEN_HLS_CONFIG })`.
    - S517 T-10: `menu: buildMenu()` / `extraRoutes: buildExtraRoutes()` carry the admin section only when `VITE_PHLIX_TV_ADMIN === '1'` (default-off; omitting it drops the admin nav entry and every `/app/admin/*` route — admin is unreachable on TV — plus the admin-layout chunk; admin page chunks stay linked via @phlix/ui's static registry import, a ui-side follow-up).
 6. `.mount('#phlix-app')`, then `installTizenBridge(application)`.
-7. Mount `SpatialNavHost` as the second app (plus the 3rd–6th overlay apps; S516 AD-13 adds `ActionToastOverlay` → `#phlix-action-toast-overlay` as the 6th — the transient focus/action caption, focus-safe by construction).
+7. Mount `SpatialNavHost` as the second app, then the 3rd–9th overlay apps in boot order: `ChapterOverlay` (3rd), `SkipIntroOverlay` (4th), `PiPController` (5th), `ActionToastOverlay` → `#phlix-action-toast-overlay` (6th; S516 AD-13's transient focus/action caption, focus-safe by construction), `QuickConnectPanel` → `#phlix-quick-connect` (7th, S520), `TelemetryConsent` → `#phlix-telemetry-consent` (8th, S521), `ScreenSaverOverlay` → `#phlix-screensaver` (9th, S523).
 
 `TIZEN_HLS_CONFIG` lives at the top of `main.ts`:
 
@@ -176,14 +176,14 @@ Two exports:
   `getRoute = () => router.currentRoute.value`, wires
   `remoteManager.suppressPropagation` for the quality-mode D-pad passthrough
   (see below), registers a `router.afterEach` guard for quality-mode teardown,
-  registers the 2020+ `tvinputdevice` media/channel/colour keys (S509 — see
+  registers the 2020+ `tvinputdevice` media/channel/color keys (S509 — see
   `remote/registerKeys.ts` below), and delegates to `wireTizenBridge` with the
   `RemoteManager` singleton. Its returned cleanup unwires the action handler,
   removes the route guard, **releases the registered keys**, forces quality mode
   off, and nulls `suppressPropagation` — so nothing from this bridge (or its key
   registrations) can outlive it.
 - **`remote/registerKeys.ts`** (S509) — the 2020+ key-registration doctrine. A
-  Samsung webview will not deliver media-transport / channel / colour / Info
+  Samsung webview will not deliver media-transport / channel / color / Info
   `keydown`s unless the app first declares them via `tizen.tvinputdevice.registerKey`.
   `installRemoteKeyRegistration(tizenLike?)` registers `REMOTE_KEYS` once,
   fail-soft per key (some profiles reject a name — it is skipped, the rest still
@@ -326,8 +326,8 @@ endpoint — **no new route** (era law):
 - **`src/tracks/languageLadder.ts`** — pure `resolvePreferredLanguage({ perItem,
   server, availableLanguages })`. Order: per-item `localStorage` → account
   `preferred_{audio,subtitle}_language` → none. Values are matched against the
-  title's own wire languages by exact (case/whitespace-normalised) code, so an
-  absent or unmatched preference leaves today's behaviour byte-identical.
+  title's own wire languages by exact (case/whitespace-normalized) code, so an
+  absent or unmatched preference leaves today's behavior byte-identical.
 - **`src/stores/useTrackPreferenceStore.ts`** — Pinia store bridging the ladder to
   the network. `load(baseUrl)` GETs `…/users/me/settings` (fail-soft),
   `getPerItem`/`setPerItem` use `phlix.trackPref.<kind>.<itemId>`, and
@@ -352,7 +352,7 @@ X-Phlix-Device-ID:   tizen-<uuid>
 
 **phlix-server** maps `X-Phlix-Device-Type: samsung-tizen` to the appropriate
 streaming/transcode quality profile server-side. Do not reintroduce a
-client-posted device profile. HLS playback behaviour on the client is tuned only
+client-posted device profile. HLS playback behavior on the client is tuned only
 through `TIZEN_HLS_CONFIG` → `playerHlsConfig` (buffer sizes, level cap, software
 AES).
 
@@ -512,6 +512,13 @@ describe('resolveAppConfig', () => {
 Run a single file: `npx vitest run tests/unit/tizenBridge.test.ts`; a single
 test: `npx vitest run -t "BACK"`.
 
+### Docs spelling
+
+House spelling for this repo's prose — README, DEVELOPER, `docs/*`, code comments,
+and the tizen-own catalog's English base (`src/i18n/tizen/locales/en.ts`) — is
+**US English** (`color`, `normalize`, `behavior`). Merged `CHANGELOG.md`
+entries stay verbatim — history is never re-spelled.
+
 ## Common Tasks
 
 ### Add a new screen / route
@@ -524,7 +531,7 @@ router or view layer to edit here.
 
 ### Map a new remote key to an action
 
-0. **2020+ only:** if the key is a media-transport / channel / colour / Info key,
+0. **2020+ only:** if the key is a media-transport / channel / color / Info key,
    the TV will not deliver it as a DOM `keydown` until it is declared through the
    platform. Add its `tvinputdevice` name to `REMOTE_KEYS` in
    `src/remote/registerKeys.ts` (registration + teardown are already wired through

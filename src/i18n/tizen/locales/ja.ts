@@ -17,9 +17,7 @@
  *   pictureInPicture.enterLabel ('PiP'), subtitleTracks.sdhBadge ('SDH').
  *   Katakana UI words (スキップ, チャプター…) are NOT allow-listed — they are
  *   Japanese written in the CJK ranges, not Latin leftovers.
- * - Brands kept verbatim: Phlix, PiP, SDH, TV, ID, @phlix/ui and the API
- *   phrase '(state: none; actions: setSubtitle/setQuality only)' which is a
- *   developer-facing diagnostic quoted from code, translated only in prose.
+ * - Brands kept verbatim: Phlix, PiP, SDH, TV, ID.
  * - AM/PM render as 午前/午後; weekday initials are the single kanji 月火水木
  *   金土日 (standard Japanese TV listings).
  * - Full-width punctuation （）： inside ja copy; ASCII commas/dashes retained
@@ -35,7 +33,7 @@ const common = {
   goBack: '戻る',
   loading: '読み込み中…',
   loadMore: 'さらに読み込む',
-  noMediaId: 'メディアIDが指定されていません',
+  noMediaId: '表示する項目がありません — 作品画面から開いてください。',
   unknown: '不明',
   edit: '編集',
   delete: '削除',
@@ -130,7 +128,7 @@ const audioTracks = {
   headingOther: '{count}本の音声トラック',
   preferredNote: 'この作品の優先言語: {language}',
   rememberedNote: 'この作品の優先音声言語として{language}を記憶しました。',
-  applyRefusal: '音声トラックの選択は適用できません: @phlix/ui のプレイヤー store に音声トラック切り替えのインターフェースがありません (state: none; actions: setSubtitle/setQuality only).',
+  applyRefusal: 'このプレイヤーはまだ音声トラックを切り替えられません — 選択は保存されて次回に引き継がれます。',
 };
 
 const subtitleTracks = {

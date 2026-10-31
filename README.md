@@ -196,6 +196,23 @@ The client sends `X-Phlix-Device-Type: samsung-tizen` and a stable
 device-type header to the appropriate streaming/transcode quality profile — the
 client does not post a device profile.
 
+### Locale & admin-console build flags
+
+The remaining knobs `src/vite-env.d.ts` declares:
+
+- `VITE_PHLIX_LOCALE` — build-time locale override for the client i18n seam.
+  Wins over `navigator.language`, loses to an explicit runtime value;
+  unset/`en` keeps the byte-identical English defaults. The full locale ladder
+  and catalog law live in [`docs/i18n.md`](docs/i18n.md).
+- `VITE_PHLIX_TV_ADMIN` — release-variant switch: set to `1` to ship the admin
+  console (its routes + nav entry) inside the `.wgt`; ANY other value
+  (including unset) omits it — default-off (`buildMenu()`/`buildExtraRoutes()`
+  in `src/main.ts`).
+
+The `VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY` / `VITE_PHLIX_DEV_ALLOW_INSECURE_SYNCPLAY`
+hatches belong to the TLS-mandatory sections above — never set them when
+building a release `.wgt`.
+
 ### Tizen Configuration
 
 `app/config.xml` is the Tizen widget (`.wgt`) manifest:
@@ -423,7 +440,7 @@ decodable format.
 ```
 phlix-tizen-client/
 ├── index.html               # Vite entry (repo root); mounts #phlix-app, #phlix-spatial-host + 7 overlay hosts
-├── vite-env.d.ts            # VITE_PHLIX_SERVER_URL / VITE_PHLIX_HUB_URL / VITE_PHLIX_HUB_SERVER_ID
+├── vite-env.d.ts            # ALL build-time env knobs (7 declared — see Configuration)
 ├── src/
 │   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host + 7 overlay apps; TIZEN_HLS_CONFIG, buildMenu, buildExtraRoutes
 │   ├── polyfills.ts         # structuredClone fallback (imported first)
@@ -449,7 +466,7 @@ phlix-tizen-client/
 │   ├── test-setup.ts        # in-memory localStorage mock
 │   ├── fixtures/
 │   │   └── server-route-manifest.json  # vendored @phlix/contracts route manifest (route gate)
-│   └── unit/
+│   └── unit/                # suites — a selection below; `ls tests/unit` for the full set
 │       ├── resolveConfig.test.ts
 │       ├── deviceId.test.ts
 │       ├── tizenBridge.test.ts
@@ -467,7 +484,8 @@ phlix-tizen-client/
 │   └── ui-port-divergence.md # local ports of sealed @phlix/ui surfaces (M-TIZEN-08)
 ├── .github/workflows/
 │   ├── test.yml             # npm test (vitest)
-│   └── lint.yml             # npm run lint + npm run build
+│   ├── lint.yml             # npm run lint + npm run build
+│   └── build.yml            # npm run package + package/ freshness gate + rolling 'latest' .wgt release
 ├── vite.config.ts           # base: './', target chrome100
 ├── vitest.config.ts
 ├── eslint.config.mjs        # flat config

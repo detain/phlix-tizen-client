@@ -7,8 +7,7 @@
  *   (plain spaces keep the file ASCII-simple); curly apostrophes ’ like the
  *   ui bundles; « % » space before percent in match copy ("à 85 %" style).
  * - Brands/technical tokens kept verbatim: Phlix, Samsung TV, PiP, SDH, Mono,
- *   AM/PM, kbps, tag (accepted loanword in fr UI for labels), and the API
- *   phrase '(state: none; actions: setSubtitle/setQuality only)'.
+ *   AM/PM, kbps, tag (accepted loanword in fr UI for labels).
  * - "Picture-in-picture" → "image dans l’image" (Apple fr convention).
  * - Subtitle family uses plain "sous-titres" (fr does not say "pistes de
  *   sous-titres" in TV UIs); audio keeps "pistes audio".
@@ -32,7 +31,7 @@ const common = {
   goBack: 'Retour',
   loading: 'Chargement…',
   loadMore: 'Charger plus',
-  noMediaId: 'Aucun ID de média fourni',
+  noMediaId: 'Rien à afficher — ouvrez cela depuis un titre.',
   unknown: 'Inconnu',
   edit: 'Modifier',
   delete: 'Supprimer',
@@ -127,7 +126,7 @@ const audioTracks = {
   headingOther: '{count} Pistes audio',
   preferredNote: 'Préférée pour ce titre : {language}',
   rememberedNote: '{language} a été mémorisée comme langue audio préférée pour ce titre.',
-  applyRefusal: 'Le choix de piste audio ne peut pas être appliqué : le store du lecteur @phlix/ui n’expose aucune interface de changement de piste audio (state: none; actions: setSubtitle/setQuality only).',
+  applyRefusal: 'Ce lecteur ne peut pas encore changer de piste audio — votre choix est retenu pour la prochaine fois.',
 };
 
 const subtitleTracks = {

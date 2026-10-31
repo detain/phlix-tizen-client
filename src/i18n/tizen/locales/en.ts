@@ -39,7 +39,7 @@ const common = {
   goBack: 'Go back',
   loading: 'Loading…',
   loadMore: 'Load more',
-  noMediaId: 'No media id provided',
+  noMediaId: 'Nothing to show — open this from a title.',
   unknown: 'Unknown',
   edit: 'Edit',
   delete: 'Delete',
@@ -155,7 +155,7 @@ const audioTracks = {
   rememberedNote:
     'Remembered {language} as your preferred audio language for this title.',
   applyRefusal:
-    'Audio track choice cannot be applied: the @phlix/ui player store exposes no audio-track switching surface (state: none; actions: setSubtitle/setQuality only).',
+    'This player can’t switch audio tracks yet — your choice is remembered for next time.',
 } satisfies Record<string, string>;
 
 const subtitleTracks = {

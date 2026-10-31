@@ -6,8 +6,7 @@
  * - Nouns capitalized per German orthography; compound labels preferred
  *   ("Audiospurliste", "Kapitelliste") to keep TV rows short.
  * - Brands/technical tokens kept verbatim: Phlix, Samsung TV, PiP, SDH, Mono,
- *   Stereo, Intro, Outro, Stream, Tag, Hub, AM/PM, kbps, and the API phrase
- *   '(state: none; actions: setSubtitle/setQuality only)'.
+ *   Stereo, Intro, Outro, Stream, Tag, Hub, AM/PM, kbps.
  * - "Picture-in-picture" → "Bild-im-Bild" (Microsoft/Apple de convention).
  * - Recommendations heading pair: "Für dich" (de TV convention for "For You").
  * - German "Kapitel"/"Titel"/"Künstler" do not inflect for the plural, so
@@ -31,7 +30,7 @@ const common = {
   goBack: 'Zurück',
   loading: 'Wird geladen…',
   loadMore: 'Mehr laden',
-  noMediaId: 'Keine Medien-ID angegeben',
+  noMediaId: 'Nichts anzuzeigen — öffne dies aus einem Titel.',
   unknown: 'Unbekannt',
   edit: 'Bearbeiten',
   delete: 'Löschen',
@@ -126,7 +125,7 @@ const audioTracks = {
   headingOther: '{count} Audiospuren',
   preferredNote: 'Bevorzugt für diesen Titel: {language}',
   rememberedNote: '{language} wurde als bevorzugte Audiosprache für diesen Titel gemerkt.',
-  applyRefusal: 'Die Audiospur-Auswahl kann nicht angewendet werden: Der @phlix/ui-Player-Store bietet keine Oberfläche zum Wechseln der Audiospur (state: none; actions: setSubtitle/setQuality only).',
+  applyRefusal: 'Dieser Player kann noch keine Audiospuren umschalten — deine Auswahl wird für das nächste Mal gemerkt.',
 };
 
 const subtitleTracks = {

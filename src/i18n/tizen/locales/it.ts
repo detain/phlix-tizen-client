@@ -5,8 +5,7 @@
  * - Informal "tu" / nominal imperative register (TV UI standard, matches the
  *   ui SSOT it voice: "Riprova", "Continua a guardare").
  * - Brands/technical tokens kept verbatim: Phlix, Samsung TV, PiP, SDH, Mono,
- *   Stereo, Intro, Outro, Tag, Hub, AM/PM, kbps, and the API phrase
- *   '(state: none; actions: setSubtitle/setQuality only)'.
+ *   Stereo, Intro, Outro, Tag, Hub, AM/PM, kbps.
  * - "Picture-in-picture" → "immagine in immagine" (Apple it convention).
  * - Recommendations family uses "consigli" (Netflix it "Per te" / "Consigli");
  *   the headingCount/gridAria additive pipes follow "Consiglio | Consigli".
@@ -32,7 +31,7 @@ const common = {
   goBack: 'Indietro',
   loading: 'Caricamento…',
   loadMore: 'Carica altro',
-  noMediaId: 'Nessun ID contenuto fornito',
+  noMediaId: 'Niente da mostrare — apri questo da un titolo.',
   unknown: 'Sconosciuto',
   edit: 'Modifica',
   delete: 'Elimina',
@@ -127,7 +126,7 @@ const audioTracks = {
   headingOther: '{count} Tracce audio',
   preferredNote: 'Preferita per questo titolo: {language}',
   rememberedNote: '{language} è stata salvata come lingua audio preferita per questo titolo.',
-  applyRefusal: 'La scelta della traccia audio non può essere applicata: il player store di @phlix/ui non espone alcuna interfaccia per cambiare traccia (state: none; actions: setSubtitle/setQuality only).',
+  applyRefusal: 'Questo player non può ancora cambiare traccia audio — la tua scelta viene ricordata per la prossima volta.',
 };
 
 const subtitleTracks = {

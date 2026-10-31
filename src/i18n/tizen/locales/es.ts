@@ -5,8 +5,7 @@
  * - Neutral Latin-American Spanish, "tú" register — mirroring the ui SSOT es
  *   bundle voice ("your cinema" friendly English → informal tú).
  * - Brands/technical tokens kept verbatim: Phlix, Samsung TV, PiP, SDH, Mono,
- *   AM/PM, kbps, and the developer-facing API phrase '(state: none; actions:
- *   setSubtitle/setQuality only)' inside audioTracks.applyRefusal.
+ *   AM/PM, kbps.
  * - "Picture-in-picture" → "imagen en imagen" (Apple/Google es convention).
  * - Skip labels: "Saltar introducción" / "Saltar cierre"; marker tooltips use
  *   the matching nouns ("Introducción" / "Final"… see below) — outro renders
@@ -35,7 +34,7 @@ const common = {
   goBack: 'Volver',
   loading: 'Cargando…',
   loadMore: 'Cargar más',
-  noMediaId: 'No se proporcionó el ID del contenido',
+  noMediaId: 'No hay nada que mostrar: abre esto desde un título.',
   unknown: 'Desconocido',
   edit: 'Editar',
   delete: 'Eliminar',
@@ -130,7 +129,7 @@ const audioTracks = {
   headingOther: '{count} Pistas de audio',
   preferredNote: 'Preferida para este título: {language}',
   rememberedNote: 'Recordé {language} como tu idioma de audio preferido para este título.',
-  applyRefusal: 'No se puede aplicar la elección de pista de audio: el player store de @phlix/ui no expone ninguna interfaz para cambiar de pista (state: none; actions: setSubtitle/setQuality only).',
+  applyRefusal: 'Este reproductor aún no puede cambiar de pista de audio — tu elección se recordará para la próxima.',
 };
 
 const subtitleTracks = {

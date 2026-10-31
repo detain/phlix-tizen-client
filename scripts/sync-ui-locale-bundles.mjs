@@ -11,7 +11,7 @@
  * branch/ref + per-file sha256 of BOTH the pristine source blob and the
  * vendored output, so tests/unit/i18nLocales.test.ts can verify the copy
  * whenever the sibling repo is reachable (hard-fail locally, explicit skip
- * in CI where only phlix-contracts is cloned — see that suite's header).
+ * in CI, which clones no sibling repo at all — see that suite's header).
  *
  * TRANSFORMS — the complete list; any other diff is drift:
  *  1. `../messages` has no client-side counterpart: the line
