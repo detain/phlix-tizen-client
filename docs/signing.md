@@ -201,7 +201,9 @@ cd package && zip -r -X ../phlix-tizen-unsigned.wgt .
 The published `.wgt` is **unsigned and not installable on a TV** — it exists
 for inspection and as a convenience snapshot. Install requires signing with
 your own certificate, which cannot happen in this repo's CI because the key is
-yours, not the project's.
+yours, not the project's. The end-to-end path for **updating an installed
+widget** (same author certificate, what state survives the replace) is the
+README section of that name.
 
 **Optional headless signing recipe** (your own runner; sketch, verify each
 step against the linked CLI docs — the Studio installer is wizard-driven, so

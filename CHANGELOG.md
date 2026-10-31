@@ -27,6 +27,36 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — a remote sync command can no longer force the player to an absurd rate (M-TIZEN-40 / review tizen__secnet MINOR-6) — 2026-10-30
+
+- **What users see:** if a group member (or a compromised server
+  rebroadcast) sends a sync command carrying rate NaN/Infinity/0/4×-plus,
+  the TV keeps its current rate instead of warping playback; clean rates
+  still apply verbatim.
+- The position arm of the same review id was already cured at `fa05cad`
+  (W-min171, `optFiniteMs` at the socket boundary). The rate arm was live:
+  `onRemoteCommand`'s sync case applied `command.rate` unvalidated. It now
+  passes `optFiniteRate` — drop-not-clamp, [0.25, 4] inclusive envelope
+  (server vocabulary only ever nudges 1 ± 0.1; SPEC.md). Wire truth logged
+  in the guard's docblock: at @phlix/syncplay v0.1.5 the socket rail cannot
+  carry a rate at all (`PlaybackCommand` = {type, position, serverTime}),
+  so the guard protects the store's public seam — and tests pin the rails'
+  rate-free shape so a future re-pin that starts forwarding `rate` reddens
+  the pin and forces a deliberate envelope review.
+
+### Documentation — the widget update path is written down (M-TIZEN-16 / review tizen__devops MINOR-7) — 2026-10-30
+
+- **What users see:** README gains "Updating an installed widget": no store
+  channel exists, so updates ride the same signed sideload as first
+  install; same author certificate + same app id replaces in place and
+  preserves the widget's localStorage (server url, install-stable device
+  id, tokens, prefs — the app restarts paired); uninstall-then-install
+  resets to a fresh pairing; the one-time re-login caveat of the
+  `encryption="enable"` webdata flag (added at `409fcc2`) is stated; and
+  the GitHub `latest` release's raw `.wgt` is named what it is — an
+  unsigned inspection snapshot, never an update source.
+- `docs/signing.md` CI-signing section cross-points the new README section.
+
 ### Security — dev-chain advisory clear + retroactive log of three shipped dependency/CI moves (M-TIZEN-41 / review tizen__writer #1) — 2026-10-30
 
 - **What users see:** nothing — every commit below is dev-chain/CI surface;

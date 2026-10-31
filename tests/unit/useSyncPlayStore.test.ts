@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { setActivePinia, createPinia } from 'pinia';
 import { SyncPlayClient } from '@phlix/syncplay';
 import {
@@ -316,6 +318,54 @@ describe('useSyncPlayStore', () => {
     it('onRemoteCommand ignores commands when no session', () => {
       const store = useSyncPlayStore();
       expect(() => store.onRemoteCommand({ type: 'play' })).not.toThrow();
+    });
+
+    // M-TIZEN-40 (tizen__secnet MINOR-6, rate arm): optFiniteRate at the
+    // application site. Poison drops (previous rate survives), clean values
+    // apply VERBATIM, envelope bounds are inclusive.
+    it('onRemoteCommand applies sane sync rates verbatim, envelope inclusive', () => {
+      for (const rate of [0.25, 1, 1.5, 4]) {
+        const store = useSyncPlayStore();
+        // @ts-expect-error - setting directly for test
+        store.currentSession = { id: 's', state: 'playing', playbackPosition: 0, playbackRate: 1 };
+        store.onRemoteCommand({ type: 'sync', rate });
+        expect(store.currentSession?.playbackRate).toBe(rate);
+      }
+    });
+
+    it('onRemoteCommand DROPS non-finite/out-of-envelope sync rates (poison keeps prior rate)', () => {
+      const poisons: unknown[] = [NaN, Infinity, -Infinity, 0, -1, 0.1, 4.5, 1000, 'poison', {}, [], null];
+      for (const rate of poisons) {
+        const store = useSyncPlayStore();
+        // @ts-expect-error - setting directly for test
+        store.currentSession = { id: 's', state: 'playing', playbackPosition: 7000, playbackRate: 1 };
+        store.onRemoteCommand({ type: 'sync', position: 8000, rate: rate as number | undefined });
+        // Rate untouched — but the clean position in the SAME command still lands.
+        expect(store.currentSession?.playbackRate).toBe(1);
+        expect(store.currentSession?.playbackPosition).toBe(8000);
+      }
+    });
+
+    it('onRemoteCommand applies a numeric STRING rate (same coercion law as the position rail)', () => {
+      const store = useSyncPlayStore();
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 's', state: 'playing', playbackRate: 1 };
+      store.onRemoteCommand({ type: 'sync', rate: '1.5' as unknown as number });
+      expect(store.currentSession?.playbackRate).toBe(1.5);
+    });
+
+    it('M-TIZEN-40 source pin: the socket rails never forward a rate at this pin', () => {
+      // @phlix/syncplay v0.1.5 PlaybackCommand is {type, position, serverTime}
+      // — no rate exists to forward. These pins make that wire truth
+      // load-bearing: a future library/re-pin that starts forwarding `rate`
+      // reddens this test and forces a deliberate look at the envelope.
+      const src = readFileSync(join(process.cwd(), 'src', 'stores', 'useSyncPlayStore.ts'), 'utf8');
+      expect(src).toContain(
+        "onRemoteCommand({ type: command.type, position: optFiniteMs(command.position) })",
+      );
+      expect(src).toContain(
+        "onRemoteCommand({ type: isPlaying ? 'play' : 'pause', position: optFiniteMs(position) })",
+      );
     });
   });
 

@@ -222,6 +222,13 @@ export function probeStorage(): StorageLike {
  * WITHOUT a ui `access_token` row, the liveness anchor here is wrong for that
  * mode and must key on that session's real signal — do not let a companion-
  * credential wipe orphan the session itself.
+ *
+ * M-TIZEN-24 (tizen__exploiter m3) is the SAME law seen by a second persona —
+ * the two reviews independently reported these three orphaned rows. The
+ * exploit scenario it named ("the next person on a shared TV keeps a
+ * relay-capable JWT") is exactly what this reconciliation removes; its two
+ * preference rows (`phlix.hubUrl`, `phlix.hubServerId`) stay KEPT by the
+ * documented decision above, not by oversight.
  */
 export function reconcileHostCredentialRows(storage: StorageLike): boolean {
   const sessionAlive = (storage.getItem('access_token') ?? '') !== '';

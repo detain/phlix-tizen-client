@@ -406,6 +406,31 @@ The app id `phlix.app.phlixtizen` comes from `app/config.xml` (authoritative).
 See [`docs/signing.md`](docs/signing.md) for signing details, the TV-as-device
 walk, and install failure modes.
 
+### Updating an installed widget
+
+There is no Samsung Apps store listing — the Phlix widget is self-distributed,
+so an update travels the **same sideload path as the first install**:
+
+1. Build and sign the new `.wgt` from a checkout of the new version, exactly as
+   in Option 2 above, **with the same author certificate as the installed one**
+   (a different author certificate installs a *second, unrelated app* — see
+   “Update installs as a second app” in [`docs/signing.md`](docs/signing.md)
+   Known Issues).
+2. Re-run the Option 2 install step above against the newly signed `.wgt` —
+   same app id + same author certificate makes the TV replace the existing
+   widget in place.
+3. What survives: an update install preserves the widget's private storage, so
+   everything under `localStorage` — the server address (`phlix.serverUrl`),
+   the install-stable `phlix.deviceId`, session tokens, preferences — carries
+   over; the updated app starts paired. An **uninstall** before installing does
+   not: the next boot is a fresh pairing with a new device id. One shipped
+   exception is one-time: the first update that applies the webdata-encryption
+   flag (`encryption="enable"` in `app/config.xml`, added 2026-10) may fail to
+   decrypt previously-written webdata — the effect is a single re-login.
+4. The `.wgt` published on the GitHub `latest` release is an **unsigned
+   inspection snapshot, not an update source** — install paths must sign from a
+   checkout (see the CI signing section in [`docs/signing.md`](docs/signing.md)).
+
 ## Remote Control
 
 D-pad navigation is handled by `@phlix/ui`'s spatial navigation

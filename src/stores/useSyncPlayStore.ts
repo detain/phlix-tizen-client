@@ -244,6 +244,36 @@ function optFiniteMs(value: unknown): number | undefined {
   return Number.isFinite(n) && n >= 0 ? n : undefined;
 }
 
+/** Plausible remote playback-rate envelope (M-TIZEN-40). The server's own
+ * vocabulary never needs more: `syncplay_playback_sync` nudges carry
+ * `suggested_rate = 1 ± 0.1` (SPEC.md, GroupState::NUDGE_RATE_STEP). The
+ * bounds are generous UX (quarter-creep to 4× skip-read) and far from the
+ * browser's hard [0.0625, 16] IndexSizeError walls. */
+const RATE_ENVELOPE_MIN = 0.25;
+const RATE_ENVELOPE_MAX = 4;
+
+/**
+ * M-TIZEN-40 (review tizen__secnet MINOR-6, rate arm): the command-rate
+ * guard, same drop-not-clamp doctrine as {@link optFiniteMs} — a poisoned
+ * rate is IGNORED (the previous rate survives) rather than rescaled, because
+ * silently altering a clean value is the worse lie.
+ *
+ * Wire truth at this pin (@phlix/syncplay v0.1.5): the socket rail cannot
+ * even deliver a rate — `PlaybackCommand` is {type, position, serverTime}
+ * and the sync handler surfaces only (memberId, position, isPlaying), so the
+ * server's nudge `suggested_rate` never reaches this store. The guard
+ * protects the store's PUBLIC seam (`onRemoteCommand` is exported) against
+ * callers that do pass a rate, and stands ready for a future library that
+ * forwards one — tests/unit/sourcePinSocketRateRail.test.ts pins the rail's
+ * rate-free shape so a re-pin that starts forwarding `rate` turns that pin
+ * red and forces a deliberate look at this envelope.
+ */
+function optFiniteRate(value: unknown): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  const n = num(value, Number.NaN);
+  return Number.isFinite(n) && n >= RATE_ENVELOPE_MIN && n <= RATE_ENVELOPE_MAX ? n : undefined;
+}
+
 /** Unix SECONDS (the server's unit) → ISO 8601. */
 function isoFromUnixSeconds(seconds: unknown): string {
   const s = num(seconds, 0);
@@ -1034,7 +1064,10 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
    * Updates local session state based on the command type. Receive-side
    * application is intentionally untouched by the seconds→ms boundary work
    * (S293 scope); finite positions are applied verbatim — the command rail's
-   * optFiniteMs guard (M-TIZEN-27) runs at the socket boundary above.
+   * optFiniteMs guard (M-TIZEN-27) runs at the socket boundary above. This
+   * function is ALSO a public store seam: callers here bypass the socket
+   * guard, so the rate arm re-validates at application (optFiniteRate,
+   * M-TIZEN-40).
    */
   function onRemoteCommand(command: RemotePlaybackCommand): void {
     if (!currentSession.value) return;
@@ -1058,8 +1091,11 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
         if (command.position !== undefined) {
           currentSession.value = { ...currentSession.value, playbackPosition: command.position };
         }
-        if (command.rate !== undefined) {
-          currentSession.value = { ...currentSession.value, playbackRate: command.rate };
+        {
+          const rate = optFiniteRate(command.rate);
+          if (rate !== undefined) {
+            currentSession.value = { ...currentSession.value, playbackRate: rate };
+          }
         }
         break;
     }
