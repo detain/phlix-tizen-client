@@ -6,6 +6,13 @@
         version="1.0.0"
         viewmodes="maximized">
 
+    <!-- M-TIZEN-38 (W-min170): the platform twin of the index.html CSP egress
+         posture — user-paired servers live at arbitrary LAN origins/ports, so
+         the widget admits all network egress; 'self' would carry nothing on a
+         file:// origin. The decision and its backstop (http(s) scheme
+         allow-list at the storage boundary, TLS-mandatory bearer relay dial)
+         are recorded in the CSP block comment there — narrowing this row
+         first would break the product's premise, not the attack. -->
     <access origin="*" subdomains="*"></access>
     <tizen:application id="phlix.app.phlixtizen"
                        package="phlix"
@@ -25,10 +32,21 @@
 
     <tizen:profile name="tv-samsung"/>
 
+    <!-- M-TIZEN-23 (W-min170): encryption="enable". This row previously read
+         "disable" — a scaffold-era default, not a decision, while the app's
+         localStorage carries bearer/refresh tokens (phlix.hubAccessToken, and
+         the vendored ui auth store's access_token/refresh_token rows). Enable
+         asks the platform to encrypt webdata at rest. Honest tradeoff:
+         on the first update that applies this flag, previously-written webdata
+         may not decrypt — the effect is a one-time re-login (tokens are
+         refreshable and the sideload-era install base is small, so the cost
+         is bounded and paid once per device). On firmware that ignores the
+         attribute the posture is unchanged by this row alone; the sandbox
+         (per-app-id webdata partition) remains the containment story. -->
     <tizen:setting screen-orientation="landscape"
                    context-menu="enable"
                    background-support="disable"
-                   encryption="disable"
+                   encryption="enable"
                    install-location="auto"
                    hwkey-event="enable"/>
 

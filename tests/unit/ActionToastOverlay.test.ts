@@ -22,6 +22,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia, type Pinia } from 'pinia';
 import remoteManager from '@/remote/RemoteManager';
+import KeyMapping from '@/remote/KeyMapping';
 import ActionToastOverlay from '@/components/ActionToastOverlay.vue';
 import {
   useActionToastStore,
@@ -178,6 +179,30 @@ describe('ActionToastOverlay (S516 AD-13)', () => {
     remoteManager.emit('action', { key: 'PLAY' });
     await wrapper.vm.$nextTick();
     expect(wrapper.text()).toBe('Play');
+    wrapper.unmount();
+  });
+
+  it('M-TIZEN-01 — the CHANNEL_UP/CHANNEL_DOWN zap-guard swallow captions nothing; the one set drives it', async () => {
+    const wrapper = mountOverlay(pinia);
+    // The channel pair is a NEGATIVE consumer (M-TIZEN-09): its immediate+
+    // handled classification exists to preventDefault a live-TV zap. Captioning
+    // "Channel Up"/"Channel Down" would echo a function that did not happen.
+    for (const key of ['CHANNEL_UP', 'CHANNEL_DOWN'] as const) {
+      remoteManager.emit('action', { key });
+      await wrapper.vm.$nextTick();
+      expect(useActionToastStore().caption, key).toBeNull();
+    }
+    expect(wrapper.text()).toBe('');
+    // Both keys remain EMITTED (RemoteManager classification untouched — the
+    // swallow is the feature); only the caption layer went quiet:
+    expect(KeyMapping.isSilentAction('CHANNEL_UP')).toBe(true);
+    expect(KeyMapping.isImmediate('CHANNEL_UP')).toBe(true);
+    // The display rows survive as vocabulary (not an echo promise):
+    expect(KeyMapping.getDisplayName('CHANNEL_UP')).toBe('Channel Up');
+    // And real actions still caption through the same set check:
+    remoteManager.emit('action', { key: 'STOP' });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toBe('Stop');
     wrapper.unmount();
   });
 

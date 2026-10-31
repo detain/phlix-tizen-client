@@ -20,14 +20,21 @@
  */
 
 import type { MusicArtist } from '../stores/useMusicStore';
+import { computed } from 'vue';
+import { useMediaApiBase } from '@phlix/ui';
 import { tTizen } from '../i18n/tizen';
+import { safeTvImageSrc } from '../utils/tvImageSrc';
 
 interface Props {
   /** The artist to display. */
   artist: MusicArtist;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
+
+// M-TIZEN-39: scheme allow-list at the binding boundary (see RecommendationCard).
+const mediaBase = useMediaApiBase();
+const photoSrc = computed(() => safeTvImageSrc(props.artist.imageUrl, mediaBase.value));
 
 const emit = defineEmits<{
   /** Fired when the user selects this artist. */
@@ -47,8 +54,9 @@ const emit = defineEmits<{
   >
     <div class="music-artist-card__poster-wrap">
       <img
-        v-if="artist.imageUrl"
-        :src="artist.imageUrl"
+        v-if="photoSrc"
+        :src="photoSrc"
+        referrerpolicy="no-referrer"
         :alt="tTizen('music.artistPhotoAlt', { name: artist.name })"
         class="music-artist-card__poster"
         loading="lazy"

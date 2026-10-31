@@ -33,6 +33,33 @@ at this commit, not from memory:
 - **Invite create-token DTO.** NOT lagged — the two-leg create-token invite
   shape already ships in the v0.99.10 bundle. Recorded so nobody re-audits it
   twice; it re-enters the list only if the DTO moves again.
+- **Music playback state (M-TIZEN-30 probe).** ui's music player
+  (`useMusicPlayer`) keeps playing-state as PAGE-INSTANCE refs on detached
+  `new Audio()` elements, exports no store, and sets no `navigator.mediaSession`
+  for the music path — the host cannot observe "a track is playing" through any
+  legitimate seam. Tizen's `src/mediaActivity.ts` is therefore an OBSERVER-ONLY
+  decoration of the global `Audio` constructor feeding the screensaver veto.
+  **Retirement:** when ui exports music playback state (a shared store, or
+  mediaSession parity with the video path), DELETE the probe and its test +
+  this row; the probe's reappearance pin (bundle grep `new Audio(` in
+  `package/assets/Music*.js`) reddens on any re-pin that moves the
+  construction site first.
+- **Vendored `MetadataMatchModal` hand-rolled innerHTML escape (M-TIZEN-22
+  backstop).** The bundle escapes `&,"<>` per string then assigns innerHTML —
+  a hand-rolled sanitizer in frozen bytes this repo cannot edit. Carried as an
+  UPSTREAM item: replace with a text binding in @phlix/ui. Meanwhile the client
+  hardened its own boundary: `script-src 'self'` (no 'unsafe-inline') makes any
+  future escape regression non-executable inline (tests/unit/cspPolicy.test.ts).
+  At the next ui re-pin, grep the new bundle for the escape pattern; gone →
+  retire this row (and keep the strict CSP anyway — it never needed to loosen).
+- **Bare token storage keys in the ui auth store (M-TIZEN-23 note).** The
+  widget's webdata (now encrypted at rest via config.xml `encryption="enable"`)
+  contains the vendored store's UNPREFIXED rows `access_token`, `refresh_token`,
+  `user` beside this app's namespaced `phlix.*` keys. Harmless under the
+  per-app-id sandbox, but they break the namespace convention every other key
+  keeps, and renaming them is a STORE-LEVEL migration only ui can make.
+  Carried upstream: prefix (or consolidate) the auth store's storage keys; a
+  re-pin lane can grep `localStorage.setItem('access_token` to check.
 
 ## The law
 

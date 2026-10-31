@@ -20,14 +20,21 @@
  */
 
 import type { MusicAlbum } from '../stores/useMusicStore';
+import { computed } from 'vue';
+import { useMediaApiBase } from '@phlix/ui';
 import { tTizen } from '../i18n/tizen';
+import { safeTvImageSrc } from '../utils/tvImageSrc';
 
 interface Props {
   /** The album to display. */
   album: MusicAlbum;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
+
+// M-TIZEN-39: scheme allow-list at the binding boundary (see RecommendationCard).
+const mediaBase = useMediaApiBase();
+const coverSrc = computed(() => safeTvImageSrc(props.album.albumArtUrl, mediaBase.value));
 
 const emit = defineEmits<{
   /** Fired when the user selects this album. */
@@ -47,8 +54,9 @@ const emit = defineEmits<{
   >
     <div class="music-album-card__cover-wrap">
       <img
-        v-if="album.albumArtUrl"
-        :src="album.albumArtUrl"
+        v-if="coverSrc"
+        :src="coverSrc"
+        referrerpolicy="no-referrer"
         :alt="tTizen('music.albumArtAria', { title: album.title })"
         class="music-album-card__cover"
         loading="lazy"

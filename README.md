@@ -124,6 +124,15 @@ app's `localStorage` at runtime.
 
 ## Configuration
 
+**TV-era motion posture (M-TIZEN-35).** The sealed `@phlix/ui` stylesheet ships
+52 backdrop-blur layers tuned for desktop compositors; on a TV webview they cost
+dropped frames during D-pad shelf scrolls. The client therefore boots in a
+**lite** posture — a host stylesheet (`src/styles/tv-motion.css`) neutralizes
+all backdrop blur under a body class, while gradients and the nocturne
+atmosphere stay. Opt a device back into full blur by setting
+`localStorage['phlix.tvMotion'] = 'full'` (any other value, including garbage,
+keeps the TV-era default; the rule is `src/tvMotion.ts`).
+
 ### Server URL
 
 The client resolves which server to talk to in this order (see `src/resolveConfig.ts`):

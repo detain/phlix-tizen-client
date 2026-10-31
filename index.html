@@ -22,10 +22,33 @@
       no `javascript:`/`data:`/`file:` address can be stored, suggested, or
       resolved into the credential-carrying base — independent of how permissive
       the fetch-scheme CSP is for legitimate http(s)/ws(s) hosts.
+
+      M-TIZEN-22 (W-min170) script-src HARDENING: the majors-era assessment kept
+      'unsafe-inline' in script-src because the boot canary then lived in an
+      inline <script>; S515 replaced that with the CSS-only splash below and
+      moved renderBootFailure into the bundled main.ts, leaving 'unsafe-inline'
+      as dead weight — every script in this document and in the shipped
+      package/index.html is an EXTERNAL module ('self'). Dropping it is not
+      cosmetic: it removes the one primitive that made any future XSS
+      executable (inline <script> AND inline event handlers are both blocked by
+      strict script-src), which is also the class-level backstop for the
+      hand-rolled innerHTML escape in the vendored MetadataMatchModal (ledger
+      row in docs/ui-port-divergence.md — upstream to retire the escape; the
+      CSP makes its regression non-executable meanwhile). style-src keeps
+      'unsafe-inline' by necessity (the splash <style> block + Vue SFC inline
+      styles; styles cannot execute script). tests/unit/cspPolicy.test.ts pins
+      both halves of this law against both index.html carriers.
+
+      M-TIZEN-38 (W-min170): the platform twin of this posture is app/config.xml's
+      `<access origin="*" subdomains="*">` — the Tizen-widget egress allow that
+      lets the webview reach the same arbitrary user-paired origins at all. It
+      carries the identical decided-posture reasoning (and the identical
+      storage-boundary backstop); tightening the meta without it would be
+      decoration, and tightening it first would break the product's premise.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; media-src 'self' https: http: blob:; connect-src 'self' https: http: ws: wss:;"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; media-src 'self' https: http: blob:; connect-src 'self' https: http: ws: wss:;"
     />
     <title>Phlix</title>
     <style>

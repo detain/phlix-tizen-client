@@ -111,9 +111,9 @@ const KEY_MAP: Record<number, ActionName> = {
   // "claiming the channel keys as immediate also stops a registered channel
   // press from zapping the app to live TV"). The preventDefault IS the
   // feature; no functional action exists and none was invented here.
-  // Residual honesty note for the toast surface: the caption still reads
-  // "Channel Up/Down" although nothing functional happens (queue: suppress
-  // the caption or rename it — a MINOR, not this item).
+  // Toast honesty (M-TIZEN-01, W-min170): the caption no longer lies —
+  // CHANNEL_UP/CHANNEL_DOWN join DIGIT_COMMIT in KeyMapping.isSilentAction,
+  // so the swallow stays invisible to the viewer, as it should be.
   10252: 'PLAY_PAUSE',
   427: 'CHANNEL_UP',
   428: 'CHANNEL_DOWN'
@@ -184,6 +184,23 @@ const DIGIT_ACTIONS: ReadonlySet<ActionName> = new Set([
 // (one vocabulary, no forked names).
 const DIGIT_COMMIT_ACTION: ActionName = 'DIGIT_COMMIT';
 
+/**
+ * M-TIZEN-01 (W-min170): the SILENT-action law. These actions have NO positive
+ * consumer — their classification exists only to SWALLOW a key (DIGIT_COMMIT is
+ * the buffer drain awaiting a go-to-time surface; CHANNEL_UP/CHANNEL_DOWN are the
+ * documented defensive zap-guard, M-TIZEN-09: the preventDefault IS the feature).
+ * The toast surface must not caption them: echoing "Channel Up" for a press the
+ * app deliberately drops tells the viewer something functional happened, and it
+ * did not. Display rows stay (vocabulary/registry truth), captions do not.
+ * Predicate exposed so the ONE set is the single source (caption layer and any
+ * future echo surface consume this, never re-enumerate).
+ */
+const SILENT_ACTIONS: ReadonlySet<ActionName> = new Set([
+  DIGIT_COMMIT_ACTION,
+  'CHANNEL_UP',
+  'CHANNEL_DOWN'
+]);
+
 // Keys for which RemoteManager calls preventDefault. Arrows + ENTER are NOT
 // here, so the browser/spatial-nav receive them unimpeded.
 const HANDLED_ACTIONS: ReadonlySet<ActionName> = new Set([
@@ -214,7 +231,8 @@ const DISPLAY_NAMES: Record<string, string> = {
   MUTE: 'Mute',
   PLAY_PAUSE: 'Play/Pause',
   // KEPT with the defensive channel swallow (M-TIZEN-09) — see KEY_MAP note;
-  // the caption nuance is a reported residual, the parent behavior preserved.
+  // captions for these are suppressed by the SILENT_ACTIONS law (M-TIZEN-01),
+  // the rows stay as vocabulary truth (display names are not an echo promise).
   CHANNEL_UP: 'Channel Up',
   CHANNEL_DOWN: 'Channel Down',
   DIGIT_0: '0',
@@ -227,10 +245,12 @@ const DISPLAY_NAMES: Record<string, string> = {
   DIGIT_7: '7',
   DIGIT_8: '8',
   DIGIT_9: '9',
-  // S535 display need (re-derived: ActionToastOverlay captions EVERY action via
-  // getDisplayName, and the buffer's drain is an action): one honest label for
-  // the joined-digit commit. The digit rows above double as the voice phrase
-  // source, so digits keep their plain numerals here.
+  // S535 display need (re-derived: ActionToastOverlay captions the actions it
+  // echoes via getDisplayName — with the M-TIZEN-01 exception: SILENT_ACTIONS
+  // keep their row as vocabulary but are never echoed), and the buffer's drain
+  // is an action): one honest label for the joined-digit commit. The digit rows
+  // above double as the voice phrase source, so digits keep their plain numerals
+  // here.
   DIGIT_COMMIT: 'Digits'
 };
 
@@ -277,6 +297,14 @@ const KeyMapping = {
       return DISPLAY_NAMES[action];
     }
     return action;
+  },
+
+  /**
+   * Whether the action must stay uncaptioned by echo surfaces (M-TIZEN-01) —
+   * negative consumers only; see the SILENT_ACTIONS note.
+   */
+  isSilentAction(action: ActionName): boolean {
+    return SILENT_ACTIONS.has(action);
   }
 };
 

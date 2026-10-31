@@ -87,8 +87,42 @@ describe('KeyMapping', () => {
     });
   });
 
-  describe('isHandled', () => {
-    it('returns true for handled actions (union of repeatable and immediate)', () => {
+  describe('isSilentAction — the M-TIZEN-01/M-TIZEN-32 one-set law', () => {
+    it('names exactly the silent trio', () => {
+      expect(KeyMapping.isSilentAction('DIGIT_COMMIT')).toBe(true);
+      expect(KeyMapping.isSilentAction('CHANNEL_UP')).toBe(true);
+      expect(KeyMapping.isSilentAction('CHANNEL_DOWN')).toBe(true);
+    });
+
+    it('refuses everything a viewer could believe was echoed', () => {
+      // Immediate consumer actions:
+      for (const key of ['PLAY', 'PAUSE', 'STOP', 'BACK', 'HOME', 'NEXT', 'VOLUME_UP', 'MUTE', 'FAST_FORWARD', 'REWIND']) {
+        expect(KeyMapping.isSilentAction(key), key).toBe(false);
+      }
+      // Digits themselves are NOT silent (they are plain numeral input echoes
+      // while typing is impossible… they never caption because RemoteManager
+      // does not emit them as actions — the SILENT set covers the drain only):
+      expect(KeyMapping.isSilentAction('DIGIT_5')).toBe(false);
+      // Unknown mappings are not silent either (a future mapping must opt in
+      // by name — the set is exhaustive-by-review, never by catch-all):
+      expect(KeyMapping.isSilentAction('UNKNOWN_99999')).toBe(false);
+    });
+
+    it('every silent action still keeps a display row (vocabulary, not echo)', () => {
+      expect(KeyMapping.getDisplayName('DIGIT_COMMIT')).toBe('Digits');
+      expect(KeyMapping.getDisplayName('CHANNEL_UP')).toBe('Channel Up');
+      expect(KeyMapping.getDisplayName('CHANNEL_DOWN')).toBe('Channel Down');
+    });
+
+    it('the channel pair stays immediate+handled — silencing the caption did not change the swallow', () => {
+      for (const key of ['CHANNEL_UP', 'CHANNEL_DOWN']) {
+        expect(KeyMapping.isImmediate(key), key).toBe(true);
+        expect(KeyMapping.isHandled(key), key).toBe(true);
+      }
+    });
+  });
+
+  describe('isHandled', () => {    it('returns true for handled actions (union of repeatable and immediate)', () => {
       // From repeatable
       expect(KeyMapping.isHandled('FAST_FORWARD')).toBe(true);
       expect(KeyMapping.isHandled('REWIND')).toBe(true);

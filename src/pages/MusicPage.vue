@@ -26,17 +26,23 @@
  * @license   MIT
  */
 
-import { onMounted, watch } from 'vue';
+import { onMounted, watch, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useMediaApiBase } from '@phlix/ui';
 import { useMusicStore } from '../stores/useMusicStore';
 import type { MusicTrack } from '../stores/useMusicStore';
 import MusicArtistCard from '../components/MusicArtistCard.vue';
 import MusicAlbumCard from '../components/MusicAlbumCard.vue';
 import TrackListItem from '../components/TrackListItem.vue';
 import { tTizen } from '../i18n/tizen';
+import { safeTvImageSrc } from '../utils/tvImageSrc';
 
 const router = useRouter();
 const musicStore = useMusicStore();
+
+// M-TIZEN-39: scheme allow-list at the binding boundary (see RecommendationCard).
+const mediaBase = useMediaApiBase();
+const albumArtSrc = computed(() => safeTvImageSrc(musicStore.currentAlbum?.albumArtUrl, mediaBase.value));
 
 const emit = defineEmits<{
   (e: 'play', track: MusicTrack): void;
@@ -241,8 +247,9 @@ watch(() => musicStore.currentView, loadInitialData);
     >
       <div class="music-page__album-header">
         <img
-          v-if="musicStore.currentAlbum.albumArtUrl"
-          :src="musicStore.currentAlbum.albumArtUrl"
+          v-if="albumArtSrc"
+          :src="albumArtSrc"
+          referrerpolicy="no-referrer"
           :alt="tTizen('music.albumArtAria', { title: musicStore.currentAlbum.title })"
           class="music-page__album-art"
         >

@@ -18,6 +18,9 @@ import '@phlix/ui/fonts.css';
 // stylesheets: the floor overrides are also belt-and-braces to their
 // `html:root` specificity win (see the file's header for the full story).
 import './styles/tv-typography.css';
+// M-TIZEN-35 — TV-era GPU posture layer. Same after-vendor order law as the
+// typography layer above (the class it keys on is applied in boot()).
+import './styles/tv-motion.css';
 import { resolveAppConfig, pushAddressHistory, sanitizeServerAddress, resolveCredentialBase, CredentialTransportInsecureError } from './resolveConfig';
 import { createConnectScan } from './discovery/connectScan';
 import { resolveLocale, messagesForLocale } from './i18n';
@@ -28,6 +31,8 @@ import { installTizenBridge } from './tizenBridge';
 import { installGamepadBridge } from './remote/gamepadBridge';
 import { resolveHubRelayConfig, openHubRelayConnection, insecureRelayHatchEnabled } from './api/hubRelay';
 import { installRuntimeFailureCapture, recordRuntimeFailure, readRuntimeFailures, describeThrown, formatRuntimeFailureLine } from './runtimeDiagnostics';
+import { installMediaActivityProbe } from './mediaActivity';
+import { applyTvMotionClass } from './tvMotion';
 import { useSyncPlayStore } from './stores/useSyncPlayStore';
 import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
 import { buildTelemetryDeps, getConsent, startTelemetry } from './telemetry';
@@ -364,6 +369,16 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   // network, zero request sites (routeManifest scan unchanged); a healthy boot
   // writes NOTHING (pin-tested). renderBootFailure is the surfacing leg.
   const diagnostics = installRuntimeFailureCapture({ storage });
+
+  // M-TIZEN-30: observe sealed-bundle MUSIC playback before any ui chunk can
+  // create an Audio element (lazy route chunks load long after boot — this is
+  // still strictly first). Observer-only; see src/mediaActivity.ts.
+  installMediaActivityProbe();
+
+  // M-TIZEN-35: TV-era motion posture (default lite — backdrop blur off;
+  // localStorage phlix.tvMotion='full' opts back in). Class-only, zero
+  // network, zero request sites; see src/tvMotion.ts for the why.
+  applyTvMotionClass(storage, document.body);
 
   const serverUrl = storage.getItem(SERVER_URL_KEY);
   const envUrl = import.meta.env.VITE_PHLIX_SERVER_URL ?? null;

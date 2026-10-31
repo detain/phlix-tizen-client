@@ -29,6 +29,7 @@ const REPO = path.resolve(__dirname, '..', '..');
 
 const h = vi.hoisted(() => ({
   player: { playing: false } as { playing: boolean },
+  audio: { active: false },
 }));
 
 vi.mock('@phlix/ui', async () => ({
@@ -36,6 +37,13 @@ vi.mock('@phlix/ui', async () => ({
   // replaces the whole module graph, and these two must stay genuine.
   ...(await vi.importActual<Record<string, unknown>>('@phlix/ui')),
   usePlayerStore: () => h.player,
+}));
+
+// M-TIZEN-30: the overlay's music veto is the probe's ONLY read here; the
+// mediaActivity.test file owns the probe itself. The component imports it as
+// '../mediaActivity' — the alias resolves to the same absolute module.
+vi.mock('@/mediaActivity', () => ({
+  hasActiveAudioPlayback: () => h.audio.active,
 }));
 
 const START = 1_700_000_000_000;
@@ -51,6 +59,7 @@ describe('ScreenSaverOverlay — idle × playback × key-reset at the mount seam
     vi.useFakeTimers({ now: START, toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
     globalThis.localStorage.clear();
     h.player.playing = false;
+    h.audio.active = false;
   });
 
   afterEach(() => {
@@ -88,6 +97,43 @@ describe('ScreenSaverOverlay — idle × playback × key-reset at the mount seam
     await nextTick();
     expect(overlayExists(wrapper)).toBe(false);
     vi.advanceTimersByTime(1_000); // exactly 180 s after the last playing tick
+    await nextTick();
+    expect(overlayExists(wrapper)).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('M-TIZEN-30 — SEALED music playback vetoes exactly like video, and the window counts from the stop', async () => {
+    // The review caught this cold: a track left playing on the music surface
+    // dimmed to the static wordmark OVER LIVE AUDIO, because the veto only
+    // saw the video store. The mediaActivity probe is the second signal.
+    const wrapper = mount(ScreenSaverOverlay);
+    h.audio.active = true;
+    vi.advanceTimersByTime(600_000); // ten "minutes" of an album
+    await nextTick();
+    expect(overlayExists(wrapper)).toBe(false);
+    h.audio.active = false; // the track ended at t = 600 s
+    vi.advanceTimersByTime(179_000); // window not over since the stop
+    await nextTick();
+    expect(overlayExists(wrapper)).toBe(false);
+    vi.advanceTimersByTime(1_000); // exactly 180 s after the last live-audio tick
+    await nextTick();
+    expect(overlayExists(wrapper)).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('M-TIZEN-30 — video veto and music veto are independent ORs (one live signal is enough)', async () => {
+    const wrapper = mount(ScreenSaverOverlay);
+    h.player.playing = true; // video half only
+    vi.advanceTimersByTime(200_000);
+    await nextTick();
+    expect(overlayExists(wrapper)).toBe(false);
+    h.player.playing = false;
+    h.audio.active = true; // music half only
+    vi.advanceTimersByTime(200_000);
+    await nextTick();
+    expect(overlayExists(wrapper)).toBe(false);
+    h.audio.active = false;
+    vi.advanceTimersByTime(180_000);
     await nextTick();
     expect(overlayExists(wrapper)).toBe(true);
     wrapper.unmount();
@@ -190,5 +236,46 @@ describe('ScreenSaverOverlay — seam identity', () => {
   it('uses the shared RemoteManager singleton (not a private document listener)', () => {
     expect(remoteManager).toBeDefined();
     expect(typeof remoteManager.on).toBe('function');
+  });
+});
+
+describe('ScreenSaverOverlay — reduced motion keeps burn-in protection (M-TIZEN-31)', () => {
+  const src = readFileSync(path.join(REPO, 'src', 'components', 'ScreenSaverOverlay.vue'), 'utf8');
+  const reduceBlock = (() => {
+    const start = src.indexOf('@media (prefers-reduced-motion: reduce)');
+    expect(start, 'reduce block present').toBeGreaterThan(-1);
+    // Brace-match the block (comments inside contain no braces — verified by
+    // the balance check below).
+    let depth = 0;
+    let i = src.indexOf('{', start);
+    const from = i;
+    for (; i < src.length; i += 1) {
+      if (src[i] === '{') depth += 1;
+      else if (src[i] === '}') {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    return src.slice(from, i + 1);
+  })();
+
+  it('the drift LAYER is not switched off — a parked 132px wordmark is the exact burn-in class the overlay exists to prevent', () => {
+    expect(reduceBlock).not.toMatch(/\.screensaver__drift\s*\{[^}]*animation:\s*none/);
+    expect(reduceBlock).toMatch(/\.screensaver__drift\s*\{[^}]*animation:\s*screensaver-drift/);
+  });
+
+  it('the survival mechanism is STEPPED motion: discrete repositioning, nothing sweeps', () => {
+    const driftRule = /\.screensaver__drift\s*\{([^}]*)\}/.exec(reduceBlock);
+    expect(driftRule).not.toBeNull();
+    expect(driftRule[1]).toContain('steps(1, end)');
+    // Still the same drift keyframes and cadence — only the timing FUNCTION
+    // changes from smooth to teleporting between the two safe offsets.
+    expect(driftRule[1]).toContain('42s');
+    expect(driftRule[1]).toContain('infinite alternate');
+  });
+
+  it('the photosensitivity triggers stay OFF: halo breathe and the entry fade do not animate under reduce', () => {
+    expect(reduceBlock).toMatch(/\.screensaver__halo\s*\{[^}]*animation:\s*none/);
+    expect(reduceBlock).toMatch(/\.screensaver\s*\{[^}]*animation:\s*none/);
   });
 });

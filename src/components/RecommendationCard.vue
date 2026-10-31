@@ -17,14 +17,23 @@
  */
 
 import type { UserRecommendation } from '@phlix/contracts';
+import { computed } from 'vue';
+import { useMediaApiBase } from '@phlix/ui';
 import { tTizen } from '../i18n/tizen';
+import { safeTvImageSrc } from '../utils/tvImageSrc';
 
 interface Props {
   /** The recommendation to display. */
   item: UserRecommendation;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
+
+// M-TIZEN-39: wire art URL through the scheme allow-list (https everywhere;
+// root-relative against the media base; foreign http refused). An empty result
+// takes the v-else placeholder, never an unguarded :src.
+const mediaBase = useMediaApiBase();
+const posterSrc = computed(() => safeTvImageSrc(props.item.posterUrl, mediaBase.value));
 
 const emit = defineEmits<{
   /** Fired when the user selects this recommendation. */
@@ -44,8 +53,9 @@ const emit = defineEmits<{
   >
     <div class="recommendation-card__poster-wrap">
       <img
-        v-if="item.posterUrl"
-        :src="item.posterUrl"
+        v-if="posterSrc"
+        :src="posterSrc"
+        referrerpolicy="no-referrer"
         :alt="tTizen('recommendations.posterAlt', { title: item.title })"
         class="recommendation-card__poster"
         loading="lazy"

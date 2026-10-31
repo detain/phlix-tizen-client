@@ -56,13 +56,16 @@ const toast = useActionToastStore();
 // unsubscribe fn — this app lives for the whole session yet registers the
 // same T-05-cleanable way as every other listener.)
 /**
- * M-TIZEN-32: DIGIT_COMMIT is not a thing the viewer did — it is the digit
- * buffer draining a burst into a value that has NO consumer yet (go-to-time
- * is the named follow-on). Toasting "Digits" for it would echo nothing, so
- * the caption layer stays silent until some surface adopts the action.
+ * M-TIZEN-32 + M-TIZEN-01 (W-min170): the silent-action law, sourced from the
+ * ONE set in KeyMapping (isSilentAction) — DIGIT_COMMIT (the digit buffer
+ * draining a value with no consumer yet) and the CHANNEL_UP/CHANNEL_DOWN
+ * zap-guard swallow (the preventDefault IS the feature; nothing functional
+ * happens). Captioning any of them would echo an action the app deliberately
+ * dropped; the caption layer stays silent — never a clobber, and real actions
+ * still caption right after.
  */
 function captionAction(event: ActionEvent | KeyEvent): void {
-  if (!('key' in event) || event.key === KeyMapping.DIGIT_COMMIT) return;
+  if (!('key' in event) || KeyMapping.isSilentAction(event.key)) return;
   toast.show(KeyMapping.getDisplayName(event.key));
 }
 

@@ -4,11 +4,15 @@
  *
  * The always-mounted NINTH root app. The entire WHEN policy is pure and lives
  * in `../screensaver` (`shouldEngageScreenSaver`); this half only moves a
- * 1 s coarse clock, feeds it two live signals, and paints:
+ * 1 s coarse clock, feeds it live signals, and paints:
  *
  *   - `usePlayerStore().playing` — while playback is active every tick counts
  *     as activity, so the overlay NEVER engages during playback and the idle
  *     window after a pause starts from the pause, not from before the movie.
+ *   - `hasActiveAudioPlayback()` (M-TIZEN-30) — the same veto for SEALED-bundle
+ *     music: the ui music composable's state is page-instance-local with
+ *     detached `new Audio()` elements, so the shared store never sees it and
+ *     the mediaActivity observer is the only cross-app signal (see that file).
  *   - `RemoteManager 'keydown'` — the SAME global seam every routed remote key
  *     passes through (arrows included: RemoteManager emits keydown for every
  *     key it sees). Any key wakes instantly and re-arms the window.
@@ -42,6 +46,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { usePlayerStore } from '@phlix/ui';
 import remoteManager from '../remote/RemoteManager';
+import { hasActiveAudioPlayback } from '../mediaActivity';
 import { tTizen } from '../i18n/tizen';
 import {
   IDLE_BODY_CLASS,
@@ -93,13 +98,17 @@ function tick(): void {
   // Active playback IS continuous activity — refresh the stamp so the idle
   // window after a pause starts from the pause. The pure policy still holds
   // the absolute veto, so a stale/odd `playing` signal cannot mis-dim.
-  if (player.playing) lastActivityAt = now;
+  // M-TIZEN-30: "playing" means VIDEO (the shared ui store) OR SEALED music
+  // (mediaActivity's observed audio) — a track left playing on the music
+  // surface must not dim to a static wordmark over live audio.
+  const playing = Boolean(player.playing) || hasActiveAudioPlayback();
+  if (playing) lastActivityAt = now;
   setEngaged(
     shouldEngageScreenSaver({
       now,
       lastActivityAt,
       timeoutMs,
-      isPlaying: Boolean(player.playing),
+      isPlaying: playing,
     }),
   );
 }
@@ -250,8 +259,25 @@ onBeforeUnmount(() => {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .screensaver,
-  .screensaver__drift,
+  /*
+   * M-TIZEN-31 (review tizen__gameux m2): this block used to read
+   * `animation: none` for ALL THREE layers — which parked the 132px wordmark
+   * dead-center forever, exactly the static-image burn-in class the whole
+   * overlay exists to prevent. Reduced-motion means "no sweeping continuous
+   * motion", NOT "no repositioning": the drift survives as a STEPPED
+   * animation — the wordmark teleports between two safe offsets at the cycle
+   * boundaries (steps(1, end) holds each keyframe value, so nothing ever
+   * translates across the screen) — while the opacity PULSE (halo breathe)
+   * and the entry fade, the actual photosensitivity triggers, stay off.
+   * Discrete position change every 42 s: no pixel of the artwork holds a
+   * fixed position on any etching-relevant timescale.
+   */
+  .screensaver {
+    animation: none;
+  }
+  .screensaver__drift {
+    animation: screensaver-drift 42s steps(1, end) infinite alternate;
+  }
   .screensaver__halo {
     animation: none;
   }

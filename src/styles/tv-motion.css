@@ -1,0 +1,23 @@
+/**
+ * tv-motion.css — the host-side TV-era GPU layer (M-TIZEN-35 / W-min170).
+ *
+ * Imported in src/main.ts AFTER the vendor stylesheets (the tv-typography
+ * import-order idiom) and keyed on body .tv-motion-lite — the class is decided
+ * by src/tvMotion.ts (TV-era default: ON; `phlix.tvMotion='full'` opts back
+ * into blur). The blanket selector is deliberate: the 52 backdrop rules live
+ * inside the SEALED @phlix/ui bundle (frozen pin — we cannot edit, enumerate,
+ * or re-forge their selectors), and a host layer that shadows every future
+ * backdrop rule without a re-pin chase is exactly what "the CSS side deserves
+ * the TIZEN_HLS_CONFIG pass" means. !important is the seal tax; the cost is
+ * only ever paid when the gate class is present.
+ *
+ * Gradients (AppBackdrop's static nocturne field) SURVIVE — they are cheap
+ * steady-state paint, not per-frame re-rasterization; it is the blur that
+ * drops frames on a TV compositor (docs note in src/tvMotion.ts).
+ */
+.tv-motion-lite *,
+.tv-motion-lite ::before,
+.tv-motion-lite ::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
