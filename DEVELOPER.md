@@ -360,8 +360,9 @@ AES).
 
 ### Prerequisites
 
-- Node.js 22.12+ (`engines.node` is `>=22.12.0`)
+- Node.js: **24.x** is the CI-tested line; `engines.node` `>=22.12.0` is the declared floor (22.x is best-effort — no workflow leg runs it)
 - npm (CI installs with `npm ci --allow-git=all` from the TRACKED `package-lock.json` — audit W105 T-01; on a `package.json` pin change, regenerate with `npm install` and commit the lock)
+- Lock-regeneration toolchain: regenerate the lock with the toolchain that authored it — npm 11.x on Node 24 (this lock: npm 11.19.0 / node 24.20.0, `npm_config_userconfig=/dev/null`, `--allow-git=all`). The estate's npm 12 rewrites every `devOptional` entry to `dev` and gates `github:` deps behind EALLOWGIT/EALLOWREMOTE, so a 12-made diff is churn, not resolution. A legitimate pin bump moves only that pin's `version`/`resolved`/`integrity` lines (3+/3− shape); if a regeneration produces broader churn, re-cut it minimally with npm 11 before committing
 - Tizen Studio (for `.wgt` signing + TV deployment)
 
 ### Setup

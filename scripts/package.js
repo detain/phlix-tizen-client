@@ -3,6 +3,15 @@
  * Creates the `package/` directory (input to Tizen Studio / `tizen` CLI .wgt
  * signing) from the Vite build output.
  *
+ * Widget identity posture (review crossfe m5): scripts/version-sync.mjs stamps
+ * package.json "version" into app/config.xml BEFORE this assembles package/,
+ * so the widget version is the single-sourced release floor. While the estate
+ * ships rolling unsigned 'latest' .wgt prereleases per master push (build.yml),
+ * consecutive builds SHARE that widget identity on purpose — sideload era:
+ * individual builds are distinguished by their git SHA, not the version field.
+ * A real store/OTA release bumps package.json "version" once and re-runs the
+ * chain (DEVELOPER.md "Versioning").
+ *
  * ESM module ("type":"module" in package.json). Run via `npm run package`,
  * which builds first (`npm run build` → dist/) then invokes this.
  */

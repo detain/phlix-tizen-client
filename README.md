@@ -72,7 +72,7 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 
 ### Development Environment
 
-- **Node.js**: Version 22.12 or higher (`engines.node` is `>=22.12.0`)
+- **Node.js**: CI runs the **24.x** line (every workflow leg). `engines.node` `>=22.12.0` is the declared install floor — 22.x installs are best-effort: no workflow leg exercises them
 - **npm**: Included with Node.js
 - **Git**: For version control
 
