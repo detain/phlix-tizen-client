@@ -997,7 +997,7 @@ describe('runtime failure visibility (error-visibility brief)', () => {
 
       // The Vue bridge: production Vue console-errors component failures into
       // the void without app.config.errorHandler — boot must set it (the
-      // vendored ui ships none; proven by grep at v0.99.10).
+      // vendored ui ships none; proven by grep at v0.99.12).
       const appCfg = fakeApp.config as { errorHandler?: (err: unknown, vm: unknown, info: string) => void };
       expect(typeof appCfg.errorHandler).toBe('function');
       appCfg.errorHandler!(new TypeError('watcher boom'), null, 'app watcher');

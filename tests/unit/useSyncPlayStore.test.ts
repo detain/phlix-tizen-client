@@ -352,7 +352,7 @@ describe('useSyncPlayStore', () => {
     });
 
     it('M-TIZEN-40 source pin: the socket rails never forward a rate at this pin', () => {
-      // @phlix/syncplay v0.1.5 PlaybackCommand is {type, position, serverTime}
+      // @phlix/syncplay v0.1.6 PlaybackCommand is {type, position, serverTime}
       // — no rate exists to forward. These pins make that wire truth
       // load-bearing: a future library/re-pin that starts forwarding `rate`
       // reddens this test and forces a deliberate look at the envelope.

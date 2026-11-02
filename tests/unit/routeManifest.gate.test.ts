@@ -11,7 +11,7 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.5.3. Every tag this cite historically named
+ * `@phlix/contracts` at #v0.5.4. Every tag this cite historically named
  * shipped a STALE embed for this gate's purpose — #v0.4.7 embedded server
  * `2f1d2ee6…` (md5 4f03cb2e…) — while the estate-wide canonical copy was the
  * untagged master regen at server `730e55b7` (md5 pinned below, contracts
@@ -62,7 +62,13 @@
  * S279-class dead-rail tripwires and the WS/relay OUT-of-manifest pins
  * re-verified against them (zero removals ⇒ the dead rails stay unserved).
  * Per-file scan coverage UNCHANGED: the two new routes are not called from
- * this tree.)
+ * this tree. contracts v0.5.3→v0.5.4 re-pin (2026-11-02, tag wave C3): the
+ * #v0.5.4 tag (peels to contracts c491985317) carries the FROZEN trio
+ * byte-identically — the installed `dist/server-route-manifest.json` cmps
+ * equal to this vendored fixture at this leg (both md5 `91579683…`),
+ * `error-codes.json` stays `40c1da48…` and `mcp-scopes.json` stays
+ * `8c92c070…` — no codes moved, so no re-vendor is due and none was taken;
+ * pin cite advanced, comment-only, 0 behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
@@ -418,9 +424,9 @@ describe(`${GATE_ID} — vendored manifest integrity`, () => {
   });
 
   it('is byte-identical to the sibling contracts artifact it vendors', () => {
-    // md5 of `@phlix/contracts` `dist/server-route-manifest.json` AT the #v0.5.3
-    // tag (peels to contracts 430981e) — re-vendored byte-for-byte from the tag
-    // at this pin bump (2026-10-01); mobile re-vendored the SAME bytes (cmp
+    // md5 of `@phlix/contracts` `dist/server-route-manifest.json` — bytes
+    // vendored from the #v0.5.3 tag (peels to contracts 430981e) at the
+    // 2026-10-01 bump (2026-10-01); mobile re-vendored the SAME bytes (cmp
     // proven at this leg) — one source across the estate; any drift here means
     // this copy was edited (the artifact says "do not").
     const raw = readFileSync(MANIFEST_PATH);

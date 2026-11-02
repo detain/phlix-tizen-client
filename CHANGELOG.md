@@ -27,6 +27,70 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — tag-wave C3 re-pin: contracts #v0.5.4, syncplay #v0.1.6, ui #v0.99.12 — 2026-11-02
+
+- **What users see:** the widget's bundled UI gains the ui v0.99.11+v0.99.12
+  waves — playlist manageability gating (delete/remove correctly gated;
+  shared playlists render read-only), the My-List copy moves (M-UI-02), the
+  publicRooms wording sweep (R-UI-06) and auth-lockout messaging — and the
+  six vendored locale bundles (es/fr/de/it/pt_BR/ja) ride the same wave.
+- **Pin advance (tag-wave C3, release cascade).** `@phlix/contracts`
+  `#v0.5.3`→`#v0.5.4` (annotated tag `eb649cd9`, peels `c491985317`),
+  `@phlix/syncplay` `#v0.1.5`→`#v0.1.6` (tag `24e51a95`, peels
+  `081687742`), `@phlix/ui` `#v0.99.10`→`#v0.99.12` (tag `93b6d186`, peels
+  `1f0046c5`); each lock `resolved` equals its tag peel (strict-equality pin
+  law). The FROZEN contracts trio is byte-ident at v0.5.4 (`error-codes.json`
+  `40c1da48…`, `server-route-manifest.json` `91579683…`, `mcp-scopes.json`
+  `8c92c070…`): the vendored `tests/fixtures/server-route-manifest.json` cmps
+  equal to the installed artifact — no re-vendor was due and none was taken;
+  the gate test's docblock cite advanced (comment-only, 0 behavior).
+- **Lock churn is the minimal declared-delta shape** (npm 11 via
+  `npx --yes npm@11`, `npm_config_userconfig=/dev/null`): exactly 11+/11− —
+  three root dependency edges, the `version`/`resolved` pair under each of
+  the three `node_modules/@phlix/*` nodes, and two dependency edges recorded
+  under the ui node. ui v0.99.12 requests the SAME contracts/syncplay tags,
+  so the install is the equality era: zero nested `@phlix` nodes, no
+  hoist-divergence waiver. Vendored identity proven: installed
+  `@phlix/ui/dist/phlix-ui.js` sha256 `c6a0ea4c…`, `dist/player.js`
+  `36fe4035…`, `@phlix/contracts/dist/phlix-contracts.js` `d06f81e9…`,
+  `@phlix/syncplay/dist/phlix-syncplay.js` `e6be5a68…` — each identical to
+  the corresponding tag's tree blob.
+- **syncplay v0.1.6 is inert at this host's consumption.** `PlaybackCommand`
+  stays `{type, position, serverTime}` (no `rate` exists to forward — the
+  M-TIZEN-40 source pin now cites v0.1.6, re-verified against the installed
+  `client.d.ts`); the wave's `onChat`/`onQueueChanged`/`sendChat`/`sendTyping`
+  seams are additive and unconsumed here.
+- **i18n law exercised — the era's one forced exception.** The v0.99.12 wave
+  grew ui's catalog (`messages.ts` + all six locale files), so `vue-tsc`
+  reddened on the stale `a580410f`-era bundles exactly as the drift design
+  intends; the sanctioned `scripts/sync-ui-locale-bundles.mjs --ref
+  1f0046c5 --branch master` re-vendored the six bundles + `PIN` (index.ts
+  content unchanged — `fb4fa495…`, the registry shape did not move) and the
+  script's bootstrap `SOURCE_REF` advanced with it (law: constant ==
+  pin.ref). `docs/i18n.md`'s PIN paragraph tells the full story.
+- **Divergence ledger re-verified row-by-row against the new bytes**
+  (`docs/ui-port-divergence.md`): the socketHint `wsUrl`/`wsPath` seam SHIPS
+  at v0.99.12, but the host-side `endpointOverrides` seam deliberately does
+  NOT retire — both of tizen's dial lanes are host-owned and the one-pair
+  vocabulary can't express the split port/relay-path override set; the
+  bundle-forwarding follow-up is registered there as its own future wave.
+  The playlist lag CLOSED at this pin; invite-DTO, MetadataMatchModal
+  escape, bare-auth-keys and music-observer premises each re-grepped (last
+  three still stand on v0.99.12 bytes).
+- **Widget re-packaged.** `npm run package` refreshed `package/` (40 assets +
+  `index.html`; deterministic: two consecutive runs byte-identical, aggregate
+  md5 `de020fc3…`). Era-cite rotations: README badge + Tech-Stack lines,
+  DEVELOPER/AGENTS/CLAUDE pin lines, AGENTS bundle-era narratives
+  (connectScan affordance ships; `app.config.errorHandler` still set by
+  nobody — re-grep-proven), `main.test.ts` Vue-bridge comment.
+- **Gates:** `vue-tsc --noEmit` 0 (folds into `package`); `vue-tsc -p
+  tsconfig.tests.json` 0; `eslint .` 0; `vitest run --no-file-parallelism`
+  **63 files / 1067 passed / 0 skipped** — baseline-exact against the
+  same-day pre-pin measure at `6a24fca` (the 733-era figure in older entries
+  is history; the suite grew through October's review waves);
+  `npm run package` 0 ×2. CI re-runs the same legs, incl. 'Assert committed
+  package/ is fresh'.
+
 ### Removed — dead rating UI trio and its 16 catalog strings (M-TIZEN-04 / review tizen__casualgamer m4) — 2026-10-30
 
 - **What users see:** nothing renders differently — that is the finding.

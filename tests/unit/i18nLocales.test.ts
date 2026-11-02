@@ -345,11 +345,14 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ a580410f == @phlix/ui v0.99.8 (catalog GREW +35 lines/locale
-    // over v0.99.7 — itemActions, reader, player-theme, mcpTokens, syncplay
-    // modeSelect, music a11y — bundles and the installed copy re-synced TOGETHER
-    // in this pin, so both equality directions still hold by construction).
-    // With the installed ⊆ bundle law
+    // Vendored @ 1f0046c5 == @phlix/ui v0.99.12 (re-synced at this pin: the
+    // v0.99.12 catalog wave moved keys — My-List additions, the orphaned
+    // syncplay.publicRooms sweep, auth-lockout copy — and BOTH equality
+    // directions plus the strict-typing compile reddened on the v0.99.8-era
+    // vendor exactly as this law intends, forcing the conscious re-sync;
+    // bundles and the installed copy re-synced TOGETHER in this pin, so both
+    // equality directions hold by construction again. With the installed ⊆
+    // bundle law
     // above, this pins EXACT key-set equality in both directions — and the
     // restored `satisfies`... see strict-typing greps — compile-proves it too.
     // Future ui-catalog growth without a client re-pin flips one direction and

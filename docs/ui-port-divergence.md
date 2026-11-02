@@ -2,7 +2,7 @@
 
 **What this document is.** The Tizen client renders its app UI from the vendored
 `@phlix/ui` bundle, but three behaviors could not ride that bundle because
-`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.10).
+`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.12).
 They are therefore **re-implemented locally** in this repo. Local ports drift:
 every ui release can change the thing being ported while the port stands still.
 This ledger names every port, what it is sealed behind, and the known
@@ -15,27 +15,38 @@ leave a port behind.
 | `src/api/hubRelay.ts` | the ui's hub-relay pending-command consumer (ui S298 half) | boot glue differs (tizen config resolution, S2a token mint); documented as a faithful port in its header |
 | `src/syncplayDispatch.ts` | the ui's `Player.vue` pending-media load path (`resolvePendingMedia` prop era) | the player page lives inside the sealed bundle; this is the host-side watcher driving the shared player store |
 
-## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.10`)
+## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.12`)
 
 Verified against the vendored bundle in `package/assets/` and the local sources
-at this commit, not from memory:
+at this commit, not from memory (rows re-grepped at the 2026-11-02 tag-wave C3
+re-pin onto the v0.99.12 bytes):
 
-- **SyncPlay socket hint seam (`wsUrl` / `wsPath`, ui v0.99.11 era).** The ui
-  gained a `socketHint` seam so hosts can point the player's SyncPlay dial at
-  a custom URL/path. The vendored v0.99.10 bundle has none of it (grep
-  `socketHint` → zero hits). Interim host-side seam SHIPPED (M-TIZEN-07,
-  W-min171): `src/endpointOverrides.ts` validates `phlix.syncplayPort` /
-  `phlix.relayPort` / `phlix.relayPath` storage rows at every dial — the
-  manual, tizen-local equivalent of the env seam the hub uses. PORT AT THE
-  NEXT UI RE-PIN to the `socketHint` prop and retire the storage vocabulary
-  (or record here why the override should stay host-side).
+- **SyncPlay socket hint seam (`wsUrl` / `wsPath`).** The ui gained a
+  `socketHint` seam so hosts can point the player's SyncPlay dial at
+  a custom URL/path; it SHIPS at the pinned v0.99.12 (grep `wsPath` →
+  `SyncPlayModal-*.js` + `index-*.js` chunks; keys typed in the bundle's
+  `app/types.d.ts`-era config). The host-side seam (M-TIZEN-07, W-min171)
+  `src/endpointOverrides.ts` — validating `phlix.syncplayPort` /
+  `phlix.relayPort` / `phlix.relayPath` storage rows at every dial —
+  therefore does NOT retire: both of tizen's dial lanes are HOST-owned code
+  (`useSyncPlayStore.ts` `buildWsUrl` for the :8097 direct socket and
+  `hubRelay.ts` `buildHubRelayUrl` for the :8804 relay), which the bundle's
+  socket never owns, and the vocabularies differ — one `wsUrl`/`wsPath` pair
+  cannot carry tizen's split port/relay-path override set while the hub
+  origin stays slot-owned. OWED FOLLOW-UP (registered here, deliberately not
+  taken in a pin-bump lane): forward the validated overrides into the
+  `PhlixAppConfig` `wsUrl`/`wsPath` at app creation so the BUNDLE socket obeys
+  the same dial-time law the host sockets already do — behavior change, needs
+  its own measured wave.
 - **Playlist manageability gating (`canManagePlaylist`, ui v0.99.11 era,
-  `playlistPermissions.ts`).** Playlist UI ships from the bundle, so this lag
-  closes itself at the next re-pin — listed here so the re-pin lane CHECKS it
-  (grep `canManagePlaylist` in the old bundle: zero hits → v0.99.11+ required).
+  `playlistPermissions.ts`).** CLOSED by this re-pin — the gate ships in the
+  pinned bytes (grep `canManagePlaylist` → 23 sites in the installed
+  `@phlix/ui` dist; `PlaylistDetailPage-*.js` + `PlaylistsPage-*.js` chunks
+  now carry it in `package/assets/`). Row kept as the closed bookend; delete
+  it in the next touch that has other business in this file.
 - **Invite create-token DTO.** NOT lagged — the two-leg create-token invite
-  shape already ships in the v0.99.10 bundle. Recorded so nobody re-audits it
-  twice; it re-enters the list only if the DTO moves again.
+  shape already ships (re-verified at v0.99.12). Recorded so nobody re-audits
+  it twice; it re-enters the list only if the DTO moves again.
 - **Music playback state (M-TIZEN-30 probe).** ui's music player
   (`useMusicPlayer`) keeps playing-state as PAGE-INSTANCE refs on detached
   `new Audio()` elements, exports no store, and sets no `navigator.mediaSession`
@@ -44,25 +55,33 @@ at this commit, not from memory:
   decoration of the global `Audio` constructor feeding the screensaver veto.
   **Retirement:** when ui exports music playback state (a shared store, or
   mediaSession parity with the video path), DELETE the probe and its test +
-  this row; the probe's reappearance pin (bundle grep `new Audio(` in
+  this row; the probe's reappearance pin (bundle grep `new Audio` in
   `package/assets/Music*.js`) reddens on any re-pin that moves the
-  construction site first.
+  construction site first. Re-verified at the v0.99.12 re-pin (2026-11-02):
+  the `MusicLibraryPage-*.js` chunk still builds it (1 site) and `mediaSession`
+  still appears only in the video-path `index-*.js` chunk — observer posture
+  unchanged, watch pin green.
 - **Vendored `MetadataMatchModal` hand-rolled innerHTML escape (M-TIZEN-22
   backstop).** The bundle escapes `&,"<>` per string then assigns innerHTML —
   a hand-rolled sanitizer in frozen bytes this repo cannot edit. Carried as an
   UPSTREAM item: replace with a text binding in @phlix/ui. Meanwhile the client
   hardened its own boundary: `script-src 'self'` (no 'unsafe-inline') makes any
   future escape regression non-executable inline (tests/unit/cspPolicy.test.ts).
-  At the next ui re-pin, grep the new bundle for the escape pattern; gone →
-  retire this row (and keep the strict CSP anyway — it never needed to loosen).
+  Re-verified at the v0.99.12 re-pin (2026-11-02): the pattern STILL ships
+  (grep `replace(/&/g` → `useItemInspector-*.js` chunk), so the row stands and
+  the strict CSP stays load-bearing. The row retires only when a future
+  bundle loses the pattern — grep it at every re-pin.
 - **Bare token storage keys in the ui auth store (M-TIZEN-23 note).** The
   widget's webdata (now encrypted at rest via config.xml `encryption="enable"`)
   contains the vendored store's UNPREFIXED rows `access_token`, `refresh_token`,
   `user` beside this app's namespaced `phlix.*` keys. Harmless under the
   per-app-id sandbox, but they break the namespace convention every other key
   keeps, and renaming them is a STORE-LEVEL migration only ui can make.
-  Carried upstream: prefix (or consolidate) the auth store's storage keys; a
-  re-pin lane can grep `localStorage.setItem('access_token` to check.
+  Carried upstream: prefix (or consolidate) the auth store's storage keys;
+  re-verified at the v0.99.12 re-pin (2026-11-02): the bare literals still
+  ship in the committed bundle (grep `"access_token"` → `index-*.js` chunk,
+  hoisted as `var Hr="access_token"` — grep the LITERAL, not a
+  `setItem('access_token` spelling, which minification never emits).
 
 ## The law
 
