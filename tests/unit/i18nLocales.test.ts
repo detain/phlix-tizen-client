@@ -350,6 +350,11 @@ describe('ui bundles — key-set identity and installed coverage', () => {
     // syncplay.publicRooms sweep, auth-lockout copy — and BOTH equality
     // directions plus the strict-typing compile reddened on the v0.99.8-era
     // vendor exactly as this law intends, forcing the conscious re-sync;
+    // the v0.99.13 re-pin moved NO ui locale source (`git diff
+    // 1f0046c5..e30bae9f -- src/i18n` empty; sync script run at the new peel
+    // reproduced the committed bytes exactly), so BOTH directions re-verify
+    // green against the v0.99.13 install with the vendor ref and all
+    // fourteen PIN hashes HELD — the design's silent-zero-churn branch;
     // bundles and the installed copy re-synced TOGETHER in this pin, so both
     // equality directions hold by construction again. With the installed ⊆
     // bundle law

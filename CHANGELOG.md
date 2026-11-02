@@ -27,6 +27,63 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — ui #v0.99.13 re-pin (ui13-wave) — 2026-11-02
+
+- **What users see:** the bundled UI's `Select` dropdown gains the upstream
+  internal-ref cure (`open`→`isOpen`, clearing the vue/no-dupe-keys collision
+  under ui's refreshed eslint-plugin-vue era — the public `v-open` model API
+  is unchanged); everything else in the bump is a toolchain-era dist rebuild
+  (chunk-content hashes move, behavior does not).
+- **Pin advance.** `@phlix/ui` `#v0.99.12`→`#v0.99.13` (annotated tag
+  `ff9c1f91`, peels `e30bae9f`; lock `resolved` equals the peel — strict
+  equality law). `@phlix/contracts` `#v0.5.4` (`c491985317`) and
+  `@phlix/syncplay` `#v0.1.6` (`081687742`) deliberately UNMOVED: v0.99.13
+  requests the same tags, so the equality era continues — zero nested
+  `@phlix` nodes, and the FROZEN contracts trio stays byte-ident (fixture
+  cmp held, no re-vendor; no gate cite to advance).
+- **Lock churn is the minimal declared-delta shape:** exactly 3 lines of
+  `package-lock.json` (root dependency edge, `node_modules/@phlix/ui`
+  `version` + `resolved`) + 1 line of `package.json`, hand-surgical — and
+  proven idempotent: a real `npm 12.0.2 install --allow-git=all` with
+  `NPM_CONFIG_USERCONFIG=/dev/null` left the lock byte-identical.
+- **Byte identity.** The GitHub `refs/tags/v0.99.13.tar.gz` hashes to
+  `sha512-/M5vgoBcc…Kr+5NQ==` — verified live, the exact tarball the
+  server and hub `web-ui` lanes pinned. Tizen's git+ssh lock form carries
+  no integrity field for git deps (lockfileVersion 3, C3 precedent), so the
+  identity law rides content: installed `dist/phlix-ui.js` sha256
+  `0899810a…`, `dist/player.js` `57ce05a0…` — each identical to the tag's
+  tree blob AND to the server/hub installed copies; contracts `d06f81e9…`
+  and syncplay `e6be5a68…` UNMOVED.
+- **i18n law's silent-zero-churn branch exercised.** v0.99.13 moved only
+  `src/components/ui/Select.vue` in ui's source — `git diff
+  1f0046c5..e30bae9f -- src/i18n` is EMPTY. `scripts/
+  sync-ui-locale-bundles.mjs --ref e30bae9f` re-vendored all seven files
+  byte-identically, so the vendor ref and all fourteen PIN hashes HOLD and
+  the bootstrap `SOURCE_REF` constant stays (law: constant == pin.ref);
+  the installed↔bundle key-set equality pin is green by construction
+  against the v0.99.13 install. `docs/i18n.md` tells the story.
+- **Divergence ledger re-verified row-by-row onto the v0.99.13 bytes**
+  (`docs/ui-port-divergence.md`, cites advanced): socketHint
+  `wsUrl`/`wsPath` seam SHIPS (host `endpointOverrides` stays — unchanged
+  registered follow-up); playlist gating CLOSED bookend holds
+  (`canManagePlaylist` 23 sites in the installed dist — same figure as the
+  C3 era); invite create-token DTO stands; music-observer posture stands
+  (`new Audio` 1 site in the `MusicLibraryPage-*.js` chunk, `mediaSession`
+  video-path-only); the `MetadataMatchModal` escape pattern still ships
+  (strict CSP stays load-bearing); bare auth-key literals still ship
+  (`Hr="access_token"` hoist byte-equal across eras); `app.config.errorHandler`
+  still set by NOBODY in ui dist (0 sites; the bundle's 3 occurrences are
+  Vue runtime internals + this app's own bridge — count-invariant).
+- **Widget re-packaged.** `npm run package` refreshed `package/` (33 chunk
+  renames + `index.html` refs; `config.xml`/`icon.png` byte-ident).
+  Deterministic: two consecutive runs byte-identical, aggregate md5
+  `de020fc3…` → `2bba6c70…`.
+- **Gates:** `vue-tsc --noEmit` 0; `vue-tsc -p tsconfig.tests.json` 0;
+  `eslint .` 0; `vitest run --no-file-parallelism` **63 files / 1067 passed
+  / 0 skipped** — baseline-exact against the same-day pre-pin measure at
+  `27a650a`; `npm run package` 0 ×2. CI re-runs the same legs, incl.
+  'Assert committed package/ is fresh'.
+
 ### Changed — tag-wave C3 re-pin: contracts #v0.5.4, syncplay #v0.1.6, ui #v0.99.12 — 2026-11-02
 
 - **What users see:** the widget's bundled UI gains the ui v0.99.11+v0.99.12
