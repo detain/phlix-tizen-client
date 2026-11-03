@@ -34,6 +34,79 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — phase-3 cascade re-pin: contracts #v0.5.5, syncplay #v0.1.7, ui #v0.99.14 — 2026-11-03
+
+- **What users see:** the translated UI catches up with upstream copy — the
+  six non-English catalogs re-vendor onto the v0.99.14 ui locale wave (new
+  and refreshed es/fr/de/it/pt_BR/ja strings wherever the viewer has a
+  language set); the bundled UI itself is a chunk refresh (content-hash
+  renames, behavior unchanged).
+- **Pin advance (phase-3 cascade, release chain).** `@phlix/contracts`
+  `#v0.5.4`→`#v0.5.5` (annotated tag `122d0acb`, peels `e21598166a`),
+  `@phlix/syncplay` `#v0.1.6`→`#v0.1.7` (tag `fe687f27`, peels `1a80b1d1`),
+  `@phlix/ui` `#v0.99.13`→`#v0.99.14` (tag `bfe47d15`, peels `a437b995`);
+  the lock `resolved` fields equal the peels — strict-equality law.
+- **Lock churn is the minimal declared-delta shape:** 10 lines of
+  `package-lock.json` (+/−: root dependency-edge trio, per-node `version` +
+  `resolved`, and the ui node's contracts edge) + 3 lines of `package.json`,
+  produced by a real `npm 12.0.2 install --allow-git=all` with
+  `NPM_CONFIG_USERCONFIG=/dev/null` and proven idempotent (a second full
+  install left the lock byte-identical).
+- **syncplay hoist-dedup divergence (disclosed).** `@phlix/ui` `v0.99.14`
+  as published still declares its `@phlix/syncplay#v0.1.6` edge; the root
+  `#v0.1.7` hoists and npm accepts the edge with ZERO nested nodes — the
+  windows contracts-v0.5.2-era precedent exercised here for the first time
+  in tizen. Content-neutral for this widget: the ui dist carries zero
+  runtime `@phlix/syncplay` references (grep-proven), and this repo's own
+  `SyncPlayClient`/`serializeMessage` import resolves to the pinned v0.1.7.
+- **Contracts trio: the v0.5.4-era freeze breaks honestly.**
+  `error-codes.json` moves `40c1da48…`→`5d1783a7…` (204→205 codes — the
+  additive RESERVED `common.not_found` mint) while
+  `server-route-manifest.json` (`91579683…`) and `mcp-scopes.json`
+  (`8c92c070…`) HOLD. The vendored fixture cmps byte-identical to the
+  installed dist — no re-vendor due, none taken; this tree carries NO
+  registry fixture and NO `Record`-over-union type pin (zero `ErrorCode`
+  surface — grep-proven), so the mint cannot break it. S279-class dead-rail
+  and WS/relay OUT-of-manifest tripwires re-verified green on the unchanged
+  manifest bytes.
+- **Byte identity.** Installed dist sha256 each equal to the tag tree blob:
+  ui `dist/phlix-ui.js` `81022381…`, `dist/player.js` `cb19528b…`; contracts
+  `dist/phlix-contracts.js` `fb818c45…`; syncplay `dist/phlix-syncplay.js`
+  `b19581f4…`.
+- **i18n law's ACTIVE re-sync branch taken.** v0.99.14 moved ui locale
+  SOURCE (`git diff 1f0046c5..a437b995 -- src/i18n` non-empty: the six
+  bundle files plus the messages/errors catalogs), so
+  `scripts/sync-ui-locale-bundles.mjs --ref a437b995` re-vendored: PIN ref
+  `1f0046c5`→`a437b995` and 12 of the fourteen hashes rotated, the index.ts
+  pair HOLDING (ui's `locales/index.ts` byte-stable across the pin); the
+  bootstrap `SOURCE_REF` constant rotated with the ref (constant==PIN law).
+- **Divergence ledger re-verified row-by-row onto the v0.99.14 bytes**
+  (`docs/ui-port-divergence.md`, cites advanced): socketHint `wsUrl`/`wsPath`
+  seam SHIPS (host `endpointOverrides` stays — the registered forwarding
+  follow-up untouched in this pin lane); playlist-gating CLOSED bookend holds
+  (23 sites — with a new methodology note: the count is recursive over
+  `.map`/`.d.ts`, the identifier never surviving minified `.js`); invite
+  two-leg DTO un-lagged; music observer posture unchanged (`new Audio` still
+  exactly 1 site, `mediaSession` video-path-only); the `MetadataMatchModal`
+  hand-rolled escape still ships (strict CSP stays load-bearing); bare
+  `access_token` literals still hoist in the index chunk.
+- **Doc arms rotated with the pins:** README badge + Tech-Stack trio,
+  DEVELOPER.md pinned-dependencies header, AGENTS.md/CLAUDE.md pin lines,
+  `docs/i18n.md` seam passage (all drift-gated by
+  `tests/unit/docsPinConsistency.test.ts`); the `routeManifest.gate` docblock
+  pin cite advanced with its v0.5.5 leg; `i18nLocales`'s era note tells the
+  re-sync story.
+- **Widget re-packaged.** `npm run package` refreshed `package/` (33 chunk
+  renames, net −1 asset file; `index.html` refs; `config.xml`/`icon.png`
+  byte-ident). Deterministic: two consecutive runs byte-identical, aggregate
+  md5 `2bba6c70…` → `f62b2d03…`.
+- **Gates:** `vue-tsc --noEmit` 0; `vue-tsc -p tsconfig.tests.json` 0;
+  `eslint .` 0; `vitest run --no-file-parallelism` **66 files / 1128 passed
+  / 0 skipped** — baseline-exact against the same-day pre-pin measure on this
+  tree; `npx vitest run --coverage` floor gate 0 (stmts 86.17 / branches
+  78.14 / funcs 83.88 / lines 87.44); `npm run package` 0 ×2. CI re-runs the
+  same legs, incl. 'Assert committed package/ is fresh'.
+
 ### Fixed — deferred-review lane: locale copy, TV focus scale, chapter ticks, D-pad schedule window — 2026-11-03
 
 - **What users see:** bitrate chips read `1280 kbps` with a proper space

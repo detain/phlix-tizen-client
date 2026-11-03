@@ -11,7 +11,7 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.5.4. Every tag this cite historically named
+ * `@phlix/contracts` at #v0.5.5. Every tag this cite historically named
  * shipped a STALE embed for this gate's purpose — #v0.4.7 embedded server
  * `2f1d2ee6…` (md5 4f03cb2e…) — while the estate-wide canonical copy was the
  * untagged master regen at server `730e55b7` (md5 pinned below, contracts
@@ -68,7 +68,21 @@
  * equal to this vendored fixture at this leg (both md5 `91579683…`),
  * `error-codes.json` stays `40c1da48…` and `mcp-scopes.json` stays
  * `8c92c070…` — no codes moved, so no re-vendor is due and none was taken;
- * pin cite advanced, comment-only, 0 behavior.)
+ * pin cite advanced, comment-only, 0 behavior. contracts v0.5.4→v0.5.5
+ * re-pin (2026-11-03, phase-3 cascade): the #v0.5.5 tag (peels to contracts
+ * e21598166a) breaks the v0.5.4-era trio freeze — that leg's "error-codes
+ * stays 40c1da48" claim stands for #v0.5.4 only; at #v0.5.5 the registry
+ * moves `40c1da48…`→`5d1783a7…` (204→205 codes, the additive RESERVED
+ * `common.not_found` mint), while `server-route-manifest.json` (`91579683…`)
+ * and `mcp-scopes.json` (`8c92c070…`) HOLD. The installed
+ * `dist/server-route-manifest.json` cmps equal to this vendored fixture at
+ * this leg, so no re-vendor is due and none was taken. This tree carries NO
+ * registry fixture and NO `Record`-over-union type pin (zero `ErrorCode`
+ * surface in src/ + tests/ — grep-proven), so the additive mint breaks no
+ * type here. The S279-class dead-rail tripwires and the WS/relay
+ * OUT-of-manifest pins re-verified green on the unchanged manifest bytes;
+ * per-file scan coverage UNCHANGED. Pin cite advanced; comment-only,
+ * 0 behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to

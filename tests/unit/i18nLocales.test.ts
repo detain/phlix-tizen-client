@@ -345,19 +345,22 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ 1f0046c5 == @phlix/ui v0.99.12 (re-synced at this pin: the
-    // v0.99.12 catalog wave moved keys — My-List additions, the orphaned
-    // syncplay.publicRooms sweep, auth-lockout copy — and BOTH equality
-    // directions plus the strict-typing compile reddened on the v0.99.8-era
-    // vendor exactly as this law intends, forcing the conscious re-sync;
-    // the v0.99.13 re-pin moved NO ui locale source (`git diff
-    // 1f0046c5..e30bae9f -- src/i18n` empty; sync script run at the new peel
-    // reproduced the committed bytes exactly), so BOTH directions re-verify
-    // green against the v0.99.13 install with the vendor ref and all
-    // fourteen PIN hashes HELD — the design's silent-zero-churn branch;
-    // bundles and the installed copy re-synced TOGETHER in this pin, so both
-    // equality directions hold by construction again. With the installed ⊆
-    // bundle law
+    // Vendored @ a437b995 == @phlix/ui v0.99.14 (re-synced at this pin: the
+    // v0.99.14 wave moved ui locale SOURCE — `git diff 1f0046c5..a437b995 --
+    // src/i18n` NON-empty: the six bundle files + messages/errors catalogs —
+    // so the installed↔bundle key-set equality demanded the conscious re-sync
+    // this leg took: ref re-anchored 1f0046c5→a437b995 and 12 of the fourteen
+    // PIN hashes rotated with it, the index.ts pair HOLDING because ui's
+    // locales/index.ts is byte-stable across those pins; bundles and the
+    // installed copy re-synced TOGETHER here, so both equality directions
+    // hold by construction again. Prior era for the record: 1f0046c5 ==
+    // v0.99.12 (catalog wave — My-List additions, the orphaned
+    // syncplay.publicRooms sweep, auth-lockout copy — reddened BOTH equality
+    // directions plus the strict-typing compile on the v0.99.8-era vendor
+    // exactly as this law intends, forcing that re-sync); the v0.99.13 re-pin
+    // moved NO ui locale source (`git diff 1f0046c5..e30bae9f -- src/i18n`
+    // empty), so ref and all fourteen PIN hashes HELD there — the design's
+    // silent-zero-churn branch. With the installed ⊆ bundle law
     // above, this pins EXACT key-set equality in both directions — and the
     // restored `satisfies`... see strict-typing greps — compile-proves it too.
     // Future ui-catalog growth without a client re-pin flips one direction and
