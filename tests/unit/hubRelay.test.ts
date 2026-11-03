@@ -44,6 +44,7 @@ import {
   HubRelayInsecureTransportError,
   HUB_RELAY_INSECURE_DEV_HATCH_ENV,
   insecureRelayHatchEnabled,
+  jitteredReconnectDelayMs,
   type PendingPlayMediaCommand,
 } from '@/api/hubRelay';
 
@@ -675,6 +676,28 @@ describe('openHubRelayConnection — the open-whenever lifecycle', () => {
     expect(onStatusChange).toHaveBeenLastCalledWith('closed');
   });
 
+  it("M7: an explicit close delivers the terminal 'closed' status to the callback", () => {
+    // Review tizen__asphp M7: closeHubRelayConnection nulled `hubConfig` BEFORE
+    // setStatus('closed'), and setStatus reads hubConfig?.onStatusChange — so
+    // EVERY explicit-close path dropped the lifecycle's terminal event (the
+    // ladder/refusal branches fired 'closed' while the config was still live,
+    // which is exactly what masked it in the pre-existing assertions). main.ts
+    // uses this callback to dismiss the waiting-visible notice; a future
+    // "connected to hub" indicator depends on reaching a terminal state.
+    const onStatusChange = vi.fn();
+    openHubRelayConnection(config({ onStatusChange }));
+    socket().connect();
+    expect(onStatusChange).toHaveBeenLastCalledWith('open');
+
+    closeHubRelayConnection();
+    // Full honest sequence: connecting → open → closed (the old order ended at open).
+    expect(onStatusChange.mock.calls.map(([s]) => s)).toEqual(['connecting', 'open', 'closed']);
+
+    // Idempotence: a second close has no config left and must NOT re-fire.
+    closeHubRelayConnection();
+    expect(onStatusChange).toHaveBeenCalledTimes(3);
+  });
+
   it('re-asks on the ladder while a MINT is in flight — the socket opens once the token lands', async () => {
     vi.useFakeTimers();
     // The tizen token provider mints asynchronously: the first call starts the
@@ -1007,5 +1030,36 @@ describe('M-TIZEN-06 — the connect path never rides a bearer plaintext', () =>
     expect(socket().url).toBe(`wss://hub.example.test:${HUB_SYNC_PLAY_PORT}/syncplay/${SERVER_ID}`);
     expect(warnSpy).not.toHaveBeenCalled();
     expect(errorSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ── m11 (review) — the shared ladder jitter ──────────────────────────────────
+
+describe('jitteredReconnectDelayMs', () => {
+  it('lands exactly on the documented ceiling when random() is maximal', () => {
+    // Ceiling law: a rung is NEVER later than base × 2^attempts. The law
+    // tests in this file advance by exactly [1000,2000,4000,8000,16000];
+    // this pin proves the ceiling side of the spread is attainable, so
+    // advancing the ceiling always fires the rung.
+    expect(jitteredReconnectDelayMs(1000, 0, () => 1)).toBe(1000);
+    expect(jitteredReconnectDelayMs(1000, 3, () => 1)).toBe(8000);
+  });
+
+  it('spreads at least 15% below the ceiling when random() is minimal', () => {
+    expect(jitteredReconnectDelayMs(1000, 0, () => 0)).toBe(850);
+    expect(jitteredReconnectDelayMs(1000, 4, () => 0)).toBe(13600);
+  });
+
+  it('stays inside [0.85 × ceiling, ceiling] across the ladder with real Math.random', () => {
+    // The herd-decorrelation band — tight enough to keep the documented
+    // ceiling, wide enough that 100 TVs post-blip don't share a tick.
+    for (let attempts = 0; attempts < 5; attempts += 1) {
+      const ceiling = 1000 * 2 ** attempts;
+      for (let i = 0; i < 50; i += 1) {
+        const delay = jitteredReconnectDelayMs(1000, attempts);
+        expect(delay).toBeGreaterThanOrEqual(ceiling * 0.85);
+        expect(delay).toBeLessThanOrEqual(ceiling);
+      }
+    }
   });
 });

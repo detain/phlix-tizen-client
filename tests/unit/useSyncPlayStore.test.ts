@@ -9,6 +9,7 @@ import {
   insecureSyncPlayHatchEnabled,
   SyncPlayInsecureTransportError,
   SYNCPLAY_INSECURE_DEV_HATCH_ENV,
+  SYNC_PLAY_REST_TIMEOUT_MS,
 } from '@/stores/useSyncPlayStore';
 
 // Mock fetch globally
@@ -402,6 +403,50 @@ describe('useSyncPlayStore', () => {
     });
   });
 
+  describe('REST error channel (review m12/m18)', () => {
+    it('m12: a hanging REST call trips the 10 s deadline — honest timeout error', async () => {
+      // fetch never settles (the TV Wi-Fi half-death case). The store's own
+      // AbortController must end the await with a distinguishable message,
+      // not a frozen pending promise. Fake timers drive the deadline; the
+      // abort listener rejecting with an AbortError-named error mirrors the
+      // real Chromium fetch bail.
+      const store = useSyncPlayStore();
+      vi.useFakeTimers();
+      try {
+        mockFetch.mockImplementationOnce((_url: string, options: RequestInit) =>
+          new Promise((_resolve, reject) => {
+            options.signal?.addEventListener('abort', () => {
+              reject(Object.assign(new Error('The operation was aborted.'), { name: 'AbortError' }));
+            });
+          }),
+        );
+        const pending = store.joinRoom('https://api.example.com', 'token', 'room-1');
+        const assertion = expect(pending).rejects.toThrow(
+          `SyncPlay API request timed out after ${SYNC_PLAY_REST_TIMEOUT_MS} ms: /api/v1/syncplay/groups/room-1/join`,
+        );
+        await vi.advanceTimersByTimeAsync(SYNC_PLAY_REST_TIMEOUT_MS);
+        await assertion;
+        expect(store.error).toContain('timed out');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('m18: a server error body is whitespace-collapsed and clipped to 200 chars', async () => {
+      // The body is arbitrary server text — a multi-kilobyte dump must not
+      // ride verbatim into the rendered error channel of a 10-foot UI.
+      const store = useSyncPlayStore();
+      const noise = `boom\n${'x'.repeat(400)}\nEND`;
+      mockFetch.mockResolvedValueOnce({ ok: false, status: 500, text: async () => noise });
+      const expected = `SyncPlay API error 500: boom ${'x'.repeat(195)}`; // 'boom ' + 195x = 200
+      await expect(
+        store.joinRoom('https://api.example.com', 'token', 'room-1'),
+      ).rejects.toThrow(expected);
+      expect(store.error).toBe(expected);
+      expect((store.error ?? '').length).toBeLessThanOrEqual(24 + 200);
+    });
+  });
+
   describe('leaveRoom', () => {
     it('does nothing if no current room', async () => {
       const store = useSyncPlayStore();
@@ -644,11 +689,13 @@ describe('useSyncPlayStore', () => {
       }
     });
 
-    it('reconnect lane re-enters connectWs with the token — the ladder never rebuilds the URL itself', async () => {
-      // scheduleReconnect re-enters connectWs(apiBase, roomId, <token>) and the
-      // bearer carrier rides every rung. With no live token in storage
-      // (M-TIZEN-36 re-read finds nothing here) this is the captured-token
-      // fallback — exactly the pre-cure shape, kept green on purpose.
+    it('M8: a CLEARED credential dials the next rung ANONYMOUSLY — never the stale capture', async () => {
+      // Empty-store law (review M8): the readable-and-holds-nothing case must
+      // NOT re-present the closure token. The ladder re-enters connectWs with
+      // `reconnectTokenForAttempt` → '' → the `token ? [...] : undefined`
+      // carrier law offers NO subprotocol — the WHATWG-faithful MockWebSocket
+      // would throw on a '' entry, so `protocols === undefined` here is the
+      // positive proof of the anonymous dial. URL stays credential-free.
       // This is also the regression pin for the onclose identity guard: the
       // harness's plain-class MockWebSocket IS proxied by vue's reactive()
       // (toStringTag '[object Object]'), so without the `toRaw` unwrap the
@@ -670,8 +717,41 @@ describe('useSyncPlayStore', () => {
         await new Promise<void>((resolve) => pending(resolve, 1100)); // real 1 s first rung
         const reconnectSocket = MockWebSocket.instances.at(-1)!;
         expect(reconnectSocket.url).toBe('wss://api.example.com:8097?room=room-1');
+        expect(reconnectSocket.protocols).toBeUndefined(); // anonymous — store readable, empty
+      } finally {
+        store.disconnectWs(); // clear any armed reconnect timer
+      }
+    });
+
+    it('M8 fallback: an UNREADABLE storage seam keeps the captured-token shape', async () => {
+      // Storage-absent (undefined branch of the tri-state): no LocalStorage
+      // is reachable, so the closure-captured dial token rides the rung — the
+      // pre-cure shape M-TIZEN-36 named as honest for exactly this case.
+      const store = useSyncPlayStore();
+      store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+      // @ts-expect-error - setting directly for test
+      store.currentRoom = { group_id: 'room-1' };
+      // @ts-expect-error - setting directly for test
+      store.currentSession = { id: 'session-1', state: 'playing' };
+      // The token store binds `window.localStorage` per call — shadow it with
+      // a thrower for the rung window only, restore in the same finally.
+      const original = Object.getOwnPropertyDescriptor(window, 'localStorage');
+      Object.defineProperty(window, 'localStorage', {
+        configurable: true,
+        get() {
+          throw new Error('SecurityError: localStorage unavailable');
+        },
+      });
+      const pending = globalThis.setTimeout;
+      try {
+        lastSocket().onclose?.({ code: 1006 }); // unexpected close → ladder arms
+        expect(store.wsReconnecting).toBe(true);
+        await new Promise<void>((resolve) => pending(resolve, 1100)); // real 1 s first rung
+        const reconnectSocket = MockWebSocket.instances.at(-1)!;
         expect(reconnectSocket.protocols).toEqual(['bearer', 'token-abc']);
       } finally {
+        if (original) Object.defineProperty(window, 'localStorage', original);
+        else delete (window as unknown as Record<string, unknown>).localStorage;
         store.disconnectWs(); // clear any armed reconnect timer
       }
     });

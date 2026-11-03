@@ -8,10 +8,10 @@
  * `@phlix/ui` does not export its player-side SyncPlay API (`getSyncPlayApi`,
  * `openSyncPlayConnection`, `sendSyncPlayCommand` are internal to the package),
  * so the REST client and the WebSocket layer live here, typed against
- * `@phlix/contracts` v0.4.6 (S415 type truth: `SyncPlayGroup` IS the
+ * `@phlix/contracts` v0.5.4 (S415 type truth: `SyncPlayGroup` IS the
  * `GroupState::getState()` emission with a DICT `members`, the list-row
  * vocabulary lives on `SyncPlayGroupListItem`, and the five REST envelopes
- * are declared) and framed by `@phlix/syncplay` v0.1.4.
+ * are declared) and framed by `@phlix/syncplay` v0.1.6.
  *
  * Port ledger (M-TIZEN-08): this file is one of the sealed-ui local ports —
  * mirror-lag duties and the re-pin law live in `docs/ui-port-divergence.md`.
@@ -53,6 +53,7 @@ import type {
   SyncPlayPermission,
 } from '@phlix/contracts';
 import { SyncPlayClient, serializeMessage } from '@phlix/syncplay';
+import { jitteredReconnectDelayMs } from '../api/hubRelay';
 import type { PendingPlayMediaCommand, HubRelayVisibilitySource } from '../api/hubRelay';
 import { parsePortOverride, SYNCPLAY_PORT_KEY } from '../endpointOverrides';
 import { tTizen } from '../i18n/tizen';
@@ -258,7 +259,7 @@ const RATE_ENVELOPE_MAX = 4;
  * rate is IGNORED (the previous rate survives) rather than rescaled, because
  * silently altering a clean value is the worse lie.
  *
- * Wire truth at this pin (@phlix/syncplay v0.1.5): the socket rail cannot
+ * Wire truth at this pin (@phlix/syncplay v0.1.6): the socket rail cannot
  * even deliver a rate — `PlaybackCommand` is {type, position, serverTime}
  * and the sync handler surfaces only (memberId, position, isPlaying), so the
  * server's nudge `suggested_rate` never reaches this store. The guard
@@ -274,10 +275,17 @@ function optFiniteRate(value: unknown): number | undefined {
   return Number.isFinite(n) && n >= RATE_ENVELOPE_MIN && n <= RATE_ENVELOPE_MAX ? n : undefined;
 }
 
-/** Unix SECONDS (the server's unit) → ISO 8601. */
+/** Unix SECONDS (the server's unit) → ISO 8601.
+ * m5 (review tizen__exploiter): num() admits ANY finite number, and Date's
+ * domain is ±8.64e15 MILLISECONDS — a JSON `1e21` in created_at/last_activity_at/
+ * joined_at used to throw RangeError mid-applyGroupState, aborting the whole
+ * frame under the file's hostile-producer trust model. An out-of-domain epoch
+ * (|s| > 1e11 ≈ year 5138) takes the SAME honest path as an absent one. */
+const MAX_PLAUSIBLE_EPOCH_SECONDS = 1e11;
 function isoFromUnixSeconds(seconds: unknown): string {
   const s = num(seconds, 0);
-  return new Date((s > 0 ? s : Date.now() / 1000) * 1000).toISOString();
+  const stamp = s > 0 && s <= MAX_PLAUSIBLE_EPOCH_SECONDS ? s : Date.now() / 1000;
+  return new Date(stamp * 1000).toISOString();
 }
 
 /** The group id under either spelling (`group_id` from state, `id` from a listing row). */
@@ -438,6 +446,13 @@ function groupToSession(raw: RawSyncPlayGroup | undefined): LocalSyncPlaySession
 // ---- API Client (local implementation, the v0.99.0 surface) ----------------
 
 /**
+ * m12 (review) — hard deadline for every SyncPlay REST call. Generous enough
+ * for a cold group-state read on a loaded server, short enough that a dead
+ * Wi-Fi path surfaces as a toast instead of a frozen await.
+ */
+export const SYNC_PLAY_REST_TIMEOUT_MS = 10_000;
+
+/**
  * Local SyncPlay API client implementation — the five `SyncPlayController`
  * routes registered in phlix-server `src/Server/Core/Application.php`:
  *   - GET  /api/v1/syncplay/groups — list all groups
@@ -465,20 +480,46 @@ class SyncPlayApiClient {
       ...(options.headers as Record<string, string>),
     };
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    // m12 (review) — every SyncPlay REST call gets a hard deadline. On TV
+    // Wi-Fi a half-dead server can leave fetch pending indefinitely; the
+    // awaiting UI then never settles and no error ever reaches the toast lane.
+    // AbortController + setTimeout is the Chrome-85-safe idiom —
+    // AbortSignal.timeout() is Chrome 103 and would blow the runtime floor
+    // (docs/runtime-floor.md).
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), SYNC_PLAY_REST_TIMEOUT_MS);
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
 
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'Unknown error');
-      throw new Error(`SyncPlay API error ${response.status}: ${errorBody}`);
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => 'Unknown error');
+        // m18 (review) — the error body is server-pushed arbitrary text;
+        // collapse whitespace and clip so a chatty (or hostile) upstream
+        // cannot flood the rendered error channel of a 10-foot UI.
+        const clipped = errorBody.replace(/\s+/g, ' ').trim().slice(0, 200);
+        throw new Error(`SyncPlay API error ${response.status}: ${clipped}`);
+      }
+
+      // Handle empty responses
+      const text = await response.text();
+      if (!text) return {} as T;
+      return JSON.parse(text) as T;
+    } catch (error) {
+      if (controller.signal.aborted && options.signal !== controller.signal) {
+        // Our deadline tripped (fetch abort, or a body read cut short by it).
+        // A caller-owned abort surfaces untouched.
+        throw new Error(
+          `SyncPlay API request timed out after ${SYNC_PLAY_REST_TIMEOUT_MS} ms: ${path}`,
+        );
+      }
+      throw error;
+    } finally {
+      clearTimeout(deadline);
     }
-
-    // Handle empty responses
-    const text = await response.text();
-    if (!text) return {} as T;
-    return JSON.parse(text) as T;
   }
 
   async createRoom(input: CreateRoomInput): Promise<SyncPlayGroup> {
@@ -666,7 +707,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   // so the server sees the same member come back (mirrors @phlix/ui).
   let memberId: string | null = null;
 
-  // T-15: forward-compat observability. `@phlix/syncplay` v0.1.5 surfaces frames
+  // T-15: forward-compat observability. `@phlix/syncplay` v0.1.6 surfaces frames
   // outside its 19 canonical `syncplay_*` types via `onUnknownFrame`; before this
   // wiring they were dropped silently. Count every one (a cumulative "has the
   // protocol outgrown us" signal, exposed for a metrics sink) and warn on the
@@ -812,11 +853,24 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
       };
 
       ws.onmessage = (event) => {
+        // m5 (review tizen__exploiter): parse and handling are DISTINCT
+        // failures — the old single try mislabeled a handler throw (e.g. an
+        // out-of-domain epoch inside applyGroupState) as a parse error.
+        // JSON.parse guards the wire; the handler gets its own honest label
+        // so a poisoned frame aborts ONE application, loudly typed.
+        let frame: unknown;
         try {
-          client.handleIncoming(JSON.parse(event.data as string));
+          frame = JSON.parse(event.data as string);
         } catch {
           // Fail fast on parse errors - don't silently ignore malformed data
           wsError.value = 'Failed to parse WebSocket message';
+          return;
+        }
+        try {
+          client.handleIncoming(frame);
+        } catch (e) {
+          wsError.value = 'Failed to apply WebSocket frame';
+          console.error('[SyncPlay] Frame handler aborted:', e);
         }
       };
 
@@ -842,6 +896,18 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
         client.onDisconnect();
 
         // Auto-reconnect on unexpected close (not manual disconnect).
+        // m13 (review tizen__asphp) — honest scope of the 1000/1001 filter:
+        // LOCAL closes never reach this branch as anything to suppress; the
+        // disconnect path detaches through the toRaw identity guard above and
+        // zeroes the budget in disconnectWs(), so the standby/abnormal close
+        // that DOES reach here arrives as 1006. The filter's real job is the
+        // SERVER-side clean close: 1000/1001 mean the group was closed or is
+        // deliberately going away, and re-dialing would re-JOIN a dissolved
+        // group on every graceful shutdown. The acknowledged trade: a server
+        // that uses 1001 for a TRANSIENT drain (worker recycle) also suppresses
+        // our reconnect — the visible-window re-ask (S510) and the sealed-bundle
+        // rail are the recovery paths there; `disconnectWs` remains the only
+        // client-side "don't" (documented, pinned by the ladder tests).
         // M-TIZEN-06: the old `!wsReconnecting.value` term here froze the walk
         // after ONE rung — a re-dial's socket closing while the retry flag
         // still stood scheduled NOTHING, so the budget never even reached the
@@ -871,20 +937,8 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   const BASE_RECONNECT_DELAY = 1000;
 
   /**
-   * M-TIZEN-36 (review tizen__secnet): the relay ladder's own in-repo law —
-   * `src/api/hubRelay.ts` re-reads its token on EVERY attempt precisely
-   * because tokens are short-lived and a captured one goes stale mid-session
-   * (ui auth-refresh rotates `access_token` while the SyncPlay socket lives).
-   * The reconnect lane must not be the one dial site left behind that law:
-   * at re-dial time the ui token store is the live source. When it holds
-   * nothing (anonymous dial, storage-less context) the captured token is the
-   * honest fallback — the ladder keeps exactly its pre-cure shape. A slot
-   * that dialed anonymously and has since logged in re-dials authenticated:
-   * the same credential the next manual dial would present.
-   */
-  /**
    * M-TIZEN-07 (W-min171): `phlix.syncplayPort` read + validated at DIAL time
-   * (same liveness law as the token re-read above — an operator edit takes
+   * (same liveness law as the token re-read below — an operator edit takes
    * effect on the next attempt, no rebuild). Invalid/absent → null → the
    * shipped :8097 default, byte-identically.
    */
@@ -896,13 +950,50 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     }
   }
 
-  function liveAccessTokenForReconnect(): string | null {
+  /**
+   * M-TIZEN-36 (review tizen__secnet) + M8 (review tizen__asphp): the relay
+   * ladder's own in-repo law — `src/api/hubRelay.ts` re-reads its token on
+   * EVERY attempt precisely because tokens are short-lived and a captured one
+   * goes stale mid-session (ui auth-refresh rotates `access_token` while the
+   * SyncPlay socket lives). The reconnect lane must not be the one dial site
+   * left behind that law: at re-dial time the ui token store is the live
+   * source.
+   *
+   * M8 TRUTH TABLE — the old `string | null` conflated two different "no
+   * token" states, so a CLEARED credential (logout / expired-session cleanup
+   * mid-outage) silently re-presented the captured bearer for every rung.
+   * Tri-state now:
+   *   - string    → the live token rides the next dial (rotation cure, kept);
+   *   - null      → the store is READABLE and holds nothing: the credential
+   *                 was cleared — dial ANONYMOUSLY (present nothing; the
+   *                 `token ? ['bearer', token] : undefined` carrier law at
+   *                 the dial site offers no subprotocol for '');
+   *   - undefined → the store itself is UNREADABLE (no localStorage in this
+   *                 context) — the captured-token fallback stays honest only
+   *                 for the anonymous-dial / storage-less cases M-TIZEN-36
+   *                 named.
+   * A slot that dialed anonymously and has since logged in still re-dials
+   * authenticated: the same credential the next manual dial would present.
+   */
+  function liveAccessTokenForReconnect(): string | null | undefined {
     try {
       const live = new LocalStorageTokenStore().getAccessToken();
       return live ? live : null;
     } catch {
-      return null; // no storage in this context — the captured token decides
+      return undefined; // store unreadable — the captured token decides (M8)
     }
+  }
+
+  /**
+   * M8: the single resolver both dial sites (ladder rung + S510 visible-window
+   * re-ask) share. Readable-and-empty yields `''` — the anonymous dial — so a
+   * cleared credential is never re-presented; unreadable yields the captured
+   * closure token; a live string wins.
+   */
+  function reconnectTokenForAttempt(captured: string): string {
+    const live = liveAccessTokenForReconnect();
+    if (live === undefined) return captured; // storage absent — pre-cure shape
+    return live ?? ''; // store says no token — dial anonymous, present nothing
   }
 
   // ── M-TIZEN-06 (W-min171) — the spent ladder waits for a visible window ───
@@ -951,7 +1042,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
       if (!isInRoom.value || wsConnection.value !== null) return; // superseded or left
       // Fresh capped ladder, live credential — the same dial shape the timer
       // rung would have taken one step later.
-      connectWs(apiBase, roomId, liveAccessTokenForReconnect() ?? token);
+      connectWs(apiBase, roomId, reconnectTokenForAttempt(token));
     };
     source.addEventListener('visibilitychange', onVisibilityChange);
     reconnectVisibilityCleanup = () => source.removeEventListener('visibilitychange', onVisibilityChange);
@@ -983,17 +1074,20 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     }
 
     wsReconnecting.value = true;
-    const delay = BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts);
+    // m11 — one-sided jitter under the documented ceiling (never later than
+    // BASE_RECONNECT_DELAY × 2^attempts); decorrelates the post-blip herd.
+    const delay = jitteredReconnectDelayMs(BASE_RECONNECT_DELAY, reconnectAttempts);
     reconnectAttempts++;
 
     reconnectTimeout = setTimeout(() => {
       reconnectTimeout = null;
       if (isInRoom.value) {
         // M-TIZEN-36: re-read the live token at DIAL TIME — the closure token
-        // is only the fallback (see liveAccessTokenForReconnect). The ladder
-        // itself is untouched: URL, carrier, and bail shapes all live inside
-        // connectWs, exactly as before.
-        connectWs(apiBase, roomId, liveAccessTokenForReconnect() ?? token);
+        // is only the storage-absent fallback (see liveAccessTokenForReconnect;
+        // M8: a readable-but-empty store means CLEARED credential → dial
+        // anonymous, never re-present the stale capture). The ladder itself is
+        // untouched: URL, carrier, and bail shapes all live inside connectWs.
+        connectWs(apiBase, roomId, reconnectTokenForAttempt(token));
       }
     }, delay);
   }

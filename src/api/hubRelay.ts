@@ -169,6 +169,26 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_BASE_DELAY_MS = 1000;
 
 /**
+ * m11 (review) — one bounded rung of a reconnect ladder, de-synchronised.
+ *
+ * A pure power-of-two ladder makes every disconnected client on the same
+ * firmware wake on identical tick boundaries — a deterministic micro-herd on
+ * the first retry after any hub blip. Spreading each rung over
+ * `[0.85 × ceiling, ceiling]` keeps the documented ceiling law intact (a rung
+ * is NEVER later than `base × 2^attempts`, which is what the law tests
+ * advance-by) while decorrelating clients. The injection seam defaults to
+ * `Math.random` so tests can pin the extremes deterministically.
+ */
+export function jitteredReconnectDelayMs(
+  baseMs: number,
+  attempts: number,
+  random: () => number = Math.random,
+): number {
+  const ceiling = baseMs * 2 ** attempts;
+  return ceiling * (0.85 + random() * 0.15);
+}
+
+/**
  * Coerce one raw relay frame into a typed play-media command.
  *
  * The parse boundary: the hub's `PendingCommandDispatcher` emits
@@ -679,7 +699,9 @@ function scheduleHubReconnect(): void {
     armVisibleWindowRetry();
     return;
   }
-  const delay = RECONNECT_BASE_DELAY_MS * 2 ** hubReconnectAttempts;
+  // m11 — one-sided jitter under the same documented ceiling (never later
+  // than base × 2^attempts); decorrelates the post-blip reconnect herd.
+  const delay = jitteredReconnectDelayMs(RECONNECT_BASE_DELAY_MS, hubReconnectAttempts);
   hubReconnectAttempts++;
   setStatus('reconnecting');
   hubReconnectTimer = setTimeout(() => {
@@ -703,8 +725,15 @@ export function closeHubRelayConnection(): void {
     hubWs = null;
   }
   hubReconnectAttempts = 0;
+  // M7 (review tizen__asphp): setStatus reads hubConfig?.onStatusChange — the
+  // old order nulled the config FIRST, so the contract's terminal 'closed'
+  // event was silently dropped on EVERY explicit-close path (main.ts uses it
+  // to dismiss the waiting-visible notice). Snapshot the callback, release the
+  // config, then deliver the lifecycle's last event. The socket's onclose was
+  // detached above, so nothing else can fire statuses against the old config.
+  const onStatusChange = hubConfig?.onStatusChange;
   hubConfig = null;
-  setStatus('closed');
+  onStatusChange?.('closed');
 }
 
 /** The open socket, or null. Exported for the app's status UI / tests. */
