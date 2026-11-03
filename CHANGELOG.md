@@ -27,6 +27,37 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — TV-experience review remediation (25 findings) — 2026-11-03
+
+- **What users see:** the pairing dialog and telemetry consent card no longer
+  leak D-pad focus behind them (the spatial pool yields to a mounted takeover
+  and blurs stale focus — removal only, never a trap); a dead YELLOW-button
+  press off the player no longer toasts "Yellow" for nothing; spamming digits
+  (held/stuck remote key) can no longer flood channel-commit; the intro/chapter
+  overlays stop double-polling the player; the QuickConnect spinner actually
+  stops when the server-side code's window lapses; focus rings are visible on
+  the consent card; splash/consent/pairing geometry survives 85-era overscan
+  (longhand insets + safe-area passthrough on three edge-anchored overlays).
+- **Reliability.** The hub-relay now REPORTS its terminal `closed` transition
+  to the lifecycle listener (it silently died before); both reconnect ladders
+  jitter one-sided under the documented power-of-two ceiling; a cleared
+  credential dials anonymously instead of re-presenting a logged-out JWT;
+  SyncPlay REST gained a 10 s deadline and clips server error bodies to 200
+  chars before they reach the 10-foot channel; implausible wire epochs clamp to
+  the now-fallback; frame-parse and frame-handler failures are distinguishable.
+- **Seam + floors.** The sealed bundle's socket hint (`window.__PHLIX__`) is now
+  seeded from the resolved server origin (the direct lane follows the host TLS
+  law instead of `window.location`); the CSS half of the Chromium-85 floor is
+  tripwired (census + the load-bearing vendored `[data-tv] :focus` fallback);
+  the immediate-action floor is per FUNCTIONAL group (PLAY/PAUSE aliases share
+  one meter — one physical toggle press is no longer a 3× flood).
+- **Housekeeping.** The position-poll law moved to a shared typed module; the
+  lint workflow no longer re-assembles `package/` without version-sync; the
+  rolling release body carries version + sha256; signing material is
+  git-ignored by extension.
+- Mechanism, pins and per-finding dispositions: `.reviews/FIXLOG/tizen.md`
+  (batches 1–4, commits `2a1872b`, `e2995a7`, `f1e1603`, `953862e`).
+
 ### Changed — ui #v0.99.13 re-pin (ui13-wave) — 2026-11-02
 
 - **What users see:** the bundled UI's `Select` dropdown gains the upstream
