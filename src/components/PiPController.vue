@@ -197,8 +197,10 @@ onUnmounted(() => {
 <style scoped>
 .pip-controller {
   position: absolute;
-  bottom: 80px;
-  right: 20px;
+  /* Review m8 — see SkipIntroOverlay: additive safe-area passthrough,
+     unchanged geometry while the panel reports none. */
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
   z-index: 150;
   pointer-events: auto;
 }

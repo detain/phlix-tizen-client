@@ -47,13 +47,10 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Build sideload package (dist + config.xml + icon.png → package/)
-        run: node scripts/package.js
-
-      - name: Upload sideload package
-        uses: actions/upload-artifact@v7
-        with:
-          name: phlix-tizen-package
-          path: package/
-          if-no-files-found: error
-          retention-days: 7
+      # Review m25 — the former "node scripts/package.js + upload package/"
+      # steps are REMOVED from this job: they re-assembled package/ WITHOUT the
+      # version-sync first leg (a second, subtly-different package recipe from
+      # the release chain) and duplicated build.yml's artifact upload. This job
+      # proves the tree compiles; `.github/workflows/build.yml` is the ONE
+      # workflow that runs the real `npm run package` chain, asserts committed
+      # package/ freshness, and publishes the .wgt artifact.

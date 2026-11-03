@@ -28,6 +28,7 @@ import { ApiClient } from '@phlix/ui';
 import { useApiBase, usePlayerStore } from '@phlix/ui';
 import type { Marker, SkipButtonSpec } from '@phlix/contracts';
 import { tTizen } from '../i18n/tizen';
+import { subscribePlayerProgress } from '../playerProgressTicker';
 
 interface MarkersApiResponse {
   markers: Marker[];
@@ -44,7 +45,9 @@ const introMarker = ref<Marker | null>(null);
 const outroMarker = ref<Marker | null>(null);
 const loading = ref(false);
 
-let positionInterval: ReturnType<typeof setInterval> | null = null;
+// Review M10: the 250 ms pulse is the SHARED typed ticker (playerProgressTicker)
+// — this holds the unsubscribe, not a private interval id.
+let unsubscribeProgress: (() => void) | null = null;
 
 // T-07: a rapid media change can leave an older markers request in flight; its
 // reply is applied only while its generation is still current, so the previous
@@ -147,33 +150,27 @@ function skipOutro(): void {
 }
 
 /**
- * Poll player position and duration.
+ * Follow the shared playback-position pulse (review M10 — typed reads, one
+ * interval for both position-polling overlays; see src/playerProgressTicker.ts).
  */
 function startPositionPolling(): void {
   // T-05: idempotent — the poll runs ONLY while a player route is active (driven
   // by the mediaId watch below), never for the whole (unmounted-never) app life.
-  if (positionInterval) return;
-  positionInterval = setInterval(() => {
-    const state = playerStore;
-    if (!state) return;
-
-    const storeAny = state as unknown as Record<string, unknown>;
-    const pos = storeAny.position ?? storeAny.currentTime ?? storeAny.time ?? storeAny.current_position ?? 0;
-    const dur = storeAny.duration ?? storeAny.totalDuration ?? storeAny.duration_seconds ?? 0;
-
-    if (typeof pos === 'number' && pos >= 0) {
-      currentPosition.value = pos;
+  if (unsubscribeProgress) return;
+  unsubscribeProgress = subscribePlayerProgress(playerStore, (position, duration) => {
+    if (position !== null) {
+      currentPosition.value = position;
     }
-    if (typeof dur === 'number' && dur > 0) {
-      currentDuration.value = dur;
+    if (duration !== null) {
+      currentDuration.value = duration;
     }
-  }, 250);
+  });
 }
 
 function stopPositionPolling(): void {
-  if (positionInterval) {
-    clearInterval(positionInterval);
-    positionInterval = null;
+  if (unsubscribeProgress) {
+    unsubscribeProgress();
+    unsubscribeProgress = null;
   }
 }
 
@@ -282,8 +279,13 @@ onBeforeUnmount(() => {
 <style scoped>
 .skip-intro-overlay {
   position: absolute;
-  bottom: 80px;
-  right: 20px;
+  /* Review m8 — overscan-safe anchoring: on panels that report a safe-area
+     inset (legacy 4:3 crop modes, curved-edge sets) the button lifts off the
+     physical bezel cut-off; env() resolves to 0 on normal TVs, so the shipped
+     geometry is byte-identical there (Chromium-69+ feature — inside the 85
+     floor). */
+  bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  right: calc(20px + env(safe-area-inset-right, 0px));
   display: flex;
   gap: var(--space-3, 0.75rem);
   z-index: 150;

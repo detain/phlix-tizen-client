@@ -34,6 +34,7 @@ import { ApiClient } from '@phlix/ui';
 import { useApiBase, usePlayerStore } from '@phlix/ui';
 import type { ChapterMarker, Marker } from '@phlix/contracts';
 import { tTizen, type TizenMessageKey } from '../i18n/tizen';
+import { subscribePlayerProgress } from '../playerProgressTicker';
 
 /**
  * Tooltip label for a marker whose server `label` is empty: the wire type maps
@@ -88,7 +89,9 @@ const currentChapterTitle = ref<string | null>(null);
 const showChapterLabel = ref(false);
 
 let labelTimeout: ReturnType<typeof setTimeout> | null = null;
-let positionInterval: ReturnType<typeof setInterval> | null = null;
+// Review M10: the 250 ms pulse is the SHARED typed ticker (playerProgressTicker)
+// — this holds the unsubscribe, not a private interval id.
+let unsubscribeProgress: (() => void) | null = null;
 
 // T-07: monotonically-increasing load generations. A rapid media change
 // starts a newer load while an older request is still in flight; the response
@@ -323,41 +326,29 @@ function hideChapterLabel(): void {
 }
 
 /**
- * Poll player position and duration.
- * The player store from @phlix/ui has a reactive state we can access.
+ * Follow the shared playback-position pulse (review M10 — typed reads, one
+ * interval for both position-polling overlays; see src/playerProgressTicker.ts).
  */
 function startPositionPolling(): void {
   // T-05: idempotent. The poll is the overlay's only per-tick work; it must run
   // ONLY while a player route is up (see the mediaId watch below), never for the
   // whole app lifetime. A second call while already running is a no-op.
-  if (positionInterval) return;
-  // Poll every 250ms to get smooth chapter label updates
-  positionInterval = setInterval(() => {
-    // Access player store state - the exact property names depend on @phlix/ui's implementation
-    // Common patterns: position, currentTime, time, playbackPosition
-    const state = playerStore;
-    if (!state) return;
-
-    // Try to read position from player store - use unknown to access dynamic properties
-     
-    const storeAny = state as unknown as Record<string, unknown>;
-    const pos = storeAny.position ?? storeAny.currentTime ?? storeAny.time ?? storeAny.current_position ?? 0;
-    const dur = storeAny.duration ?? storeAny.totalDuration ?? storeAny.duration_seconds ?? 0;
-
-    if (typeof pos === 'number' && pos >= 0) {
-      currentPosition.value = pos;
+  if (unsubscribeProgress) return;
+  unsubscribeProgress = subscribePlayerProgress(playerStore, (position, duration) => {
+    if (position !== null) {
+      currentPosition.value = position;
     }
-    if (typeof dur === 'number' && dur > 0) {
-      currentDuration.value = dur;
+    if (duration !== null) {
+      currentDuration.value = duration;
       updateChapterLabel(currentPosition.value);
     }
-  }, 250);
+  });
 }
 
 function stopPositionPolling(): void {
-  if (positionInterval) {
-    clearInterval(positionInterval);
-    positionInterval = null;
+  if (unsubscribeProgress) {
+    unsubscribeProgress();
+    unsubscribeProgress = null;
   }
   hideChapterLabel();
 }
@@ -481,8 +472,11 @@ onBeforeUnmount(() => {
 .chapter-overlay {
   position: absolute;
   bottom: 60px;
-  left: 0;
-  right: 0;
+  /* Review m8 — the tick lane spans edge-to-edge; pull both ends inside the
+     safe area when the panel reports one (0 = today's geometry everywhere
+     else). */
+  left: env(safe-area-inset-left, 0px);
+  right: env(safe-area-inset-right, 0px);
   height: 30px;
   z-index: 100;
 }

@@ -94,6 +94,12 @@ Official walk-through:
 Update law: a new version signed with a **different author certificate** is
 treated as a *different app* — keep the same author certificate across updates.
 
+Keep every signing artifact — the `.p12`/`.pfx` keystores, passwords, the
+Certificate Manager `profile*.xml`, and any generated `.wgt` — **out of the
+repo tree** (`.gitignore` refuses them by extension precisely because one
+committed `author.p12` is a stolen app identity); store them in your OS
+keychain or an encrypted backup, never in git.
+
 ---
 
 ## Building the Unsigned Widget

@@ -89,6 +89,16 @@ jobs:
           name: phlix-tizen-wgt
           path: artifacts
 
+      - name: Stamp release facts (review m26)
+        # A rolling "latest" artifact is otherwise unverifiable: the body now
+        # carries the widget version (package.json SSOT) and the sha256 of the
+        # EXACT bytes being attached, so a downloaded .wgt can be checked
+        # against the release note without re-deriving anything.
+        id: facts
+        run: |
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+          echo "sha256=$(sha256sum artifacts/phlix-tizen-unsigned.wgt | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
       - name: Reset "latest" release + tag
         run: gh release delete latest --yes --cleanup-tag || true
         env:
@@ -100,8 +110,11 @@ jobs:
           tag_name: latest
           name: Latest (master)
           body: |
-            Rolling build of the latest `master` commit (${{ github.sha }}).
-            - **`phlix-tizen-unsigned.wgt`** — the Tizen widget package. It is
+            Rolling build v${{ steps.facts.outputs.version }} of the latest `master` commit (${{ github.sha }}).
+
+            - **SHA-256** (of the attached file, review m26):
+              `${{ steps.facts.outputs.sha256 }}`
+            - **`phlix-tizen-unsigned.wgt`** — the Tizen widget package (widget version `${{ steps.facts.outputs.version }}`). It is
               **unsigned**: sign it with your author + distributor certificates
               via Tizen Studio or the `tizen` CLI before installing on a TV.
           prerelease: true

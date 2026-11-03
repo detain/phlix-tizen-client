@@ -5,6 +5,18 @@ dist
 # Caliber local state
 .caliber/
 
+# Signing material (review m24) — certificates, keystores, profile XML and the
+# CI/dev unsigned widget drop live OUTSIDE the repo tree (see docs/signing.md).
+# None of these extensions collide with tracked paths (package/ carries the
+# widget sources; no *.wgt is ever committed).
+*.p12
+*.pfx
+*.pem
+*.key
+*.csr
+profile*.xml
+phlix-tizen-unsigned.wgt
+
 # Test coverage output (S409: build artifacts must not be tracked — a
 # stale committed copy actively poisoned greps with pre-S404 renderings)
 coverage/
