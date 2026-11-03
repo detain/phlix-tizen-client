@@ -267,7 +267,7 @@ watch(mediaId, loadSubtitleTracks);
 
 .subtitle-tracks-page__back:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 .subtitle-tracks-page__title {
@@ -311,7 +311,7 @@ watch(mediaId, loadSubtitleTracks);
 
 .subtitle-tracks-page__retry:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 .subtitle-tracks-page__boundary {

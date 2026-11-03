@@ -93,7 +93,7 @@ function formatDuration(seconds: number): string {
 }
 
 .track-list-item:focus-visible {
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 .track-list-item--playing {

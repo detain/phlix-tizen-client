@@ -258,15 +258,18 @@ describe('tvTypography — M-TIZEN-11 TV couch-legibility laws', () => {
 
   it('tokenizes the review-named ChapterOverlay evidence anchors', () => {
     const css = stripCssComments(styleBlocksOf(readFileSync(join(SRC, 'components', 'ChapterOverlay.vue'), 'utf8')));
+    // The tooltip-label/tooltip-time anchors M-TIZEN-11 enumerated here left
+    // with the pointer machinery (deferred review m10, 2026-11-03): the
+    // chrome is gone, its 12/10px evidence with it. The px-ban test above
+    // reddens any resurrection that bypasses the ladder.
     for (const selector of [
       'chapter-overlay__ad-badge',
-      'chapter-overlay__tooltip-label',
-      'chapter-overlay__tooltip-time',
       'chapter-overlay__label',
     ]) {
       const rule = new RegExp(`\\.${selector}\\s*\\{([^}]*)\\}`).exec(css);
       expect(rule, `.${selector} must exist`).not.toBeNull();
       expect(rule![1], `.${selector} still bypasses the ladder`).toMatch(/font-size:\s*var\(--text-/);
     }
+    expect(css).not.toContain('chapter-overlay__tooltip');
   });
 });

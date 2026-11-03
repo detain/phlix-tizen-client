@@ -101,3 +101,11 @@ fallback and the suite reddens on the same law that admits them today.
    load-bearing half — a change to either means the ≥ 85 population's focus
    story or layout changed and a human re-adjudicates, with attribution in
    both this table and the test.
+6. Host ring scale (deferred m9, 2026-11-03): every HOST-owned focus ring
+   rides TV scale on the 1920 canvas — translucent box-shadow rings are
+   `0 0 0 5px var(--accent-ring, …)` (30 sites) and solid outline rings are
+   `outline: 4px solid …` (3 sites). Desktop-scale 3px was 0.16% of frame
+   width at couch distance. Width only — the COLOR stays the estate token
+   `--accent-ring` (ui theme), so this is a tizen-surface scale decision, not
+   a palette one. Final weight awaits a real-TV eyeball (device-test-pending);
+   5/4px sits inside the 4-6px TV convention band.

@@ -158,7 +158,7 @@ const totalCount = computed(() => props.chapters.length);
  * `.chapter-list__item:focus-visible:focus-visible` was a redundant editing
  * artifact — the same element cannot be "more" focused — dropped to one arm. */
 .chapter-list__item:focus-visible {
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
   border-color: var(--accent, #f59e0b);
 }
 

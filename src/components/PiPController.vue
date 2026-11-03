@@ -229,7 +229,7 @@ onUnmounted(() => {
 }
 
 .pip-controller__button:focus-visible {
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
   border-color: var(--accent, #f59e0b);
 }
 

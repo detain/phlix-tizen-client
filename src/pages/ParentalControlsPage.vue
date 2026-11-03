@@ -879,7 +879,7 @@ onMounted(loadAll);
 
 .parental-controls__back:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 .parental-controls__back svg {
@@ -928,7 +928,7 @@ onMounted(loadAll);
 
 .parental-controls__tab:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 /* Section */
@@ -974,7 +974,7 @@ onMounted(loadAll);
 
 .section__action:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 .section__loading,
@@ -1074,7 +1074,7 @@ onMounted(loadAll);
 
 .action-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 /* Form */
@@ -1127,7 +1127,7 @@ onMounted(loadAll);
 .form__input:focus {
   outline: none;
   border-color: var(--accent, #f59e0b);
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.25));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.25));
 }
 
 .form__input--number {
@@ -1178,7 +1178,7 @@ onMounted(loadAll);
 
 .day-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 .form__actions {
@@ -1239,7 +1239,7 @@ onMounted(loadAll);
 .cancel-btn:focus-visible,
 .retry-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 /* Tags */
@@ -1262,7 +1262,7 @@ onMounted(loadAll);
 .tag-input:focus {
   outline: none;
   border-color: var(--accent, #f59e0b);
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.25));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.25));
 }
 
 .add-tag-btn {
@@ -1288,7 +1288,7 @@ onMounted(loadAll);
 
 .add-tag-btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 .tag-list {
@@ -1336,7 +1336,7 @@ onMounted(loadAll);
 
 .tag-item__remove:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 /* Limits */

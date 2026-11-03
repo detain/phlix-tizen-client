@@ -17,10 +17,19 @@
  *          generation counter drops any superseded reply. Pins resolve the two
  *          in-flight loads out of order and assert the stale one never lands.
  *
+ *   m10 — the seekbar ticks carried pointer-era chrome (hover tooltip,
+ *         click-seek, title attribute) that can NEVER fire on this no-pointer
+ *         device (deferred review, 2026-11-03). Fix: ticks are decorative; the
+ *         ChaptersPage route is the operable surface. The bottom describe
+ *         greps the source so the machinery cannot silently re-ship.
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license MIT
  */
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { reactive } from 'vue';
@@ -209,8 +218,31 @@ describe('ChapterOverlay — T-07 stale-load generation guard', () => {
     vi.advanceTimersByTime(250);
     await wrapper.vm.$nextTick();
 
-    const titles = wrapper.findAll('.chapter-overlay__tick').map((t) => t.attributes('title'));
+    const titles = wrapper.findAll('.chapter-overlay__tick').map((t) =>
+      t.attributes('data-tick-title')
+    );
     expect(titles).toEqual(['M2 Chapter']);
+    // Review m10 law (2026-11-03): the tick's identity channel is a DATA
+    // attribute — the hover `title` affordance (and the tooltip it drove)
+    // left with the pointer machinery. A re-add of title= reddens here.
+    expect(wrapper.findAll('.chapter-overlay__tick')[0].attributes('title')).toBeUndefined();
     wrapper.unmount();
+  });
+});
+
+describe('seekbar ticks are decorative — pointer machinery stays dead (deferred review m10)', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const source = readFileSync(join(here, '../../src/components/ChapterOverlay.vue'), 'utf8');
+
+  it('the component source carries no hover/click/title handlers, no tooltip state, no tooltip chrome', () => {
+    expect(source).not.toMatch(/@mouseenter|@mouseleave|@click=|:title=/);
+    expect(source).not.toMatch(/hoveredTick|seekToTick/);
+    expect(source).not.toContain('chapter-overlay__tooltip');
+    expect(source).not.toMatch(/\.chapter-overlay__tick:hover|cursor:\s*pointer/);
+  });
+
+  it('the tick lane is declared decorative: container aria-hidden, no pointer-events opt-in', () => {
+    expect(source).toContain('<div class="chapter-overlay__ticks" aria-hidden="true">');
+    expect(source).not.toMatch(/\.chapter-overlay__ticks\s*\{[^}]*pointer-events:\s*auto/);
   });
 });

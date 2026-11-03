@@ -216,7 +216,7 @@ onBeforeUnmount(() => {
  */
 .telemetry-consent__btn:focus,
 .telemetry-consent__btn:focus-visible {
-  outline: 3px solid #efece4;
+  outline: 4px solid #efece4;
   outline-offset: 3px;
 }
 .telemetry-consent__btn--no:focus,

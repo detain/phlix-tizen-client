@@ -366,7 +366,7 @@ watch(() => musicStore.currentView, loadInitialData);
 
 .music-page__back:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 .music-page__title {
@@ -412,7 +412,7 @@ watch(() => musicStore.currentView, loadInitialData);
 
 .music-page__retry:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 /* ── Grid ── */
@@ -455,7 +455,7 @@ watch(() => musicStore.currentView, loadInitialData);
   outline: none;
   border-style: solid;
   border-color: var(--accent, #f59e0b);
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
 }
 
 .music-page__load-more[disabled] {

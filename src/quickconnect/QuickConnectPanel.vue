@@ -334,7 +334,7 @@ watch(eligible, (active) => {
   cursor: pointer;
 }
 .quick-connect__retry:focus-visible {
-  outline: 3px solid #efece4;
+  outline: 4px solid #efece4;
   outline-offset: 3px;
 }
 /* C16 exit row: the amber CTA stays the pairing focal action; the persistent
@@ -357,7 +357,7 @@ watch(eligible, (active) => {
   cursor: pointer;
 }
 .quick-connect__dismiss:focus-visible {
-  outline: 3px solid #f5a524;
+  outline: 4px solid #f5a524;
   outline-offset: 3px;
 }
 </style>

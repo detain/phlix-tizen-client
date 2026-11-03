@@ -9,6 +9,13 @@
  *   - A chapter title label that appears briefly when playback is near a chapter
  *   - An "Ad" badge when playback is inside an ad marker range
  *
+ * Ticks are DECORATIVE (deferred review m10, 2026-11-03): this is a
+ * no-pointer/no-mouse device, and the former hover tooltip + click-seek
+ * machinery could never fire on a TV — it was pointer-era chrome wearing out
+ * its welcome. The overlay shows the seekbar its chapter map; the operable
+ * chapter surface is the ChaptersPage route (the review's own alternative).
+ * The no-interactivity state is grep-pinned in tests/unit/ChapterOverlay.test.ts.
+ *
  * This is a portal-rendered overlay that positions itself over the player area.
  * The seekbar tick positions are calculated as percentages of the player width,
  * so they scale correctly regardless of the actual seekbar pixel dimensions.
@@ -233,35 +240,6 @@ const isInAdMarker = computed(() => {
   );
 });
 
-/** Currently hovered tick for tooltip display */
-const hoveredTick = ref<(typeof allTickPositions.value)[0] | null>(null);
-
-/**
- * Format milliseconds to MM:SS display string.
- */
-function formatTime(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-/**
- * Seek to a tick's position.
- */
-function seekToTick(tick: (typeof allTickPositions.value)[0]): void {
-  if (tick.type === 'chapter') {
-    // Chapter ticks use startSeconds (need to find the chapter)
-    const chapter = chapters.value.find((c) => `chapter-${c.index}` === tick.id);
-    if (chapter) {
-      playerStore.seekTo(chapter.startSeconds);
-    }
-  } else {
-    // Marker ticks use startMs
-    playerStore.seekTo(tick.startMs / 1000);
-  }
-}
-
 /**
  * Check if the current position is near a chapter boundary and
  * update the chapter label display accordingly.
@@ -414,8 +392,10 @@ onBeforeUnmount(() => {
       </div>
     </Transition>
 
-    <!-- Tick marks on the seekbar (chapters + markers) -->
-    <div class="chapter-overlay__ticks">
+    <!-- Tick marks on the seekbar (chapters + markers) — decorative chapter
+         map (review m10): no handlers, no tooltip, no title attribute. The
+         data-tick-title channel is test-visible tick identity, not UI. -->
+    <div class="chapter-overlay__ticks" aria-hidden="true">
       <div
         v-for="tick in allTickPositions"
         :key="tick.id"
@@ -425,31 +405,9 @@ onBeforeUnmount(() => {
           left: `${tick.positionPercent}%`,
           backgroundColor: tick.color
         }"
-        :title="tick.title"
-        @mouseenter="hoveredTick = tick"
-        @mouseleave="hoveredTick = null"
-        @click="seekToTick(tick)"
+        :data-tick-title="tick.title"
       />
     </div>
-
-    <!-- Marker tooltip - shows on hover with label + start time -->
-    <Transition name="tooltip">
-      <div
-        v-if="hoveredTick"
-        class="chapter-overlay__tooltip"
-        :style="{
-          left: `${hoveredTick.positionPercent}%`
-        }"
-      >
-        <span class="chapter-overlay__tooltip-label">{{ hoveredTick.title }}</span>
-        <span
-          v-if="'startMs' in hoveredTick && hoveredTick.startMs"
-          class="chapter-overlay__tooltip-time"
-        >
-          {{ formatTime(hoveredTick.startMs) }}
-        </span>
-      </div>
-    </Transition>
 
     <!-- Chapter label that appears when near a chapter -->
     <Transition name="chapter-label">
@@ -467,7 +425,8 @@ onBeforeUnmount(() => {
 /**
  * Overlay container positioned at the bottom of the player area,
  * over the seek bar. The overlay uses pointer-events: none so it
- * doesn't block player controls (except for interactive ticks).
+ * never blocks player controls (review m10: the ticks are decorative
+ * too — nothing under this overlay takes input).
  */
 .chapter-overlay {
   position: absolute;
@@ -520,13 +479,13 @@ onBeforeUnmount(() => {
   position: relative;
   height: 8px;
   margin: 0 10%;
-  pointer-events: auto;
 }
 
 /**
  * Individual tick mark - colored vertical bar based on type.
  * Positioned using left percentage calculated from start time.
- * Interactive: hover shows tooltip, click seeks.
+ * DECORATIVE (review m10): no hover state, no click — the ChaptersPage
+ * route is the operable chapter surface on a no-pointer device.
  */
 .chapter-overlay__tick {
   position: absolute;
@@ -536,13 +495,6 @@ onBeforeUnmount(() => {
   transform: translateX(-50%);
   border-radius: 1px;
   opacity: 0.9;
-  cursor: pointer;
-  transition: opacity 150ms ease, transform 150ms ease;
-}
-
-.chapter-overlay__tick:hover {
-  opacity: 1;
-  transform: translateX(-50%) scaleY(1.3);
 }
 
 /* Tick type variants */
@@ -564,47 +516,6 @@ onBeforeUnmount(() => {
 
 .chapter-overlay__tick--ad {
   background-color: #ef4444;
-}
-
-/**
- * Marker tooltip - appears on hover with label and start time.
- * Centered above the tick position.
- */
-.chapter-overlay__tooltip {
-  position: absolute;
-  bottom: 100%;
-  transform: translateX(-50%);
-  margin-bottom: 6px;
-  padding: 10px 16px;
-  background: rgba(0, 0, 0, 0.9);
-  border-radius: 4px;
-  white-space: nowrap;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.chapter-overlay__tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-top-color: rgba(0, 0, 0, 0.9);
-}
-
-.chapter-overlay__tooltip-label {
-  font-size: var(--text-xs); /* M-TIZEN-11: was 12px */
-  font-weight: 600;
-  color: #fff;
-}
-
-.chapter-overlay__tooltip-time {
-  font-size: var(--text-2xs); /* M-TIZEN-11: was 10px */
-  color: #a1a1aa;
 }
 
 /**
@@ -650,28 +561,11 @@ onBeforeUnmount(() => {
   transform: translateY(4px);
 }
 
-/* Transition animations for tooltip */
-.tooltip-enter-active,
-.tooltip-leave-active {
-  transition: opacity 150ms ease;
-}
-
-.tooltip-enter-from,
-.tooltip-leave-to {
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .chapter-overlay__tick {
-    transition: none;
-  }
-
   .chapter-label-enter-active,
   .chapter-label-leave-active,
   .ad-badge-enter-active,
-  .ad-badge-leave-active,
-  .tooltip-enter-active,
-  .tooltip-leave-active {
+  .ad-badge-leave-active {
     transition: none;
   }
 }

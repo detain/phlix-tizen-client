@@ -210,7 +210,7 @@ const totalCount = computed(() => props.tracks.length);
 
 .subtitle-track-list__item:focus-visible,
 .subtitle-track-list__item:focus-visible:focus-visible {
-  box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
   border-color: var(--accent, #f59e0b);
 }
 
