@@ -302,4 +302,88 @@ describe('quickConnectSession — orchestrator', () => {
   it('DEFAULT cadence is the exported fallback', () => {
     expect(DEFAULT_POLL_INTERVAL_SECONDS).toBeGreaterThan(0);
   });
+
+  // ── m17 — the client-side expiry belt ─────────────────────────────────────
+  it('m17: a server stuck on `pending` past its own window ends client-side', async () => {
+    const client = new FakeTransport();
+    client.respond(
+      { code: 'ABCD-1234', interval: 1, expires_at: 30 }, // absolute 30 s from t0
+      ...Array.from({ length: 40 }, () => ({ status: 'pending' })),
+    );
+    let clockMs = 0;
+    const phases: PairingPhase[] = [];
+    const session = createPairingSession({
+      client,
+      identity: { deviceName: 'tv', deviceType: 'samsung-tizen' },
+      isVisible: () => true,
+      applyTokens: () => {},
+      onCode: () => {},
+      onStatusChange: (phase) => phases.push(phase),
+      sleep: async (ms) => {
+        clockMs += ms; // the fake sleep CONSUMES the wall clock, like a real one
+      },
+      now: () => clockMs,
+    });
+    await expect(session.run()).resolves.toBe('expired');
+    // One poll per second of window, plus the final one that trips the belt —
+    // bounded, never the old unbounded hold.
+    const statusCalls = client.calls.filter((c) => c.endpoint.endsWith('/status')).length;
+    expect(statusCalls).toBeLessThanOrEqual(31);
+    expect(phases[phases.length - 1]).toBe('expired');
+  });
+
+  it('m17: a skewed-FAST TV clock never expires a live code client-side — the server stays authoritative', async () => {
+    const client = new FakeTransport();
+    client.respond(
+      { code: 'ABCD-1234', interval: 1, expires_at: 100 }, // unix 100 s
+      { status: 'pending' },
+      { status: 'approved' },
+      { access_token: 'a', refresh_token: 'r' },
+    );
+    let clockMs = 500_000; // TV clock already "past" the absolute expiry (skew)
+    const applied: Array<{ accessToken: string; refreshToken: string }> = [];
+    const session = createPairingSession({
+      client,
+      identity: { deviceName: 'tv', deviceType: 'samsung-tizen' },
+      isVisible: () => true,
+      applyTokens: (tokens) => applied.push(tokens),
+      onCode: () => {},
+      sleep: async (ms) => {
+        clockMs += ms;
+      },
+      now: () => clockMs,
+    });
+    // Derived window is negative → belt DISARMED by design; the flow completes
+    // on the server's honest answers, no client-side 'expired' phantom.
+    await expect(session.run()).resolves.toBe('approved');
+    expect(applied).toEqual([{ accessToken: 'a', refreshToken: 'r' }]);
+  });
+
+  it('m17: a late-but-true approval still redeems — the belt sits AFTER status handling', async () => {
+    const client = new FakeTransport();
+    client.respond(
+      { code: 'ABCD-1234', interval: 1, expires_at: 2 }, // only 2 s of slack
+      { status: 'pending' },
+      { status: 'pending' },
+      { status: 'approved' }, // arrives after the client deadline lapsed
+      { access_token: 'a', refresh_token: 'r' },
+    );
+    let clockMs = 0;
+    const applied: unknown[] = [];
+    const session = createPairingSession({
+      client,
+      identity: { deviceName: 'tv', deviceType: 'samsung-tizen' },
+      isVisible: () => true,
+      applyTokens: (tokens) => applied.push(tokens),
+      onCode: () => {},
+      sleep: async (ms) => {
+        clockMs += ms;
+      },
+      now: () => clockMs,
+    });
+    // t=0 poll pending → sleep 1000 → t=1000 poll pending (belt: 1000 < 2000 OK)
+    // → sleep → t=2000 poll APPROVED (belt checked only after status handling).
+    await expect(session.run()).resolves.toBe('approved');
+    expect(applied).toHaveLength(1);
+  });
 });

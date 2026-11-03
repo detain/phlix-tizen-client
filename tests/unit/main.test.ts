@@ -69,7 +69,11 @@ vi.mock('@phlix/contracts', () => ({
 
 const installTizenBridge = vi.fn(() => () => {});
 vi.mock('@/tizenBridge', () => ({
-  installTizenBridge: (...args: unknown[]) => installTizenBridge(...args)
+  installTizenBridge: (...args: unknown[]) => installTizenBridge(...args),
+  // Review M5 — the real ActionToastOverlay module still loads in this graph
+  // and imports the YELLOW echo gate; a plain ref stand-in keeps the mock
+  // surface complete (nothing in boot tests toggles it).
+  lastYellowWasLive: { value: false }
 }));
 
 // S522 AD-20 — boot installs the gamepad→key bridge once; mock it so the boot

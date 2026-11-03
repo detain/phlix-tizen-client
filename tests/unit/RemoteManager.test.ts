@@ -409,12 +409,39 @@ describe('RemoteManager immediate-action floor (M-TIZEN-26)', () => {
     rm.destroy();
   });
 
-  it('the floor is PER KEY — a different immediate key inside 250 ms still emits', () => {
+  it('M2: the floor is PER FUNCTIONAL GROUP — play/pause wire aliases share one meter', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    // The physical "play/pause" click on a Samsung host can arrive as ANY of
+    // 415/19/66/10252 — sometimes several for one press. Review M2: under the
+    // old per-NAME metering all of these emitted (toggle flood). Grouped,
+    // only the first press of the window emits, and it emits its TRUE name.
+    rm.onKeyDown(fakeKeyEvent(415)); // PLAY at t=0 — emits
+    rm.onKeyDown(fakeKeyEvent(19)); // PAUSE at t=0 — same operation, floored
+    rm.onKeyDown(fakeKeyEvent(66)); // PLAY_PAUSE at t=0 — floored
+    rm.onKeyDown(fakeKeyEvent(10252)); // tvinputdevice PLAY_PAUSE — floored
+    expect(handler.mock.calls.map((c) => c[0])).toEqual([{ key: 'PLAY' }]);
+    rm.destroy();
+  });
+
+  it('a DIFFERENT operation inside 250 ms still emits — groups only collapse aliases', () => {
     const rm = new RemoteManager();
     const handler = vi.fn();
     rm.onAction(handler);
     rm.onKeyDown(fakeKeyEvent(415)); // PLAY at t=0
-    rm.onKeyDown(fakeKeyEvent(19)); // PAUSE at t=0 — different key, not floored
+    rm.onKeyDown(fakeKeyEvent(413)); // STOP at t=0 — its own meter, not floored
+    expect(handler.mock.calls.map((c) => c[0])).toEqual([{ key: 'PLAY' }, { key: 'STOP' }]);
+    rm.destroy();
+  });
+
+  it('the group meter lapses like a per-key one — a real second press registers across aliases', () => {
+    const rm = new RemoteManager();
+    const handler = vi.fn();
+    rm.onAction(handler);
+    rm.onKeyDown(fakeKeyEvent(415)); // PLAY emits at t=0
+    vi.advanceTimersByTime(260); // past the floor
+    rm.onKeyDown(fakeKeyEvent(19)); // PAUSE — fresh press of the SAME operation
     expect(handler.mock.calls.map((c) => c[0])).toEqual([{ key: 'PLAY' }, { key: 'PAUSE' }]);
     rm.destroy();
   });
@@ -572,6 +599,20 @@ describe('RemoteManager digit-commit buffer (S535)', () => {
     rm.onKeyDown(fakeKeyEvent(49, input)); // typed — dropped like today
     rm.onKeyDown(fakeKeyEvent(53)); // normal focus — buffered
     vi.advanceTimersByTime(2000);
+    expect(actions(handler)).toEqual([{ key: 'DIGIT_COMMIT', value: '5' }]);
+  });
+
+  it('refuses AUTO-REPEAT keydowns on the digit lane — a held key queues one press (review m1)', () => {
+    const handler = vi.fn();
+    rm.on('action', handler);
+
+    rm.onKeyDown(fakeKeyEvent(53)); // DIGIT_5, first press
+    for (let i = 0; i < 30; i++) {
+      rm.onKeyDown(fakeKeyEvent(53, undefined, true)); // the host's held-key flood
+    }
+    vi.advanceTimersByTime(2000);
+
+    expect(handler).toHaveBeenCalledTimes(1);
     expect(actions(handler)).toEqual([{ key: 'DIGIT_COMMIT', value: '5' }]);
   });
 

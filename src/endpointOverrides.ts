@@ -7,13 +7,14 @@
  * `/syncplay/{serverId}` in `buildHubRelayUrl` (relay lane) — while the
  * estate has grown endpoint seams everywhere else: server ListenEndpoints
  * (server 7b7bf215), hub HUB_WS_URL/HUB_WS_PATH (hub 6175184), and the ui's
- * v0.99.11 socketHint prop. A deployment that mounts those services on
- * custom ports/paths splits-brain against the TV: REST works (apiBase is
- * configurable), the room socket silently dials the wrong door. The ui seam
- * is NOT available at this pin (v0.99.11 is push-gated), so the tizen-local
- * re-implementations carry the override themselves — exactly the fallback
- * the crossfe review prescribes ("if hosts keep their own re-implementations
- * … those need the same override").
+ * v0.99.13 socketHint seam (`window.__PHLIX__.wsUrl/wsPath`, read lazily at
+ * every dial — review M11 wires it in `src/syncplaySocketHint.ts`). A
+ * deployment that mounts those services on custom ports/paths splits-brain
+ * against the TV: REST works (apiBase is configurable), the room socket
+ * silently dials the wrong door. Both lanes carry the override: the tizen
+ * re-implementations read these keys at DIAL time, and the sealed-bundle
+ * surface is fed the derived hint through the ui seam — one truth, two
+ * consumers.
  *
  * THE SHAPE: localStorage keys, read at dial time (a settings surface, not
  * an operator rebuild), validated to death here, DEFAULT-ON-INVALID (a
@@ -61,4 +62,21 @@ export function parsePathOverride(raw: string | null | undefined): string | null
   if (trimmed.length === 0 || trimmed.length > 200) return null;
   if (!/^\/(?!\/)[^\s?#]*$/.test(trimmed)) return null;
   return trimmed;
+}
+
+/**
+ * Read + validate `phlix.syncplayPort` RIGHT NOW (M-TIZEN-07 liveness law:
+ * an operator edit takes effect on the next attempt, no rebuild). The single
+ * shared reader behind BOTH dial-time consumers — the store's direct-lane
+ * `buildWsUrl` and the socketHint seeder (`src/syncplaySocketHint.ts`) — so
+ * the sealed bundle and the tizen socket can never disagree on the port.
+ * Storage absent/throwing or an invalid row → null → the shipped :8097
+ * default decides, byte-identically.
+ */
+export function syncPlayPortOverride(): number | null {
+  try {
+    return parsePortOverride(globalThis.localStorage.getItem(SYNCPLAY_PORT_KEY));
+  } catch {
+    return null; // no storage in this context — the shipped default decides
+  }
 }

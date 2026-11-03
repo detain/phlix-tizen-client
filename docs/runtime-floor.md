@@ -50,6 +50,36 @@ so if any code ever calls them on a reactive array below 110 the call throws
 `TypeError`. The tripwire counts and shape-pins them precisely so a re-vendor
 that turns one live cannot pass green.
 
+### CSS features above 85 (review M9)
+
+The same floor applies to the shipped stylesheet — an unsupported selector or
+property in modern CSS drops **the whole rule**, silently. Census measured
+2026-11-03 (batch-3 rebuild, review-lane `e2995a7` successor) over the single
+committed stylesheet `package/assets/index-*.css` (hash-agnostic read — the
+whole bundle emits exactly one CSS file), all figures re-derived from disk:
+
+| Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
+|---|---|---|---|
+| `:focus-visible` | Chrome **86** | 155 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. |
+| `inset:` | Chrome **87** | 41 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
+| `aspect-ratio` | Chrome **88** | 36 | Boxes size from content/height instead of the ratio — cards may stretch. |
+| `accent-color` | Chrome **93** | 8 | Form controls keep UA default colors — cosmetic only. |
+| `:has()` | Chrome **105** | 1 | The one rule (`.register-form__segment:has(input:checked)`, a segmented-control highlight) drops — the state stays unstyled. Upstream cosmetic half (ui repo), pinned here so its arrival/movement is visible. |
+
+The load-bearing cure is the vendored 10-foot fallback carried in the same
+stylesheet:
+
+```css
+[data-tv] :focus,[data-tv] [data-focusable]:focus{box-shadow:…;outline:none}
+```
+
+`data-tv` is set by @phlix/ui on `document.documentElement` (the same class of
+surface `src/styles/tv-typography.css` documents), so on ≤ 85 engines the D-pad
+focus ring still renders — through plain `:focus`, universally supported. The
+tripwire test **hard-asserts** that selector pair verbatim: if a re-vendor ever
+drops it, the 155 `:focus-visible` census sites become unsupported-with-no-
+fallback and the suite reddens on the same law that admits them today.
+
 ## Governance law (tripwire rotation rules)
 
 1. `tests/unit/distApiFloor.test.ts` scans the **committed** `package/` — the
@@ -66,3 +96,8 @@ that turns one live cannot pass green.
 4. String/TypedArray `.at` are **not** covered by the Array polyfill; the
    `\.at\(` census pin protects against a silent String receiver sneaking in as
    "already covered".
+5. The CSS census (above) rotates under the same law: every count pin is an
+   exact measured figure, and the `[data-tv] :focus` fallback assertion is the
+   load-bearing half — a change to either means the ≥ 85 population's focus
+   story or layout changed and a human re-adjudicates, with attribution in
+   both this table and the test.

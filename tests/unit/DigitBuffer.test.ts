@@ -17,7 +17,8 @@ import path from 'node:path';
 import {
   createDigitBuffer,
   isTypingTarget,
-  DIGIT_COMMIT_TIMEOUT_MS
+  DIGIT_COMMIT_TIMEOUT_MS,
+  DIGIT_BUFFER_MAX
 } from '@/remote/DigitBuffer';
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..');
@@ -245,5 +246,52 @@ describe('DigitBuffer — ONE buffer in the tree (AC#3 grep pin)', () => {
       /from '[^']*DigitBuffer'/.test(readFileSync(path.join(REPO_ROOT, rel), 'utf8'))
     );
     expect(importers).toEqual(['src/remote/RemoteManager.ts']);
+  });
+});
+
+// Review m1 — the flood-abort cap. A held/stuck number key can no longer reach
+// the buffer at all (RemoteManager refuses repeat keydowns), and if ANY feeder
+// (voice phrase included) queues beyond the cap, the burst is noise by
+// construction: it is abandoned WITHOUT a commit, never truncated-and-shipped.
+describe('DigitBuffer — flood-abort cap (review m1)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const burst = (buffer: ReturnType<typeof createDigitBuffer>, count: number): void => {
+    for (let i = 0; i < count; i++) buffer.push(String(i % 10));
+  };
+
+  it('a full 16-digit burst still commits exactly (the cap admits, not chops)', () => {
+    const commit = vi.fn();
+    const buffer = createDigitBuffer({ commit });
+    burst(buffer, DIGIT_BUFFER_MAX);
+    expect(buffer.pending()).toBe('0123456789012345');
+    vi.advanceTimersByTime(DIGIT_COMMIT_TIMEOUT_MS);
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(commit).toHaveBeenCalledWith('0123456789012345');
+  });
+
+  it('the 17th push ABANDONS the queue — no commit ever fires for the flood', () => {
+    const commit = vi.fn();
+    const buffer = createDigitBuffer({ commit });
+    burst(buffer, DIGIT_BUFFER_MAX);
+    buffer.push('7'); // overflow evidence
+    expect(buffer.pending()).toBe(''); // whole burst dropped
+    vi.advanceTimersByTime(DIGIT_COMMIT_TIMEOUT_MS * 2);
+    expect(commit).not.toHaveBeenCalled(); // and the drain timer was cancelled
+  });
+
+  it('after an abandon the buffer is clean — a fresh digit commits normally', () => {
+    const commit = vi.fn();
+    const buffer = createDigitBuffer({ commit });
+    burst(buffer, DIGIT_BUFFER_MAX + 1);
+    buffer.push('9');
+    vi.advanceTimersByTime(DIGIT_COMMIT_TIMEOUT_MS);
+    expect(commit).toHaveBeenCalledTimes(1);
+    expect(commit).toHaveBeenCalledWith('9');
   });
 });

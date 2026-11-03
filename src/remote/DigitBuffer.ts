@@ -14,7 +14,8 @@
  * tests. The ONE-buffer law: exactly one instance exists at runtime, owned by
  * the `RemoteManager` singleton, fed by routed keydowns AND recognised numeric
  * voice phrases (S531's coordinate-on-arrival) — never a forked digit path
- * (grep-pinned in the suite).
+ * (grep-pinned in the suite). A push beyond {@link DIGIT_BUFFER_MAX} is flood
+ * evidence and abandons the queue without committing (review m1).
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
@@ -22,6 +23,17 @@
 
 /** Silence window before a queued digit burst commits as one value (2 s, findings §AD-22). */
 export const DIGIT_COMMIT_TIMEOUT_MS = 2000;
+
+/**
+ * Review m1 — the hardware-honest queue cap. No real channel/skip number
+ * approaches 16 digits; a push that would make the 17th was produced by a
+ * held or stuck key (or a flooded router), not a human. Such a burst is
+ * noise, so the overflow ABANDONS the whole queue — clearing it without a
+ * commit — rather than emitting a nonsense 16-digit channel the consumer
+ * would only toast about. Belt number two: `RemoteManager.onKeyDown` already
+ * refuses auto-repeat keydowns on the digit lane.
+ */
+export const DIGIT_BUFFER_MAX = 16;
 
 /** Exactly one ASCII digit — the sole shape the queue accepts (parse at the boundary). */
 const SINGLE_DIGIT = /^[0-9]$/;
@@ -118,6 +130,17 @@ export function createDigitBuffer({ commit, timeoutMs = DIGIT_COMMIT_TIMEOUT_MS 
   return {
     push(digit: string): void {
       if (!SINGLE_DIGIT.test(digit)) return; // Law 1: refuse anything but one digit char.
+      if (digits.length >= DIGIT_BUFFER_MAX) {
+        // Law 4 (review m1): the cap overflow is flood evidence — abandon the
+        // burst whole. A human never queues 17 digits; committing the first
+        // 16 would ship a guaranteed-invalid channel switch.
+        if (timer !== null) {
+          clearTimeout(timer);
+          timer = null;
+        }
+        digits = '';
+        return;
+      }
       digits += digit;
       if (timer !== null) clearTimeout(timer); // Law 3: re-arm — never an early drain.
       timer = setTimeout(drain, timeoutMs);

@@ -44,6 +44,7 @@
 import { onBeforeUnmount, onMounted } from 'vue';
 import remoteManager, { type ActionEvent, type KeyEvent } from '../remote/RemoteManager';
 import KeyMapping from '../remote/KeyMapping';
+import { lastYellowWasLive } from '../tizenBridge';
 import { useActionToastStore } from '../stores/useActionToastStore';
 
 /** Captions are a glance, not a paragraph — long labels truncate here. */
@@ -66,6 +67,10 @@ const toast = useActionToastStore();
  */
 function captionAction(event: ActionEvent | KeyEvent): void {
   if (!('key' in event) || KeyMapping.isSilentAction(event.key)) return;
+  // Review M5 — YELLOW captions ONLY functional presses: the bridge ran first
+  // on this very emit (boot-order law) and published whether the quality
+  // menu actually moved. An off-route / no-menu press stays silent.
+  if (event.key === 'YELLOW' && !lastYellowWasLive.value) return;
   toast.show(KeyMapping.getDisplayName(event.key));
 }
 

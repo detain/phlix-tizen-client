@@ -35,6 +35,7 @@ import { installRuntimeFailureCapture, recordRuntimeFailure, readRuntimeFailures
 import { installMediaActivityProbe } from './mediaActivity';
 import { applyTvMotionClass } from './tvMotion';
 import { useSyncPlayStore } from './stores/useSyncPlayStore';
+import { applySyncPlaySocketHint } from './syncplaySocketHint';
 import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
 import { buildTelemetryDeps, getConsent, startTelemetry } from './telemetry';
 import SpatialNavHost from './SpatialNavHost.vue';
@@ -435,6 +436,12 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
 
   const { app, apiBase } = resolveAppConfig({ serverUrl, envUrl });
 
+  // Review M11 — point the sealed @phlix/ui bundle's room socket at THIS
+  // server (its legacy fallback derives from `window.location`, which on a
+  // widget is the package root, never the LAN base). Seed at boot; a first-
+  // run empty base clears the hint (legacy stands until a server exists).
+  applySyncPlaySocketHint(apiBase || null);
+
   // ONE locale truth for the whole client (explicit → VITE_PHLIX_LOCALE →
   // navigator.language → 'en'): pinned for the own-strings catalog AND passed
   // as the ui-seam override map below, so the two catalogs can never disagree.
@@ -484,13 +491,25 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
             );
             return;
           }
+          // Review M11 — a server switch MUST move the bundle's socket with
+          // it; the hint re-derives from the newly chosen (sanitized) base,
+          // never from the raw callback string. BEFORE the persist: @phlix/ui
+          // drives the session from the in-memory value, so the hint must
+          // match it even when storage writes throw (the next boot re-seeds
+          // from durable storage anyway).
+          applySyncPlaySocketHint(address);
           storage.setItem(SERVER_URL_KEY, address);
           // S529 / AD-24 — record the address in the bounded history that seeds
           // the first-run connect suggestions (privilege-honest: this is the
           // data source that replaces a blind subnet sweep — see resolveConfig).
           // Its own gate (M-TIZEN-07) re-checks — one edge, single-source law.
           pushAddressHistory(storage, address);
-        } else storage.removeItem(SERVER_URL_KEY);
+        } else {
+        // Clearing the slot must clear the hint too — a stale wsUrl would
+        // keep the bundle dialing the abandoned server.
+        applySyncPlaySocketHint(null);
+        storage.removeItem(SERVER_URL_KEY);
+      }
       } catch {
         // Persistence failed; the in-memory session value still drives this run.
       }

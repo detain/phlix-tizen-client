@@ -217,6 +217,72 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
   });
 
   /* ------------------------------------------------------------------------
+   * CSS SIDE (review M9) — the same ≥ 85 floor governs the shipped stylesheet,
+   * where an unsupported selector/property silently DROPS THE WHOLE RULE. The
+   * census below is measured 2026-11-03 from the committed single CSS file;
+   * every figure is an exact re-pin target (rotation law + docs/runtime-floor.md
+   * "CSS features above 85"). The pair law: the 155 `:focus-visible` sites are
+   * admitted ONLY because the vendored `[data-tv] :focus` fallback rides in
+   * the same file — both halves are asserted together, so a re-vendor that
+   * drops the fallback reddens the suite instead of shipping blind D-pad focus.
+   * ---------------------------------------------------------------------- */
+  describe('CSS features above the floor (review M9)', () => {
+    function cssFiles(): string[] {
+      expect(existsSync(ASSETS_DIR), `committed bundle missing: ${ASSETS_DIR}`).toBe(true);
+      return readdirSync(ASSETS_DIR).filter((f) => f.endsWith('.css'));
+    }
+
+    /** The stylesheet index.html actually links (hash-agnostic, entry law). */
+    function entryCssName(): string {
+      const html = readFileSync(join(PKG_DIR, 'index.html'), 'utf8');
+      const m = html.match(/href="\.\/assets\/(index-[^"]+\.css)"/);
+      expect(m, 'index.html does not reference an ./assets/index-*.css entry').not.toBeNull();
+      return m![1];
+    }
+
+    function countAcrossCss(needle: string): number {
+      let total = 0;
+      for (const f of cssFiles()) total += countOccurrences(readFileSync(join(ASSETS_DIR, f), 'utf8'), needle);
+      return total;
+    }
+
+    it('the bundle emits exactly one stylesheet, and it is the entry-linked one', () => {
+      const files = cssFiles();
+      expect(files.length, 'CSS file count').toBe(1);
+      expect(files[0]).toBe(entryCssName());
+    });
+
+    it('pins the above-floor CSS census at measured counts (rotation = adjudication)', () => {
+      // :focus-visible Chrome 86 · inset: 87 · aspect-ratio 88 · accent-color 93.
+      // Measured 2026-11-03 (batch-3 tree). Movement in ANY of these means the
+      // vendored surface changed shape — re-derive the degradation table in
+      // docs/runtime-floor.md in the same change, never silently.
+      expect(countAcrossCss(':focus-visible')).toBe(155);
+      expect(countAcrossCss('inset:')).toBe(41);
+      expect(countAcrossCss('aspect-ratio')).toBe(36);
+      expect(countAcrossCss('accent-color')).toBe(8);
+    });
+
+    it('carries the vendored [data-tv] plain-:focus fallback the census depends on', () => {
+      const css = readFileSync(join(ASSETS_DIR, entryCssName()), 'utf8');
+      // Verbatim selector pair (minified form) — the load-bearing cure for
+      // :focus-visible on ≤ 85 engines (docs/runtime-floor.md, M9 section).
+      expect(css).toContain('[data-tv] :focus,[data-tv] [data-focusable]:focus{');
+      // And it must be a real ring rule, not a hollow selector:
+      expect(css).toContain('[data-tv] :focus,[data-tv] [data-focusable]:focus{box-shadow:');
+    });
+
+    it('pins the single :has( rule as the known cosmetic dead-rule (upstream half)', () => {
+      const css = readFileSync(join(ASSETS_DIR, entryCssName()), 'utf8');
+      // Chrome 105 — on the floor engine the ONE segmented-control highlight
+      // rule drops, unstyled-state cosmetic only. Pinned count=1: a second
+      // `:has(` arrival is a new dependency on ≥ 105 parsing and needs eyes.
+      expect(countOccurrences(css, ':has(')).toBe(1);
+      expect(css).toContain(':has(input:checked)');
+    });
+  });
+
+  /* ------------------------------------------------------------------------
    * CLAIM SIDE (M-TIZEN-08 / review tizen__exploiter lineage) — the surface
    * that SAYS what engines are supported must never undercut the ≥ 85 floor
    * this file enforces on the bundle itself.

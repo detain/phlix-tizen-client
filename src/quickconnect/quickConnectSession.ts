@@ -20,7 +20,10 @@
  * server-published `interval`, then a conservative default; transient network
  * faults back off exponentially against a ceiling, and while the surface is
  * HIDDEN the loop sleeps WITHOUT touching the network at all (the pin: an
- * invisible pairing screen issues zero status requests).
+ * invisible pairing screen issues zero status requests). A server-published
+ * absolute expiry additionally arms a client-side deadline, so a server stuck
+ * on `pending` cannot keep the loop (or the pairing UI) alive past the code's
+ * own validity window (review m17).
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
@@ -101,6 +104,9 @@ export interface PairingSessionDeps {
   sleep?: (ms: number) => Promise<void>;
   /** Force a cadence, ignoring any server-published interval (tests / tuning). */
   intervalSeconds?: number;
+  /** Injectable clock (unix-ms) for the client-side expiry belt — tests only;
+   *  production reads `Date.now()`. */
+  now?: () => number;
 }
 
 export interface PairingSession {
@@ -164,6 +170,23 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
       deps.onCode(offer.code, offer.expiresAtSeconds);
       emit('pairing');
 
+      // Review m17 — CLIENT-SIDE EXPIRY BELT. `expiresAtSeconds` used to be
+      // display-only: a server that kept answering `pending` past its own
+      // expiry window kept the TV polling (and holding a live pairing UI)
+      // indefinitely. Belt rule: derive a wall-clock deadline from the
+      // server-issued ABSOLUTE expiry, but only trust it when the locally
+      // derived window is POSITIVE — an unpaired TV's clock can be skewed,
+      // and a skewed-FAST clock would otherwise expire a genuinely live code
+      // client-side. Skewed-SLOW just means the belt never fires and the
+      // server's own honest `expired` status stays authoritative (it also
+      // bounds a long deadline: no client timer outruns a truthful server).
+      const nowMs = () => deps.now?.() ?? Date.now();
+      let deadlineAtMs: number | null = null;
+      if (typeof offer.expiresAtSeconds === 'number' && Number.isFinite(offer.expiresAtSeconds)) {
+        const derivedWindowMs = offer.expiresAtSeconds * 1000 - nowMs();
+        if (derivedWindowMs > 0) deadlineAtMs = nowMs() + derivedWindowMs;
+      }
+
       const baseMs = clampPollMs(
         deps.intervalSeconds ?? offer.intervalSeconds ?? DEFAULT_POLL_INTERVAL_SECONDS,
       );
@@ -202,7 +225,13 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
         if (status === 'denied') return finish('denied');
         if (status === 'expired') return finish('expired');
 
-        // pending / unknown → hold the cadence and poll again.
+        // pending / unknown → hold the cadence and poll again — UNLESS the
+        // client-side expiry belt has lapsed (m17): a server past its own
+        // window stops being believed from the client side too. Checked AFTER
+        // status handling so a live-but-late `approved` still redeems.
+        if (deadlineAtMs !== null && nowMs() >= deadlineAtMs) {
+          return finish('expired');
+        }
         await sleep(baseMs);
       }
 

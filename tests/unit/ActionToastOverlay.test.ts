@@ -23,6 +23,7 @@ import { mount } from '@vue/test-utils';
 import { createPinia, setActivePinia, type Pinia } from 'pinia';
 import remoteManager from '@/remote/RemoteManager';
 import KeyMapping from '@/remote/KeyMapping';
+import { lastYellowWasLive } from '@/tizenBridge';
 import ActionToastOverlay from '@/components/ActionToastOverlay.vue';
 import {
   useActionToastStore,
@@ -273,5 +274,39 @@ describe('ActionToastOverlay (S516 AD-13)', () => {
     wrapper.unmount();
     expect(() => legacyKeyDown(415)).not.toThrow();
     expect(document.querySelector('.action-toast')).toBeNull();
+  });
+
+  // Review M5 — the context-dependent half of the silent-action law: YELLOW
+  // captions ONLY when the bridge marked this very press functional. The
+  // bridge's listener registers before this overlay mounts (main.ts boot
+  // order), so in production the ref read here is always THIS emit's verdict;
+  // these tests drive the seam directly the way the bridge would.
+  it('M5: a YELLOW the bridge found non-functional captions NOTHING', async () => {
+    lastYellowWasLive.value = false;
+    const wrapper = mountOverlay(pinia);
+    remoteManager.emit('action', { key: 'YELLOW' });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toBe('');
+    lastYellowWasLive.value = false;
+    wrapper.unmount();
+  });
+
+  it('M5: a functional YELLOW captions its display name like any real action', async () => {
+    lastYellowWasLive.value = true;
+    const wrapper = mountOverlay(pinia);
+    remoteManager.emit('action', { key: 'YELLOW' });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toBe(KeyMapping.getDisplayName('YELLOW'));
+    lastYellowWasLive.value = false;
+    wrapper.unmount();
+  });
+
+  it('M5: the gate is YELLOW-only — other actions caption regardless of the ref', async () => {
+    lastYellowWasLive.value = false;
+    const wrapper = mountOverlay(pinia);
+    remoteManager.emit('action', { key: 'PLAY' });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toBe('Play');
+    wrapper.unmount();
   });
 });

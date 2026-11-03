@@ -92,6 +92,18 @@ export interface BridgeQualityMenu {
  */
 export const qualityMenuActive: Ref<boolean> = ref(false);
 
+/**
+ * Review M5 — the toast-echo gate for YELLOW. `true` iff the LAST YELLOW
+ * keydown performed its quality-menu function (player route + menu active or
+ * available). `ActionToastOverlay` captions YELLOW only when this says so:
+ * the color button exists on every remote, and pressing it on the home
+ * screen used to echo a "Yellow" toast for an action that did nothing — the
+ * silent-action law's context-dependent sibling (the static set can only
+ * carry always-dead actions; this one lives or dies by route + menu state).
+ * Written only by the bridge's YELLOW case, read only by the caption layer.
+ */
+export const lastYellowWasLive: Ref<boolean> = ref(false);
+
 /** CSS selector for the QualityMenu's Select trigger inside the player chrome. */
 const QUALITY_TRIGGER_SELECTOR = '.quality-menu .phlix-select__trigger';
 
@@ -513,13 +525,21 @@ export function wireTizenBridge(
       case 'HOME':
         router.push('/app');
         break;
-      case 'YELLOW':
+      case 'YELLOW': {
         // Yellow color button = "Quality". Only on the player route, and only
         // when the QualityMenu is actually on screen (multi-variant transcode);
         // it toggles quality-selection mode so the D-pad drives the picker.
-        if (getRoute().name === 'player') {
+        // Review M5: whether this press did ANYTHING is published to the toast
+        // caption layer (`lastYellowWasLive`) — an off-route or no-menu press
+        // must stay SILENT, echoing nothing. The bridge listener is registered
+        // before the overlay mounts (main.ts boot order), so on the same emit
+        // the overlay always reads THIS press's verdict, never a stale one.
+        const live =
+          getRoute().name === 'player' && (quality.isActive() || quality.isAvailable());
+        lastYellowWasLive.value = live;
+        if (live) {
           if (quality.isActive()) qualityLayer.close();
-          else if (quality.isAvailable()) {
+          else {
             // Remember where the viewer stood so BACK can return them (AD-10
             // focus memory — the seam AD-9's ui focus-stack adopts).
             if (typeof document !== 'undefined' && document.activeElement) {
@@ -529,6 +549,7 @@ export function wireTizenBridge(
           }
         }
         break;
+      }
       default:
         // Arrows / ENTER / keys with no consumer — not bridged. M-TIZEN-09
         // retired the dead vocabulary at the KEY_MAP, so the codes it removed

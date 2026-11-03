@@ -329,4 +329,24 @@ describe('KeyMapping', () => {
       expect(KeyMapping.getDisplayName('DIGIT_COMMIT')).not.toBe('DIGIT_COMMIT');
     });
   });
+
+  describe('floorGroup — the M-TIZEN-26 ledger key (review M2)', () => {
+    it('collapses the play/pause wire aliases onto one representative', () => {
+      // 415/19/66/10252 are one physical toggle arriving under several names;
+      // the floor MUST meter them together or a single click floods emits.
+      for (const alias of ['PLAY', 'PAUSE', 'PLAY_PAUSE']) {
+        expect(KeyMapping.floorGroup(alias)).toBe('PLAY_PAUSE');
+      }
+    });
+
+    it('meters every other action — known or UNKNOWN_n — by its own name', () => {
+      for (const name of ['STOP', 'BACK', 'HOME', 'FAST_FORWARD', 'YELLOW', 'UNKNOWN_999']) {
+        expect(KeyMapping.floorGroup(name)).toBe(name);
+      }
+    });
+
+    it('is idempotent: the representative maps to itself', () => {
+      expect(KeyMapping.floorGroup(KeyMapping.floorGroup('PLAY'))).toBe('PLAY_PAUSE');
+    });
+  });
 });

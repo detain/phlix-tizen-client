@@ -97,10 +97,12 @@ export class RemoteManager {
   private activeKeyRepeat: ReturnType<typeof setTimeout> | ReturnType<typeof setInterval> | null =
     null;
   /**
-   * M-TIZEN-26: per-action-name timestamp of the last EMITTED immediate
-   * action. Written only on emission (a suppressed press never refreshes it),
-   * read by the floor predicate in `onKeyDown`. Cleared with the rest of the
-   * runtime state on disable/destroy.
+   * M-TIZEN-26: per-FLOOR-GROUP timestamp of the last EMITTED immediate
+   * action (review M2 — wire-name aliases of one physical action share the
+   * meter via `KeyMapping.floorGroup`; emissions keep their true names).
+   * Written only on emission (a suppressed press never refreshes it), read by
+   * the floor predicate in `onKeyDown`. Cleared with the rest of the runtime
+   * state on disable/destroy.
    */
   private readonly lastImmediateAt = new Map<ActionName, number>();
   /**
@@ -147,7 +149,10 @@ export class RemoteManager {
     // the drain later emits a single DIGIT_COMMIT action. While a typing target
     // holds focus this is skipped entirely: no buffer, no preventDefault, the
     // event keeps its byte-identical passthrough so a search input types "1984".
-    if (KeyMapping.isDigit(mappedKey) && !isTypingTarget(event.target)) {
+    // Review m1: auto-repeat keydowns (a held number key) never feed the
+    // buffer either — `press` semantics like the immediate lane, and the
+    // DigitBuffer's own cap is the belt behind it.
+    if (KeyMapping.isDigit(mappedKey) && event.repeat !== true && !isTypingTarget(event.target)) {
       this.pressDigit(mappedKey);
     }
 
@@ -160,10 +165,15 @@ export class RemoteManager {
     // are gated, so the FIRST press arms the hold timer and repeats leave it
     // alone: a held seek accelerator finally reaches its 500 ms hold cadence
     // instead of restarting under every auto-repeat keydown.
+    // Review M2: the ledger is keyed by FUNCTIONAL GROUP, not wire name —
+    // PLAY/PAUSE/PLAY_PAUSE are aliases of one physical toggle and Samsung
+    // hosts deliver several codes per press, so per-name metering let a
+    // single click emit up to three (net-zero / thrashing) actions.
+    const floorKey = KeyMapping.floorGroup(mappedKey);
     const suppressedImmediate =
       KeyMapping.isImmediate(mappedKey) &&
       (event.repeat === true ||
-        Date.now() - (this.lastImmediateAt.get(mappedKey) ?? Number.NEGATIVE_INFINITY) <
+        Date.now() - (this.lastImmediateAt.get(floorKey) ?? Number.NEGATIVE_INFINITY) <
           IMMEDIATE_ACTION_FLOOR_MS);
 
     // Held-key repeat (seek-accelerator hold: FAST_FORWARD/REWIND). Clear any
@@ -189,7 +199,8 @@ export class RemoteManager {
     if (KeyMapping.isImmediate(mappedKey)) {
       event.preventDefault();
       if (!suppressedImmediate) {
-        this.lastImmediateAt.set(mappedKey, Date.now());
+        // Group representative (M2) — the emit still carries the TRUE name.
+        this.lastImmediateAt.set(floorKey, Date.now());
         this.emit('action', { key: mappedKey });
       }
     }

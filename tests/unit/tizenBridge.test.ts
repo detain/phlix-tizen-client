@@ -4,6 +4,7 @@ import {
   createDomQualityMenu,
   installTizenBridge,
   qualityMenuActive,
+  lastYellowWasLive,
   defaultExitApplication,
   createFocusTrapLayer,
   FOCUS_TRAP_SELECTOR,
@@ -316,6 +317,9 @@ describe('wireTizenBridge', () => {
     wireTizenBridge(remote, makePlayer(), makeRouter(), playerRoute, quality);
     remote.fire({ key: 'YELLOW' });
     expect(quality.activate).toHaveBeenCalledTimes(1);
+    // M5: a functional press publishes itself live for the caption layer.
+    expect(lastYellowWasLive.value).toBe(true);
+    lastYellowWasLive.value = false;
   });
 
   it('YELLOW is a no-op off the player route', () => {
@@ -323,6 +327,8 @@ describe('wireTizenBridge', () => {
     wireTizenBridge(remote, makePlayer(), makeRouter(), browseRoute, quality);
     remote.fire({ key: 'YELLOW' });
     expect(quality.activate).not.toHaveBeenCalled();
+    // M5: dead press → NOT live → the overlay stays silent.
+    expect(lastYellowWasLive.value).toBe(false);
   });
 
   it('YELLOW is a no-op when the QualityMenu is not on screen', () => {
@@ -330,6 +336,7 @@ describe('wireTizenBridge', () => {
     wireTizenBridge(remote, makePlayer(), makeRouter(), playerRoute, quality);
     remote.fire({ key: 'YELLOW' });
     expect(quality.activate).not.toHaveBeenCalled();
+    expect(lastYellowWasLive.value).toBe(false); // M5
   });
 
   it('YELLOW toggles the QualityMenu closed when it is already active', () => {
@@ -338,6 +345,8 @@ describe('wireTizenBridge', () => {
     remote.fire({ key: 'YELLOW' });
     expect(quality.deactivate).toHaveBeenCalledTimes(1);
     expect(quality.activate).not.toHaveBeenCalled();
+    expect(lastYellowWasLive.value).toBe(true); // M5 — closing IS functional
+    lastYellowWasLive.value = false;
   });
 
   it('BACK dismisses an active QualityMenu without leaving the player', () => {

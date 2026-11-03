@@ -160,6 +160,24 @@ const IMMEDIATE_ACTIONS: ReadonlySet<ActionName> = new Set([
   'YELLOW'
 ]);
 
+/**
+ * Review M2 — FUNCTIONAL FLOOR GROUPS for the immediate-action floor.
+ * PLAY (keyCode 415), PAUSE (19) and PLAY_PAUSE (66 + tvinputdevice 10252)
+ * are three WIRE NAMES for ONE physical operation: every consumer maps them
+ * to the same player toggle. Samsung remotes and the `tvinputdevice` lane
+ * demonstrably deliver several of these codes for a single press, and a
+ * floor keyed by wire name suppressed none of that — one click could emit
+ * up to three toggling actions (net-zero or state thrash, the review's flood).
+ * Metering the floor under ONE group representative makes the alias burst a
+ * single press exactly once per window, per what the user actually did.
+ * Only semantically identical names share a group; STOP keeps its own meter.
+ */
+const IMMEDIATE_FLOOR_GROUP: Partial<Record<ActionName, ActionName>> = {
+  PLAY: 'PLAY_PAUSE',
+  PAUSE: 'PLAY_PAUSE',
+  PLAY_PAUSE: 'PLAY_PAUSE',
+};
+
 // Digit actions (S509 naming; since S535 routed into the shared digit-commit
 // buffer). Predicate-exposed; kept OUT of IMMEDIATE/HANDLED on purpose — they
 // must not be preventDefaulted while a text field has focus (see KEY_MAP digits
@@ -273,6 +291,16 @@ const KeyMapping = {
   /** Whether the action fires immediately on keydown. */
   isImmediate(action: ActionName): boolean {
     return IMMEDIATE_ACTIONS.has(action);
+  },
+
+  /**
+   * The key the M-TIZEN-26 immediate floor is metered under (review M2):
+   * wire-name aliases of one physical action collapse to their group
+   * representative; every other name meters itself. EMISSION still uses the
+   * true action name — only the suppression ledger is grouped.
+   */
+  floorGroup(action: ActionName): ActionName {
+    return IMMEDIATE_FLOOR_GROUP[action] ?? action;
   },
 
   /** Whether the action is one of the named digit keys (S509 routing groundwork). */
