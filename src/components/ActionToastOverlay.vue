@@ -119,11 +119,16 @@ onMounted(() => {
 
 <style scoped>
 /*
- * Bottom-third chrome above app content but far below the S515 boot splash
- * (z 2147483647) — the splash must always win while it is on screen. Amber
- * dot ties the echo to the nocturne accent; the pill stays legible over any
- * poster wall or fullscreen frame. pointer-events:none + no tabindex keep it
- * strictly non-interactive: nothing here can take a D-pad focus stop.
+ * Bottom-third caption. Layer order (m7 / review tizen__gameux): the key-echo
+ * caption rides at z 13000 — ABOVE the telemetry consent card (9000: a DOM-order
+ * tie used to bury the caption exactly while the user navigated that card, the
+ * moment the announcement is most needed) and above the QuickConnect takeover
+ * (12000: C2 — focus stops inside the pairing surface must still announce).
+ * Still far below the S515 boot splash (2147483647) — the splash must always
+ * win while it is on screen. Amber dot ties the echo to the nocturne accent;
+ * the pill stays legible over any poster wall or fullscreen frame.
+ * pointer-events:none + no tabindex keep it strictly non-interactive: nothing
+ * here can take a D-pad focus stop.
  */
 .action-toast {
   position: fixed;
@@ -145,7 +150,7 @@ onMounted(() => {
   font-size: var(--text-base);
   line-height: 1.2;
   letter-spacing: 0.02em;
-  z-index: 9000;
+  z-index: 13000;
   pointer-events: none;
   animation: action-toast-in 180ms ease-out;
 }

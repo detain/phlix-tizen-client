@@ -33,7 +33,13 @@
  * and never grabs focus on mount — the takeover is never a trap; its controls
  * (the always-present dismiss button, plus "Try again" in the non-fatal terminal
  * phases) are plain focusable nodes a D-pad walk reaches, and BACK escapes the
- * surface even while focus sits invisibly beneath it. It issues no request while
+ * surface even while focus sits invisibly beneath it. C2 (review tizen__gameux)
+ * closes the other half of that sentence: carrying `data-spatial-takeover`
+ * makes the candidate watcher (src/spatial/focusCandidates.ts) treat this
+ * subtree as the ONLY spatial region while it is mounted — hidden controls
+ * beneath are swept from the pool and a focus parked under the panel is
+ * released, so the D-pad can neither land on nor fire an unseen action. It
+ * issues no request while
  * hidden or dismissed (`isVisible` folds in `document` visibility + the mount,
  * auth and dismissal state), so a backgrounded, logged-in or retired TV polls
  * zero times.
@@ -173,6 +179,7 @@ watch(eligible, (active) => {
     role="dialog"
     aria-live="polite"
     data-quick-connect-panel
+    data-spatial-takeover
     :aria-label="tTizen('quickConnect.aria')"
     @keydown.escape="dismiss"
   >
@@ -248,7 +255,14 @@ watch(eligible, (active) => {
  */
 .quick-connect {
   position: fixed;
+  /* C3 (review tizen__crossfe): pair the Chrome-87 `inset` shorthand with the
+   * four longhands so the takeover still covers the viewport on the declared
+   * Chromium-85 floor, where the shorthand is dropped silently. */
   inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   align-items: center;
   justify-content: center;

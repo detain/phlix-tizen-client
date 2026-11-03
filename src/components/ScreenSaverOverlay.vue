@@ -159,9 +159,12 @@ onBeforeUnmount(() => {
 <style scoped>
 /*
  * Full-viewport idle artwork in the house nocturne/amber language — a committed
- * night sky with one ember, NOT a generic black rectangle. z 9500: above every
- * overlay app (toast 9000) while the boot splash (2147483647) still always
- * wins. pointer-events:none + no tabindex + aria-hidden: strictly un-focusable,
+ * night sky with one ember, NOT a generic black rectangle. z 9500: above the
+ * app content and the player-chrome overlays; the key-echo toast (13000, m7)
+ * and the pairing takeover (12000) ride above by design — both only ever exist
+ * while a viewer is actively pressing keys, and the same press wakes this
+ * overlay — while the boot splash (2147483647) still always wins.
+ * pointer-events:none + no tabindex + aria-hidden: strictly un-focusable,
  * the remote keeps driving straight through it.
  * The 42 s drift and 7 s breath are one slow orchestration, not decoration
  * noise: they exist so no pixel of the artwork holds a fixed position while the
@@ -169,7 +172,14 @@ onBeforeUnmount(() => {
  */
 .screensaver {
   position: fixed;
+  /* C3 (review tizen__crossfe): Chrome-87 `inset` shorthand paired with the
+   * longhands — pre-87 engines drop the shorthand and the idle artwork would
+   * shrink-wrap instead of blank-covering the screen (its whole purpose). */
   inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   display: flex;
   align-items: center;
   justify-content: center;

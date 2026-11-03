@@ -11,6 +11,8 @@ import { describe, it, expect, afterEach } from 'vitest';
 import {
   AUTO_FOCUS_MARKER,
   FOCUSABLE_SELECTOR,
+  TAKEOVER_ATTRIBUTE,
+  spatialTakeover,
   createFocusCandidateWatcher,
   type FocusCandidateWatcher
 } from '@/spatial/focusCandidates';
@@ -166,5 +168,129 @@ describe('focusCandidates', () => {
     active.refresh();
     active.refresh();
     expect(registry.size).toBe(size);
+  });
+
+  // --- C2 (review tizen__gameux Critical + tizen__crossfe Minor 2) ----------
+
+  it('never registers a v-show-hidden (display:none) control, and admits it when shown again', async () => {
+    scaffold('<button id="ghost" style="display:none">Hidden</button>');
+    startWatcher();
+    const ghost = root.querySelector<HTMLButtonElement>('#ghost')!;
+    expect(registry.has(ghost)).toBe(false);
+
+    ghost.style.display = '';
+    await flushMutations();
+    expect(registry.has(ghost)).toBe(true);
+
+    ghost.style.display = 'none';
+    await flushMutations();
+    expect(registry.has(ghost)).toBe(false);
+  });
+
+  it('never registers a node under a hidden or visibility-hidden ancestor', () => {
+    scaffold(
+      '<div hidden><button id="underHidden">H</button></div>' +
+        '<div style="visibility:hidden"><button id="underInvisible">V</button></div>'
+    );
+    startWatcher();
+    expect(registry.has(root.querySelector<HTMLElement>('#underHidden')!)).toBe(false);
+    expect(registry.has(root.querySelector<HTMLElement>('#underInvisible')!)).toBe(false);
+  });
+
+  it('drops nodes whose subtree is hidden in place (sweep, not just admit)', async () => {
+    scaffold('<button id="live">On screen</button>');
+    startWatcher();
+    const live = root.querySelector<HTMLButtonElement>('#live')!;
+    expect(registry.has(live)).toBe(true);
+
+    live.setAttribute('hidden', '');
+    await flushMutations();
+    expect(registry.has(live)).toBe(false);
+    expect(live.hasAttribute('data-focusable')).toBe(false);
+  });
+
+  it('a mounted takeover owns the pool: foreign shell entries are swept and re-admitted after it retires', async () => {
+    scaffold('<button id="beneath">Under the panel</button>');
+    startWatcher();
+    const beneath = root.querySelector<HTMLButtonElement>('#beneath')!;
+    expect(registry.has(beneath)).toBe(true);
+
+    const takeover = makeElement('div', { [TAKEOVER_ATTRIBUTE]: '' });
+    const inside = makeElement('button', { id: 'inside' });
+    takeover.append(inside);
+    root.appendChild(takeover);
+    await flushMutations();
+
+    // Only the takeover subtree is navigable while it is up (C2(a)).
+    expect(registry.has(beneath)).toBe(false);
+    expect(registry.has(inside)).toBe(true);
+    expect(spatialTakeover.value).toBe(takeover);
+
+    takeover.remove();
+    await flushMutations();
+    expect(registry.has(beneath)).toBe(true);
+    expect(registry.has(inside)).toBe(false);
+    expect(spatialTakeover.value).toBeNull();
+  });
+
+  it('a takeover appearing by attribute flip (no mount) gates the pool too', async () => {
+    scaffold('<div id="layer"><button>In</button></div><button id="out">Out</button>');
+    startWatcher();
+    const layer = root.querySelector('#layer')!;
+    const out = root.querySelector<HTMLButtonElement>('#out')!;
+    const inBtn = layer.querySelector('button')!;
+    expect(registry.has(out)).toBe(true);
+    expect(registry.has(inBtn)).toBe(true);
+
+    layer.setAttribute(TAKEOVER_ATTRIBUTE, '');
+    await flushMutations();
+    expect(registry.has(out)).toBe(false);
+    expect(registry.has(inBtn)).toBe(true);
+    expect(spatialTakeover.value).toBe(layer);
+    layer.removeAttribute(TAKEOVER_ATTRIBUTE);
+    await flushMutations();
+    expect(spatialTakeover.value).toBeNull();
+  });
+
+  it('a focus parked under a rising takeover is released, never re-aimed', async () => {
+    scaffold('<button id="parked">Has focus</button>');
+    startWatcher();
+    const parked = root.querySelector<HTMLButtonElement>('#parked')!;
+    parked.focus();
+    expect(document.activeElement).toBe(parked);
+
+    const takeover = makeElement('div', { [TAKEOVER_ATTRIBUTE]: '' });
+    const inside = makeElement('button');
+    takeover.append(inside);
+    root.appendChild(takeover);
+    await flushMutations();
+
+    // The stale ENTER target is gone (blur → body); nothing stole focus
+    // (S512: the watcher REMOVES focus, it never moves or claims it).
+    expect(document.activeElement).toBe(document.body);
+    expect(takeover.contains(document.activeElement)).toBe(false);
+  });
+
+  it('the topmost (last-mounted) takeover wins', async () => {
+    scaffold('<button id="deep">B</button>');
+    startWatcher();
+    const lower = makeElement('div', { [TAKEOVER_ATTRIBUTE]: '' });
+    const upper = makeElement('div', { [TAKEOVER_ATTRIBUTE]: '' });
+    const inUpper = makeElement('button');
+    upper.append(inUpper);
+    root.append(lower, upper);
+    await flushMutations();
+    expect(spatialTakeover.value).toBe(upper);
+    expect(registry.has(inUpper)).toBe(true);
+    expect(registry.has(root.querySelector<HTMLElement>('#deep')!)).toBe(false);
+  });
+
+  it('destroy clears the takeover mirror', async () => {
+    scaffold(`<div ${TAKEOVER_ATTRIBUTE}><button>In</button></div>`);
+    const active = startWatcher();
+    expect(spatialTakeover.value).not.toBeNull();
+    active.destroy();
+    expect(spatialTakeover.value).toBeNull();
+    watcher = null;
   });
 });

@@ -154,8 +154,10 @@ const totalCount = computed(() => props.chapters.length);
   border-color: var(--border-subtle, #3f3f46);
 }
 
-.chapter-list__item:focus-visible,
-.chapter-list__item:focus-visible:focus-visible {
+/* m14 (review tizen__crossfe): former duplicate arm
+ * `.chapter-list__item:focus-visible:focus-visible` was a redundant editing
+ * artifact — the same element cannot be "more" focused — dropped to one arm. */
+.chapter-list__item:focus-visible {
   box-shadow: 0 0 0 3px var(--accent-ring, rgba(245, 158, 11, 0.5));
   border-color: var(--accent, #f59e0b);
 }

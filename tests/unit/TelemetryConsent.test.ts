@@ -9,9 +9,12 @@
  * @license   MIT
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { mount } from '@vue/test-utils';
 import { nextTick, ref } from 'vue';
 import TelemetryConsent from '@/components/TelemetryConsent.vue';
+import { spatialTakeover } from '@/spatial/focusCandidates';
 
 const apiBaseRef = ref('');
 
@@ -61,6 +64,7 @@ function reset() {
   while (mounts.length) mounts.pop()!.unmount();
   apiBaseRef.value = '';
   mock.state.consent = null;
+  spatialTakeover.value = null;
   globalThis.localStorage.clear();
   for (const fn of [mock.getConsent, mock.setConsent, mock.startTelemetry, mock.stopTelemetry, mock.buildTelemetryDeps]) {
     fn.mockClear();
@@ -122,5 +126,36 @@ describe('TelemetryConsent card — one-time gate + routing', () => {
     expect(mock.stopTelemetry).toHaveBeenCalled();
     expect(mock.startTelemetry).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="telemetry-decline"]').exists()).toBe(false);
+  });
+
+  it('yields to a full-bleed spatial takeover and resurfaces when it retires (M6)', async () => {
+    // Review tizen__gameux M6: the QuickConnect pairing panel (z 12000) used
+    // to BURY this z-9000 card for the whole ceremony — the one-time privacy
+    // choice degraded to never-asked while its buttons stayed D-pad-live
+    // underneath. The card now waits for the takeover mirror to clear.
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkCard();
+    await nextTick();
+    expect(wrapper.find('[data-testid="telemetry-enable"]').exists()).toBe(true);
+
+    spatialTakeover.value = document.createElement('div');
+    await nextTick();
+    expect(wrapper.find('[data-testid="telemetry-enable"]').exists()).toBe(false);
+
+    spatialTakeover.value = null; // panel retired via dismiss or completed login
+    await nextTick();
+    expect(wrapper.find('[data-testid="telemetry-enable"]').exists()).toBe(true);
+  });
+
+  it('ships an explicit focus ring for its buttons on both engines of the floor (M3)', () => {
+    // Review tizen__gameux M3: zero focus rules meant the consent choice was
+    // clicked against the UA default ring — invisible at couch distance. Pin
+    // the cure in the component source: a plain `:focus` arm (Chromium-85
+    // floor) and the modern `:focus-visible` arm on the pill class.
+    const source = readFileSync(
+      join(__dirname, '..', '..', 'src', 'components', 'TelemetryConsent.vue'),
+      'utf8'
+    );
+    expect(source).toMatch(/\.telemetry-consent__btn:focus\s*,\s*\.telemetry-consent__btn:focus-visible\s*\{/);
   });
 });

@@ -59,7 +59,11 @@
        * shows white. Nocturne-atmosphere: near-black night-blue field, one
        * amber accent (#f5a524 — the shipped theme's accent), a slow breathing
        * pulse as the honest "still trying" signal. Fixed 1920×1080 viewport is
-       * honoured via inset:0 full-bleed. The removal is declarative: Vue's
+       * honoured via full-bleed insets — the `inset` shorthand PAIRED with the four
+ * longhands (review tizen__crossfe C3): `inset` alone is Chrome 87 while the
+ * declared floor is Chromium 85 (docs/runtime-floor.md), where the shorthand is
+ * silently dropped and a fixed auto-inset element shrink-wraps at its static
+ * position instead of covering the viewport. The removal is declarative: Vue's
        * mount fills #phlix-app, and `:not(:empty) ~` retires the splash with
        * zero JS — renderBootFailure() filling the same host retires it too,
        * leaving the readable error, never a splash over a corpse.
@@ -90,7 +94,14 @@
       }
       #phlix-splash {
         position: fixed;
+        /* C3 floor pairing: `inset` is Chrome 87, the repo floor is 85 — the
+         * longhands below are the pre-87 equivalent; the shorthand stays for
+         * engines that read it (identical values, no cascade conflict). */
         inset: 0;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
         display: flex;
         flex-direction: column;
         align-items: center;

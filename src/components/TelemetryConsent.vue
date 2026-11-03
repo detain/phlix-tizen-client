@@ -31,6 +31,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { useApiBase } from '@phlix/ui';
 import { tTizen } from '../i18n/tizen';
+import { spatialTakeover } from '../spatial/focusCandidates';
 import {
   buildTelemetryDeps,
   CONSENT_KEY,
@@ -68,8 +69,17 @@ const apiBase = useApiBase();
 const answered = ref(false);
 const consentUnset = !storage.getItem(CONSENT_KEY);
 
-/** Show only for a never-decided install that already has a server to pair with. */
-const visible = computed(() => consentUnset && !answered.value && Boolean(apiBase.value));
+/** Show only for a never-decided install that already has a server to pair
+ * with — and NOT while a full-bleed spatial takeover (the QuickConnect
+ * pairing panel, z 12000) is on screen (M6 / review tizen__gameux): the card
+ * used to sit buried under the takeover for the whole pairing ceremony, so
+ * its buttons were invisible stops the D-pad could still fire blind. Now it
+ * waits its turn — the reactive takeover mirror retires the card while the
+ * panel is up and re-offers it the moment the takeover ends (dismissal or
+ * completed login), so the one-time choice is never silently skipped. */
+const visible = computed(
+  () => consentUnset && !answered.value && Boolean(apiBase.value) && spatialTakeover.value === null
+);
 
 function enable(): void {
   setConsent(storage, true);
@@ -191,5 +201,26 @@ onBeforeUnmount(() => {
   background: transparent;
   color: #efece4;
   border-color: rgba(239, 236, 228, 0.35);
+}
+/*
+ * M3 (review tizen__gameux): these buttons shipped NO focus rule — the
+ * one-time privacy choice was operated against the Chromium-100-era UA
+ * default ring (a faint 1-2px glow at 2-3% screen height, effectively
+ * invisible at couch distance on this translucent card). Every other host
+ * control defines a :focus-visible ring; the pair now follows the QuickConnect
+ * exit-row vocabulary (amber fill takes the light ring, the ghost takes the
+ * accent ring). The plain `:focus` arm is the runtime-floor fallback —
+ * `:focus-visible` is Chrome 86 while the declared floor is Chromium 85
+ * (docs/runtime-floor.md); on ≥86 engines focus-from-click does not occur on
+ * a pointerless TV, so the same ring is the right answer on both arms.
+ */
+.telemetry-consent__btn:focus,
+.telemetry-consent__btn:focus-visible {
+  outline: 3px solid #efece4;
+  outline-offset: 3px;
+}
+.telemetry-consent__btn--no:focus,
+.telemetry-consent__btn--no:focus-visible {
+  outline-color: #f5a524;
 }
 </style>
