@@ -221,7 +221,7 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
    * where an unsupported selector/property silently DROPS THE WHOLE RULE. The
    * census below is measured 2026-11-03 from the committed single CSS file;
    * every figure is an exact re-pin target (rotation law + docs/runtime-floor.md
-   * "CSS features above 85"). The pair law: the 155 `:focus-visible` sites are
+   * "CSS features above 85"). The pair law: the 156 `:focus-visible` sites are
    * admitted ONLY because the vendored `[data-tv] :focus` fallback rides in
    * the same file — both halves are asserted together, so a re-vendor that
    * drops the fallback reddens the suite instead of shipping blind D-pad focus.
@@ -257,7 +257,9 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // Measured 2026-11-03 (batch-3 tree). Movement in ANY of these means the
       // vendored surface changed shape — re-derive the degradation table in
       // docs/runtime-floor.md in the same change, never silently.
-      expect(countAcrossCss(':focus-visible')).toBe(155);
+      // 155→156: deferred m3 added the host `.stepper-btn:focus-visible` ring
+      // (schedule steppers, 2026-11-03) — host surface, attributed.
+      expect(countAcrossCss(':focus-visible')).toBe(156);
       expect(countAcrossCss('inset:')).toBe(41);
       expect(countAcrossCss('aspect-ratio')).toBe(36);
       expect(countAcrossCss('accent-color')).toBe(8);

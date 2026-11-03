@@ -21,6 +21,9 @@
  *   parentalControls.bandwidthKbps, parentalControls.timeAm,
  *   parentalControls.timePm, pictureInPicture.enterLabel,
  *   subtitleTracks.sdhBadge.
+ *   parentalControls.stepMinusHour, parentalControls.stepMinusQuarter,
+ *   parentalControls.stepPlusQuarter, parentalControls.stepPlusHour
+ *   (m3 schedule-stepper symbols, 2026-11-03).
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
@@ -260,6 +263,12 @@ const parentalControls = {
   maxTotalBandwidth: 'Largura de banda total máxima',
   bandwidthKbps: '{kbps} kbps',
   editLimits: 'Editar limites',
+  // m3 schedule-window stepper symbols (deferred review, 2026-11-03): locale-neutral
+  // minute offsets, byte-identical to the English table (EN_LEAK_OK cohort).
+  stepMinusHour: '-60',
+  stepMinusQuarter: '-15',
+  stepPlusQuarter: '+15',
+  stepPlusHour: '+60',
 };
 
 /**

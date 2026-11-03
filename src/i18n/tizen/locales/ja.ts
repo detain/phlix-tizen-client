@@ -15,6 +15,8 @@
  *   tracks.durationAria, chapters.itemAria (pure {placeholder} templates),
  *   audioTracks.bitrateKbps, parentalControls.bandwidthKbps (unit formats),
  *   pictureInPicture.enterLabel ('PiP'), subtitleTracks.sdhBadge ('SDH').
+ *   The m3 stepper symbols (parentalControls.stepMinusHour/-Quarter,
+ *   stepPlusQuarter/+Hour, 2026-11-03) are pure numerals — same allowance.
  *   Katakana UI words (スキップ, チャプター…) are NOT allow-listed — they are
  *   Japanese written in the CJK ranges, not Latin leftovers.
  * - Brands kept verbatim: Phlix, PiP, SDH, TV, ID.
@@ -261,6 +263,12 @@ const parentalControls = {
   maxTotalBandwidth: '合計帯域幅の上限',
   bandwidthKbps: '{kbps} kbps',
   editLimits: '制限を編集',
+  // m3 schedule-window stepper symbols (deferred review, 2026-11-03): locale-neutral
+  // minute offsets, byte-identical to the English table (EN_LEAK_OK cohort).
+  stepMinusHour: '-60',
+  stepMinusQuarter: '-15',
+  stepPlusQuarter: '+15',
+  stepPlusHour: '+60',
 };
 
 /**

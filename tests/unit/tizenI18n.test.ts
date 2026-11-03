@@ -232,7 +232,11 @@ const EXPECTED: Record<string, string> = {
   "parentalControls.maxBandwidthLabel": "Max Bandwidth (kbps, 0 means Unlimited)",
   "parentalControls.maxTotalBandwidth": "Max Total Bandwidth",
   "parentalControls.bandwidthKbps": "{kbps} kbps",
-  "parentalControls.editLimits": "Edit Limits",};
+  "parentalControls.editLimits": "Edit Limits",
+  "parentalControls.stepMinusHour": "-60",
+  "parentalControls.stepMinusQuarter": "-15",
+  "parentalControls.stepPlusQuarter": "+15",
+  "parentalControls.stepPlusHour": "+60",};
 
 describe('tizen-own catalog — byte identity', () => {
   const actual = flatten(TIZEN_EN);

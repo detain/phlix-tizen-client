@@ -307,6 +307,13 @@ const parentalControls = {
   // that ternary reuses common.unlimited.
   bandwidthKbps: '{kbps} kbps',
   editLimits: 'Edit Limits',
+  // m3 schedule-window stepper (deferred review, 2026-11-03): the buttons are
+  // pure minute-offset symbols — byte-identical in every locale table and
+  // therefore EN_LEAK_OK allow-listed in tests/unit/i18nLocales.test.ts.
+  stepMinusHour: '-60',
+  stepMinusQuarter: '-15',
+  stepPlusQuarter: '+15',
+  stepPlusHour: '+60',
 } satisfies Record<string, string>;
 
 /**

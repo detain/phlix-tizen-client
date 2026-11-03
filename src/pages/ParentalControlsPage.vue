@@ -20,6 +20,7 @@ import { ApiClient } from '@phlix/ui';
 import { useApiBase } from '@phlix/ui';
 import { useAuthStore, type AuthUser } from '@phlix/ui';
 import { tTizen, type TizenMessageKey } from '../i18n/tizen';
+import { stepTime, STEP_QUARTER_MINUTES, STEP_HOUR_MINUTES } from '../parentalTimeStepper';
 import type {
   AccessSchedule,
   DayOfWeek,
@@ -361,6 +362,23 @@ function formatTime(time: string): string {
   return `${hour12}:${m} ${ampm}`;
 }
 
+/**
+ * m3 (deferred review, 2026-11-03): the schedule form's two native
+ * time-input fields were pointer-era controls on a no-pointer device —
+ * focusable by D-pad, unusable past that. They are replaced by symbol
+ * stepper buttons around an AM/PM readout; stepping writes back into
+ * THE SAME scheduleForm fields saveSchedule sends raw, so every S325b/S502
+ * wire-shape pin keeps its byte-for-byte meaning. (The m3 source law at the
+ * bottom of tests/unit/ParentalControlsTimeStepper.test.ts greps this file —
+ * keep the quoted attribute spelling out of comments here.)
+ */
+function stepScheduleTime(field: 'startTime' | 'endTime', deltaMinutes: number): void {
+  scheduleForm.value = {
+    ...scheduleForm.value,
+    [field]: stepTime(scheduleForm.value[field], deltaMinutes)
+  };
+}
+
 function formatDays(days: DayOfWeek[]): string {
   if (days.length === 0) return tTizen('parentalControls.noDaysSet');
   if (days.length === 7) return tTizen('parentalControls.everyDay');
@@ -550,29 +568,76 @@ onMounted(loadAll);
         </div>
 
         <div class="form__row">
+          <!-- m3: D-pad steppers replace the native time inputs (see the
+               stepScheduleTime docblock). The group's aria-label carries the
+               field name now that no label-for input exists. -->
           <div class="form__field">
-            <label
-              class="form__label"
-              for="schedule-start"
-            >{{ tTizen('parentalControls.startTime') }}</label>
-            <input
-              id="schedule-start"
-              v-model="scheduleForm.startTime"
-              type="time"
-              class="form__input"
+            <label class="form__label">{{ tTizen('parentalControls.startTime') }}</label>
+            <div
+              class="time-stepper"
+              role="group"
+              :aria-label="tTizen('parentalControls.startTime')"
             >
+              <button
+                type="button"
+                class="stepper-btn"
+                :disabled="savingSchedule"
+                @click="stepScheduleTime('startTime', -STEP_HOUR_MINUTES)"
+              >{{ tTizen('parentalControls.stepMinusHour') }}</button>
+              <button
+                type="button"
+                class="stepper-btn"
+                :disabled="savingSchedule"
+                @click="stepScheduleTime('startTime', -STEP_QUARTER_MINUTES)"
+              >{{ tTizen('parentalControls.stepMinusQuarter') }}</button>
+              <span class="time-stepper__value">{{ formatTime(scheduleForm.startTime) }}</span>
+              <button
+                type="button"
+                class="stepper-btn"
+                :disabled="savingSchedule"
+                @click="stepScheduleTime('startTime', STEP_QUARTER_MINUTES)"
+              >{{ tTizen('parentalControls.stepPlusQuarter') }}</button>
+              <button
+                type="button"
+                class="stepper-btn"
+                :disabled="savingSchedule"
+                @click="stepScheduleTime('startTime', STEP_HOUR_MINUTES)"
+              >{{ tTizen('parentalControls.stepPlusHour') }}</button>
+            </div>
           </div>
           <div class="form__field">
-            <label
-              class="form__label"
-              for="schedule-end"
-            >{{ tTizen('parentalControls.endTime') }}</label>
-            <input
-              id="schedule-end"
-              v-model="scheduleForm.endTime"
-              type="time"
-              class="form__input"
+            <label class="form__label">{{ tTizen('parentalControls.endTime') }}</label>
+            <div
+              class="time-stepper"
+              role="group"
+              :aria-label="tTizen('parentalControls.endTime')"
             >
+              <button
+                type="button"
+                class="stepper-btn"
+                :disabled="savingSchedule"
+                @click="stepScheduleTime('endTime', -STEP_HOUR_MINUTES)"
+              >{{ tTizen('parentalControls.stepMinusHour') }}</button>
+              <button
+                type="button"
+                class="stepper-btn"
+                :disabled="savingSchedule"
+                @click="stepScheduleTime('endTime', -STEP_QUARTER_MINUTES)"
+              >{{ tTizen('parentalControls.stepMinusQuarter') }}</button>
+              <span class="time-stepper__value">{{ formatTime(scheduleForm.endTime) }}</span>
+              <button
+                type="button"
+                class="stepper-btn"
+                :disabled="savingSchedule"
+                @click="stepScheduleTime('endTime', STEP_QUARTER_MINUTES)"
+              >{{ tTizen('parentalControls.stepPlusQuarter') }}</button>
+              <button
+                type="button"
+                class="stepper-btn"
+                :disabled="savingSchedule"
+                @click="stepScheduleTime('endTime', STEP_HOUR_MINUTES)"
+              >{{ tTizen('parentalControls.stepPlusHour') }}</button>
+            </div>
           </div>
         </div>
 
@@ -1173,6 +1238,53 @@ onMounted(loadAll);
 
 .day-btn:hover:not(.day-btn--selected) {
   background: var(--surface-3, #27272a);
+  color: var(--text, #e4e4e7);
+}
+
+/* m3 schedule-window stepper (deferred review, 2026-11-03): symbol buttons
+ * around an AM/PM readout, modeled on the day-picker pills. The value slot
+ * is fixed-width so stepping never reflows the row; the ring follows the
+ * host 5px focus law (docs/runtime-floor.md governance item 6). */
+.time-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+
+.stepper-btn {
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  border: 1px solid var(--border-strong, #52525b);
+  border-radius: var(--radius-md, 0.375rem);
+  background: transparent;
+  color: var(--text-muted, #a1a1aa);
+  font-size: var(--text-sm, 0.875rem);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--dur-fast, 150ms) var(--ease-out, ease-out),
+              color var(--dur-fast, 150ms) var(--ease-out, ease-out),
+              border-color var(--dur-fast, 150ms) var(--ease-out, ease-out);
+}
+
+.stepper-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.stepper-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: var(--surface-3, #27272a);
+  color: var(--text, #e4e4e7);
+}
+
+.time-stepper__value {
+  min-width: 10ch;
+  text-align: center;
+  font-size: var(--text-sm, 0.875rem);
+  font-variant-numeric: tabular-nums;
   color: var(--text, #e4e4e7);
 }
 
