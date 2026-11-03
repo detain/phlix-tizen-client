@@ -123,7 +123,7 @@ const audioTracks = {
   loading: 'Cargando pistas de audio…',
   loadFailed: 'No se pudieron cargar las pistas de audio',
   empty: 'No hay pistas de audio alternativas disponibles para este contenido.',
-  bitrateKbps: '{value}kbps',
+  bitrateKbps: '{value} kbps',
   loadingTitle: 'Pistas de audio…',
   headingOne: '{count} Pista de audio',
   headingOther: '{count} Pistas de audio',

@@ -82,10 +82,15 @@ const hub = {
 
 const skip = {
   controlsAria: 'Skip controls',
+  // Deferred review m22 (2026-11-03): button labels ride SENTENCE CASE per the
+  // casing law written into docs/i18n.md; the title-cased 'Skip Intro' /
+  // 'Skip Outro' labels read one way on screen and announced another through
+  // their aria twins. Every translated mirror already shipped label === aria;
+  // English now matches its own mirrors.
   introAria: 'Skip intro',
-  introLabel: 'Skip Intro',
+  introLabel: 'Skip intro',
   outroAria: 'Skip outro',
-  outroLabel: 'Skip Outro',
+  outroLabel: 'Skip outro',
 } satisfies Record<string, string>;
 
 const chapters = {
@@ -143,9 +148,12 @@ const audioTracks = {
   loading: 'Loading audio tracks…',
   loadFailed: 'Failed to load audio tracks',
   empty: 'No alternative audio tracks available for this media.',
-  // Row-meta bitrate: the original template glued value and unit with NO space
-  // (`320kbps`) — byte-pinned as such.
-  bitrateKbps: '{value}kbps',
+  // Row-meta bitrate. Deferred review m21 (2026-11-03): the space-less glue
+  // (`320kbps`) contradicted parentalControls.bandwidthKbps's `3000 kbps` on a
+  // sibling surface; the catalog now owns ONE unit-space law — value + space +
+  // unit. This format string is byte-identical in all seven locale tables
+  // (EN_LEAK_OK allow-listed), so all seven moved together in this commit.
+  bitrateKbps: '{value} kbps',
   // Page heading chrome (same tri-state shape the chapters/recommendations
   // pages use; One/Other pair keeps the English ternary render byte-identical).
   loadingTitle: 'Audio Tracks…',
@@ -288,7 +296,11 @@ const parentalControls = {
   noBlockedTags: 'No blocked tags configured.',
   loadingLimits: 'Loading limits…',
   maxConcurrentStreams: 'Max Concurrent Streams',
-  maxBandwidthLabel: 'Max Bandwidth (kbps, 0 = unlimited)',
+  // Deferred review m23 (2026-11-03): the '0 = unlimited' glue was developer
+  // shorthand; the hint now speaks the plain word the display branch already
+  // renders right beside this input (common.unlimited → 'Unlimited').
+  // Translated mirrors keep their reviewed wording.
+  maxBandwidthLabel: 'Max Bandwidth (kbps, 0 means Unlimited)',
   maxTotalBandwidth: 'Max Total Bandwidth',
   // Display value for a SET limit: the original glued value + ' kbps' in a
   // template (`3000 kbps`, WITH space) — byte-pinned; the 'Unlimited' branch of

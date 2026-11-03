@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
- * SkipIntroOverlay — shows "Skip Intro" / "Skip Outro" buttons driven by markers.
+ * SkipIntroOverlay — shows "Skip intro" / "Skip outro" buttons driven by markers.
  *
  * Fetches markers from `GET /api/v1/media/{id}/markers` and displays skip buttons
  * when playback is within the intro or outro marker ranges. The user can click
- * "Skip Intro" or "Skip Outro" to seek past those sections.
+ * "Skip intro" or "Skip outro" to seek past those sections.
  *
  * This is a portal-rendered overlay that positions itself over the player area.
  * Styled for a dark TV UI (nocturne theme) with D-pad navigation support.

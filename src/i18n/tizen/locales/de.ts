@@ -119,7 +119,7 @@ const audioTracks = {
   loading: 'Audiospuren werden geladen…',
   loadFailed: 'Audiospuren konnten nicht geladen werden',
   empty: 'Für dieses Medium sind keine alternativen Audiospuren verfügbar.',
-  bitrateKbps: '{value}kbps',
+  bitrateKbps: '{value} kbps',
   loadingTitle: 'Audiospuren…',
   headingOne: '{count} Audiospur',
   headingOther: '{count} Audiospuren',

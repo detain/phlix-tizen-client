@@ -121,7 +121,7 @@ const audioTracks = {
   loading: 'Carregando faixas de áudio…',
   loadFailed: 'Falha ao carregar as faixas de áudio',
   empty: 'Nenhuma faixa de áudio alternativa disponível para esta mídia.',
-  bitrateKbps: '{value}kbps',
+  bitrateKbps: '{value} kbps',
   loadingTitle: 'Faixas de áudio…',
   headingOne: '{count} Faixa de áudio',
   headingOther: '{count} Faixas de áudio',

@@ -122,7 +122,7 @@ const audioTracks = {
   loading: '音声トラックを読み込み中…',
   loadFailed: '音声トラックを読み込めませんでした',
   empty: 'このメディアに代替の音声トラックはありません。',
-  bitrateKbps: '{value}kbps',
+  bitrateKbps: '{value} kbps',
   loadingTitle: '音声トラック…',
   headingOne: '{count}本の音声トラック',
   headingOther: '{count}本の音声トラック',
