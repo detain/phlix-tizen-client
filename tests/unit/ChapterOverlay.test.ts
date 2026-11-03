@@ -242,7 +242,9 @@ describe('seekbar ticks are decorative — pointer machinery stays dead (deferre
   });
 
   it('the tick lane is declared decorative: container aria-hidden, no pointer-events opt-in', () => {
-    expect(source).toContain('<div class="chapter-overlay__ticks" aria-hidden="true">');
+    // Whitespace-tolerant: eslint owns the template's line breaks; the law is
+    // that the container carries BOTH the class and aria-hidden="true".
+    expect(source).toMatch(/<div\s+class="chapter-overlay__ticks"\s+aria-hidden="true"/);
     expect(source).not.toMatch(/\.chapter-overlay__ticks\s*\{[^}]*pointer-events:\s*auto/);
   });
 });

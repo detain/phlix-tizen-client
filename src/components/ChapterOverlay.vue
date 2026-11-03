@@ -395,7 +395,10 @@ onBeforeUnmount(() => {
     <!-- Tick marks on the seekbar (chapters + markers) — decorative chapter
          map (review m10): no handlers, no tooltip, no title attribute. The
          data-tick-title channel is test-visible tick identity, not UI. -->
-    <div class="chapter-overlay__ticks" aria-hidden="true">
+    <div
+      class="chapter-overlay__ticks"
+      aria-hidden="true"
+    >
       <div
         v-for="tick in allTickPositions"
         :key="tick.id"

@@ -583,26 +583,34 @@ onMounted(loadAll);
                 class="stepper-btn"
                 :disabled="savingSchedule"
                 @click="stepScheduleTime('startTime', -STEP_HOUR_MINUTES)"
-              >{{ tTizen('parentalControls.stepMinusHour') }}</button>
+              >
+                {{ tTizen('parentalControls.stepMinusHour') }}
+              </button>
               <button
                 type="button"
                 class="stepper-btn"
                 :disabled="savingSchedule"
                 @click="stepScheduleTime('startTime', -STEP_QUARTER_MINUTES)"
-              >{{ tTizen('parentalControls.stepMinusQuarter') }}</button>
+              >
+                {{ tTizen('parentalControls.stepMinusQuarter') }}
+              </button>
               <span class="time-stepper__value">{{ formatTime(scheduleForm.startTime) }}</span>
               <button
                 type="button"
                 class="stepper-btn"
                 :disabled="savingSchedule"
                 @click="stepScheduleTime('startTime', STEP_QUARTER_MINUTES)"
-              >{{ tTizen('parentalControls.stepPlusQuarter') }}</button>
+              >
+                {{ tTizen('parentalControls.stepPlusQuarter') }}
+              </button>
               <button
                 type="button"
                 class="stepper-btn"
                 :disabled="savingSchedule"
                 @click="stepScheduleTime('startTime', STEP_HOUR_MINUTES)"
-              >{{ tTizen('parentalControls.stepPlusHour') }}</button>
+              >
+                {{ tTizen('parentalControls.stepPlusHour') }}
+              </button>
             </div>
           </div>
           <div class="form__field">
@@ -617,26 +625,34 @@ onMounted(loadAll);
                 class="stepper-btn"
                 :disabled="savingSchedule"
                 @click="stepScheduleTime('endTime', -STEP_HOUR_MINUTES)"
-              >{{ tTizen('parentalControls.stepMinusHour') }}</button>
+              >
+                {{ tTizen('parentalControls.stepMinusHour') }}
+              </button>
               <button
                 type="button"
                 class="stepper-btn"
                 :disabled="savingSchedule"
                 @click="stepScheduleTime('endTime', -STEP_QUARTER_MINUTES)"
-              >{{ tTizen('parentalControls.stepMinusQuarter') }}</button>
+              >
+                {{ tTizen('parentalControls.stepMinusQuarter') }}
+              </button>
               <span class="time-stepper__value">{{ formatTime(scheduleForm.endTime) }}</span>
               <button
                 type="button"
                 class="stepper-btn"
                 :disabled="savingSchedule"
                 @click="stepScheduleTime('endTime', STEP_QUARTER_MINUTES)"
-              >{{ tTizen('parentalControls.stepPlusQuarter') }}</button>
+              >
+                {{ tTizen('parentalControls.stepPlusQuarter') }}
+              </button>
               <button
                 type="button"
                 class="stepper-btn"
                 :disabled="savingSchedule"
                 @click="stepScheduleTime('endTime', STEP_HOUR_MINUTES)"
-              >{{ tTizen('parentalControls.stepPlusHour') }}</button>
+              >
+                {{ tTizen('parentalControls.stepPlusHour') }}
+              </button>
             </div>
           </div>
         </div>

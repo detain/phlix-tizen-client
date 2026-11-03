@@ -20,12 +20,50 @@ ledger accepts deliberately:
 - Historical section titles written before this law was declared stand
   verbatim (including the non-KaC `### Prior era snapshot — …` grouping deep
   in the file) — estate history-verbatim law; corrections append, never
-  rewrite.
+  rewrite. (Deferred m19/m20 adjudication, 2026-11-03: the non-KaC headings
+  the reviews enumerated are historical record; they grandfather, they do not
+  migrate.)
 - Forward-entry law for every lane landing here: lead each entry with the
   **user-visible delta**, then the mechanism; internal churn belongs in the
   body, not the heading.
+- Forward-vocabulary law (deferred m20, 2026-11-03): NEW `###` headings under
+  `## [Unreleased]` use only the six Keep-a-Changelog categories — Added,
+  Changed, Deprecated, Removed, Fixed, Security — followed by ` — <topic> —
+  <ISO date>`. Grandfathered non-KaC titles above do not set a precedent;
+  coining a fresh category is the drift this clause exists to stop.
 
 ## [Unreleased]
+
+### Fixed — deferred-review lane: locale copy, TV focus scale, chapter ticks, D-pad schedule window — 2026-11-03
+
+- **What users see:** bitrate chips read `1280 kbps` with a proper space
+  (was `1280kbps`, clashing with the bandwidth format beside it); the skip
+  buttons now read "Skip intro"/"Skip outro" — the same words they announce;
+  the bandwidth hint says "0 means Unlimited" in plain words instead of
+  developer shorthand (`0 = unlimited`); every host-owned focus ring is
+  visible from the couch — rings went from 3px desktop scale to 5px
+  translucent / 4px solid TV weight (final eyeball calibration is a
+  real-TV-session item, device-test-pending); the seekbar chapter map no
+  longer pretends the remote has a mouse — the hover tooltip and click-seek
+  machinery that could never fire on a TV is gone, and ChaptersPage remains
+  the operable chapter surface; the parental schedule window can finally be
+  edited with the remote alone — four minute-stepper buttons (-60/-15/+15/
+  +60) around a 12-hour readout replace two segment-editing time fields that
+  wanted a pointer the device does not have.
+- Mechanism: a new pure helper (`src/parentalTimeStepper.ts`) owns the
+  stepping arithmetic — 24-hour wrap both directions, seconds-segment shape
+  preserved so wire bodies change only when the viewer actually steps, and a
+  pinned degrade-to-midnight for corrupt stored times. Four locale-neutral
+  symbol keys joined all seven catalog tables (184 → 188 keys, mirrors
+  byte-identical, EN_LEAK_OK cohort extended); the `:focus-visible` CSS
+  census rotated 155 → 156 with attribution in both surfaces it lives in;
+  the copy law is written down in docs/i18n.md and the ring law in
+  docs/runtime-floor.md (governance item 6). Stepper presses write into the
+  exact form fields the S325b/S502 wire pins guard, so every
+  verb/URL/body tuple kept its byte-for-byte meaning.
+- Deferred-m20 discipline: the ledger's forward-vocabulary clause above now
+  restricts new headings to the six Keep-a-Changelog categories; the
+  non-KaC historical titles the reviews enumerated grandfather verbatim.
 
 ### Fixed — TV-experience review remediation (25 findings) — 2026-11-03
 
