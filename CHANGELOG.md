@@ -34,6 +34,46 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — in-source pin cites advanced to contracts #v0.5.5 / syncplay #v0.1.7 — 2026-11-04
+
+- **What users see:** nothing — the shipped widget is byte-identical (zero-
+  rebuild proof below). What was stale was the code's own prose: five
+  in-source cites still named the pre-cascade pins after `081975b8` moved
+  the lock — the `useSyncPlayStore` header ("typed against
+  `@phlix/contracts` v0.5.4 … framed by `@phlix/syncplay` v0.1.6"), the
+  M-TIZEN-40 rate-envelope docblock ("Wire truth at this pin
+  (@phlix/syncplay v0.1.6)" — self-referentially false against a #v0.1.7
+  lock), the T-15 `onUnknownFrame` note, and the M-TIZEN-40 source-pin
+  comment in the store's test. Review tizen Minor-1.
+- **Why CI could not catch it:** `docsPinConsistency.test.ts` machine-pins
+  README / AGENTS / CLAUDE / DEVELOPER only — in-source cites are the
+  human-law surface. This completes the cascade's own skipped batch-2 m6
+  re-anchor discipline (performed for the v0.5.4/#v0.1.6 era, not re-run
+  when the era moved).
+- **Facts re-verified at the new pins, not copied:** contracts #v0.5.5 is
+  additive over #v0.5.4 (error-code registry `40c1da48…`→`5d1783a7…`,
+  204→205 — the one new RESERVED `common.not_found`; the `SyncPlay*` types,
+  `server-route-manifest.json` `91579683…` and `mcp-scopes.json`
+  `8c92c070…` all HOLD). syncplay #v0.1.7 over #v0.1.6 changes no wire code
+  (upstream `git diff v0.1.6 v0.1.7`: `src/messages.ts` byte-unchanged,
+  `serializeMessage` zero-diff; the leg is decode-side `UnknownFrame`
+  honesty plus send-return observability — neither read through this
+  store's rails). `PlaybackCommand` re-confirmed rate-free
+  `{type, position, serverTime}` and the 19 canonical `syncplay_*` set
+  re-counted against the installed #v0.1.7 types.
+- **Discipline:** leg-scoped history + a new leg stating the move, modeled
+  on `routeManifest.gate.test.ts`; historically-scoped lines kept verbatim
+  per the history law (the S415 "retired in contracts v0.4.6" note, the
+  test's v0.1.2/v0.1.4 fold history, `package-lock.json`'s disclosed
+  ui→#v0.1.6 edge line).
+- **Zero-rebuild proof:** every changed line is a comment; no built artifact
+  embeds the touched prose (grep-proven across `package/` and `dist/`), and
+  a full `npm run package` after the edits left the committed `package/` at
+  ZERO git churn — no re-vendor taken, none due.
+- **Gates:** vue-tsc src + tests rc=0; eslint rc=0; `vitest run
+  --no-file-parallelism` 66 files / 1128 tests / 0 skipped, rc=0 —
+  baseline-exact (the edits touch no assertion).
+
 ### Changed — phase-3 cascade re-pin: contracts #v0.5.5, syncplay #v0.1.7, ui #v0.99.14 — 2026-11-03
 
 - **What users see:** the translated UI catches up with upstream copy — the
