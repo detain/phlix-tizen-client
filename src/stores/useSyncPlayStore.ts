@@ -8,7 +8,7 @@
  * `@phlix/ui` does not export its player-side SyncPlay API (`getSyncPlayApi`,
  * `openSyncPlayConnection`, `sendSyncPlayCommand` are internal to the package),
  * so the REST client and the WebSocket layer live here, typed against
- * `@phlix/contracts` v0.5.5 (S415 type truth: `SyncPlayGroup` IS the
+ * `@phlix/contracts` v0.5.6 (S415 type truth: `SyncPlayGroup` IS the
  * `GroupState::getState()` emission with a DICT `members`, the list-row
  * vocabulary lives on `SyncPlayGroupListItem`, and the five REST envelopes
  * are declared) and framed by `@phlix/syncplay` v0.1.7.
@@ -22,7 +22,14 @@
  * and #v0.1.7 changes nothing on the wire over #v0.1.6 (`messages.ts`
  * byte-unchanged, `serializeMessage` zero-diff upstream; the leg's delta is
  * decode-side `UnknownFrame` honesty plus send-return observability, none of
- * it read through the rails below). Historically-scoped cites in this file
+ * it read through the rails below), and the #v0.5.6 cite is the 2026-11-04
+ * wave-5 re-pin leg: #v0.5.6 carries the registry bytes UNCHANGED over
+ * #v0.5.5 (`dist/error-codes.json` md5 `5d1783a7…`, 205 codes, cmp-proven equal
+ * to the installed #v0.5.5 copy) — the tag delta is errors.ts doc-cite
+ * re-anchors plus server route-manifest regen #36 (three new server-side
+ * routes, zero removals), none of it inside the five REST envelopes or the
+ * group/member vocabulary this store consumes (re-verified at the new pin,
+ * not copied). Historically-scoped cites in this file
  * and its test (the S415 `retired in contracts v0.4.6` note, the
  * v0.1.2/v0.1.4 fold history) stay verbatim per the changelog law.
  *

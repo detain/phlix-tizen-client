@@ -34,6 +34,74 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — ui #v0.99.16 + contracts #v0.5.6 re-pin: locale PIN HELD + widget bundle regen — 2026-11-04
+
+- **What users see:** nothing on the copy front — the six vendored locale
+  bundles are byte-stable across this ui wave, so TV strings do not move.
+  The shipped widget bundle is regenerated at the new era (embedded version
+  stamp + chunk-hash renames only); app behavior is unchanged.
+- **Pin leg:** `@phlix/ui` `#v0.99.15`→`#v0.99.16` (annotated tag object
+  `743a4b38`, peel `4d89b3a7` == ui master tip at dispatch, origin-verified
+  via ls-remote) and `@phlix/contracts` `#v0.5.5`→`#v0.5.6` (tag object
+  `9f04fc50`, peel `c89c8420`), both tag-form per the repo pin law.
+  `package-lock.json` SURGICAL 7+/7−: the two root edge specs, the ui node
+  `version`/`resolved` (→ peel, full-40), the contracts node
+  `version`/`resolved` (→ peel, full-40), and the ui as-published
+  `@phlix/contracts` edge `#v0.5.5`→`#v0.5.6` — EQUALS the root spec, so the
+  v0.99.15 wave's hoist-asymmetry cure stays cured. `@phlix/syncplay`
+  `#v0.1.7` root pin HELD (ui ships the same edge). Venue:
+  NPM_CONFIG_USERCONFIG=/dev/null + `npx --yes npm@11 install`; SECOND
+  install byte-identical (idempotency proven); installed-vs-tag payload byte
+  identity via codeload tarballs: `dist/phlix-ui.js` sha256 `df46896e…`,
+  `dist/player.js` sha256 `6fb1f8aa…`; contracts `dist/error-codes.json`
+  `5d1783a7…` cmp-equal BOTH sides — the registry bytes do not move across
+  v0.5.5→v0.5.6 (205 codes, zero new mints → no TS2741 hazard class, and
+  this tree carries no `ErrorCode` surface anyway — re-grepped).
+- **Locale leg (PIN HELD — verified, not assumed):** the ui tag payload's
+  seven `src/i18n/locales` files re-hashed EXACTLY to the `PIN`
+  `source_sha256` values, and upstream `git diff 36c04fbe..4d89b3a7 --
+  src/i18n` is EMPTY — so ref, all fourteen hashes and the script's
+  `SOURCE_REF` constant stay UNTOUCHED (first held locale pin since v0.99.13;
+  the v0.99.16 ui delta is its contracts dep spec + the dist stamp literal).
+  `tests/unit/i18nLocales.test.ts` green against the INSTALLED v0.99.16
+  catalog, incl. both key-set equality directions.
+- **Widget leg:** `package/` regenerated — 31 chunk renames + the
+  `index.html` entry rewire; the embedded ui version stamp moves `0.99.15`→
+  `0.99.16` (single site — the M-UI-23 stamp; zero stale `0.99.15` strings
+  in `package/`); the `index-*.css` chunk name HOLDS (CSS bytes unchanged).
+  Determinism: two consecutive `npm run package` builds `diff -r`-identical,
+  re-attested this turn. AGGREGATE-MD5 RECIPE
+  `find package -type f -print0 | sort -z | xargs -0 md5sum | awk '{print $1}' | sort | tr -d '\n' | md5sum`:
+  `6baff790f0c7792e80069474b90e8c42` → `b1f57c27c042ea1710f97b375a15ad3a`.
+  Freshness-gate sim after staging: rebuild left `package/` byte-identical to
+  the index (build.yml "Assert committed package/ is fresh" holds).
+- **Gate ledgers advanced (comment-only, 0 behavior):** the routeManifest
+  gate's vendored fixture STAYS at the 412-era bytes (`91579683…`) per the
+  wave plan ruling — the fixture tracks the cs#48 coordination cascade, not
+  the npm pin; the #v0.5.6 embed is regen #36 (`90b79e35…`/415: +
+  `GET /api/v1/me/history`, +`GET /api/v1/servers/{id}`, +
+  `GET /api/v1/users/me/history`, zero removals, none issued from this tree —
+  scan sites and per-file pins UNCHANGED), recorded as a new honest leg in
+  the gate header + `useSyncPlayStore` pin-cite currency (registry-held facts
+  re-verified by md5, not copied). `distApiFloor` NOT rotated — measured
+  green on the new bundle (`:focus-visible` stays 157; the ui dist delta
+  carries no stylesheet change).
+- **Docs leg:** docsPinConsistency MEASURED 6 red arms (README badge, README
+  Tech Stack, DEVELOPER, docs/i18n seam, AGENTS, CLAUDE) → rotated → 9/9.
+  docs/i18n.md seam narrative gained the held-pin sentence with the
+  `git diff` proof; the divergence ledger's six rows re-grepped against the
+  fresh v0.99.16 bundle bytes — ALL FACT-UNCHANGED (wsPath rides
+  `SyncPlayModal-*.js`+`index-*.js`; picker literal `(shared — read-only)` in
+  the index chunk only, MediaCard still folded; invite paths/codes ship;
+  `new Audio` 1 site, `mediaSession` video-only; `replace(/&/g` still in
+  `useItemInspector-*.js`; auth hoist `var Zr` stable v0.99.15→v0.99.16).
+- **Baseline conflict RESOLVED by measurement (the 63f/1067 vs 66f/1128
+  register conflict):** full serial vitest at the PARENT tree = 66 files /
+  1128 tests / 0 skipped — the 66/1128 era figure is the measured truth;
+  final post-rotation run EXACT (66/1128/0). Gates: vue-tsc src+tests 0,
+  eslint 0, `npm run package` rc 0 ×2, `git diff` clean vs origin tip before
+  push.
+
 ### Changed — ui #v0.99.15 re-pin: locale re-vendor + widget bundle regen — 2026-11-04
 
 - **What users see:** the TV copy lands localized in all six vendored

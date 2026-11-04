@@ -11,7 +11,7 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.5.5. Every tag this cite historically named
+ * `@phlix/contracts` at #v0.5.6. Every tag this cite historically named
  * shipped a STALE embed for this gate's purpose — #v0.4.7 embedded server
  * `2f1d2ee6…` (md5 4f03cb2e…) — while the estate-wide canonical copy was the
  * untagged master regen at server `730e55b7` (md5 pinned below, contracts
@@ -82,7 +82,23 @@
  * type here. The S279-class dead-rail tripwires and the WS/relay
  * OUT-of-manifest pins re-verified green on the unchanged manifest bytes;
  * per-file scan coverage UNCHANGED. Pin cite advanced; comment-only,
- * 0 behavior.)
+ * 0 behavior. contracts v0.5.5→v0.5.6 re-pin (2026-11-04, wave-5 cascade):
+ * the #v0.5.6 tag (peels to contracts c89c8420) moves the EMBED — installed
+ * `dist/server-route-manifest.json` advances `91579683…`/412 →
+ * `90b79e35…`/415 (regen #36: +`GET /api/v1/me/history`,
+ * +`GET /api/v1/servers/{id}`, +`GET /api/v1/users/me/history`, ZERO
+ * removals — none of the three issued from this tree, so the scan sites and
+ * per-file pins here are UNCHANGED and every tuple-exact assertion still
+ * holds against the vendored copy), while `error-codes.json`
+ * (`5d1783a7…`, 205 codes) and `mcp-scopes.json` (`8c92c070…`) HOLD — no
+ * codes moved, no type hazard (zero `ErrorCode` surface in src/ + tests/,
+ * re-grepped). The VENDORED fixture deliberately STAYS at the 412-era bytes:
+ * plan ruling is that the fixture tracks the cs#48 coordination wave, not the
+ * npm pin (identical disposition to the console/roku CHECK legs this wave; a
+ * re-vendor could only ADD served tuples — never redden the anti-absorption
+ * law this gate enforces — so holding is behavior-neutral, and the 415
+ * re-vendor is owed as its own ritual lane). Header pin cite advanced;
+ * comment-only, 0 behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to

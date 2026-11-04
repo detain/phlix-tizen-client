@@ -2,7 +2,7 @@
 
 **What this document is.** The Tizen client renders its app UI from the vendored
 `@phlix/ui` bundle, but three behaviors could not ride that bundle because
-`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.15).
+`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.16).
 They are therefore **re-implemented locally** in this repo. Local ports drift:
 every ui release can change the thing being ported while the port stands still.
 This ledger names every port, what it is sealed behind, and the known
@@ -15,17 +15,19 @@ leave a port behind.
 | `src/api/hubRelay.ts` | the ui's hub-relay pending-command consumer (ui S298 half) | boot glue differs (tizen config resolution, S2a token mint); documented as a faithful port in its header |
 | `src/syncplayDispatch.ts` | the ui's `Player.vue` pending-media load path (`resolvePendingMedia` prop era) | the player page lives inside the sealed bundle; this is the host-side watcher driving the shared player store |
 
-## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.15`)
+## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.16`)
 
 Verified against the vendored bundle in `package/assets/` and the local sources
-at this commit, not from memory (rows re-grepped at the 2026-11-04 v0.99.15
-re-pin onto the v0.99.15 bytes — every row re-attested FACT-UNCHANGED from the
-2026-11-03 v0.99.14 [phase-3 cascade] re-greps, chunk content-hashes and
-minifier hoist-name drift aside):
+at this commit, not from memory (rows re-grepped at the 2026-11-04 v0.99.16
+re-pin onto the v0.99.16 bytes — the ui delta across that pin is ONLY the
+contracts dep spec and the embedded version-stamp literal, `git diff
+36c04fbe..4d89b3a7 -- src/i18n` empty — every row re-attested FACT-UNCHANGED
+from the 2026-11-04 v0.99.15 [locale re-vendor] re-greps, with chunk
+content-hash renames (31 pairs) aside):
 
 - **SyncPlay socket hint seam (`wsUrl` / `wsPath`).** The ui gained a
   `socketHint` seam so hosts can point the player's SyncPlay dial at
-  a custom URL/path; it SHIPS at the pinned v0.99.15 (grep `wsPath` →
+  a custom URL/path; it SHIPS at the pinned v0.99.16 (re-grepped at this wave →
   `SyncPlayModal-*.js` + `index-*.js` chunks; keys typed in the bundle's
   `app/types.d.ts`-era config). The host-side seam (M-TIZEN-07, W-min171)
   `src/endpointOverrides.ts` — validating `phlix.syncplayPort` /
@@ -47,17 +49,19 @@ minifier hoist-name drift aside):
   now carry it in `package/assets/`). Methodology notes: from the v0.99.14
   re-grep the 23-site figure was a RECURSIVE dist count over `.map`/`.d.ts`
   too — the identifier never survives in the minified `.js` bodies; at the
-  v0.99.15 re-pin (2026-11-04) that recursive count reads 5 (1 `.d.ts` + 4
-  `.map` sourcesContent) purely from bundler map granularity, so re-attest
-  via the shipped `(shared — read-only)` picker literal — at v0.99.15 it
-  rides the committed `index-*.js` chunk (this widget build folds MediaCard
+  v0.99.15 re-pin (2026-11-04) that recursive count read 5 (1 `.d.ts` + 4
+  `.map` sourcesContent) purely from bundler map granularity — RE-MEASURED 5 at
+  the v0.99.16 re-pin (2026-11-04) — so re-attest via the shipped
+  `(shared — read-only)` picker literal — at v0.99.16 it still rides the
+  committed `index-*.js` chunk (this widget build folds MediaCard
   into index; no standalone `MediaCard-*.js`), gate proven live.
   Row kept as the closed bookend; delete
   it in the next touch that has other business in this file.
 - **Invite create-token DTO.** NOT lagged — the two-leg create-token invite
-  shape already ships (re-verified at v0.99.15 — `invite-links` path plus the
+  shape already ships (re-verified at v0.99.16 — `invite-links` path plus the
   `invite_link_not_found` / `invite_expired_or_exhausted` codes ride the
-  committed bundle). Recorded so nobody re-audits
+  committed bundle — `invite-links` greps to `McpTokensPage-*.js` +
+  `index-*.js`, the codes to `index-*.js`). Recorded so nobody re-audits
   it twice; it re-enters the list only if the DTO moves again.
 - **Music playback state (M-TIZEN-30 probe).** ui's music player
   (`useMusicPlayer`) keeps playing-state as PAGE-INSTANCE refs on detached
@@ -69,7 +73,7 @@ minifier hoist-name drift aside):
   mediaSession parity with the video path), DELETE the probe and its test +
   this row; the probe's reappearance pin (bundle grep `new Audio` in
   `package/assets/Music*.js`) reddens on any re-pin that moves the
-  construction site first. Re-verified at the v0.99.15 re-pin (2026-11-04):
+  construction site first. Re-verified at the v0.99.16 re-pin (2026-11-04):
   the `MusicLibraryPage-*.js` chunk still builds it (1 site) and `mediaSession`
   still appears only in the video-path `index-*.js` chunk — observer posture
   unchanged, watch pin green.
@@ -79,7 +83,7 @@ minifier hoist-name drift aside):
   UPSTREAM item: replace with a text binding in @phlix/ui. Meanwhile the client
   hardened its own boundary: `script-src 'self'` (no 'unsafe-inline') makes any
   future escape regression non-executable inline (tests/unit/cspPolicy.test.ts).
-  Re-verified at the v0.99.15 re-pin (2026-11-04): the pattern STILL ships
+  Re-verified at the v0.99.16 re-pin (2026-11-04): the pattern STILL ships
   (grep `replace(/&/g` → `useItemInspector-*.js` chunk), so the row stands and
   the strict CSP stays load-bearing. The row retires only when a future
   bundle loses the pattern — grep it at every re-pin.
@@ -90,9 +94,10 @@ minifier hoist-name drift aside):
   per-app-id sandbox, but they break the namespace convention every other key
   keeps, and renaming them is a STORE-LEVEL migration only ui can make.
   Carried upstream: prefix (or consolidate) the auth store's storage keys;
-  re-verified at the v0.99.15 re-pin (2026-11-04): the bare literals still
+  re-verified at the v0.99.16 re-pin (2026-11-04): the bare literals still
   ship in the committed bundle (grep `"access_token"` → `index-*.js` chunk,
-  hoisted as `var Zr="access_token"` at this build — `var Hr=` at v0.99.14;
+  hoisted as `var Zr="access_token"` at both v0.99.15 and v0.99.16 builds —
+  `var Hr=` at v0.99.14;
   the hoist NAME is minifier churn, grep the LITERAL, not a
   `setItem('access_token` spelling, which minification never emits).
 

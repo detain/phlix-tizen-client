@@ -345,7 +345,13 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ 36c04fbe == @phlix/ui v0.99.15 (re-synced at this pin: the
+    // Vendored @ 36c04fbe == @phlix/ui v0.99.15 — PIN HELD at the v0.99.16
+    // re-pin (2026-11-04: ui moved only its contracts dep spec + the dist
+    // version stamp; `git diff 36c04fbe..4d89b3a7 -- src/i18n` is EMPTY and
+    // all seven PIN source hashes re-verified byte-identical against the
+    // v0.99.16 tag payload — ref, all fourteen hashes and SOURCE_REF
+    // untouched; first HELD wave since v0.99.13). The v0.99.15 wave
+    // (re-synced at this pin: the
     // v0.99.15 wave moved ui locale SOURCE — `git diff a437b995..36c04fbe --
     // src/i18n` NON-empty: the six bundle files + messages/errors catalogs —
     // so the installed↔bundle key-set equality demanded the conscious re-sync
