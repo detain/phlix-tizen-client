@@ -259,7 +259,11 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // docs/runtime-floor.md in the same change, never silently.
       // 155→156: deferred m3 added the host `.stepper-btn:focus-visible` ring
       // (schedule steppers, 2026-11-03) — host surface, attributed.
-      expect(countAcrossCss(':focus-visible')).toBe(156);
+      // 156→157: ui #v0.99.15 re-vendor added exactly one rule —
+      // `.phlix-input.is-invalid .phlix-input__field:focus-visible` (invalid-
+      // state input ring; vendored surface, attributed via a scope-hash-
+      // stripped selector-set diff of the old vs new committed stylesheet).
+      expect(countAcrossCss(':focus-visible')).toBe(157);
       expect(countAcrossCss('inset:')).toBe(41);
       expect(countAcrossCss('aspect-ratio')).toBe(36);
       expect(countAcrossCss('accent-color')).toBe(8);

@@ -34,6 +34,72 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — ui #v0.99.15 re-pin: locale re-vendor + widget bundle regen — 2026-11-04
+
+- **What users see:** the TV copy lands localized in all six vendored
+  non-English catalogs — the v0.99.15 ui wave grew favorite/mark-watched/
+  rating failure toasts, the primary-nav landmark label, search
+  `showingOf`/`inputLabel`, `noRooms`/`unknownError`/`matching` and the
+  syncplay `leaveConfirm` leg — plus the regenerated widget bundle those
+  rules ride.
+- **Pin leg:** `@phlix/ui` moves `#v0.99.14`→`#v0.99.15` (annotated tag
+  object `74c9e1e3`, peel `36c04fbe` == ui master tip, origin-verified;
+  tag-form pin per the repo's pin law). `package-lock.json` SURGICAL 4+/4−:
+  root edge spec, the ui node `version`/`resolved` to the peel, and the ui
+  as-published `@phlix/syncplay` edge `#v0.1.6`→`#v0.1.7` — which ELIMINATES
+  the prior wave's disclosed as-published asymmetry. `@phlix/contracts`
+  `#v0.5.5` and `@phlix/syncplay` `#v0.1.7` root pins HELD (recon-confirmed
+  live; no drift taken). Install idempotency proven by a second
+  `npm@11 install` (NPM_CONFIG_USERCONFIG=/dev/null) byte-identical to the
+  first, and installed-vs-tag byte identity: `dist/phlix-ui.js`
+  sha256 `d1a83db4…`, `dist/player.js` sha256 `ec461df9…` == the v0.99.15
+  peel blobs; the vendored syncplay `dist/phlix-syncplay.js`
+  `b19581f4…` == the v0.1.7 peel blob.
+- **Locale leg (REAL re-vendor):** `scripts/sync-ui-locale-bundles.mjs
+  --ref 36c04fbe` — 6 of the 7 vendored files genuinely move (de.ts ±17,
+  es/fr/it/ja/pt_BR.ts ±19 each; recon's measurement confirmed against the
+  actual tags, `git diff a437b995..36c04fbe -- src/i18n/locales`); the
+  ui-side install catalog (`messages.ts`) grows alongside, so the
+  installed↔bundle key-set equality holds by joint re-sync, not luck.
+  `locales/index.ts` byte-HOLDS; PIN ref re-anchored `a437b995`→`36c04fbe`
+  and 12 of the fourteen hashes rotate with the pair holding. The `SOURCE_REF`
+  constant in the sync script re-anchored in the same commit (its equality
+  pin is the drift law).
+- **Widget leg:** `package/` regenerated — 32 chunk renames + the
+  `index.html` rewire; the embedded ui version stamp moves `0.99.14`→
+  `0.99.15` (single site, the M-UI-23 stamp), zero stale `0.99.14` strings
+  remain. Determinism proven: two clean builds byte-identical (`diff -r`
+  empty); aggregate md5 `ac20ea10e25b33605bb26bbe8205a88b` →
+  `6baff790f0c7792e80069474b90e8c42` (recipe in TW-TIZEN-UI15.md).
+- **Runtime-floor adjudication:** the above-floor CSS census golden
+  `:focus-visible` moves 156→157 — attributed to EXACTLY one new vendored
+  rule (`.phlix-input.is-invalid .phlix-input__field:focus-visible`, via a
+  scope-hash-stripped selector-set diff of old vs new committed stylesheet;
+  host CSS untouched). Golden rotated with the attribution staircase comment
+  and the `docs/runtime-floor.md` degradation table re-derived in the same
+  commit, per that file's own law. `inset:` 41, `aspect-ratio` 36,
+  `accent-color` 8 re-measured UNCHANGED.
+- **Divergence ledger:** all six mirror-lag rows in
+  `docs/ui-port-divergence.md` re-grepped against the v0.99.15 bytes (law
+  #2: grep evidence, not memory) — every row FACT-UNCHANGED. Two bookkeeping
+  deltas disclosed in-place: the `canManagePlaylist` recursive dist count
+  23→5 (map-granularity; gate re-attested through the shipped
+  `(shared — read-only)` picker literal, which now rides the `index-*.js`
+  chunk — this widget build folds MediaCard into index) and the
+  `access_token` hoist name drift (`Hr`→`Zr`). The registered
+  endpointOverrides→`wsUrl`/`wsPath` forwarding follow-up stays OPEN —
+  deliberately not taken in a pin-bump lane.
+- **Docs rotation:** README badge + Tech Stack line, DEVELOPER.md pin line,
+  AGENTS.md / CLAUDE.md pin lines, and the `docs/i18n.md` seam narrative
+  re-anchored (the v0.99.14 era folded into the prior-era record; the
+  v0.99.12/13 legs carried verbatim). `tests/unit/i18nLocales.test.ts` era
+  comment rotated the same way.
+- **Gates:** `docsPinConsistency.test.ts` measured the expected 6 red arms
+  pre-rotation → 9/9 green after; vue-tsc src + tests rc=0; eslint rc=0;
+  `vitest run --no-file-parallelism` **66 files / 1128 tests / 0 skipped**
+  rc=0 — baseline-exact against the v0.99.14-wave record (66f/1128; the
+  stale 63f/1067 figure predates the phase-3 test additions).
+
 ### Changed — in-source pin cites advanced to contracts #v0.5.5 / syncplay #v0.1.7 — 2026-11-04
 
 - **What users see:** nothing — the shipped widget is byte-identical (zero-

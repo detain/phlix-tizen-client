@@ -345,15 +345,17 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ a437b995 == @phlix/ui v0.99.14 (re-synced at this pin: the
-    // v0.99.14 wave moved ui locale SOURCE — `git diff 1f0046c5..a437b995 --
+    // Vendored @ 36c04fbe == @phlix/ui v0.99.15 (re-synced at this pin: the
+    // v0.99.15 wave moved ui locale SOURCE — `git diff a437b995..36c04fbe --
     // src/i18n` NON-empty: the six bundle files + messages/errors catalogs —
     // so the installed↔bundle key-set equality demanded the conscious re-sync
-    // this leg took: ref re-anchored 1f0046c5→a437b995 and 12 of the fourteen
+    // this leg took: ref re-anchored a437b995→36c04fbe and 12 of the fourteen
     // PIN hashes rotated with it, the index.ts pair HOLDING because ui's
     // locales/index.ts is byte-stable across those pins; bundles and the
     // installed copy re-synced TOGETHER here, so both equality directions
-    // hold by construction again. Prior era for the record: 1f0046c5 ==
+    // hold by construction again. Prior eras for the record: a437b995 ==
+    // v0.99.14 (the identical six-file SOURCE move — 12 of fourteen rotating,
+    // index pair holding); 1f0046c5 ==
     // v0.99.12 (catalog wave — My-List additions, the orphaned
     // syncplay.publicRooms sweep, auth-lockout copy — reddened BOTH equality
     // directions plus the strict-typing compile on the v0.99.8-era vendor
