@@ -34,6 +34,84 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — ui #v0.99.17 re-pin: PLAYERMUTE cure rides the bundle; locale PIN HELD again — 2026-11-06
+
+- **What users see:** one playback behavior change reaches the TV — an
+  autoplay-forced mute no longer leaks across media items (ui PLAYERMUTE
+  cure: the forced mute is tagged as such and released when the next item
+  loads, so one blocked autoplay no longer silences everything after it).
+  The bundle's `usePlayerStore` typing gains the ADDITIVE members
+  `autoplayMuted` / `muteForAutoplay` (nothing removed; vue-tsc green).
+  Copy is stable: the six vendored locale bundles are byte-stable across
+  this ui wave.
+- **Pin leg:** `@phlix/ui` `#v0.99.16`→`#v0.99.17` (annotated tag object
+  `4515df9c`, peel `b958fb574744bb490ff573d70f7fbe134bdf721f` == ui master
+  tip at dispatch, origin-verified via ls-remote), tag-form per the repo pin
+  law. `package-lock.json` SURGICAL 3+/3−: the root edge spec and the ui node
+  `version`/`resolved` (→ peel, full-40). `@phlix/contracts` `#v0.5.6` and
+  `@phlix/syncplay` `#v0.1.7` root pins HELD — ui v0.99.17 ships the same
+  edges, so no as-published drift was reintroduced. Venue:
+  NPM_CONFIG_USERCONFIG=/dev/null + `npx --yes npm@11 install`; SECOND
+  install byte-identical (idempotency proven). Supply chain: installed
+  `node_modules/@phlix/ui` (889 files) `diff -r` against the codeload
+  v0.99.17 tag tree = ZERO shared-file content differences (the only-in-tag
+  entries are ui's source/vite configs, correctly excluded by
+  `files: ["dist"]`); installed `package.json` byte-identical to the tag;
+  `dist/phlix-ui.js` md5 `e00ff69ccfb857c9ec011ded49fbe042` and
+  `dist/player.js` md5 `903b503cfeee4e22420d653a0dae590a` — both match the
+  release register; the fix chunk `usePlayerStore-BpohCwDP.js` is present.
+- **Locale leg (PIN HELD — verified, not assumed):** upstream `git diff
+  4d89b3a7..b958fb574 -- src/i18n` is EMPTY and all seven tag-payload
+  `src/i18n/locales` files re-hash EXACTLY to the `PIN.source_sha256` values
+  — ref `36c04fbe`, all fourteen hashes and `SOURCE_REF` UNTOUCHED for the
+  SECOND consecutive wave. `tests/unit/i18nLocales.test.ts` green against the
+  INSTALLED v0.99.17 catalog, incl. both key-set equality directions; only
+  its era comment advanced (stamp-only).
+- **Widget leg:** `package/` regenerated — 32 chunk renames + the
+  `index.html` entry rewire; UNLIKE the v0.99.16 wave the `index-*.css`
+  chunk ROTATED (`index-C0I6qGRy`→`index-aXIOf-KD`) — this wave is
+  bundle-substantive (the Player.vue edit moves its scoped-style hash, so
+  CSS bytes genuinely changed). Embedded ui version stamp `0.99.16`→`0.99.17`
+  (single site in `index-*.js` — the M-UI-23 stamp; zero stale `0.99.16`
+  strings in `package/`). The cure ships in the widget: `muteForAutoplay`
+  greps to `index-*.js` + `PlayerPage-*.js` chunks. Determinism: two
+  consecutive `npm run package` builds `diff -r`-identical, re-attested this
+  turn. AGGREGATE-MD5 recipe (as last wave):
+  `b1f57c27c042ea1710f97b375a15ad3a`→`7382e4fa4c4a7ed32ccb5cde7a0dc6ca`
+  (42 files). Freshness-gate sim after staging: rebuild left `package/`
+  byte-identical to the index (build.yml "Assert committed package/ is
+  fresh" holds).
+- **Gate ledgers advanced (comment-only, 0 behavior):** the routeManifest
+  gate's vendored fixture STAYS at the 412-era bytes — the contracts pin did
+  not move this wave (re-vendor #36 duty already discharged at v0.99.16).
+  `distApiFloor` NOT rotated — measured green on the new bundle: CSS census
+  holds (`:focus-visible` 157, `inset:` 41, `aspect-ratio` 36,
+  `accent-color` 8, `:has(` 1) and the JS census + entry-polyfill +
+  version-stamping laws all pass; the pins measure content, not chunk names,
+  so the 32 renames are inert to them.
+- **Docs leg:** docsPinConsistency MEASURED 6 red arms (README badge, README
+  Tech Stack, DEVELOPER, docs/i18n seam, AGENTS, CLAUDE) → rotated → 9/9.
+  docs/i18n.md seam narrative now records the TWO-consecutive-held-waves run
+  with both `git diff` proofs; the divergence ledger's six rows re-grepped
+  against the fresh v0.99.17 bundle bytes — ALL FACT-UNCHANGED (wsPath rides
+  `SyncPlayModal-*.js`+`index-*.js`; picker literal `(shared — read-only)` in
+  the index chunk only, MediaCard still folded; invite paths/codes ship —
+  with a precision CORRECTION: `invite-links` greps ONLY to
+  `McpTokensPage-*.js`, the prior wording also listing `index-*.js` was
+  imprecise even at the v0.99.16 bytes (count 0 there), and the codes +
+  `redeem` leg ride `index-*.js`; `new Audio` 1 site, `mediaSession`
+  video-only; `replace(/&/g` still in `useItemInspector-*.js`; auth hoist
+  `var Zr="access_token"` stable across v0.99.15→16→17). The closed
+  canManagePlaylist bookend row was RE-STAMPED rather than deleted (recursive
+  count re-measured 5) — it says "delete it in the next touch"; deleting
+  ledger history is outside a pin-bump lane's remit and is left to a docs
+  wave.
+- **Baseline + Gates:** full serial vitest at the PARENT measured 66 files /
+  1128 tests / 0 skipped, and EXACT at this tree post-rotation (no test
+  gained, none lost). lint 0, `vue-tsc` src 0, `typecheck:tests` 0,
+  `node scripts/audit-gate.mjs` PASS (same 2 allow-listed dev-chain advisory
+  ids, zero new), `npm run build` rc 0, `npm run package` rc 0 ×2.
+
 ### Changed — ui #v0.99.16 + contracts #v0.5.6 re-pin: locale PIN HELD + widget bundle regen — 2026-11-04
 
 - **What users see:** nothing on the copy front — the six vendored locale
