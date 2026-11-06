@@ -227,6 +227,7 @@ export const PT_BR_MESSAGES = {
     off: 'Desligado',
     audio: 'Áudio',
     audioTrack: 'Faixa de áudio',
+    audioOriginal: 'Original',
     captionStyle: 'Estilo das legendas',
     size: 'Tamanho',
     captionSize: 'Tamanho das legendas',

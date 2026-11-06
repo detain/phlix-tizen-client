@@ -228,6 +228,7 @@ export const JA_MESSAGES = {
     off: 'オフ',
     audio: '音声',
     audioTrack: '音声トラック',
+    audioOriginal: 'オリジナル',
     captionStyle: '字幕スタイル',
     size: 'サイズ',
     captionSize: '字幕サイズ',

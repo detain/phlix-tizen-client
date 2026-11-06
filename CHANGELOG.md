@@ -34,6 +34,86 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — ui #v0.99.19 re-pin (two tags crossed): mini-master audio cure + stale-menu fix ride the bundle; locale bundles REAL re-vendor — 2026-11-06
+
+- **What users see:** the hosted-TV playback silence class closes on this
+  widget. Pinned-quality loads now ride per-rung `media_v*_master.m3u8`
+  mini-master indexes (ui v0.99.18 RUNGMASTER — hls.js drops `EXT-X-MEDIA`
+  renditions on bare-playlist loads, so multi-audio sources shipped silent
+  video; the index restores the audio group), with a HEAD-404 fallback to the
+  legacy bare URL for pre-1035e7de servers (one probe per quality pick), a
+  synthesized "Original" audio entry for muxed-audio HLS (single-track sources
+  get the menu option back; copy = new `player.audioOriginal` leaf), and an
+  audio menu that no longer lists stale renditions after the pin path
+  (the stale-track sync cure). The six vendored locales each gained the
+  `audioOriginal` string (catalog 523→524) — this wave is a REAL locale
+  re-vendor, not a held pin.
+- **Pin leg:** `@phlix/ui` `#v0.99.17`→`#v0.99.19` (annotated tag object
+  `f9b89669d6d9e567373bd21f4ea7601dad4f497e`, peel
+  `a6c9d466a9a8d99076128c0c9928d99de0cc14b7` == ui master tip at dispatch,
+  origin-verified via ls-remote; codeload 200), tag-form per the repo pin law.
+  `package-lock.json` SURGICAL 3+/3−: the root edge spec and the ui node
+  `version`/`resolved` (→ peel, full-40). `@phlix/contracts` `#v0.5.6` and
+  `@phlix/syncplay` `#v0.1.7` root pins HELD — ui v0.99.19 declares the same
+  edges (verified against the tag's `package.json`, not recalled). Venue:
+  NPM_CONFIG_USERCONFIG=/dev/null + `npx --yes npm@11 install`; SECOND install
+  byte-identical (idempotency proven). Supply chain: installed
+  `node_modules/@phlix/ui` (889 files) `diff -r` against the codeload
+  v0.99.19 tag tree = ZERO shared-file content differences (19 only-in-tag
+  entries: ui source/configs, correctly excluded by `files: ["dist"]`);
+  `dist/phlix-ui.js` md5 `feadba0155082abfd8178f0a19ebaf4d` and `dist/player.js`
+  md5 `9af331187aff3c7a7a555c7216e7ff07` — both match the release register;
+  the carriers rotated as registered: `PlayerPage-kwMAZlDu.js` md5
+  `2aba040e291a38be42da1a7e7d99f4b6` + `PlayerPage-DAswZ8i8.cjs` md5
+  `14a50c008b001f47f6b697d047513f27`.
+- **Locale leg (REAL re-vendor — verified, not assumed):** the held run of
+  `36c04fbe` ended. Upstream `git diff 2158564a..a6c9d466 -- src/i18n` is
+  NON-empty (six bundle files + `messages.ts` gained `player.audioOriginal`;
+  `errors.ts` delta is docblock wording; `locales.test.ts` is ui-internal) —
+  while `git diff b958fb574..2158564a -- src/i18n` (the v0.99.18 leg) is
+  EMPTY, so one re-anchor crossed the held .18 stamp and the moving .19 wave
+  together. MEASURED RED-FIRST before the sync: `i18nLocales` reddened
+  exactly the two equality legs (`es missing installed keys:
+  ['player.audioOriginal']`, `524 ≠ 523`). `scripts/sync-ui-locale-bundles.mjs
+  --ref a6c9d466…` re-vendored: the six bundles each +1 line, the index.ts
+  pair byte-HOLDING as ever; PIN ref `36c04fbe`→`a6c9d466` with 12 of the
+  fourteen hashes rotating; the `SOURCE_REF` bootstrap constant re-anchored
+  the SAME commit (drift fails `PIN↔SOURCE_REF` pin); era comment rewritten
+  with the two-era narrative + measured-red disclosure.
+- **Widget leg:** `package/` regenerated — 32 chunk renames + the `index.html`
+  entry rewire; the `index-*.css` chunk rotated AGAIN
+  (`index-aXIOf-KD`→`index-BqeiLgxA`) — bundle-substantive: the
+  CaptionsMenu/Player edits move scoped styles. Embedded ui version stamp
+  `0.99.17`→`0.99.19` (single site in `index-D6A1amz-.js`; zero stale
+  `0.99.17` strings in `package/`). LAW GREP: `_master.m3u8` ships in
+  `PlayerPage-kwMAZlDu-pDFpVY3j.js` (also in the installed `dist/player.js`);
+  `audioOriginal` rides `index-*.js` + the PlayerPage chunk (compiled locale
+  bundles). Determinism: two consecutive `npm run package` builds
+  `diff -r`-identical, re-attested this turn. AGGREGATE-MD5 recipe (as last
+  waves): `7382e4fa4c4a7ed32ccb5cde7a0dc6ca`→`6b5415c76d609960be825b309f794d58`
+  (42 files). Freshness-gate sim after staging: rebuild left `package/`
+  byte-identical to the index (build.yml "Assert committed package/ is
+  fresh" holds).
+- **Gate ledgers advanced (measured, not recalled):** serial vitest EXACT
+  66 files / 1128 tests / 0 skipped at the PARENT tree AND post-change — zero
+  suite churn this wave. docsPinConsistency MEASURED 6 red arms → rotated →
+  9/9. `distApiFloor` NOT rotated — green on the new bytes (the pins measure
+  content, not chunk names). typecheck 0; typecheck:tests 0; lint 0;
+  audit-gate PASS (same 2 allow-listed dev-chain ids, zero new); build rc 0;
+  package rc 0 ×2.
+- **Docs leg:** README badge + Tech Stack, DEVELOPER, AGENTS, CLAUDE,
+  docs/i18n seam rotated to `v0.99.19`; the i18n seam narrative rewritten for
+  the moved PIN ref (`36c04fbe` held-run ended → `a6c9d466`, 12/14 rotating);
+  the divergence ledger's six rows re-grepped at v0.99.19 bytes — all
+  FACT-UNCHANGED (`wsUrl` ships in `SyncPlayModal-*.js` + `index-*.js`;
+  `canManagePlaylist` recursive count RE-MEASURED 5 + the
+  `(shared — read-only)` picker literal still rides `index-*.js`;
+  `invite-links` still McpTokensPage-only; `new Audio` still 1
+  `MusicLibraryPage-*.js` site with `mediaSession` video-path-only;
+  the innerHTML-escape pattern still `useItemInspector-*.js`; bare
+  `"access_token"` still hoisted as `var Zr=` — chain extended through
+  v0.99.19). Era stamps advanced.
+
 ### Changed — ui #v0.99.17 re-pin: PLAYERMUTE cure rides the bundle; locale PIN HELD again — 2026-11-06
 
 - **What users see:** one playback behavior change reaches the TV — an

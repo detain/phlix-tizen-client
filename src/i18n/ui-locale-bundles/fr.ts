@@ -231,6 +231,7 @@ export const FR_MESSAGES = {
     off: 'Désactivé',
     audio: 'Audio',
     audioTrack: 'Piste audio',
+    audioOriginal: 'Original',
     captionStyle: 'Style de sous-titres',
     size: 'Taille',
     captionSize: 'Taille des sous-titres',

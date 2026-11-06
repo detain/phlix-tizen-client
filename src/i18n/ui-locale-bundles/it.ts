@@ -227,6 +227,7 @@ export const IT_MESSAGES = {
     off: 'Disattivo',
     audio: 'Audio',
     audioTrack: 'Traccia audio',
+    audioOriginal: 'Originale',
     captionStyle: 'Stile sottotitoli',
     size: 'Dimensione',
     captionSize: 'Dimensione sottotitoli',

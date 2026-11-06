@@ -345,26 +345,31 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ 36c04fbe == @phlix/ui v0.99.15 — PIN HELD at the v0.99.16 +
-    // v0.99.17 re-pins (2026-11-04: ui moved only its contracts dep spec +
-    // the dist version stamp, `git diff 36c04fbe..4d89b3a7 -- src/i18n`
-    // EMPTY; 2026-11-06: the PLAYERMUTE cure + stamp + a ui-internal
-    // routeGate fixture regen, `git diff 4d89b3a7..b958fb574 -- src/i18n`
-    // EMPTY; all seven PIN source hashes re-verified byte-identical against
-    // the v0.99.17 tag payload — ref, all fourteen hashes and SOURCE_REF
-    // untouched; two consecutive held waves, the first such run since
-    // v0.99.13). The v0.99.15 wave
-    // (re-synced at this pin: the
-    // v0.99.15 wave moved ui locale SOURCE — `git diff a437b995..36c04fbe --
-    // src/i18n` NON-empty: the six bundle files + messages/errors catalogs —
-    // so the installed↔bundle key-set equality demanded the conscious re-sync
-    // this leg took: ref re-anchored a437b995→36c04fbe and 12 of the fourteen
-    // PIN hashes rotated with it, the index.ts pair HOLDING because ui's
-    // locales/index.ts is byte-stable across those pins; bundles and the
-    // installed copy re-synced TOGETHER here, so both equality directions
-    // hold by construction again. Prior eras for the record: a437b995 ==
-    // v0.99.14 (the identical six-file SOURCE move — 12 of fourteen rotating,
-    // index pair holding); 1f0046c5 ==
+    // Vendored @ a6c9d466 == @phlix/ui v0.99.19 — RE-SYNCED at this pin (the
+    // held run ended): the v0.99.19 wave moved ui locale SOURCE — `git diff
+    // 2158564a..a6c9d466 -- src/i18n` NON-empty: the six bundle files + the
+    // messages.ts catalog each gained the one `player.audioOriginal` leaf
+    // (523→524 keys; the copy behind ui's synthesized "Original" audio
+    // entry) — while v0.99.18 itself HELD src/i18n (`git diff
+    // b958fb574..2158564a -- src/i18n` EMPTY — the RUNGMASTER wave), so one
+    // re-anchor steps from the v0.99.15-era pin across both. The errors.ts
+    // delta is docblock wording (523-key prose → 524-key), locales.test.ts
+    // is ui-internal test growth — never vendored; the installed↔bundle
+    // key-set equality demanded the conscious re-sync this leg took (both
+    // equality legs measured RED on the v0.99.19 install BEFORE the sync —
+    // `es missing installed keys: ['player.audioOriginal']` + `524 ≠ 523`):
+    // ref re-anchored 36c04fbe→a6c9d466 and 12 of the fourteen PIN hashes
+    // rotated with it, the index.ts pair HOLDING because ui's locales/
+    // index.ts is byte-stable across those pins; bundles and the installed
+    // copy re-synced TOGETHER here, so both equality directions hold by
+    // construction again. Prior eras for the record: 36c04fbe == v0.99.15
+    // (re-synced at its pin — the identical six-file SOURCE move, 12 of
+    // fourteen rotating, index pair holding), then HELD at the v0.99.16 +
+    // v0.99.17 re-pins (`git diff 36c04fbe..4d89b3a7 -- src/i18n` and
+    // `git diff 4d89b3a7..b958fb574 -- src/i18n` both EMPTY — two
+    // consecutive held waves, the first such run since v0.99.13);
+    // a437b995 == v0.99.14 (the identical six-file SOURCE move — 12 of
+    // fourteen rotating, index pair holding); 1f0046c5 ==
     // v0.99.12 (catalog wave — My-List additions, the orphaned
     // syncplay.publicRooms sweep, auth-lockout copy — reddened BOTH equality
     // directions plus the strict-typing compile on the v0.99.8-era vendor
