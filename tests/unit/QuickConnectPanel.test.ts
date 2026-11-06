@@ -25,9 +25,17 @@ const auth = reactive({
 });
 
 // Captured per-session so each test can drive the orchestrator's callbacks.
-const captured: { deps?: Record<string, any>; runCalls: number; stopCalls: number } = {
+// `handles` records EVERY session the panel has created, in order — the
+// RT-055 pins need the old (superseded) handle to prove stale writes drop.
+const captured: {
+  deps?: Record<string, any>;
+  runCalls: number;
+  stopCalls: number;
+  handles: Array<{ run: () => Promise<string>; stop: () => void; isFinished: () => boolean }>;
+} = {
   runCalls: 0,
   stopCalls: 0,
+  handles: [],
 };
 
 // `@phlix/ui` fakes are module singletons; every mount must be unmounted or a
@@ -53,7 +61,7 @@ vi.mock('@phlix/ui', async () => ({
 vi.mock('@/quickconnect/quickConnectSession', () => ({
   createPairingSession: vi.fn((deps: Record<string, unknown>) => {
     captured.deps = deps;
-    return {
+    const handle = {
       run: vi.fn(() => {
         captured.runCalls += 1;
         return Promise.resolve('pairing');
@@ -63,6 +71,8 @@ vi.mock('@/quickconnect/quickConnectSession', () => ({
       }),
       isFinished: vi.fn(() => false),
     };
+    captured.handles.push(handle);
+    return handle;
   }),
 }));
 
@@ -76,6 +86,7 @@ function reset() {
   captured.deps = undefined;
   captured.runCalls = 0;
   captured.stopCalls = 0;
+  captured.handles.length = 0;
   globalThis.localStorage.clear();
 }
 
@@ -127,14 +138,80 @@ describe('QuickConnectPanel — placement + token-store seam', () => {
     expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBe('http://tv:8096');
   });
 
+  // ── RT-056 (review tizen__secnet #1) — the pairing mirror rides the sanitizer ──
+  it('RT-056: the mirrored base also lands in the address history through the same gate', async () => {
+    // The Connect/first-run edge persists chosen bases into BOTH slots
+    // (phlix.serverUrl + phlix.serverHistory). The pairing mirror wrote only
+    // the url slot raw — a paired base never became a re-seed candidate, and
+    // nothing passed it through the storage gate at all. Post-cure the mirror
+    // reuses resolveConfig's own writers, so both slots agree.
+    apiBaseRef.value = 'http://tv:8096';
+    mkPanel();
+    await nextTick();
+    (captured.deps!.applyTokens as (t: unknown) => void)({ accessToken: 'ACC', refreshToken: 'REF' });
+    expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBe('http://tv:8096');
+    const history = JSON.parse(globalThis.localStorage.getItem('phlix.serverHistory') ?? '[]') as string[];
+    expect(history).toContain('http://tv:8096');
+  });
+
+  it('RT-056: a refused scheme is never mirrored to persisted storage — the session still lands', async () => {
+    // Pre-cure this wrote the poison verbatim: a `javascript:` base persisted
+    // into phlix.serverUrl re-seeds the next cold boot's first-run Connect
+    // and any history-driven re-entry — the exact stored-forever class the
+    // M-TIZEN-07 gate exists to stop. The credential pair itself is real
+    // (server answered the pairing), so setTokens must NOT be collateral.
+    apiBaseRef.value = 'javascript:alert(1)';
+    const wrapper = mkPanel();
+    await nextTick();
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true); // base present → panel offered
+    (captured.deps!.applyTokens as (t: unknown) => void)({ accessToken: 'ACC', refreshToken: 'REF' });
+    expect(auth.setTokens).toHaveBeenCalledWith('ACC', 'REF');
+    expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBeNull();
+    expect(globalThis.localStorage.getItem('phlix.serverHistory')).toBeNull();
+  });
+
   it('surfaces the short code (no QR) once the orchestrator offers one', async () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
-    const onCode = captured.deps!.onCode as (code: string, exp: number | null) => void;
-    onCode('ABCD-1234', 1_800_000_000);
+    const onCode = captured.deps!.onCode as (code: string, exp: number | null, owner: unknown) => void;
+    // RT-055: the publisher stamps its own session handle; the surface accepts
+    // a code only from the session it currently holds.
+    onCode('ABCD-1234', 1_800_000_000, captured.handles[captured.handles.length - 1]);
     await nextTick();
     expect(wrapper.find('[data-testid="qc-code"]').text()).toBe('ABCD-1234');
+  });
+
+  // ── RT-055 (review tizen__exploiter #4) — stale sessions cannot write ─────
+  it('RT-055: a superseded session publishing late does not stamp its code on the live panel', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    const first = captured.handles[0]!;
+    const firstDeps = captured.deps!;
+    // A dismissal retires the session, and choosing a different base re-offers
+    // pairing (C16 contract) — the re-offer SUPERSEDES the dead session whose
+    // initiate answer may still land late.
+    await wrapper.find('[data-testid="qc-dismiss"]').trigger('click');
+    await nextTick();
+    apiBaseRef.value = 'http://tv2:8096';
+    await nextTick();
+    await nextTick();
+    expect(captured.handles).toHaveLength(2);
+
+    // The DEAD session reaches the (shared) onCode closure carrying its OWN
+    // handle: pre-cure there was no owner argument at all, so this late write
+    // stamped the stale code onto the live surface. Post-cure the panel
+    // compares identity and drops it — the empty placeholder stays.
+    firstDeps.onCode('STALE-1111', null, first);
+    await nextTick();
+    expect(wrapper.find('[data-testid="qc-code"]').exists()).toBe(false);
+
+    // The CURRENT session still lands its code normally.
+    const onCode = captured.deps!.onCode as (code: string, exp: number | null, owner: unknown) => void;
+    onCode('FRESH-2222', null, captured.handles[1]);
+    await nextTick();
+    expect(wrapper.find('[data-testid="qc-code"]').text()).toBe('FRESH-2222');
   });
 
   it('is invisible-gated: the isVisible predicate is false once logged in, and pairing is torn down', async () => {

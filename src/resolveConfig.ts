@@ -52,6 +52,15 @@ export interface ResolvedAppConfig {
 // replaces) the M-TIZEN-06 relay TLS law: `http:` stays persistable for LAN
 // servers; the bearer-carrying relay DIAL still additionally requires `https:`
 // in `api/hubRelay.ts`, untouched.
+//
+// RT-056 (review tizen__secnet #1) names the full writer set so "BOTH edges"
+// stays literally true: `phlix.serverUrl` has exactly two writers in this
+// client — the Connect/first-run persist in `main.ts` and the quick-connect
+// pairing mirror in `quickconnect/QuickConnectPanel.vue` — and since that
+// cure BOTH route through `sanitizeServerAddress` + `pushAddressHistory`
+// here. The pairing mirror pre-cure wrote the base raw, bypassing this gate
+// on a path the user never types through (a server-answered handshake), which
+// is precisely the stored-forever class this block exists to stop.
 // ---------------------------------------------------------------------------
 
 /** The ONLY protocols a persisted/resolved server address may carry. */

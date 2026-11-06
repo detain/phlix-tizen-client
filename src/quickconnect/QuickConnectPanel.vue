@@ -59,6 +59,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { ApiClient, useApiBase, useAuthStore } from '@phlix/ui';
 import { createPairingSession, type PairingPhase, type PairingSession } from './quickConnectSession';
+import { sanitizeServerAddress, pushAddressHistory } from '../resolveConfig';
 import { tTizen } from '../i18n/tizen';
 
 const apiBase = useApiBase();
@@ -123,13 +124,33 @@ function beginSession(): void {
       // The existing auth seam is the ONLY token store; the base we paired
       // against is already the app's server, mirrored back idempotently.
       auth.setTokens(tokens.accessToken, tokens.refreshToken);
+      // RT-056 (review tizen__secnet #1): the mirror is a WRITE to
+      // `phlix.serverUrl` — the exact slot the M-TIZEN-07 storage gate was
+      // built for. Pre-cure it wrote apiBase raw, so a `javascript:`/`data:`
+      // base (hand-edited storage feeding a stale pairing, a poisoned future
+      // suggestion) persisted forever and re-seeded the next cold boot. The
+      // pair itself is a real credential the server minted — setTokens above
+      // stays unconditional; only the ADDRESS mirror is gated, through the
+      // same sanitizeServerAddress + pushAddressHistory edge the Connect
+      // writers use, so the paired base also becomes a re-seed candidate.
       try {
-        globalThis.localStorage.setItem('phlix.serverUrl', apiBase.value);
+        const address = sanitizeServerAddress(apiBase.value);
+        if (address === null) {
+          console.warn('[phlix] quick-connect: refusing to mirror an unsafe base to storage', apiBase.value);
+        } else {
+          globalThis.localStorage.setItem('phlix.serverUrl', address);
+          pushAddressHistory(globalThis.localStorage, address);
+        }
       } catch {
         // Persistence is best-effort — setTokens already landed the session.
       }
     },
-    onCode: (next, exp) => {
+    onCode: (next, exp, owner) => {
+      // RT-055 (review tizen__exploiter #4): only the session this panel
+      // currently holds may stamp the displayed code. A superseded session
+      // (re-base, dismiss-then-reoffer) whose initiate answer lands late is
+      // dropped here — the code on screen always belongs to the live poller.
+      if (owner !== session) return;
       code.value = next;
       expiresAtSeconds.value = exp;
     },

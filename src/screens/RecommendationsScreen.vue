@@ -37,10 +37,20 @@ const requests = useRequestsStore();
 const items = ref<UserRecommendation[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
+/**
+ * RT-052 (review tizen__casualgamer #4): the headline is ALWAYS the catalog
+ * copy; the raw transport message — useful to support, hostile to a localized
+ * TV surface — moved to a subordinate detail line. Pre-cure the ternary gave
+ * the raw message PRIORITY (`e.message` on Error throws, catalog copy only
+ * as fallback), so every axios-style failure printed English wire-speak where
+ * all seven locales already ship the right sentence.
+ */
+const errorDetail = ref<string | null>(null);
 
 async function load(): Promise<void> {
   loading.value = true;
   error.value = null;
+  errorDetail.value = null;
 
   try {
     const data = await requests.request(
@@ -52,7 +62,8 @@ async function load(): Promise<void> {
     );
     items.value = data.recommendations ?? [];
   } catch (e) {
-    error.value = e instanceof Error ? e.message : tTizen('recommendations.failed');
+    error.value = tTizen('recommendations.failed');
+    errorDetail.value = e instanceof Error ? e.message : null;
     items.value = [];
   } finally {
     loading.value = false;
@@ -120,6 +131,12 @@ onMounted(load);
       role="alert"
     >
       <p>{{ error }}</p>
+      <p
+        v-if="errorDetail"
+        class="recommendations-screen__error-detail"
+      >
+        {{ errorDetail }}
+      </p>
       <button
         type="button"
         class="recommendations-screen__retry"
@@ -221,6 +238,15 @@ onMounted(load);
   text-align: center;
   color: var(--text-muted, #a1a1aa);
   min-height: 40vh;
+}
+
+/* RT-052: the raw transport message as a subordinate diagnostic — visibly
+ * quieter than the localized headline it sits under. */
+.recommendations-screen__error-detail {
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-faint, #71717a);
+  overflow-wrap: anywhere;
+  max-width: 60ch;
 }
 
 .recommendations-screen__retry {

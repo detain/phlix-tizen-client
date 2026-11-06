@@ -34,6 +34,63 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Security — quick-connect base mirror passes the storage gate; hub relay mint refuses plaintext (2026-11-06)
+
+- **What users see:** nothing changes on healthy setups. A TV paired against
+  a hand-poisoned server base (e.g. a `javascript:` address seeded into
+  storage) no longer persists that poison back into `phlix.serverUrl` — the
+  pairing itself still lands, because the credential pair is real. Tizen
+  hubs reached over a plain-HTTP hub base now fail the relay-token mint
+  immediately instead of sending the hub JWT in the clear to a scheme the
+  socket law would refuse at dial time anyway.
+- **Mechanism (RT-056, review tizen__secnet #1):** `QuickConnectPanel`
+  applyTokens now routes the base through the same
+  `sanitizeServerAddress` + `pushAddressHistory` edge as the Connect
+  writers (refuse → warn, no write; accept → mirror + become a re-seed
+  candidate). The `phlix.serverUrl` writer census (exactly two writers,
+  both gated) is recorded in the `resolveConfig` header.
+- **Mechanism (RT-057, review tizen__secnet #3):** `mintHubRelayToken`
+  gained an `allowInsecure` parameter (default: the
+  `VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY` hatch, same as the dial gate) and
+  throws `HubRelayInsecureTransportError` before any fetch on plaintext
+  http bases — the provider's existing reject-arm already degrades a
+  failed mint to null, so no call-site change. Tests that genuinely mint
+  moved to https bases; the two never-fetch provider pins deliberately
+  stayed http to prove the guard does not leak into non-mint paths.
+
+### Fixed — pairing codes can't be stamped by dead sessions; parental schedule form opens on demand; poison schedule rows degrade per-row; recommendation failures name the cause (2026-11-06)
+
+- **What users see:** starting a second pairing (dismiss-then-re-offer or a
+  base change) can no longer flash a stale short code from the abandoned
+  first attempt onto the live panel. The parental-controls schedule editor
+  starts closed — it used to sit open on every visit because its `v-if`
+  ended in `|| true` — and one malformed row from a degraded server drops
+  just that row instead of blanking the whole schedules panel with a
+  TypeError. When recommendations fail to load, the screen says so in the
+  app's own language first, with the raw network error underneath as
+  detail (previously a raw axios string replaced the localized headline).
+- **Mechanism (RT-055, review tizen__exploiter #4):** `createPairingSession`
+  keeps a named handle, re-checks `stopped` after the initiate round-trip
+  resolves BEFORE publishing the code, and stamps its own identity into
+  `onCode(code, expiresAt, session)`; the panel accepts a code only from
+  the session it currently holds.
+- **Mechanism (RT-053, review tizen__exploiter #6):** explicit
+  `scheduleFormOpen` ref driven by start/cancel/save, replacing the
+  scaffold's always-true condition.
+- **Mechanism (RT-054, review tizen__exploiter #5):** new pure
+  `src/parentalScheduleRows.ts` validates each wire row against the
+  contracts `AccessSchedule` shape (integer id, string name, clock-formatted
+  times with bounds, all-valid day lists, boolean `is_active`,
+  `profileId`/`profile_id` both accepted); invalid rows are DROPPED, which
+  is the safe direction for access windows — a partially-repaired schedule
+  could silently widen a child's allowed time.
+- **Mechanism (RT-052, review tizen__casualgamer #4):** headline is always
+  the catalog key; `errorDetail` carries the raw message only when the
+  throw is an `Error`.
+- Also: comment-only currency — the `phlix.serverUrl`/era-stamp notes in
+  `resolveConfig.ts` and `quickConnectClient.ts` now state the 415-tuple
+  fixture era (contracts #v0.5.6) instead of the retired 412-tuple one.
+
 ### Fixed — quick-connect refusal no longer blames the network; telemetry consent says only what is true; CSS-census red forward-fixed (2026-11-06)
 
 - **What users see:** pairing a TV against an old server now says "This

@@ -45,6 +45,13 @@ const TAGS = [
   { id: 2, profileId: 'prof-1', tag: 'family', tag_type: 'allowed' }
 ];
 
+/**
+ * RT-054: the schedules GET payload is a per-case knob so one test can serve
+ * a poison row beside a healthy one. beforeEach restores the healthy default.
+ */
+const HEALTHY_SCHEDULES: unknown[] = [SCHEDULE];
+let schedulesPayload: unknown[] = HEALTHY_SCHEDULES;
+
 /** S502: verb-recording capture — `{ method, url, body? }`, not just `{ url, body? }`. */
 const apiCalls: { method: string; url: string; body?: unknown }[] = [];
 
@@ -62,7 +69,7 @@ vi.mock('@phlix/ui', async () => ({
     async get<T = unknown>(url: string): Promise<T> {
       apiCalls.push({ method: 'GET', url });
       if (url.endsWith('/schedules')) {
-        return { schedules: [SCHEDULE] } as T;
+        return { schedules: schedulesPayload } as T;
       }
       if (url.endsWith('/tags')) {
         return { tags: TAGS } as T;
@@ -93,6 +100,7 @@ vi.mock('@phlix/ui', async () => ({
 describe('ParentalControlsPage wire shape (S325b)', () => {
   beforeEach(() => {
     apiCalls.length = 0;
+    schedulesPayload = HEALTHY_SCHEDULES;
   });
 
   it('renders the server snake_case schedule fields instead of blanks', async () => {
@@ -224,5 +232,55 @@ describe('ParentalControlsPage wire shape (S325b)', () => {
     } finally {
       clearTizenLocale();
     }
+  });
+
+  // ── RT-053 (review tizen__exploiter #6) — the add/edit form is conditional ──
+
+  it('RT-053: the schedule form is hidden at rest and opens only on Add or Edit', async () => {
+    // Pre-cure the form's v-if carried a literal `|| true` (vestigial from the
+    // scaffold), so the add/edit panel was ALWAYS rendered on first paint —
+    // the "empty slate" the exploiter review flagged, and a focus-pollution
+    // source on a D-pad device. The cure gates it on an explicit open intent.
+    const wrapper = mount(ParentalControlsPage);
+    await flushPromises();
+    expect(wrapper.find('#schedule-name').exists()).toBe(false);
+
+    await wrapper.find('.section__action').trigger('click'); // + Add Schedule
+    expect(wrapper.find('#schedule-name').exists()).toBe(true);
+
+    await wrapper.find('.cancel-btn').trigger('click');
+    expect(wrapper.find('#schedule-name').exists()).toBe(false);
+
+    await wrapper.find('.action-btn').trigger('click'); // Edit the seeded row
+    expect(wrapper.find('#schedule-name').exists()).toBe(true);
+  });
+
+  it('RT-053: saving a schedule closes the form (the terminal success path)', async () => {
+    const wrapper = mount(ParentalControlsPage);
+    await flushPromises();
+    await wrapper.find('.section__action').trigger('click');
+    await wrapper.find('#schedule-name').setValue('Closing window');
+    await wrapper.find('.save-btn').trigger('click');
+    await flushPromises();
+    expect(wrapper.find('#schedule-name').exists()).toBe(false);
+  });
+
+  // ── RT-054 (review tizen__exploiter #5) — one poison row cannot blank the panel ──
+
+  it('RT-054: a row with null times is dropped while its healthy sibling still renders', async () => {
+    // The server DTO carries SQL NULL verbatim into an unset time column.
+    // Pre-cure `formatTime(null)` threw inside the render — EVERY schedule,
+    // every field, vanished with it (blank panel, no error surface).
+    schedulesPayload = [
+      SCHEDULE,
+      { id: 8, profileId: 'prof-1', name: 'Broken', start_time: null, end_time: null, days_of_week: null, is_active: true },
+    ];
+    const wrapper = mount(ParentalControlsPage);
+    await flushPromises();
+
+    const items = wrapper.findAll('.schedule-item');
+    expect(items).toHaveLength(1);
+    expect(items[0].find('.schedule-item__name').text()).toBe('Weekday window');
+    expect(items[0].find('.schedule-item__time').text()).toContain('9:00');
   });
 });

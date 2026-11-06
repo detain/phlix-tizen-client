@@ -293,6 +293,69 @@ describe('quickConnectSession — orchestrator', () => {
     }
   });
 
+  // ── RT-055 (review tizen__exploiter #4) — a stopped session publishes nothing ──
+  it('RT-055: stop() while initiate is in flight publishes NO code and never enters pairing', async () => {
+    // The window the cure closes: the viewer dismissed the panel (or a fresh
+    // base superseded the session) WHILE the initiate request was still open.
+    // Pre-cure, the awaited offer was published unconditionally after the
+    // await — a dead session stamped its code onto the live surface, and the
+    // panel displayed a code whose polling loop had already exited.
+    let settle!: (value: unknown) => void;
+    const transport = {
+      get(endpoint: string): Promise<unknown> {
+        return Promise.reject(new Error(`unexpected GET ${endpoint}`));
+      },
+      post(endpoint: string): Promise<unknown> {
+        if (!endpoint.endsWith('/initiate')) {
+          return Promise.reject(new Error(`unexpected POST ${endpoint}`));
+        }
+        return new Promise((resolve) => {
+          settle = resolve;
+        });
+      },
+    };
+    const phases: PairingPhase[] = [];
+    const codes: string[] = [];
+    const session = createPairingSession({
+      client: transport as unknown as Parameters<typeof createPairingSession>[0]['client'],
+      identity: { deviceName: 'tv', deviceType: 'samsung-tizen' },
+      isVisible: () => true,
+      applyTokens: () => {},
+      onCode: (code) => codes.push(code),
+      onStatusChange: (phase) => phases.push(phase),
+      sleep: () => Promise.resolve(),
+    });
+    const running = session.run();
+    await Promise.resolve(); // let run() park on the initiate await
+    session.stop(); // viewer moved on while the request was open
+    settle({ code: 'STALE-1234', interval: 1 }); // the server answers LATE
+    await expect(running).resolves.toBe('abandoned');
+    // The whole point: the late offer dies with its session.
+    expect(codes).toHaveLength(0);
+    expect(phases).not.toContain('pairing');
+  });
+
+  it('RT-055: onCode stamps the owning session so the surface can drop stale writes', async () => {
+    // The identity half: publishing the code is not enough — the receiver must
+    // be able to prove WHICH session authored it. The handle itself rides the
+    // callback (no ids to invent); the panel compares it against its current
+    // session before writing, pinned in QuickConnectPanel.test.ts.
+    const client = new FakeTransport();
+    client.respond({ code: 'ABCD-1234', interval: 1 }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
+    const owners: unknown[] = [];
+    const session = createPairingSession({
+      client,
+      identity: { deviceName: 'tv', deviceType: 'samsung-tizen' },
+      isVisible: () => true,
+      applyTokens: () => {},
+      onCode: (_code, _exp, owner) => owners.push(owner),
+      sleep: () => Promise.resolve(),
+    });
+    await expect(session.run()).resolves.toBe('approved');
+    expect(owners).toHaveLength(1);
+    expect(owners[0]).toBe(session);
+  });
+
   it('intervalSeconds override wins over the server-published interval', async () => {
     const client = new FakeTransport();
     client.respond({ code: 'ABCD-1234', interval: 9 }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });

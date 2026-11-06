@@ -21,6 +21,7 @@ import { useApiBase } from '@phlix/ui';
 import { useAuthStore, type AuthUser } from '@phlix/ui';
 import { tTizen, type TizenMessageKey } from '../i18n/tizen';
 import { stepTime, STEP_QUARTER_MINUTES, STEP_HOUR_MINUTES } from '../parentalTimeStepper';
+import { normalizeScheduleRows } from '../parentalScheduleRows';
 import type {
   AccessSchedule,
   DayOfWeek,
@@ -73,6 +74,16 @@ const errorLimits = ref<string | null>(null);
 // ── Schedule editing ───────────────────────────────────────────────────────
 
 const editingSchedule = ref<AccessSchedule | null>(null);
+/**
+ * RT-053 (review tizen__exploiter #6): explicit open-intent flag for the
+ * add/edit panel. The form's v-if carried a literal `|| true` from the
+ * scaffold era, so the condition was constant-true and the editor rendered on
+ * every first paint — hidden focus targets on a D-pad device and a misleading
+ * "already editing" slate. The flag now opens on Add/Edit, closes on cancel
+ * and on a successful save (the arms editingSchedule alone could not drive:
+ * create keeps the id null while still being an open form).
+ */
+const scheduleFormOpen = ref(false);
 const scheduleForm = ref({
   name: '',
   startTime: '08:00:00',
@@ -94,6 +105,7 @@ const DAYS: { label: string; value: DayOfWeek }[] = [
 
 function startCreateSchedule(): void {
   editingSchedule.value = null;
+  scheduleFormOpen.value = true;
   scheduleForm.value = {
     name: '',
     startTime: '08:00:00',
@@ -105,6 +117,7 @@ function startCreateSchedule(): void {
 
 function startEditSchedule(schedule: AccessSchedule): void {
   editingSchedule.value = schedule;
+  scheduleFormOpen.value = true;
   scheduleForm.value = {
     name: schedule.name,
     // S325b: the server emits snake_case on the wire (AccessSchedule::toArray);
@@ -119,6 +132,7 @@ function startEditSchedule(schedule: AccessSchedule): void {
 
 function cancelEditSchedule(): void {
   editingSchedule.value = null;
+  scheduleFormOpen.value = false;
 }
 
 function toggleDay(day: DayOfWeek): void {
@@ -165,6 +179,7 @@ async function saveSchedule(): Promise<void> {
       });
     }
     editingSchedule.value = null;
+    scheduleFormOpen.value = false;
     await loadSchedules();
   } catch (_e) {
     // Keep editing open on error
@@ -284,10 +299,15 @@ async function loadSchedules(): Promise<void> {
 
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
-    const data = await client.get<{ schedules: AccessSchedule[] }>(
+    // RT-054 (review tizen__exploiter #5): the list is PARSED, not cast. The
+    // DTO carries SQL NULL verbatim into unset columns, and the old blind
+    // `data.schedules ?? []` cast let a null time crash formatTime() inside
+    // the v-for — blanking every healthy row with it. normalizeScheduleRows
+    // (src/parentalScheduleRows.ts) drops only the poison rows.
+    const data = await client.get<{ schedules: unknown }>(
       `/api/v1/profiles/${seg(pid)}/schedules`
     );
-    schedules.value = data.schedules ?? [];
+    schedules.value = normalizeScheduleRows(data.schedules);
   } catch (e) {
     errorSchedules.value = e instanceof Error ? e.message : tTizen('parentalControls.failedSchedules');
     schedules.value = [];
@@ -546,7 +566,7 @@ onMounted(loadAll);
 
       <!-- Schedule Form -->
       <div
-        v-if="editingSchedule !== null || scheduleForm.name !== '' || true"
+        v-if="scheduleFormOpen"
         class="schedule-form"
       >
         <h3 class="form__title">

@@ -397,10 +397,10 @@ describe('mintHubRelayToken — the hub S2a mint endpoint', () => {
       ok: true,
       json: async () => ({ token: 'relay-tok', expires_at: 1_700_003_600 }),
     })) as unknown as typeof fetch;
-    const minted = await mintHubRelayToken('http://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl);
+    const minted = await mintHubRelayToken('https://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl);
     expect(minted).toEqual({ token: 'relay-tok', expiresAt: 1_700_003_600 });
     expect(fetchImpl).toHaveBeenCalledWith(
-      'http://hub.example.test/api/v1/me/servers/srv-abc123/relay-token',
+      'https://hub.example.test/api/v1/me/servers/srv-abc123/relay-token',
       expect.objectContaining({
         method: 'POST',
         headers: { Authorization: 'Bearer hub-jwt' },
@@ -410,14 +410,14 @@ describe('mintHubRelayToken — the hub S2a mint endpoint', () => {
 
   it('returns null on a non-2xx response', async () => {
     const fetchImpl = vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) })) as unknown as typeof fetch;
-    expect(await mintHubRelayToken('http://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl)).toBeNull();
+    expect(await mintHubRelayToken('https://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl)).toBeNull();
   });
 
   it('returns null on a network error', async () => {
     const fetchImpl = vi.fn(async () => {
       throw new Error('ECONNREFUSED');
     }) as unknown as typeof fetch;
-    expect(await mintHubRelayToken('http://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl)).toBeNull();
+    expect(await mintHubRelayToken('https://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl)).toBeNull();
   });
 
   it('returns null on a malformed body', async () => {
@@ -425,7 +425,32 @@ describe('mintHubRelayToken — the hub S2a mint endpoint', () => {
       ok: true,
       json: async () => ({ token: 42 }),
     })) as unknown as typeof fetch;
-    expect(await mintHubRelayToken('http://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl)).toBeNull();
+    expect(await mintHubRelayToken('https://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl)).toBeNull();
+  });
+
+  // ── RT-057 (review tizen__secnet #3) — the mint sends a bearer credential ──
+  it('RT-057: REFUSES a plaintext hub base before the hub JWT leaves the device', async () => {
+    // The dial law (buildHubRelayUrl) already refuses plaintext, but it runs
+    // AFTER the provider may have minted; an https-only relay base reached
+    // over an http hub origin would still POST `Authorization: Bearer <jwt>`
+    // in the clear. The mint now guards its OWN edge, same error, same hatch.
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ token: 'x', expires_at: 1 }) })) as unknown as typeof fetch;
+    await expect(
+      mintHubRelayToken('http://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl),
+    ).rejects.toBeInstanceOf(HubRelayInsecureTransportError);
+    expect(fetchImpl).not.toHaveBeenCalled(); // refusal is PRE-request
+  });
+
+  it('RT-057: the refusal names the escape hatch, and the explicit allowance ships http', async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ token: 'x', expires_at: 1 }) })) as unknown as typeof fetch;
+    await expect(
+      mintHubRelayToken('http://hub.example.test', SERVER_ID, 'hub-jwt', fetchImpl),
+    ).rejects.toThrow(HUB_RELAY_INSECURE_DEV_HATCH_ENV);
+    // Symmetric with the dial law's third arm: the injected allowance mints.
+    const hatchImpl = vi.fn(async () => ({ ok: true, json: async () => ({ token: 'relay-tok', expires_at: 1_700_003_600 }) })) as unknown as typeof fetch;
+    const minted = await mintHubRelayToken('http://hub.example.test', SERVER_ID, 'hub-jwt', hatchImpl, true);
+    expect(minted).toEqual({ token: 'relay-tok', expiresAt: 1_700_003_600 });
+    expect(hatchImpl).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -438,7 +463,7 @@ describe('createRelayTokenProvider — the cached minting provider', () => {
       json: async () => ({ token: 'relay-tok', expires_at: Math.floor(Date.now() / 1000) + 3600 }),
     })) as unknown as typeof fetch;
     const provider = createRelayTokenProvider({
-      hubBaseUrl: 'http://hub.example.test',
+      hubBaseUrl: 'https://hub.example.test',
       serverId: SERVER_ID,
       accessTokenProvider: () => 'hub-jwt',
       fetchImpl,
@@ -459,7 +484,7 @@ describe('createRelayTokenProvider — the cached minting provider', () => {
       json: async () => ({ token: 'relay-tok', expires_at: now + 5 }),
     })) as unknown as typeof fetch;
     const provider = createRelayTokenProvider({
-      hubBaseUrl: 'http://hub.example.test',
+      hubBaseUrl: 'https://hub.example.test',
       serverId: SERVER_ID,
       accessTokenProvider: () => 'hub-jwt',
       fetchImpl,
@@ -503,7 +528,7 @@ describe('createRelayTokenProvider — the cached minting provider', () => {
       return { ok: false, status: 401, json: async () => ({}) };
     }) as unknown as typeof fetch;
     const provider = createRelayTokenProvider({
-      hubBaseUrl: 'http://hub.example.test',
+      hubBaseUrl: 'https://hub.example.test',
       serverId: SERVER_ID,
       accessTokenProvider: () => 'hub-jwt',
       fetchImpl,

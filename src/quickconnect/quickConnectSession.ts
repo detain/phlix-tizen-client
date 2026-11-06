@@ -21,6 +21,12 @@
  * route), the session says so instead of blaming the network, and the surface
  * routes the viewer to the password pill.
  *
+ * RT-055 (review tizen__exploiter #4) sharpens what `stop()` MEANS: a session
+ * stopped while its initiate request is in flight now publishes NOTHING when
+ * the answer lands late, and every code publication stamps the owning handle
+ * so the surface can prove which session authored what it is being asked to
+ * display. A superseded session is silent, not merely exited.
+ *
  * Never hammers: the cadence prefers an explicit override, then the
  * server-published `interval`, then a conservative default; transient network
  * faults back off exponentially against a ceiling, and while the surface is
@@ -103,8 +109,16 @@ export interface PairingSessionDeps {
   isVisible: () => boolean;
   /** The EXISTING token-store seam — the caller wires `useAuthStore().setTokens`. */
   applyTokens: (tokens: RedeemedTokens) => void;
-  /** Surface the short code (+ optional absolute expiry, unix seconds). */
-  onCode: (code: string, expiresAtSeconds: number | null) => void;
+  /**
+   * Surface the short code (+ optional absolute expiry, unix seconds).
+   * RT-055 (review tizen__exploiter #4): the third argument identifies the
+   * session that produced the offer, so a surface holding a SUPERSEDED
+   * session can be refused — the panel compares it against its current
+   * handle before writing. Without it, a late response from a dead session
+   * stamped its code onto the live pairing screen (and the viewer could
+   * approve a code whose poller had already exited).
+   */
+  onCode: (code: string, expiresAtSeconds: number | null, session: PairingSession) => void;
   /** Observe every phase transition (for the on-screen caption). */
   onStatusChange?: (phase: PairingPhase) => void;
   /** Injectable sleeper so tests drive time without fake timers. */
@@ -184,7 +198,7 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
     return phase;
   };
 
-  return {
+  const handle: PairingSession = {
     isFinished: () => finished,
 
     stop(): void {
@@ -212,7 +226,16 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
         }
         return finish('error');
       }
-      deps.onCode(offer.code, offer.expiresAtSeconds);
+      // RT-055 (review tizen__exploiter #4): the initiate await opened a
+      // window in which the surface could move on (dismiss, re-base,
+      // unmount — all call stop() endSession-style). Pre-cure the late offer
+      // was published UNCONDITIONALLY after the await: the dead session
+      // stamped its code on the live panel and entered `pairing` even though
+      // its poll loop exited on the very next check. The stopped re-read
+      // closes the publish race at the await boundary; the handle stamp lets
+      // the surface reject anything that still arrives out of order.
+      if (stopped) return finish('abandoned');
+      deps.onCode(offer.code, offer.expiresAtSeconds, handle);
       emit('pairing');
 
       // Review m17 — CLIENT-SIDE EXPIRY BELT. `expiresAtSeconds` used to be
@@ -283,6 +306,12 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
       return finish('abandoned');
     },
   };
+
+  // RT-055: a NAMED handle — `run()` can stamp its own identity into the
+  // onCode publication (the closure over an anonymous object literal could
+  // not reference itself), which is what lets the surface refuse stale
+  // writes from superseded sessions.
+  return handle;
 }
 
 export { TERMINAL_PHASES };

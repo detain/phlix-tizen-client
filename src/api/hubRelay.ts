@@ -63,6 +63,7 @@
 
 /** The hub relay's SyncPlay WebSocket port (SyncPlayRelayWorker::DEFAULT_PORT). */
 import { parsePathOverride, parsePortOverride } from '../endpointOverrides';
+import { isPlaintextCredentialBase } from '../resolveConfig';
 
 export const HUB_SYNC_PLAY_PORT = 8804;
 
@@ -307,13 +308,39 @@ export interface MintedRelayToken {
  * access JWT in the `Authorization` header. Returns `null` on any failure
  * (non-2xx, network error, malformed body) — the caller degrades to "socket
  * stays closed" rather than presenting a bad credential.
+ *
+ * RT-057 (review tizen__secnet #3): the mint carries the hub ACCESS JWT — a
+ * full account credential — so the M-TIZEN-06 TLS law applies to THIS request
+ * too, not just the relay dial it feeds. The dial layer's refusal of a
+ * plaintext base runs later than the provider may already have minted, so the
+ * mint guards its own edge: a plaintext http: hub base THROWS
+ * {@link HubRelayInsecureTransportError} (never `null` — this is a policy
+ * refusal, not a transient fault) before one byte leaves the device, unless
+ * the same explicitly-injected dev allowance the dial honors is passed.
+ * `resolveHubRelayConfig`'s server-origin fallback can hand this function an
+ * http: base on a LAN server; the guard makes that combination loud instead
+ * of quietly credential-bearing. The provider's rejection arm already
+ * degrades a throwing mint to `null` (socket stays closed, ladder re-asks),
+ * so production behavior for the poisoned-config case is unchanged apart
+ * from the JWT never crossing plaintext.
  */
 export async function mintHubRelayToken(
   hubBaseUrl: string,
   serverId: string,
   accessToken: string,
   fetchImpl: typeof fetch = fetch,
+  allowInsecure: boolean = insecureRelayHatchEnabled(),
 ): Promise<MintedRelayToken | null> {
+  if (!allowInsecure && isPlaintextCredentialBase(hubBaseUrl)) {
+    throw new HubRelayInsecureTransportError(
+      `relay-token mint to ${hubBaseUrl} refused: the mint POSTs the hub access ` +
+        `JWT in the Authorization header, so a plaintext http: hub base would ` +
+        `broadcast the account credential on the local network. Configure an ` +
+        `https:// hub URL; for LOCAL TESTING ONLY you may build with ` +
+        `${HUB_RELAY_INSECURE_DEV_HATCH_ENV}=1, which mints (and dials) over ` +
+        `unencrypted http/ws and is never release-safe.`,
+    );
+  }
   let response: Response;
   try {
     response = await fetchImpl(`${hubBaseUrl.replace(/\/+$/, '')}/api/v1/me/servers/${encodeURIComponent(serverId)}/relay-token`, {
