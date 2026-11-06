@@ -345,29 +345,35 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ a6c9d466 == @phlix/ui v0.99.19 — RE-SYNCED at this pin (the
-    // held run ended), and HELD unchanged at the v0.99.20 re-pin (2026-11-06:
-    // the signed-URL `playlist_url` cure moved only ui player code + the
-    // stamp-bearing dist entries; `git diff a6c9d466..e48d8d02 -- src/i18n`
-    // EMPTY and all seven v0.99.20 tag-payload locale files re-hashed
-    // byte-identical to their PIN source hashes — ref, all fourteen hashes
-    // and SOURCE_REF untouched): the v0.99.19 wave moved ui locale SOURCE — `git diff
-    // 2158564a..a6c9d466 -- src/i18n` NON-empty: the six bundle files + the
-    // messages.ts catalog each gained the one `player.audioOriginal` leaf
-    // (523→524 keys; the copy behind ui's synthesized "Original" audio
-    // entry) — while v0.99.18 itself HELD src/i18n (`git diff
-    // b958fb574..2158564a -- src/i18n` EMPTY — the RUNGMASTER wave), so one
-    // re-anchor steps from the v0.99.15-era pin across both. The errors.ts
-    // delta is docblock wording (523-key prose → 524-key), locales.test.ts
-    // is ui-internal test growth — never vendored; the installed↔bundle
+    // Vendored @ 01acaa12 == @phlix/ui v0.99.21 — RE-SYNCED at this pin (the
+    // a6c9d466-era held run ended here): the v0.99.21 theme-persistence wave
+    // moved ui locale SOURCE — `git diff a6c9d466..01acaa12 -- src/i18n`
+    // NON-empty: the six bundle files + the messages.ts catalog each gained
+    // the two `settings.themeCatalogueUnavailable` / `settings.themeSavedLocally`
+    // leaves (524→526 keys; the Appearance-picker disclosures ui ships when the
+    // theme catalogue fails or a theme PUT stays on-device-only). The
+    // errors.ts + errors.test.ts deltas in that range are 524→526-key prose
+    // and ui-internal test growth — never vendored; the installed↔bundle
     // key-set equality demanded the conscious re-sync this leg took (both
-    // equality legs measured RED on the v0.99.19 install BEFORE the sync —
-    // `es missing installed keys: ['player.audioOriginal']` + `524 ≠ 523`):
-    // ref re-anchored 36c04fbe→a6c9d466 and 12 of the fourteen PIN hashes
-    // rotated with it, the index.ts pair HOLDING because ui's locales/
-    // index.ts is byte-stable across those pins; bundles and the installed
-    // copy re-synced TOGETHER here, so both equality directions hold by
-    // construction again. Prior eras for the record: 36c04fbe == v0.99.15
+    // equality legs measured RED on the v0.99.21 install BEFORE the sync —
+    // `es missing installed keys: ['settings.themeCatalogueUnavailable',
+    // 'settings.themeSavedLocally']` + `526 ≠ 524`): ref re-anchored
+    // a6c9d466→01acaa12 and 12 of the fourteen PIN hashes rotated with it,
+    // the index.ts pair HOLDING because ui's locales/index.ts is byte-stable
+    // across those pins; bundles and the installed copy re-synced TOGETHER
+    // here, so both equality directions hold by construction again. Prior
+    // eras for the record: a6c9d466 == v0.99.19 (re-synced at its pin —
+    // `git diff 2158564a..a6c9d466 -- src/i18n` NON-empty: the same six-file
+    // SOURCE move, each bundle + messages.ts gaining the one
+    // `player.audioOriginal` leaf (523→524; the copy behind ui's synthesized
+    // "Original" audio entry) while v0.99.18 itself HELD src/i18n (`git diff
+    // b958fb574..2158564a -- src/i18n` EMPTY — the RUNGMASTER wave); 12 of
+    // fourteen rotating, index pair holding), then HELD at the v0.99.20
+    // re-pin (`git diff a6c9d466..e48d8d02 -- src/i18n` EMPTY — the signed-URL
+    // `playlist_url` cure moved only ui player code + the stamp-bearing dist
+    // entries; all seven tag-payload locale files re-hashed byte-identical to
+    // their PIN source hashes — ref, all fourteen hashes and SOURCE_REF
+    // untouched, era comment advanced stamp-only); 36c04fbe == v0.99.15
     // (re-synced at its pin — the identical six-file SOURCE move, 12 of
     // fourteen rotating, index pair holding), then HELD at the v0.99.16 +
     // v0.99.17 re-pins (`git diff 36c04fbe..4d89b3a7 -- src/i18n` and

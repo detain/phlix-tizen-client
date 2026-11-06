@@ -485,6 +485,8 @@ export const JA_MESSAGES = {
   },
   settings: {
     theme: 'テーマ',
+    themeCatalogueUnavailable: 'テーマカタログを取得できないため、内蔵テーマを表示しています。',
+    themeSavedLocally: 'この端末にのみ保存されました（サーバーには保存できませんでした）。',
     accent: 'アクセント',
     accentColor: 'アクセントカラー',
     display: '表示',

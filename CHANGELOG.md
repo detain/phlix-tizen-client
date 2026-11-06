@@ -34,6 +34,87 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — ui #v0.99.21 re-pin: theme choices now persist per-user server-side; Appearance-picker disclosures + catalogue force-refresh; locale bundles REAL re-vendor (PIN rotated 524→526) — 2026-11-06
+
+- **What users see:** a theme picked on this TV follows the signed-in user
+  across devices and sessions — the Appearance choice round-trips through the
+  EXISTING `GET|PUT /api/v1/users/me/settings` account endpoint (the same seam
+  the track-language memory already reuses; zero new routes), and a choice
+  made on another portal/device is adopted on login. When the theme catalogue
+  cannot load, or a save stays device-only, the picker now says so honestly
+  instead of degrading silently; a plugin enabled after page load surfaces in
+  the picker without a full reload (catalogue force-refresh at mount); the
+  Plugins page carries the per-user theme copy. Requires a phlix-server at
+  `7d15183b`-shape for persistence; against older servers the sync is a silent
+  no-op and every prior behavior stands.
+- **Pin leg:** `@phlix/ui` `#v0.99.20`→`#v0.99.21` (one tag crossed; tag object
+  `bf70c58f1f1dc0fbb549cd6f69a3c807875b9a03`, peel
+  `01acaa1264736fa9c744fc902044c9ad511b93ba` == ui master tip, ls-remote
+  verified; codeload 200 @ 26,780,271 B; v0.99.20 peel proven ancestor).
+  `package-lock.json` surgical 3+/3- (root edge spec + ui node version/
+  resolved — resolved lands on the peel); contracts `#v0.5.6` + syncplay
+  `#v0.1.7` HELD — the tag's own `package.json` carries the identical edges
+  (checked, not recalled). npm11 idempotency proven (2nd install
+  byte-identical); installed tree `diff -r` vs the codeload tag payload: zero
+  content differences (only-in-tag = ui source, correctly excluded by
+  `files:[dist]`); `dist/phlix-ui.js` md5 `7e4c16b5b1bd3c2630e8c1435875f992`,
+  `dist/player.js` md5 `fcb3596cf78dc7ecf67228b18b31152e` and carrier
+  `PlayerPage-BTz2s3yI.js` md5 `5b5ac8271efe2ab3ce8c808bc29ea326` all match
+  the .21 release register.
+- **Locale leg:** REAL re-vendor — the .20 held run ends: `git diff
+  a6c9d466..01acaa12 -- src/i18n` NON-empty (the six bundle files + the
+  installed `messages.ts` each gained the `settings.themeCatalogueUnavailable`
+  + `settings.themeSavedLocally` leaves, catalog 524→526, +2 per locale × 6).
+  RED-FIRST measured on the .21 install BEFORE the sync — both equality legs
+  red: `es missing installed keys: ['settings.themeCatalogueUnavailable',
+  'settings.themeSavedLocally']` and `expected 526 to be 524` (raw log
+  retained with this lane's register). Re-synced at the peel via
+  `scripts/sync-ui-locale-bundles.mjs --ref 01acaa12…`; ref
+  `a6c9d466`→`01acaa12` and 12 of the fourteen PIN hashes ROTATED (source +
+  vendored pair for each of six bundle files), the index.ts pair HOLDING
+  byte-identical (`f5c2011a` source / `fb4fa495` vendored — ui's locales
+  `index.ts` is byte-stable across the pin, the fourth wave running);
+  `SOURCE_REF` in the sync script rotated with the PIN (the suite hard-pins
+  constant == PIN); era docblock rewritten in
+  `tests/unit/i18nLocales.test.ts`. Post-sync: all three locale suites green
+  (90 tests, incl. the sibling SOURCE-parity leg at the real peel).
+- **Widget leg:** `package/` regenerated — 31 JS chunk renames + `index.html`
+  rewire + the entry CSS chunk ROTATED `index-BqeiLgxA.css` →
+  `index-u1vjsYdH.css` (the `.aps__hint` disclosure styles from the .21 theme
+  wave crossed it; it had held since the .17 re-greps). PlayerPage carrier
+  rotated `PlayerPage-BUnWXFam-*` → `PlayerPage-BTz2s3yI-C5eG8fum.js` (the ui
+  register flagged this rotation for consumers up front). Embedded ui stamp
+  `0.99.20`→`0.99.21` single site (`index-BS813AAP.js`), zero stale. LAW
+  GREPS: `playlist_url`, `_master.m3u8` and `rung mini-master unavailable`
+  ship in the new carrier; the new `users/me/settings` +
+  `themeCatalogueUnavailable` strings ship in `index-*.js` (the latter also in
+  `SettingsPage-*.js`). Determinism ×2 `diff -r`-identical; aggregate md5
+  under the disclosed recipe `find package -type f | sort | xargs md5sum |
+  md5sum`: `90359d9a6ea00502387f29daf8e6e51a` (.20 bytes) →
+  `fa496906e734400922df55595773b896` (.21 bytes), 42 files (the .20 entry's
+  `022d5991…` figure predates recipe disclosure and is not re-derivable here —
+  determinism rides the `diff -r` proof, not the aggregate). Freshness-gate
+  sim after staging: rebuild left `package/` byte-identical to the index
+  (build.yml "Assert committed package/ is fresh" holds).
+- **Gate ledgers advanced (measured, not recalled):** serial vitest EXACT 66
+  files / 1128 tests / 0 skipped at the PARENT tree AND post-change — zero
+  suite churn (the .21 feature rides entirely inside the sealed bundle; no
+  host-side test is added or moved). docsPinConsistency MEASURED 6 red arms
+  (badge, Tech Stack, DEVELOPER, i18n seam, AGENTS, CLAUDE) → rotated → 9/9.
+  `distApiFloor` NOT rotated — green on the new bytes. typecheck 0;
+  typecheck:tests 0; lint 0; audit-gate PASS (same 2 allow-listed dev-chain
+  ids, zero new); build rc 0; package rc 0 ×2 + post-stage ×1.
+- **Docs leg:** README badge + Tech Stack, DEVELOPER, AGENTS, CLAUDE,
+  docs/i18n seam rotated; docs/ui-port-divergence six rows re-grepped at
+  v0.99.21 bytes — all FACT-UNCHANGED (wsUrl/wsPath still `SyncPlayModal-*.js`
+  + `index-*.js`; canManagePlaylist recursive dist count re-measured 5;
+  `(shared — read-only)` picker still `index-*.js` — the widget build still
+  folds MediaCard into index; invite-links still `McpTokensPage-*` only with
+  codes + `redeem` in `index-*.js`; `new Audio` still 1 `MusicLibraryPage-*`
+  site with `mediaSession` video-path-only; escape pattern still
+  `useItemInspector-*.js`; bare `access_token` hoist name walked `Zr`→`Xr` at
+  .21 — minifier churn, the LITERAL law holds; chain through v0.99.21).
+
 ### Changed — ui #v0.99.20 re-pin: the bundle consumes server-minted signed playlist URLs verbatim (pinned-quality "can't play" class closed); locale PIN held — 2026-11-06
 
 - **What users see:** the fresh-tab pinned-quality failure introduced by the

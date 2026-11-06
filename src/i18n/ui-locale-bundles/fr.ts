@@ -488,6 +488,8 @@ export const FR_MESSAGES = {
   },
   settings: {
     theme: 'Thème',
+    themeCatalogueUnavailable: 'Catalogue de thèmes indisponible — affichage des thèmes intégrés.',
+    themeSavedLocally: 'Enregistré sur cet appareil uniquement — le serveur n’a pas pu l’enregistrer.',
     accent: 'Accentuation',
     accentColor: 'Couleur d’accentuation',
     display: 'Affichage',

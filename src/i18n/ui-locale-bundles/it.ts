@@ -484,6 +484,8 @@ export const IT_MESSAGES = {
   },
   settings: {
     theme: 'Tema',
+    themeCatalogueUnavailable: 'Catalogo temi non disponibile: vengono mostrati i temi integrati.',
+    themeSavedLocally: 'Salvato solo su questo dispositivo: il server non ha potuto salvarlo.',
     accent: 'Accento',
     accentColor: 'Colore accento',
     display: 'Schermo',
