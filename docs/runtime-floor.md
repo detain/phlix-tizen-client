@@ -56,12 +56,16 @@ The same floor applies to the shipped stylesheet — an unsupported selector or
 property in modern CSS drops **the whole rule**, silently. Census measured
 2026-11-03 (batch-3 rebuild, review-lane `e2995a7` successor) over the single
 committed stylesheet `package/assets/index-*.css` (hash-agnostic read — the
-whole bundle emits exactly one CSS file), all figures re-derived from disk:
+whole bundle emits exactly one CSS file), all figures re-derived from disk;
+re-measured 2026-11-06 after the `@phlix/ui` #v0.99.22 re-vendor — the ambient
+canvas cure (`.player__ambient`) emits one more `inset:` site (41→42, the two
+negative-inset declarations of the new keyframed layers minus one media-query
+rule hoisted at build time); every other figure held:
 
 | Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
 |---|---|---|---|
 | `:focus-visible` | Chrome **86** | 157 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. |
-| `inset:` | Chrome **87** | 41 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
+| `inset:` | Chrome **87** | 42 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
 | `aspect-ratio` | Chrome **88** | 36 | Boxes size from content/height instead of the ratio — cards may stretch. |
 | `accent-color` | Chrome **93** | 8 | Form controls keep UA default colors — cosmetic only. |
 | `:has()` | Chrome **105** | 1 | The one rule (`.register-form__segment:has(input:checked)`, a segmented-control highlight) drops — the state stays unstyled. Upstream cosmetic half (ui repo), pinned here so its arrival/movement is visible. |

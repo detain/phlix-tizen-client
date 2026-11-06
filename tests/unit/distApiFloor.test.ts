@@ -263,8 +263,14 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // `.phlix-input.is-invalid .phlix-input__field:focus-visible` (invalid-
       // state input ring; vendored surface, attributed via a scope-hash-
       // stripped selector-set diff of the old vs new committed stylesheet).
+      // 41→42: ui #v0.99.22 re-vendor (ambient-canvas fps cure) — the new
+      // `.player__ambient` layers carry two negative `inset:` declarations and
+      // one media-query rule was hoisted at build time: net +1 site (the
+      // pre-existing red at the v0.99.22 re-vendor commit, attributed by a
+      // selector-set diff of index-u1vjsYdH.css vs index-DzrZJodb.css and
+      // cured here; docs/runtime-floor.md table re-measured in the same change).
       expect(countAcrossCss(':focus-visible')).toBe(157);
-      expect(countAcrossCss('inset:')).toBe(41);
+      expect(countAcrossCss('inset:')).toBe(42);
       expect(countAcrossCss('aspect-ratio')).toBe(36);
       expect(countAcrossCss('accent-color')).toBe(8);
     });

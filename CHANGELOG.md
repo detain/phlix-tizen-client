@@ -34,6 +34,84 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — quick-connect refusal no longer blames the network; telemetry consent says only what is true; CSS-census red forward-fixed (2026-11-06)
+
+- **What users see:** pairing a TV against an old server now says "This
+  server can’t do code sign-in yet — it needs updating. Use your password
+  instead." instead of "Could not reach the server." (never true of a server
+  that answered); the telemetry consent card no longer promises "You can
+  change this anytime" — that surface does not exist — and states the card is
+  the only place to decide, nothing sent until you choose.
+- RT-050 (review tizen__casualgamer #2): `createPairingSession` splits initiate
+  failures by ANSWER — an answered 4xx (a pre-quick-connect server 404-ing the
+  unknown route, or a 400/405 refusal) resolves the new calm terminal phase
+  `unsupported`; the status is read STRUCTURALLY off the thrown value (ui's
+  `ApiError` carries it; no upstream class identity, plain-Error fakes stay
+  honest), while no-answer throws keep the network-blaming `error`, and 429
+  plus 5xx deliberately stay retry-bearing `error` — a rate limit or a broken
+  endpoint is not a capability refusal. `unsupported` shows NO "Try again"
+  (re-asking an old server cannot change its answer); the always-mounted
+  password pill is the exit the copy names. New key `quickConnect.unsupported`
+  across all seven Tizen locales; session pins cover 400/404/405, no-answer,
+  429 and 503; the panel suite pins both arms plus the retry absence.
+- RT-051 (review tizen__casualgamer #3): `telemetry.body` reworded ×7 locales to
+  the `CONSENT_KEY` truth — the card is the only decision surface (a Settings
+  row stays an unshipped future option; nothing in the vendored ui bundle or
+  this client reopens the decision). The `tizenI18n` EN copy pin rotates in
+  the same commit.
+- The Tizen-OWN catalog key-count pin rotates 188→189 from the measured red in
+  this adding commit (the `TizenCatalog` satisfies law + the both-directions
+  key-set identity held across all seven locales without a single edit); the
+  vendored ui-bundle locale PINs are UNTOUCHED — this lane ships no ui-catalog
+  bytes and the v0.99.22 hold stays byte-true.
+- **Attributed forward-fix (pre-existing at tip):** the `distApiFloor` CSS
+  census was red on master — `inset:` measured 42 against the pinned 41. The
+  site arrived with the ui #v0.99.22 re-vendor's ambient-canvas cure
+  (selector-set diff of the then-committed `index-DzrZJodb.css` against the
+  v0.99.21 `index-u1vjsYdH.css`; the release commit's gates claim predates
+  it). The pin rotates to 42 here and `docs/runtime-floor.md` re-derives its
+  table row in the same change (every other figure held).
+
+### Changed — route-manifest fixture takes the 415-tuple re-vendor; stale-era docblock stamps cured; package/ regenerated (2026-11-06)
+
+- LW-033 (behavior-neutral): `tests/fixtures/server-route-manifest.json`
+  re-vendored byte-identical to the pinned contracts #v0.5.6 artifact —
+  412→415 tuples, server `58530ec2…`, md5 `90b79e35…` (cs#48's estate-wide
+  rotation; Tizen was the last hold-out). The three additions
+  (`GET /api/v1/me/history`, `GET /api/v1/servers/{id}`,
+  `GET /api/v1/users/me/history`) are additions-only and never issued from this
+  client — the gate's per-file scan coverage stays 27, and the S279 dead-rail
+  tripwires re-verified false on the new bytes. Provenance pins (serverSha /
+  total / length / md5 / unique) rotated from the measured two-assert red
+  inside this commit; the header narrative's false "shares disposition with the
+  console/roku CHECK legs this wave" cross-claim (both had already moved) is
+  corrected in the same pass. The gate reads the vendored fixture only — zero
+  behavior change.
+- LW-035: `VERIFICATION.md` Step 1.4 carries the audit-date-annotation —
+  `@phlix/tokens` rides #v0.2.1 through the ui devPin era (append-style
+  correction; the v0.1.1 finding line stays as history).
+- LW-037-a / LW-038: the register-named stale-era stamps are cured — `main.ts`
+  drops "(v0.53.0)" (a phlix-shared version line has no place crediting the
+  `playerHlsConfig` seam; cited by name, re-verified in the vendored dist) and
+  the `v0.99.10` errorHandler-provenance literal (the no-default-handler claim
+  re-grep-proven against the pinned bundle: zero `config.errorHandler`);
+  `syncplayDispatch.ts`'s dead premise is rewritten — v0.99.0 did NOT predate
+  `resolvePendingMedia`: the prop exists on the vendored `Player.vue` surface
+  but carries no `createPhlixApp` config seam, so this module remains the
+  Tizen half of the load path (conclusion stands, reasoning corrected); the
+  admin CSS docblock now records the UI-3.3 REJECTION upstream (the split
+  orphaned ~248 KB and shipped the app unstyled; the `dist-css-bundle` guard
+  holds) instead of calling it an open follow-up — posture ACCEPT-TV-COST, with
+  the measured current sizes (ui `style.css` ~447 KB; widget entry CSS ~482 KB).
+- `package/` regenerated in this commit (shipped JS + i18n changed):
+  deterministic ×2, 42 files, aggregate md5 `635c697f12a16f1c59e8c98afc02d1e5`
+  (recipe: `find package -type f | LC_ALL=C sort | xargs md5sum | md5sum`),
+  entry chunk rotated (`index-Yld_BPQH.js`), zero `0.99.21` residue, version
+  stamp `0.99.22` carried.
+- Gates: vitest serial 66 files / 1133 passed (baseline 1128, +5 new pins
+  disclosed above, +1 red cured); `typecheck`, `typecheck:tests`, `lint` all
+  clean.
+
 ### Changed — ui #v0.99.22 re-pin: the player presents its full frame rate (no live CSS blurs on the playing path); locale PIN held; package/ regenerated (2026-11-06)
 
 - **What users see:** smoother video. v0.99.22 stops the player page re-rasterising

@@ -262,6 +262,37 @@ describe('quickConnectSession — orchestrator', () => {
     expect(h.applied).toHaveLength(0);
   });
 
+  // ── RT-050 (review tizen__casualgamer #2) — initiate refusals split by ANSWER.
+  // Pre-cure every initiate throw became the network-blaming `error`; a server
+  // that 404s the unknown quick-connect route never touched a failed network.
+  it('RT-050: an answered 4xx refusal on initiate resolves unsupported, not error', async () => {
+    for (const status of [400, 404, 405]) {
+      const client = new FakeTransport();
+      client.respond(Object.assign(new Error('quick-connect refused'), { status }));
+      const h = harness(client);
+      await expect(h.session.run()).resolves.toBe('unsupported');
+      expect(h.codes, `status ${status} issues no code`).toHaveLength(0);
+      expect(h.phases[h.phases.length - 1]).toBe('unsupported');
+    }
+  });
+
+  it('RT-050: a no-answer throw on initiate keeps error (the true unreachable)', async () => {
+    const client = new FakeTransport();
+    client.respond(new Error('connect failed'));
+    const h = harness(client);
+    await expect(h.session.run()).resolves.toBe('error');
+    expect(h.phases[h.phases.length - 1]).toBe('error');
+  });
+
+  it('RT-050: 429 and 5xx answers keep the retry-bearing error posture (not capability refusals)', async () => {
+    for (const status of [429, 503]) {
+      const client = new FakeTransport();
+      client.respond(Object.assign(new Error('busy or broken'), { status }));
+      const h = harness(client);
+      await expect(h.session.run()).resolves.toBe('error');
+    }
+  });
+
   it('intervalSeconds override wins over the server-published interval', async () => {
     const client = new FakeTransport();
     client.respond({ code: 'ABCD-1234', interval: 9 }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });

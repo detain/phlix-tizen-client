@@ -133,7 +133,7 @@ const screensaver = {
 const telemetry = {
   aria: 'Help improve Phlix',
   title: 'Share anonymous usage stats?',
-  body: 'A single periodic signal (device id, app version) — no titles, no account. You can change this anytime.',
+  body: 'A single periodic signal (device id, app version) — no titles, no account. This card is the only place to decide — nothing is sent until you choose.',
   enable: 'Enable',
   notNow: 'Not now',
 } satisfies Record<string, string>;
@@ -249,6 +249,7 @@ const quickConnect = {
   declined: 'Pairing was declined.',
   expired: 'That code expired.',
   unreachable: 'Could not reach the server.',
+  unsupported: 'This server can’t do code sign-in yet — it needs updating. Use your password instead.',
   expiryNote: 'Expires in a few minutes — no need to hurry.',
   tryAgain: 'Try again',
   usePassword: 'Enter password instead',

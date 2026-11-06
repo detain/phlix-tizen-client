@@ -3,9 +3,12 @@
  *
  * A delivered `pending_command` / `play_media` frame carries ONLY a media id +
  * title ("Alexa, play X"). Nothing in the app can play that until the player
- * LOADS it — the Tizen player page lives inside sealed `@phlix/ui` v0.99.0
- * (which predates the ui's `resolvePendingMedia` player prop), so this module
- * is the Tizen half of the ui's Player.vue load path: a watcher over the
+ * LOADS it — the Tizen player page lives inside the sealed `@phlix/ui` bundle:
+ * the ui's `resolvePendingMedia` player prop exists on the vendored `Player.vue`
+ * surface (re-verified at the current pin), but it is a COMPONENT prop with no
+ * `createPhlixApp` config seam, so this shell cannot supply it. This module is
+ * therefore still the Tizen half of the ui's Player.vue load path: a watcher
+ * over the
  * store's `pendingPlayMedia` slot that resolves the id to a `MediaItem` and
  * drives the shared `@phlix/ui` player store. Port ledger + mirror-lag duties
  * (M-TIZEN-08): `docs/ui-port-divergence.md`.

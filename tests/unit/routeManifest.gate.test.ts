@@ -92,13 +92,16 @@
  * holds against the vendored copy), while `error-codes.json`
  * (`5d1783a7…`, 205 codes) and `mcp-scopes.json` (`8c92c070…`) HOLD — no
  * codes moved, no type hazard (zero `ErrorCode` surface in src/ + tests/,
- * re-grepped). The VENDORED fixture deliberately STAYS at the 412-era bytes:
- * plan ruling is that the fixture tracks the cs#48 coordination wave, not the
- * npm pin (identical disposition to the console/roku CHECK legs this wave; a
- * re-vendor could only ADD served tuples — never redden the anti-absorption
- * law this gate enforces — so holding is behavior-neutral, and the 415
- * re-vendor is owed as its own ritual lane). Header pin cite advanced;
- * comment-only, 0 behavior.)
+ * re-grepped). cs#48 LANDING (LW-033, 2026-11-06): the vendored fixture is now
+ * re-vendored to those 415 bytes. The earlier hold note — "identical
+ * disposition to the console/roku CHECK legs this wave" — was FALSE at
+ * drafting: console and roku had already taken the 415 re-vendor on disk, and
+ * this fixture was the estate's last 412 hold-out. Additions-only keeps every
+ * law green: the three new tuples are never issued from this tree (per-file
+ * coverage stays 27 sites), and the S279-class dead rails + WS/relay OUT-of-
+ * manifest pins re-verified against the new bytes (zero removals ⇒ still
+ * unserved). Provenance/total/length/md5/unique pins rotated from the
+ * measured red at this commit; 0 behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
@@ -447,23 +450,24 @@ export const S535_DIGIT_BUFFER_TOKEN = 'S535DIGITBUFX9P1';
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
-    expect(manifest.provenance.serverSha).toBe('758f91496c068551b310f1078093335f79c20e04');
-    expect(manifest.provenance.total).toBe(412);
-    expect(manifest.routes).toHaveLength(412);
+    expect(manifest.provenance.serverSha).toBe('58530ec207b0d40c3386ed10215d5bda3eaf54af');
+    expect(manifest.provenance.total).toBe(415);
+    expect(manifest.routes).toHaveLength(415);
     expect(manifest.provenance.generator).toBe('scripts/generate-server-route-manifest.mjs');
   });
 
   it('is byte-identical to the sibling contracts artifact it vendors', () => {
     // md5 of `@phlix/contracts` `dist/server-route-manifest.json` — bytes
-    // vendored from the #v0.5.3 tag (peels to contracts 430981e) at the
-    // 2026-10-01 bump (2026-10-01); mobile re-vendored the SAME bytes (cmp
-    // proven at this leg) — one source across the estate; any drift here means
-    // this copy was edited (the artifact says "do not").
+    // vendored from the #v0.5.6 tag (peels to contracts c89c8420) at the
+    // LW-033 re-vendor (2026-11-06); the fixture was byte-copied from the
+    // installed copy, and this md5 is that equality's proof — one source
+    // across the estate; any drift here means this copy was edited (the
+    // artifact says "do not").
     const raw = readFileSync(MANIFEST_PATH);
     const md5 = createHash('md5').update(raw).digest('hex');
-    expect(md5).toBe('915796837d38a77733c169996d97640c');
+    expect(md5).toBe('90b79e355055307d5ba2cc0ef98e2300');
     const unique = new Set(manifest.routes.map(([m, r]) => `${m} ${r}`));
-    expect(unique.size).toBe(412);
+    expect(unique.size).toBe(415);
   });
 });
 
@@ -486,7 +490,7 @@ describe(`${GATE_ID} — every URL tizen issues is tuple-exact served`, () => {
     console.log(
       `[${GATE_ID}] tizen: ${sites.length} request sites / ${uniqueTuples.size} distinct ` +
         `[method, pathTemplate] tuples across ${perFile.size} modules — all tuple-exact against ` +
-        `the vendored 412-route manifest @ ${manifest.provenance.serverSha}`,
+        `the vendored 415-route manifest @ ${manifest.provenance.serverSha}`,
     );
     for (const [file, count] of [...perFile.entries()].sort()) {
       console.log(`  ${file}: ${count}`);

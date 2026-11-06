@@ -107,7 +107,7 @@ const screensaver = {
 const telemetry = {
   aria: 'Hilf mit, Phlix zu verbessern',
   title: 'Anonyme Nutzungsstatistiken teilen?',
-  body: 'Ein einzelnes periodisches Signal (Geräte-ID, App-Version) — keine Titel, kein Konto. Du kannst dies jederzeit ändern.',
+  body: 'Ein einzelnes periodisches Signal (Geräte-ID, App-Version) — keine Titel, kein Konto. Diese Karte ist die einzige Entscheidung — nichts wird gesendet, bis du wählst.',
   enable: 'Aktivieren',
   notNow: 'Jetzt nicht',
 };
@@ -210,6 +210,7 @@ const quickConnect = {
   declined: 'Die Kopplung wurde abgelehnt.',
   expired: 'Dieser Code ist abgelaufen.',
   unreachable: 'Der Server konnte nicht erreicht werden.',
+  unsupported: 'Dieser Server unterstützt die Code-Anmeldung noch nicht — er muss aktualisiert werden. Verwende stattdessen dein Passwort.',
   expiryNote: 'Läuft in wenigen Minuten ab — kein Grund zur Eile.',
   tryAgain: 'Erneut versuchen',
   usePassword: 'Stattdessen Passwort eingeben',

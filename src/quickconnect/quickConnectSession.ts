@@ -14,7 +14,12 @@
  * throws and never nukes the app; a retry is simply a fresh session. Only an
  * unrecoverable network budget (`error`) or a success body we cannot read also
  * resolve — again without throwing. The pairing surface shows a retry affordance
- * off the phase; nothing here blocks the rest of the TV app.
+ * off the phase; nothing here blocks the rest of the TV app. RT-050 (review
+ * tizen__casualgamer #2) adds a sixth calm terminal: `unsupported` — when the
+ * initiate attempt shows the server an ANSWERED 4xx (it declined the
+ * quick-connect flow, typically a pre-quick-connect build 404-ing the unknown
+ * route), the session says so instead of blaming the network, and the surface
+ * routes the viewer to the password pill.
  *
  * Never hammers: the cadence prefers an explicit override, then the
  * server-published `interval`, then a conservative default; transient network
@@ -46,6 +51,7 @@ export type PairingPhase =
   | 'denied'
   | 'expired'
   | 'abandoned'
+  | 'unsupported'
   | 'error';
 
 /** Phases after which `run()` has stopped and will not poll again. */
@@ -54,6 +60,7 @@ const TERMINAL_PHASES: ReadonlySet<PairingPhase> = new Set<PairingPhase>([
   'denied',
   'expired',
   'abandoned',
+  'unsupported',
   'error',
 ]);
 
@@ -131,6 +138,35 @@ function backoffMs(baseMs: number, consecutiveErrors: number): number {
 }
 
 /**
+ * Structural read of an HTTP status off a thrown value (Law 2: parse at the
+ * boundary). The `@phlix/ui` ApiClient rejects with its `ApiError` (which
+ * carries `status`) when the server ANSWERED with a non-2xx, and with
+ * `NetworkError`/`TimeoutError` — no `status` at all — when no answer arrived.
+ * Reading the property rather than `instanceof`-ing the bundle's classes keeps
+ * this module free of upstream class identity and testable with plain fakes.
+ */
+function httpStatusOf(error: unknown): number | null {
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const raw = (error as { status: unknown }).status;
+    if (typeof raw === 'number' && Number.isInteger(raw)) return raw;
+  }
+  return null;
+}
+
+/**
+ * RT-050 — the statuses that mean "this server DECLINED the quick-connect
+ * flow" rather than "the network failed": any answered 4xx the server chose to
+ * send (404 unknown route on a pre-quick-connect build, 405, a 400-style
+ * refusal). 429 is deliberately EXCLUDED — it is a rate limit, not a
+ * capability refusal, and the retry-bearing `error` posture is the honest arm
+ * for it. 5xx stays `error` too: the endpoint exists and broke, which a
+ * capability message would misrepresent.
+ */
+function isUnsupportedRefusal(status: number): boolean {
+  return status >= 400 && status < 500 && status !== 429;
+}
+
+/**
  * Build a single pairing session. The returned `run()` is cancellable via
  * `stop()` at the next await boundary; a second `run()` on the same handle is a
  * programming error, so a fresh session is created per attempt (retry = rebuild).
@@ -163,8 +199,17 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
       let offer;
       try {
         offer = await initiatePairing(deps.client, deps.identity);
-      } catch {
-        // initiate failed: no code exists to poll; a calm dead-end, retryable.
+      } catch (error) {
+        // RT-050 (review tizen__casualgamer #2): pre-cure, EVERY initiate throw
+        // surfaced as "Could not reach the server." — an old server that 404s
+        // the unknown quick-connect route blamed a network it never touched.
+        // An answered 4xx refusal is now its own calm terminal `unsupported`;
+        // no-answer throws (offline/DNS/timeout), 429 and 5xx keep `error`.
+        // Either way: no code exists to poll; a calm dead-end, retryable.
+        const status = httpStatusOf(error);
+        if (status !== null && isUnsupportedRefusal(status)) {
+          return finish('unsupported');
+        }
         return finish('error');
       }
       deps.onCode(offer.code, offer.expiresAtSeconds);

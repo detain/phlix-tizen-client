@@ -169,7 +169,7 @@
 
 ## Step 1.4 - @phlix/tokens Integration
 **Status**: Verified OK
-**Finding**: @phlix/tokens v0.1.1 transitively included via @phlix/ui/style.css
+**Finding**: @phlix/tokens v0.1.1 transitively included via @phlix/ui/style.css *(LW-035 re-measure, 2026-11-06: audit-date state. At tip the vendored `@phlix/ui#v0.99.22` declares `@phlix/tokens` as `github:detain/phlix-tokens#v0.2.1`, and the tokens surfaces still ride the compiled `style.css` (no separate `@phlix/tokens` copy materialises at the tizen root — it is a ui devDep). The transitive-inclusion posture holds; the version cited above is superseded.)*
 
 ## Step 1.5 - Music API Breaking Changes (v0.98.32)
 **Decision**: SUPERSEDED (was IMPLEMENTED_OK on raw calls; at tip the store uses the helper methods)

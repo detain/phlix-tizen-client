@@ -60,14 +60,22 @@ import ScreenSaverOverlay from './components/ScreenSaverOverlay.vue';
  * all — `/app/admin/*` is unreachable on TV.
  * Honest scope (survey-c ruling + measured at this commit, no overclaim): the
  * admin PAGES were always lazy separate chunks (never boot-parsed), and the one
- * always-parsed admin cost — the ~454 KB merged `@phlix/ui` `index.css` design
- * system — is NOT reducible client-side. The flag DOES drop the admin-layout
+ * always-parsed admin cost — the merged `@phlix/ui` `style.css` design system
+ * (~447 KB at the current pin; the widget's single committed entry CSS measures
+ * ~482 KB) — is NOT reducible client-side. The flag DOES drop the admin-layout
  * chunk from the .wgt (measured here); it does NOT drop the page chunks,
  * because `@phlix/ui`'s shell statically imports its admin registry for label
  * lookup, keeping those lazy-import closures alive in the graph for Rollup.
- * Full admin-bundle exclusion (and the CSS-split) are therefore @phlix/ui
- * cross-repo follow-ups, not claims of this gate. `routeManifest.gate` is
- * unaffected: admin tuples come from ui. Read INSIDE the builders (not at
+ * Full admin-bundle exclusion is therefore an `@phlix/ui` matter, not a claim
+ * of this gate — and the CSS-split half is NOT an open cross-repo follow-up:
+ * it was tried upstream and REJECTED (ui CHANGELOG UI-3.3 — splitting
+ * `admin.css` orphaned ~248 KB into chunks nothing loads and shipped the whole
+ * app unstyled; the aggregated single stylesheet is now guarded by ui's
+ * `dist-css-bundle` build-output test, and W113 records the admin CSS carve
+ * out — ~22.6% of `style.css` — as a known limitation). This client's posture
+ * is ACCEPT-TV-COST: the merged design system rides the boot parse and stays;
+ * a re-open needs a per-entry CSS opt-in seam upstream first.
+ * `routeManifest.gate` is unaffected: admin tuples come from ui. Read INSIDE the builders (not at
  * module scope) so `vi.stubEnv` can re-decide per boot, mirroring how
  * `VITE_PHLIX_SERVER_URL` is read.
  */
@@ -134,7 +142,9 @@ export function buildExtraRoutes(): RouteRecordRaw[] {
 
 // RAM-conscious HLS tuning for Samsung TV webviews (bounded buffers; cap level
 // to player size; software AES so DRM-free HLS still plays on weaker decoders).
-// Passed through to @phlix/ui's player via playerHlsConfig (v0.53.0).
+// Passed through to @phlix/ui's player via the `playerHlsConfig` field of
+// `PhlixAppConfig` (the pinned @phlix/ui; seam re-verified present in the
+// vendored dist).
 const TIZEN_HLS_CONFIG = {
   maxBufferLength: 60,
   maxMaxBufferLength: 180,
@@ -549,7 +559,7 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   // render/watcher/lifecycle errors to `app.config.errorHandler`, and WITHOUT
   // one it ends in a bare invisible `console.error` — the estate's largest
   // silent-death channel, and window.onerror never sees it. The vendored
-  // @phlix/ui v0.99.10 sets NO handler (grep-proven: zero
+  // `@phlix/ui` sets NO handler (grep-proven against the pinned copy: zero
   // "config.errorHandler" in the bundle), so this overrides nothing; it feeds
   // the SAME ring as the window listeners. Never rethrows, never surfaces a
   // UI itself — the boot-failure screen is the surfacing point.

@@ -256,3 +256,44 @@ describe('QuickConnectPanel — C16 dismissal contract', () => {
     expect(wrapper.find(match![1]).exists()).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// RT-050 (tizen__casualgamer #2) — failure-copy honesty. Pre-cure EVERY initiate
+// failure rendered "Could not reach the server."; the answered-refusal arm now
+// names the refusal (the copy points at the always-mounted password pill), the
+// genuine no-answer arm keeps the unreachable wording, and `unsupported` is
+// NOT retryable — re-asking an old server cannot change its answer.
+// ---------------------------------------------------------------------------
+describe('QuickConnectPanel — RT-050 error-copy arms', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    reset();
+  });
+
+  afterEach(() => {
+    while (mounts.length) mounts.pop()!.unmount();
+  });
+
+  it('the refused phase shows the unsupported copy with the password pill and NO retry', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    (captured.deps!.onStatusChange as (p: string) => void)('unsupported');
+    await nextTick();
+    expect(wrapper.find('.quick-connect__lead').text()).toBe(
+      'This server can’t do code sign-in yet — it needs updating. Use your password instead.',
+    );
+    expect(wrapper.find('[data-testid="qc-retry"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="qc-dismiss"]').exists()).toBe(true);
+  });
+
+  it('the no-answer phase keeps the unreachable wording AND the retry affordance', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    (captured.deps!.onStatusChange as (p: string) => void)('error');
+    await nextTick();
+    expect(wrapper.find('.quick-connect__lead').text()).toBe('Could not reach the server.');
+    expect(wrapper.find('[data-testid="qc-retry"]').exists()).toBe(true);
+  });
+});

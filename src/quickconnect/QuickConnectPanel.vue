@@ -27,7 +27,12 @@
  * carrying `data-quick-connect-panel` on its takeover root, the bridge rings an
  * `Escape` keydown bell on it, and THIS component alone decides what closing
  * means (mirroring the generic focus-trap layer's contract exactly). Dismissal
- * is per-base: choosing a DIFFERENT server re-offers the pairing code.
+ * is per-base: choosing a DIFFERENT server re-offers the pairing code. RT-050
+ * (review tizen__casualgamer #2) sharpens the failure copy: an old server that
+ * refuses the quick-connect route with an answered 4xx now reads "this server
+ * can't do code sign-in yet — use your password" (naming the pill that is
+ * already on screen) instead of the network-blaming "could not reach"; genuine
+ * no-answer failures keep the unreachable wording.
  *
  * FOCUS-SAFE (S512 containment doctrine, honored): this never calls `focus()`
  * and never grabs focus on mount — the takeover is never a trap; its controls
@@ -74,7 +79,10 @@ const eligible = computed(
   () => mounted.value && Boolean(apiBase.value) && !auth.isLoggedIn && !dismissed.value
 );
 
-/** Terminal-but-recoverable states that offer a fresh attempt rather than a dead end. */
+/** Terminal-but-recoverable states that offer a fresh attempt rather than a dead end.
+ *  RT-050: `unsupported` is deliberately ABSENT — re-initiating against the same
+ *  old server cannot change its answer; that copy routes to the password pill,
+ *  which is permanently mounted below. */
 const retryable = computed(() => phase.value === 'denied' || phase.value === 'expired' || phase.value === 'error');
 
 function currentStatusText(): string {
@@ -87,6 +95,8 @@ function currentStatusText(): string {
       return tTizen('quickConnect.declined');
     case 'expired':
       return tTizen('quickConnect.expired');
+    case 'unsupported':
+      return tTizen('quickConnect.unsupported');
     case 'error':
       return tTizen('quickConnect.unreachable');
     default:
