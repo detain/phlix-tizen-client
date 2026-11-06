@@ -289,7 +289,9 @@ stray `BACK`/`YELLOW` press.
   of Electron media events). A class with a default singleton export. Listens to
   `keydown` / `keyup` on `document` (guarded for jsdom), maps the key code via
   `KeyMapping`, and emits `'keydown'` / `'keyup'` / `'action'`. Held keys repeat
-  (`keyRepeatDelay = 500`, `keyRepeatInterval = 100`) for seek-accel. `on()`
+  (`keyRepeatDelay` / `keyRepeatInterval`, currently 500 / 500 ms — the class
+  fields in `RemoteManager.ts` own the cadence; it was deliberately retuned from
+  100 ms per the class header) for seek-accel. `on()`
   returns an unsubscribe function; `destroy()` removes the DOM listeners and
   clears subscribers.
 - **`KeyMapping.ts`** — maps Samsung Tizen key codes to action names

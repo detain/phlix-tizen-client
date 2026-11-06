@@ -34,6 +34,34 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — the entry docs teach the shipped chain, count, cadence and CI story, not fossils; the quick-connect redeem docblock names its LAN race — 2026-11-06
+
+- **What users see:** nothing at runtime — no behavior changed and the shipped
+  bundle is byte-identical (the sole `src/` touch is a comment). What changes is
+  what a reader is taught: `npm run package` now reads sync-first on every
+  surface naming its legs (README command comment, AGENTS/CLAUDE command blocks
+  + the CLAUDE chain sentence, all three `docs/signing.md` recipes — RT-062);
+  the AGENTS.md/CLAUDE.md suite census reads 68 and is now machine-pinned by a
+  new `docsTestListings` arm (e) that redds any future drift in the same commit
+  that moves the count (RT-061, red-first against the stale 63); DEVELOPER.md's
+  held-key cadence matches the retuned `RemoteManager` fields and cites the
+  seam instead of hardening a bare number (RT-059); `docs/i18n.md` states the
+  true CI checkout story — only this repo is checked out, the contracts
+  manifest rides as the vendored fixture, the phlix-ui sibling is absent so
+  source-parity skips (RT-060); README's workflow map names test.yml's three
+  legs — vitest + coverage floor, tests/scripts typecheck, audit gate (RT-063).
+- **Mechanism (RT-058, review tizen__secnet #2):** `redeemPairingToken` gains a
+  posture-ledger paragraph — the pairing code is the sole redeem secret and
+  travels in the URL path segment, so on the ratified http-permitted LAN
+  baseline an on-path observer of the initiate response can attempt a
+  race-redeem at approval; server-side code entropy and the approval TTL own
+  the residual. Naming only; zero code change.
+- **Ledger correction (forward, per the w07-L6 review minor):** the c999d4a1
+  commit-message prose double-counted pins — disk truth is 10 pure + 1 mount
+  for RT-054, and RT-053's own pins are 2 mount pins (the third parent-side
+  WireShape red belongs to RT-054). The entry's +22 battery total was and
+  remains exact; only the per-RT prose was inflated.
+
 ### Security — quick-connect base mirror passes the storage gate; hub relay mint refuses plaintext (2026-11-06)
 
 - **What users see:** nothing changes on healthy setups. A TV paired against

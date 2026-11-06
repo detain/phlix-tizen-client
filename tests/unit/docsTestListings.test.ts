@@ -26,7 +26,14 @@
  *      for the overlays it documents, replacing the pre-cure instruction that
  *      could never succeed for the PlayerPage-bundled sleep timer / up next;
  *      additionally every host-div id named in README's "Overlay Missing"
- *      section exists in index.html (the debug walk must not chase ghosts).
+ *      section exists in index.html (the debug walk must not chase ghosts);
+ *  (e) the AGENTS.md/CLAUDE.md suite-file census number equals the real
+ *      `tests/unit/*.test.ts` count (review tizen__docmaint #1 / tizen__writer
+ *      #4, RT-061: the "63 files" stamp had fossilized again — arms a-d prove
+ *      cited NAMES exist but nothing pinned the COUNT, so the parenthetical
+ *      that claims to carry a re-measure drifted one wave after landing).
+ *      Adding or removing a suite reddens this arm until the same commit
+ *      re-measures both entry maps.
  *
  * Zero runtime imports (docsPinConsistency/docsDeployWalk idiom): reads doc,
  * README, index.html and src/main.ts as TEXT plus the tests/ directory only,
@@ -37,7 +44,8 @@
  * `npx vitest run tests/unit/UpNextOverlay.test.ts` command, and (c) the
  * "5 overlay apps" line. Measured runs recorded in
  * .reviews/fixlog/M-TIZEN-16__fix.md. Mutation teeth: re-planting any fossil
- * name reddens exactly its arm.
+ * name reddens exactly its arm. Arm (e) was itself red-first against the
+ * fossilized "63 files" stamp in the pre-RT-061 docs (68 on disk).
  *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
@@ -170,5 +178,21 @@ describe('docsTestListings — doc-citation truth (M-TIZEN-16)', () => {
         expect(declared.has(id), `Overlay Missing walk references ${id} — no such div`).toBe(true);
       }
     });
+  });
+
+  describe('(e) suite-file census in the agent entry maps is current', () => {
+    const realCount = readdirSync(path.join(REPO, 'tests', 'unit')).filter((f) =>
+      f.endsWith('.test.ts')
+    ).length;
+    for (const rel of ['AGENTS.md', 'CLAUDE.md']) {
+      it(`${rel} "Suites (NN files" equals the real tests/unit count`, () => {
+        const match = /[sS]uites \((\d+) files/.exec(read(rel));
+        expect(match, `${rel} carries a "Suites (NN files" census`).not.toBeNull();
+        expect(
+          Number(match![1]),
+          `${rel} claims ${match![1]} suites but tests/unit holds ${realCount} *.test.ts files — re-measure the entry map in the same commit that moves the count (RT-061)`
+        ).toBe(realCount);
+      });
+    }
   });
 });

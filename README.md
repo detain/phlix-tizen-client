@@ -278,7 +278,7 @@ Output is placed in the `dist/` directory (`index.html` + `assets/`).
 ### Packaging for Tizen
 
 ```bash
-npm run package     # npm run build, node scripts/version-sync.mjs, then node scripts/package.js
+npm run package     # node scripts/version-sync.mjs, npm run build, then node scripts/package.js — the sync runs FIRST so the bundle itself carries the stamped version (pinned by tests/unit/versionStamping.test.ts)
 ```
 
 This assembles the `package/` directory (the Vite `dist/` plus `app/config.xml`
@@ -537,7 +537,7 @@ phlix-tizen-client/
 │   ├── i18n.md              # locale catalogs + vendored ui-locale story
 │   └── ui-port-divergence.md # local ports of sealed @phlix/ui surfaces (M-TIZEN-08)
 ├── .github/workflows/
-│   ├── test.yml             # npm test (vitest)
+│   ├── test.yml             # three legs: vitest + S501 coverage floor, tests/scripts typecheck (M-TIZEN-12), npm-audit gate last (M-TIZEN-13)
 │   ├── lint.yml             # npm run lint + npm run build
 │   └── build.yml            # npm run package + package/ freshness gate + rolling 'latest' .wgt release
 ├── vite.config.ts           # base: './', target chrome100

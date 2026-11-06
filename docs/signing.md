@@ -106,8 +106,9 @@ keychain or an encrypted backup, never in git.
 
 ```bash
 npm ci
-npm run build      # vue-tsc --noEmit && vite build → dist/
-node scripts/package.js   # assembles package/ (dist/* + app/config.xml + icon)
+npm run package    # scripts/version-sync.mjs FIRST, then build (vue-tsc --noEmit &&
+                   # vite build → dist/), then scripts/package.js assembles package/
+                   # (dist/* + app/config.xml + icon)
 ```
 
 `package/` is the widget root (`config.xml` at its top). The `tizen` CLI signs
@@ -197,8 +198,10 @@ Linux `ubuntu-26.04` runners):
 
 ```bash
 npm ci
-npm run build && node scripts/package.js
-# freshness gate asserts the committed package/ matches a fresh build
+npm run package
+# (the full sync-first chain: scripts/version-sync.mjs stamps the package.json
+# version into the carriers BEFORE vite builds, then scripts/package.js
+# assembles; the freshness gate asserts the committed package/ matches a fresh build)
 cd package && zip -r -X ../phlix-tizen-unsigned.wgt .
 # artifact `phlix-tizen-wgt` uploaded; the "latest" GitHub release
 # publishes this RAW, UNSIGNED .wgt
@@ -227,7 +230,7 @@ unattended mode as documented by the current walk-through):
 #    - TIZEN_AUTHOR_CERT_PASSWORD
 # 4. Point the CLI at the profile:
 #    tools/ide/bin/tizen cli-config -g "default.profiles.path=$PWD/profiles.xml"
-# 5. npm ci && npm run build && node scripts/package.js
+# 5. npm ci && npm run package   # sync-first chain: version-sync, build, package.js
 # 6. cp -r package ./build-widget
 #    tools/ide/bin/tizen package -t wgt -s <profile-name> -- ./build-widget
 # 7. Upload/attach the signed .wgt from ./build-widget/ (the CLI prints its

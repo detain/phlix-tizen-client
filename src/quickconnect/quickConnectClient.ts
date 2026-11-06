@@ -133,6 +133,15 @@ export async function fetchPairingStatus(client: PairingTransport, code: string)
  * Redeem an APPROVED code for this device's token pair. The server only answers
  * this for a code it has marked approved; a success body missing either token
  * is a protocol error (never a silent empty login).
+ *
+ * Posture ledger (review tizen__secnet #2, named not hidden): the sole redeem
+ * secret is the code carried in this request's URL PATH SEGMENT, so over the
+ * http-permitted LAN REST baseline (see `resolveConfig.ts`) an on-path observer
+ * of the initiate response can attempt a race-redeem the instant the companion
+ * approves. The bounds that own that residual are server-side — code entropy
+ * and the short approval TTL — not anything this client can add without a
+ * second secret; pairing rides the same ratified transport posture as every
+ * other credential call in this module.
  */
 export async function redeemPairingToken(client: PairingTransport, code: string): Promise<RedeemedTokens> {
   const body = asRecord(await client.post(`/api/v1/auth/quick-connect/${encodeURIComponent(code)}/token`, {}));
