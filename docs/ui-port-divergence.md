@@ -2,7 +2,7 @@
 
 **What this document is.** The Tizen client renders its app UI from the vendored
 `@phlix/ui` bundle, but three behaviors could not ride that bundle because
-`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.21).
+`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.22).
 They are therefore **re-implemented locally** in this repo. Local ports drift:
 every ui release can change the thing being ported while the port stands still.
 This ledger names every port, what it is sealed behind, and the known
@@ -15,7 +15,7 @@ leave a port behind.
 | `src/api/hubRelay.ts` | the ui's hub-relay pending-command consumer (ui S298 half) | boot glue differs (tizen config resolution, S2a token mint); documented as a faithful port in its header |
 | `src/syncplayDispatch.ts` | the ui's `Player.vue` pending-media load path (`resolvePendingMedia` prop era) | the player page lives inside the sealed bundle; this is the host-side watcher driving the shared player store |
 
-## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.21`)
+## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.22`)
 
 Verified against the vendored bundle in `package/assets/` and the local sources
 at this commit, not from memory (rows re-grepped at the 2026-11-06 v0.99.21

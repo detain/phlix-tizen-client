@@ -34,6 +34,31 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — ui #v0.99.22 re-pin: the player presents its full frame rate (no live CSS blurs on the playing path); locale PIN held; package/ regenerated (2026-11-06)
+
+- **What users see:** smoother video. v0.99.22 stops the player page re-rasterising
+  live CSS blurs on every video repaint — the poster backdrop and the ambient glow are
+  pre-rendered to small bitmaps and the hidden chrome drops its `backdrop-filter`
+  (field-measured on desktop Firefox: ~6–9 presented fps → ~24). Tizen's Chromium
+  webview runs the same page, so it no longer pays that compositing cost either.
+- **Pin leg:** `@phlix/ui` `#v0.99.21` → `#v0.99.22` (tag object `abc9566c`, peel
+  `a4ede939` == ui master tip, ls-remote verified). `package-lock.json` surgical 3+/3-
+  (root edge spec + ui node version/resolved — resolved lands on the peel); contracts
+  `#v0.5.6` + syncplay `#v0.1.7` held. Fresh `npm ci`: `dist/phlix-ui.js` `a3a8aa84`.
+  Pin docs rotated (README ×2, CLAUDE.md, DEVELOPER.md, AGENTS.md, `docs/i18n.md`
+  installed-pin line, `docs/ui-port-divergence.md` pin header ×2); dated
+  "re-verified at v0.99.21" history lines left verbatim.
+- **Locale leg:** PIN HELD — `git diff 01acaa12..a4ede939 -- src/i18n` is EMPTY in ui
+  (the release touched only player code), so ref, hashes and SOURCE_REF hold;
+  `i18nLocales` suites green unchanged.
+- **Widget leg:** `package/` regenerated via `npm run package` (version-sync idempotent,
+  zero config.xml/telemetry churn); deterministic ×2 (`diff -r` clean); 42 files,
+  aggregate md5 (`find package -type f | sort | xargs md5sum | md5sum`)
+  `92c3abcc0623239d0166aaedc7fd5d2d`; ui stamp `0.99.22` on `index-DwbVGWf9.js`, zero
+  `0.99.21` residue; carrier `PlayerPage-BbWPOZn8-DNp0W6Cc.js` carries `is-preblurred`.
+- **Gates:** vitest 66 files / 1128 tests (incl. docsPinConsistency); lint 0; typecheck
+  0; typecheck:tests 0.
+
 ### Changed — ui #v0.99.21 re-pin: theme choices now persist per-user server-side; Appearance-picker disclosures + catalogue force-refresh; locale bundles REAL re-vendor (PIN rotated 524→526) — 2026-11-06
 
 - **What users see:** a theme picked on this TV follows the signed-in user
