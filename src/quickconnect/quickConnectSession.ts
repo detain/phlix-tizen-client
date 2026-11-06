@@ -235,6 +235,9 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
       // closes the publish race at the await boundary; the handle stamp lets
       // the surface reject anything that still arrives out of order.
       if (stopped) return finish('abandoned');
+      // The surface is shown the CODE only (RT-058): the pairing secret is the
+      // redeem credential and never display text, so the pairing screen — a
+      // shoulder, a screenshot, a screen-share — carries no credential at all.
       deps.onCode(offer.code, offer.expiresAtSeconds, handle);
       emit('pairing');
 
@@ -283,7 +286,10 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
         if (status === 'approved') {
           let tokens;
           try {
-            tokens = await redeemPairingToken(deps.client, offer.code);
+            // RT-058: the OFFER is the handle — the secret the initiate answer
+            // carried goes straight into the body the server's token() demands,
+            // with no re-derivation and no second source for it.
+            tokens = await redeemPairingToken(deps.client, offer);
           } catch {
             return finish('error');
           }

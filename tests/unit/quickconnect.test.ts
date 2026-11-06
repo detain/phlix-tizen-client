@@ -8,18 +8,52 @@
  * throwing. The transport tests lock the exact served path shapes so a drift off
  * the 410-tuple manifest is caught here too.
  *
+ * RT-058 cure (w08-L4 adversarial review): the fakes speak the SERVER'S wire,
+ * not a wish. `initiate` answers carry the 43-char base64url pairing secret the
+ * shipped controller really mints (`QuickConnectController.php:183-187`),
+ * `initiatePairing` fails loud without it, and every redeem pins the body
+ * `{secret}` that `token()` demands before it consults a pairing at all
+ * (`:300-303`) — the pre-cure empty body draws 400 "secret is required" from the
+ * real server on EVERY call, so a fantasy-wire fake here would pin nothing but
+ * the bug. One pin is source-grepped: the module's posture note must never
+ * re-certify the retired "the code is the sole redeem secret" claim.
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import {
   DEFAULT_POLL_INTERVAL_SECONDS,
   QuickConnectProtocolError,
   fetchPairingStatus,
   initiatePairing,
   redeemPairingToken,
+  type PairingOffer,
 } from '@/quickconnect/quickConnectClient';
 import { createPairingSession, type PairingPhase } from '@/quickconnect/quickConnectSession';
+
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
+
+/**
+ * A source file flattened to prose: comment stars, indentation and line breaks
+ * collapse to single spaces, so a claim wrapped across a JSDoc line still
+ * matches a whole-phrase grep. The RT-058 myth survived literal greps precisely
+ * because it sits on a comment break.
+ */
+function proseOf(file: string): string {
+  return readFileSync(path.join(REPO_ROOT, file), 'utf8')
+    .replace(/[\s*/-]+/g, ' ')
+    .trim();
+}
+
+/**
+ * What the server actually hands the TV at initiate: 32 random bytes, base64url
+ * unpadded, 43 chars (`QuickConnectStateStore.php:389-391`, pinned by its own
+ * suite at `:60-64`). Not the 6-letter human code — the code routes, this redeems.
+ */
+const PAIRING_SECRET = '2kPLRlAvgL6tr4knlXnxnx43fFG8Dy3hB93C9XNGivc';
 
 // ── a fake transport that records every wire call and returns queued bodies ──
 
@@ -56,20 +90,42 @@ class FakeTransport {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+/** An offer exactly as `initiatePairing` hands it on — the ONLY thing redeem may be given. */
+function offer(code = 'ABCD-1234', secret = PAIRING_SECRET): PairingOffer {
+  return { code, secret, intervalSeconds: null, expiresAtSeconds: null };
+}
+
 describe('quickConnectClient — transport', () => {
-  it('initiate POSTs the served route with identity and parses a camel-safe code', async () => {
+  it('initiate POSTs the served route with identity and parses the code + secret pair', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 7, expires_at: 1_800_000_000 });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 7, expires_at: 1_800_000_000 });
     const offer = await initiatePairing(client, { deviceName: 'Phlix for Samsung TV', deviceType: 'samsung-tizen' });
     expect(client.calls).toEqual([
       { method: 'POST', endpoint: '/api/v1/auth/quick-connect/initiate', data: { deviceName: 'Phlix for Samsung TV', deviceType: 'samsung-tizen' } },
     ]);
-    expect(offer).toEqual({ code: 'ABCD-1234', intervalSeconds: 7, expiresAtSeconds: 1_800_000_000 });
+    expect(offer).toEqual({
+      code: 'ABCD-1234',
+      secret: PAIRING_SECRET,
+      intervalSeconds: 7,
+      expiresAtSeconds: 1_800_000_000,
+    });
+  });
+
+  // RT-058: the shipped controller's literal answer shape, byte-for-byte the
+  // keys at QuickConnectController.php:183-187. The secret is NOT optional and
+  // NOT derived from the code — a client that drops it cannot ever redeem.
+  it('initiate parses the REAL server answer {code, secret, expiresIn} and keeps its secret', async () => {
+    const client = new FakeTransport();
+    client.respond({ code: 'QKTVWA', secret: PAIRING_SECRET, expiresIn: 600 });
+    const offer = await initiatePairing(client, { deviceName: 'tv', deviceType: 'samsung-tizen' });
+    expect(offer.code).toBe('QKTVWA');
+    expect(offer.secret).toBe(PAIRING_SECRET);
+    expect(offer.secret).not.toBe(offer.code);
   });
 
   it('initiate accepts documented field aliases and defaults when absent', async () => {
     const client = new FakeTransport();
-    client.respond({ user_code: 'WXYZ-9999' });
+    client.respond({ user_code: 'WXYZ-9999', secret: PAIRING_SECRET });
     const offer = await initiatePairing(client, { deviceName: 'x', deviceType: 'y' });
     expect(offer.code).toBe('WXYZ-9999');
     expect(offer.intervalSeconds).toBeNull();
@@ -80,6 +136,20 @@ describe('quickConnectClient — transport', () => {
     const client = new FakeTransport();
     client.respond({ message: 'nope' });
     await expect(initiatePairing(client, { deviceName: 'x', deviceType: 'y' })).rejects.toBeInstanceOf(QuickConnectProtocolError);
+  });
+
+  // RT-058: an initiate that carries no usable secret is a DEAD pairing — the
+  // redeem would 400 forever. Failing at the boundary beats a doomed poll loop.
+  // The client's bar is the server's own shape guard (`is_string && !== ''`,
+  // QuickConnectController.php:302) — content is the server's to compare.
+  it('initiate fails FAST when the body carries no usable pairing secret', async () => {
+    for (const secret of [undefined, '', 42, null, {}]) {
+      const client = new FakeTransport();
+      client.respond({ code: 'ABCDEF', ...(secret === undefined ? {} : { secret }) });
+      await expect(
+        initiatePairing(client, { deviceName: 'x', deviceType: 'y' })
+      ).rejects.toBeInstanceOf(QuickConnectProtocolError);
+    }
   });
 
   it('status GETs the {code}/status path segment and normalises the closed set', async () => {
@@ -105,17 +175,53 @@ describe('quickConnectClient — transport', () => {
     expect(client.calls[0].endpoint).toBe('/api/v1/auth/quick-connect/a%20b/status');
   });
 
-  it('token redeems via POST and returns the camelCase pair', async () => {
+  // RT-058 — THE wire truth. `token()` reads the secret from the BODY and answers
+  // 400 "secret is required" for anything else (QuickConnectController.php:300-303)
+  // BEFORE it consults the pairing. The empty body this client shipped pre-cure
+  // therefore never redeemed anything, on any server version (S518-era to today).
+  it('token redeems via POST carrying {secret} in the body and returns the camelCase pair', async () => {
     const client = new FakeTransport();
     client.respond({ access_token: 'acc', refresh_token: 'ref' });
-    await expect(redeemPairingToken(client, 'ABCD')).resolves.toEqual({ accessToken: 'acc', refreshToken: 'ref' });
-    expect(client.calls[0]).toEqual({ method: 'POST', endpoint: '/api/v1/auth/quick-connect/ABCD/token', data: {} });
+    await expect(redeemPairingToken(client, offer())).resolves.toEqual({
+      accessToken: 'acc',
+      refreshToken: 'ref',
+    });
+    expect(client.calls[0]).toEqual({
+      method: 'POST',
+      endpoint: '/api/v1/auth/quick-connect/ABCD-1234/token',
+      data: { secret: PAIRING_SECRET },
+    });
+  });
+
+  // The credential rides the body, never the URL: a path/query secret is
+  // reproduced into access logs, proxies and history. The server's own placement
+  // law says so (class header :61-66 — the code routes, the secret authorises).
+  it('token keeps the pairing secret OUT of the request URL', async () => {
+    const client = new FakeTransport();
+    client.respond({ access_token: 'acc', refresh_token: 'ref' });
+    await redeemPairingToken(client, offer());
+    expect(client.calls[0].endpoint).toBe('/api/v1/auth/quick-connect/ABCD-1234/token');
+    expect(client.calls[0].endpoint).not.toContain(PAIRING_SECRET);
+    expect(client.calls[0].data).toEqual({ secret: PAIRING_SECRET });
   });
 
   it('token fails FAST on an incomplete pair', async () => {
     const client = new FakeTransport();
     client.respond({ access_token: 'acc' });
-    await expect(redeemPairingToken(client, 'ABCD')).rejects.toBeInstanceOf(QuickConnectProtocolError);
+    await expect(redeemPairingToken(client, offer())).rejects.toBeInstanceOf(QuickConnectProtocolError);
+  });
+
+  // RT-058 Critical #1 guard: the module's posture note must state the server
+  // contract and must never re-certify the retired code-is-the-secret claim the
+  // shipped wire refutes. Source-grepped, because a comment IS the artifact here —
+  // and flattened first, so the same myth wrapped across a comment break cannot
+  // sneak past a literal-string grep.
+  it('the redeem posture note states the real contract, not the retired myth', () => {
+    const prose = proseOf('src/quickconnect/quickConnectClient.ts');
+    expect(prose).not.toMatch(/sole\s+redeem\s+secret/i);
+    expect(prose).toMatch(/bearer\s+credential/i);
+    expect(prose).toMatch(/secret\s+is\s+required/);
+    expect(prose).toMatch(/QuickConnectController\.php/);
   });
 });
 
@@ -171,7 +277,7 @@ describe('quickConnectSession — orchestrator', () => {
   it('HAPPY PATH end-to-end: initiate → code → pending → approved → redeem → applyTokens', async () => {
     const client = new FakeTransport();
     client.respond(
-      { code: 'ABCD-1234', interval: 2 }, // initiate
+      { code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 2 }, // initiate
       { status: 'pending' }, // poll 1
       { status: 'approved' }, // poll 2
       { access_token: 'acc', refresh_token: 'ref' }, // redeem
@@ -190,11 +296,27 @@ describe('quickConnectSession — orchestrator', () => {
       '/api/v1/auth/quick-connect/ABCD-1234/status',
       '/api/v1/auth/quick-connect/ABCD-1234/token',
     ]);
+    // RT-058 end-to-end carry-through: the secret the initiate answer carried is
+    // the SAME one the session redeems with. The offer is the pairing handle; no
+    // leg of the loop re-derives, drops or invents the credential on the way.
+    expect(client.calls.find((c) => c.endpoint.endsWith('/token'))?.data).toEqual({ secret: PAIRING_SECRET });
+  });
+
+  // RT-058: a code the TV can never redeem is not a pairing. Pre-cure the session
+  // happily polled such an offer to approval and then ate a 400 at redeem; now the
+  // boundary refuses the offer up front and the surface gets a calm terminal phase.
+  it('RT-058: an initiate answer with no secret ends error — never a doomed poll loop', async () => {
+    const client = new FakeTransport();
+    client.respond({ code: 'ABCD-1234', interval: 1 }); // secretless = unredeemable
+    const h = harness(client);
+    await expect(h.session.run()).resolves.toBe('error');
+    expect(h.codes).toHaveLength(0);
+    expect(client.calls.filter((c) => c.endpoint.endsWith('/status'))).toHaveLength(0);
   });
 
   it('an INVISIBLE surface issues ZERO status requests and stays quiet', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 1 });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1 });
     // Every subsequent GET would hit the fake's empty queue → throw; none may occur.
     const h = harness(client, { isVisible: () => false });
     h.sleeper.stopAfter(5); // after 5 hidden re-checks, abort so the loop ends.
@@ -207,7 +329,7 @@ describe('quickConnectSession — orchestrator', () => {
   it('transient faults back off exponentially against the base cadence', async () => {
     const client = new FakeTransport();
     client.respond(
-      { code: 'ABCD-1234', interval: 1 }, // initiate (base 1000 ms)
+      { code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1 }, // initiate (base 1000 ms)
       new Error('network'), // poll 1 fails
       new Error('network'), // poll 2 fails
       { status: 'approved' }, // poll 3 succeeds
@@ -221,7 +343,7 @@ describe('quickConnectSession — orchestrator', () => {
 
   it('stops hammering after the error budget is exhausted (non-fatal error phase)', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 1 }); // initiate ok
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1 }); // initiate ok
     for (let i = 0; i < 10; i += 1) client.respond(new Error('down'));
     const h = harness(client);
     await expect(h.session.run()).resolves.toBe('error');
@@ -232,7 +354,7 @@ describe('quickConnectSession — orchestrator', () => {
 
   it('denied is a calm terminal phase — no redeem, no tokens, no throw', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 1 }, { status: 'denied' });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1 }, { status: 'denied' });
     const h = harness(client);
     await expect(h.session.run()).resolves.toBe('denied');
     expect(h.applied).toHaveLength(0);
@@ -241,13 +363,13 @@ describe('quickConnectSession — orchestrator', () => {
 
   it('expired is a calm terminal phase', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 1 }, { status: 'expired' });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1 }, { status: 'expired' });
     await expect(harness(client).session.run()).resolves.toBe('expired');
   });
 
   it('stop() during a pending wait abandons the session', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 1 }, ...Array.from({ length: 8 }, () => ({ status: 'pending' })));
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1 }, ...Array.from({ length: 8 }, () => ({ status: 'pending' })));
     const h = harness(client);
     h.sleeper.stopAfter(3); // pending polls keep looping; after 3 sleeps the abort fires stop()
     await expect(h.session.run()).resolves.toBe('abandoned');
@@ -256,7 +378,7 @@ describe('quickConnectSession — orchestrator', () => {
 
   it('a redeem protocol failure after approval resolves error (never throws out)', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 1 }, { status: 'approved' }, { message: 'malformed' });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1 }, { status: 'approved' }, { message: 'malformed' });
     const h = harness(client);
     await expect(h.session.run()).resolves.toBe('error');
     expect(h.applied).toHaveLength(0);
@@ -328,7 +450,7 @@ describe('quickConnectSession — orchestrator', () => {
     const running = session.run();
     await Promise.resolve(); // let run() park on the initiate await
     session.stop(); // viewer moved on while the request was open
-    settle({ code: 'STALE-1234', interval: 1 }); // the server answers LATE
+    settle({ code: 'STALE-1234', secret: PAIRING_SECRET, interval: 1 }); // the server answers LATE
     await expect(running).resolves.toBe('abandoned');
     // The whole point: the late offer dies with its session.
     expect(codes).toHaveLength(0);
@@ -341,7 +463,7 @@ describe('quickConnectSession — orchestrator', () => {
     // callback (no ids to invent); the panel compares it against its current
     // session before writing, pinned in QuickConnectPanel.test.ts.
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 1 }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1 }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
     const owners: unknown[] = [];
     const session = createPairingSession({
       client,
@@ -358,7 +480,7 @@ describe('quickConnectSession — orchestrator', () => {
 
   it('intervalSeconds override wins over the server-published interval', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 9 }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 9 }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
     const h = harness(client, { intervalSeconds: 3 });
     await h.session.run();
     // base comes from the override (3 s), not the server's 9.
@@ -368,7 +490,7 @@ describe('quickConnectSession — orchestrator', () => {
   // ── M-TIZEN-25 — server-published cadence is clamped to a sane window ─────
   it('M-TIZEN-25: a server interval of 0 cannot hammer the poll endpoint (floor 1 s)', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 0 }, { status: 'pending' }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 0 }, { status: 'pending' }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
     const h = harness(client);
     await expect(h.session.run()).resolves.toBe('approved');
     expect(h.sleeper.delays).toContain(1_000); // floored, never 0
@@ -377,7 +499,7 @@ describe('quickConnectSession — orchestrator', () => {
 
   it('M-TIZEN-25: a giant server interval is ceilinged at 60 s (the flow cannot freeze)', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 1_000_000_000 }, { status: 'pending' }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1_000_000_000 }, { status: 'pending' }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
     const h = harness(client);
     await expect(h.session.run()).resolves.toBe('approved');
     expect(h.sleeper.delays).toContain(60_000);
@@ -386,7 +508,7 @@ describe('quickConnectSession — orchestrator', () => {
 
   it('M-TIZEN-25: a non-finite override falls back to the exported default cadence', async () => {
     const client = new FakeTransport();
-    client.respond({ code: 'ABCD-1234', interval: 9 }, { status: 'pending' }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
+    client.respond({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 9 }, { status: 'pending' }, { status: 'approved' }, { access_token: 'a', refresh_token: 'r' });
     const h = harness(client, { intervalSeconds: Number.NaN });
     await h.session.run();
     expect(h.sleeper.delays).toContain(DEFAULT_POLL_INTERVAL_SECONDS * 1000);
@@ -401,7 +523,7 @@ describe('quickConnectSession — orchestrator', () => {
   it('m17: a server stuck on `pending` past its own window ends client-side', async () => {
     const client = new FakeTransport();
     client.respond(
-      { code: 'ABCD-1234', interval: 1, expires_at: 30 }, // absolute 30 s from t0
+      { code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1, expires_at: 30 }, // absolute 30 s from t0
       ...Array.from({ length: 40 }, () => ({ status: 'pending' })),
     );
     let clockMs = 0;
@@ -429,7 +551,7 @@ describe('quickConnectSession — orchestrator', () => {
   it('m17: a skewed-FAST TV clock never expires a live code client-side — the server stays authoritative', async () => {
     const client = new FakeTransport();
     client.respond(
-      { code: 'ABCD-1234', interval: 1, expires_at: 100 }, // unix 100 s
+      { code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1, expires_at: 100 }, // unix 100 s
       { status: 'pending' },
       { status: 'approved' },
       { access_token: 'a', refresh_token: 'r' },
@@ -456,7 +578,7 @@ describe('quickConnectSession — orchestrator', () => {
   it('m17: a late-but-true approval still redeems — the belt sits AFTER status handling', async () => {
     const client = new FakeTransport();
     client.respond(
-      { code: 'ABCD-1234', interval: 1, expires_at: 2 }, // only 2 s of slack
+      { code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1, expires_at: 2 }, // only 2 s of slack
       { status: 'pending' },
       { status: 'pending' },
       { status: 'approved' }, // arrives after the client deadline lapsed

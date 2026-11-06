@@ -34,6 +34,65 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — quick-connect redeem carries the pairing secret the server requires; the RT-058 posture note is corrected — 2026-11-06
+
+- **What users see:** a TV pairing can now be redeemed at all. The shipped flow
+  asked the server for the token pair with an EMPTY body, and the server answers
+  every such request `400 secret is required` — so a pairing never completed on
+  any server this client can talk to: the panel reached `approved` and fell
+  straight to its error phase. What still does NOT work is the other half of the
+  flow (named below, not fixed here): no estate client implements the companion's
+  approve leg, so a pairing completing end-to-end remains future work. What
+  changes today is that the TV's half is truthful about the wire.
+- **Mechanism (w08-L4 review, Critical #2):** `PairingOffer`
+  (`src/quickconnect/quickConnectClient.ts:62`) gains a required `secret`;
+  `initiatePairing` parses it under its single wire name and FAILS LOUD when the
+  answer omits one (`:133-136` — a code without a secret is a pairing that can
+  never redeem, so it is refused at the boundary instead of being polled to a
+  doomed approval); `redeemPairingToken` takes the OFFER rather than a bare code
+  and posts `{secret}` in the body while the code stays in the path segment
+  (`:199-206`) — the shape the server's `token()` demands
+  (`phlix-server` `QuickConnectController.php:300-303`).
+  `createPairingSession` hands the offer straight through
+  (`quickConnectSession.ts:292`), so the credential has exactly one source, and
+  the code it shows the viewer is the code ONLY (`:238-241`) — the secret never
+  reaches the on-screen surface.
+- **Ledger correction (Critical #1, forward per the verbatim-history law):** the
+  entry below, and the docblock it describes, say "the pairing code is the sole
+  redeem secret" with the residual bounded by "server-side code entropy and the
+  approval TTL". The wire refutes all three clauses: `token()` takes the pairing
+  secret from the request BODY (`QuickConnectController.php:300-303`), that secret
+  is 32 random bytes as 43-char base64url (`QuickConnectStateStore.php:389-391`,
+  entropy pinned by its own suite at `:60-64`), constant-time compared (`:261`)
+  and one-shot with a 600 s window (`:63`), and the server's law on the code is
+  the opposite — a guessed code reveals state to someone who "cannot redeem"
+  (`QuickConnectController.php:49-50`). The requirement is original to the feature
+  (S518, server `730e55b7`) and present at this client's pinned era `58530ec2`.
+  The earlier entry stands verbatim as the record; this one is its correction. The
+  docblock now states the secret is the bearer credential and the code only
+  routes, and a source-grepped pin (comments flattened first, so a re-wrapped
+  claim cannot slip past) refuses any return of the old wording.
+- **Tests:** the fake transport finally speaks the server's wire — every initiate
+  answer carries a realistic 43-char secret and every redeem pins the `{secret}`
+  body (the pre-cure suite mentioned the secret zero times, so what it pinned was
+  the bug). Five pins added: the real `{code, secret, expiresIn}` answer,
+  fail-loud on a secretless initiate (transport AND session, with zero status
+  traffic), the redeem body, the secret staying OUT of the request URL, and the
+  note-truth grep; the session happy path now asserts the end-to-end
+  carry-through. Battery 68 files / 1,162 passing / 0 skipped (was 1,157 — +5
+  exact, no file added, so the arm-(e) census holds); red-first against the
+  pre-cure source convicted 8 tests.
+- **Named, not fixed (owner call, out of this card):** (1) the companion
+  `POST …/quick-connect/{code}/approve` with `{secret}` exists on the server
+  (`QuickConnectController.php:241-277`) and in the vendored manifest, but no
+  estate client ships it, and this TV surfaces the code alone — the server's flow
+  sketch (`:37`) has the QR carrying code + secret. Until a companion half lands,
+  no pairing completes from a Tizen screen. (2) The server answers initiate with
+  the RELATIVE `expiresIn` (`:186`) while `initiatePairing` parses the ABSOLUTE
+  aliases `expires_at`/`expiresAt`, so the client-side expiry belt
+  (`quickConnectSession.ts:255-258`) never arms against a real server. Both want
+  their own waves with their own red-first pins.
+
 ### Fixed — the entry docs teach the shipped chain, count, cadence and CI story, not fossils; the quick-connect redeem docblock names its LAN race — 2026-11-06
 
 - **What users see:** nothing at runtime — no behavior changed and the shipped
