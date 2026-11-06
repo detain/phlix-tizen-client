@@ -34,6 +34,66 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — ui #v0.99.20 re-pin: the bundle consumes server-minted signed playlist URLs verbatim (pinned-quality "can't play" class closed); locale PIN held — 2026-11-06
+
+- **What users see:** the fresh-tab pinned-quality failure introduced by the
+  .18/.19 mini-master wave closes on this widget. v0.99.19 derived the per-rung
+  mini-master URL by appending `_master.m3u8` client-side — onto a SIGNED
+  `?exp=…&sig=…` URL that put the filename INSIDE the signature value and the
+  extension-less path before the query, so every pinned pick 404'd loudly
+  (the 2026-11-06 hub.phlix "can't play it" incident, job 6df5ca50). The ui now
+  loads `playlist_url` — each playable variant's own signed mini-master index,
+  advertised beside the signed bare `url` by phlix-server — VERBATIM for probe
+  and load, falls back to the advertised `url` on a decisive 404, and derives
+  only for a rung the ladder never advertises, strictly PATH-scoped (split at
+  `?`, rename in the path, re-append the query — the prefix-scoped signer
+  authorises every file under `/hls/{job}`). Auto-quality and the
+  `master.m3u8` path are untouched; interim mitigation (picking Auto) stays
+  harmless.
+- **Pin leg:** `@phlix/ui` `#v0.99.19`→`#v0.99.20` (one tag crossed; tag object
+  `bab302e2ef9d124a3f27c54caf6e582e98a6b270`, peel
+  `e48d8d029cbf81b2e92c93e0a6914765330718b1` == ui master tip, ls-remote
+  verified; codeload 200; v0.99.19 proven ancestor). `package-lock.json`
+  surgical 3+/3- (root edge spec + ui node version/resolved — resolved lands on
+  the peel); contracts `#v0.5.6` + syncplay `#v0.1.7` HELD — the tag's own
+  `package.json` carries the identical edges (checked, not recalled). npm11
+  idempotency proven (2nd install byte-identical); installed tree `diff -r` vs
+  the codeload tag payload: zero content differences (only-in-tag = ui source,
+  correctly excluded by `files:[dist]`); `dist/phlix-ui.js` md5
+  `818e5829e510ade58b140ad451b7b10e` and `dist/player.js` md5
+  `ca81bb6e71763f6cd80a2494ef40519f` match the .20 release register; carrier
+  `PlayerPage-BUnWXFam.js` present.
+- **Locale leg:** PIN HELD — `git diff a6c9d466..e48d8d02 -- src/i18n` is EMPTY
+  and all seven v0.99.20 tag-payload locale files re-hash EXACTLY to their
+  `PIN.source_sha256`; ref, all fourteen hashes and `SOURCE_REF` untouched; era
+  comment advanced in `tests/unit/i18nLocales.test.ts` (stamp-only).
+- **Widget leg:** `package/` regenerated — 31 JS chunk renames + `index.html`
+  rewire; the entry CSS chunk `index-BqeiLgxA.css` HOLDS (this wave crossed no
+  scoped-style edits). Embedded ui stamp `0.99.19`→`0.99.20` single site
+  (`index-2q1ZxDUw.js`), zero stale. LAW GREPS: `playlist_url`,
+  `_master.m3u8` and the fallback wording `rung mini-master unavailable` all
+  ship in `PlayerPage-BUnWXFam-DsOXQs9M.js` (the installed `dist/player.js`
+  likewise). Determinism ×2 `diff -r`-identical; aggregate md5
+  `6baff…`-era lineage: `6b5415c76d609960be825b309f794d58` →
+  `022d5991152490307e676d2c01dbc035` (42 files). Freshness-gate sim after
+  staging: rebuild left `package/` byte-identical to the index (build.yml
+  "Assert committed package/ is fresh" holds).
+- **Gate ledgers advanced (measured, not recalled):** serial vitest EXACT 66
+  files / 1128 tests / 0 skipped at the PARENT tree AND post-change — zero
+  suite churn. docsPinConsistency MEASURED 6 red arms → rotated → 9/9.
+  `distApiFloor` NOT rotated — green on the new bytes (pins measure content,
+  not chunk names). typecheck 0; typecheck:tests 0; lint 0; audit-gate PASS
+  (same 2 allow-listed dev-chain ids, zero new); build rc 0; package rc 0 ×2.
+- **Docs leg:** README badge + Tech Stack, DEVELOPER, AGENTS, CLAUDE, docs/i18n
+  seam rotated; docs/ui-port-divergence six rows re-grepped at v0.99.20 bytes —
+  all FACT-UNCHANGED (wsUrl/wsPath still `SyncPlayModal-*.js` + `index-*.js`;
+  canManagePlaylist recursive dist count re-measured 5; `(shared — read-only)`
+  picker still `index-*.js`; invite-links still `McpTokensPage-*` only with
+  codes + `redeem` in `index-*.js`; `new Audio` still 1 `MusicLibraryPage-*`
+  site with `mediaSession` video-path-only; escape pattern still
+  `useItemInspector-*.js`; bare `access_token` still `var Zr=` — chain extended
+  through v0.99.20).
+
 ### Changed — ui #v0.99.19 re-pin (two tags crossed): mini-master audio cure + stale-menu fix ride the bundle; locale bundles REAL re-vendor — 2026-11-06
 
 - **What users see:** the hosted-TV playback silence class closes on this

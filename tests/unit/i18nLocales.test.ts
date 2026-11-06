@@ -346,7 +346,12 @@ describe('ui bundles — key-set identity and installed coverage', () => {
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
     // Vendored @ a6c9d466 == @phlix/ui v0.99.19 — RE-SYNCED at this pin (the
-    // held run ended): the v0.99.19 wave moved ui locale SOURCE — `git diff
+    // held run ended), and HELD unchanged at the v0.99.20 re-pin (2026-11-06:
+    // the signed-URL `playlist_url` cure moved only ui player code + the
+    // stamp-bearing dist entries; `git diff a6c9d466..e48d8d02 -- src/i18n`
+    // EMPTY and all seven v0.99.20 tag-payload locale files re-hashed
+    // byte-identical to their PIN source hashes — ref, all fourteen hashes
+    // and SOURCE_REF untouched): the v0.99.19 wave moved ui locale SOURCE — `git diff
     // 2158564a..a6c9d466 -- src/i18n` NON-empty: the six bundle files + the
     // messages.ts catalog each gained the one `player.audioOriginal` leaf
     // (523→524 keys; the copy behind ui's synthesized "Original" audio

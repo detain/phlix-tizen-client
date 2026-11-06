@@ -2,7 +2,7 @@
 
 **What this document is.** The Tizen client renders its app UI from the vendored
 `@phlix/ui` bundle, but three behaviors could not ride that bundle because
-`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.19).
+`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.20).
 They are therefore **re-implemented locally** in this repo. Local ports drift:
 every ui release can change the thing being ported while the port stands still.
 This ledger names every port, what it is sealed behind, and the known
@@ -15,23 +15,26 @@ leave a port behind.
 | `src/api/hubRelay.ts` | the ui's hub-relay pending-command consumer (ui S298 half) | boot glue differs (tizen config resolution, S2a token mint); documented as a faithful port in its header |
 | `src/syncplayDispatch.ts` | the ui's `Player.vue` pending-media load path (`resolvePendingMedia` prop era) | the player page lives inside the sealed bundle; this is the host-side watcher driving the shared player store |
 
-## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.19`)
+## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.20`)
 
 Verified against the vendored bundle in `package/assets/` and the local sources
-at this commit, not from memory (rows re-grepped at the 2026-11-06 v0.99.19
-re-pin onto the v0.99.19 bytes — two pins crossed: v0.99.18's RUNGMASTER wave
-(pinned-quality loads move to per-rung `*_master.m3u8` mini-master indexes) and
-v0.99.19's probe-404 legacy fallback, muxed-“Original” audio entry, stale
-audio-menu cure and the `player.audioOriginal` locale leaf (catalog 523→524,
-`git diff 2158564a..a6c9d466 -- src/i18n` non-empty) plus the embedded
-version-stamp literal — every row re-attested FACT-UNCHANGED from the
-2026-11-06 v0.99.17 re-greps, with chunk content-hash renames (32 pairs — the
-entry CSS chunk rotates again, the CaptionsMenu/Player edits moving scoped
-styles; `index-aXIOf-KD.css` → `index-BqeiLgxA.css`) aside):
+at this commit, not from memory (rows re-grepped at the 2026-11-06 v0.99.20
+re-pin onto the v0.99.20 bytes — one pin crossed since .19: the signed-URL
+cure, where pinned-quality loads consume the server-minted `playlist_url`/`url`
+verbatim, the `_master`-suffix-after-query incident class is structurally gone,
+and derivation survives only for un-advertised rungs, strictly PATH-scoped;
+`git diff a6c9d466..e48d8d02 -- src/i18n` EMPTY, so the locale-bundle PIN held
+with it; the .19 wave had crossed RUNGMASTER per-rung `*_master.m3u8` loads, the
+probe-404 legacy fallback, the muxed-“Original” audio entry, the stale
+audio-menu cure and the `player.audioOriginal` locale leaf (catalog 523→524)
+plus the embedded version-stamp literal) — every row re-attested
+FACT-UNCHANGED from the 2026-11-06 v0.99.19 wave, with 31 JS chunk
+content-hash renames aside (the entry CSS chunk `index-BqeiLgxA.css` HOLDS this
+wave — no scoped-style edits crossed; it last rotated at the .17 re-greps):
 
 - **SyncPlay socket hint seam (`wsUrl` / `wsPath`).** The ui gained a
   `socketHint` seam so hosts can point the player's SyncPlay dial at
-  a custom URL/path; it SHIPS at the pinned v0.99.19 (re-grepped at the 2026-11-06 wave → `SyncPlayModal-*.js` + `index-*.js` chunks; keys typed in
+  a custom URL/path; it SHIPS at the pinned v0.99.20 (re-grepped at the 2026-11-06 wave → `SyncPlayModal-*.js` + `index-*.js` chunks; keys typed in
   the bundle's `app/types.d.ts`-era config). The host-side seam (M-TIZEN-07,
   W-min171)
   `src/endpointOverrides.ts` — validating `phlix.syncplayPort` /
@@ -54,13 +57,13 @@ styles; `index-aXIOf-KD.css` → `index-BqeiLgxA.css`) aside):
   re-grep the 23-site figure was a RECURSIVE dist count over `.map`/`.d.ts`
   too — the identifier never survives in the minified `.js` bodies; at the
   v0.99.15 re-pin (2026-11-04) that recursive count read 5 (1 `.d.ts` + 4
-  `.map` sourcesContent) purely from bundler map granularity — RE-MEASURED 5 at the v0.99.16 re-pin (2026-11-04), 5 again at the v0.99.17 re-pin and 5 again at the v0.99.19 re-pin (2026-11-06) — so re-attest via the shipped `(shared — read-only)` picker literal — at v0.99.19 it still rides the
+  `.map` sourcesContent) purely from bundler map granularity — RE-MEASURED 5 at the v0.99.16 re-pin (2026-11-04), 5 again at the v0.99.17 re-pin, 5 again at the v0.99.19 re-pin and 5 again at the v0.99.20 re-pin (2026-11-06) — so re-attest via the shipped `(shared — read-only)` picker literal — at v0.99.20 it still rides the
   committed `index-*.js` chunk (this widget build folds MediaCard
   into index; no standalone `MediaCard-*.js`), gate proven live.
   Row kept as the closed bookend; delete
   it in the next touch that has other business in this file.
 - **Invite create-token DTO.** NOT lagged — the two-leg create-token invite
-  shape already ships (re-verified at the v0.99.19 re-pin (2026-11-06) — the
+  shape already ships (re-verified at the v0.99.20 re-pin (2026-11-06) — the
   `invite-links` path plus the `invite_link_not_found` /
   `invite_expired_or_exhausted` codes and the `redeem` leg ride the committed
   bundle — `invite-links` greps to the `McpTokensPage-*.js` chunk, the codes
@@ -78,7 +81,7 @@ styles; `index-aXIOf-KD.css` → `index-BqeiLgxA.css`) aside):
   mediaSession parity with the video path), DELETE the probe and its test +
   this row; the probe's reappearance pin (bundle grep `new Audio` in
   `package/assets/Music*.js`) reddens on any re-pin that moves the
-  construction site first. Re-verified at the v0.99.19 re-pin (2026-11-06): the `MusicLibraryPage-*.js` chunk still builds it (1 site) and `mediaSession`
+  construction site first. Re-verified at the v0.99.20 re-pin (2026-11-06): the `MusicLibraryPage-*.js` chunk still builds it (1 site) and `mediaSession`
   still appears only in the video-path `index-*.js` chunk — observer posture
   unchanged, watch pin green.
 - **Vendored `MetadataMatchModal` hand-rolled innerHTML escape (M-TIZEN-22
@@ -86,7 +89,7 @@ styles; `index-aXIOf-KD.css` → `index-BqeiLgxA.css`) aside):
   a hand-rolled sanitizer in frozen bytes this repo cannot edit. Carried as an
   UPSTREAM item: replace with a text binding in @phlix/ui. Meanwhile the client
   hardened its own boundary: `script-src 'self'` (no 'unsafe-inline') makes any
-  future escape regression non-executable inline (tests/unit/cspPolicy.test.ts). Re-verified at the v0.99.19 re-pin (2026-11-06): the pattern STILL ships
+  future escape regression non-executable inline (tests/unit/cspPolicy.test.ts). Re-verified at the v0.99.20 re-pin (2026-11-06): the pattern STILL ships
   (grep `replace(/&/g` → `useItemInspector-*.js` chunk), so the row stands and
   the strict CSP stays load-bearing. The row retires only when a future
   bundle loses the pattern — grep it at every re-pin.
@@ -97,8 +100,8 @@ styles; `index-aXIOf-KD.css` → `index-BqeiLgxA.css`) aside):
   per-app-id sandbox, but they break the namespace convention every other key
   keeps, and renaming them is a STORE-LEVEL migration only ui can make.
   Carried upstream: prefix (or consolidate) the auth store's storage keys;
-  re-verified at the v0.99.19 re-pin (2026-11-06): the bare literals still ship in the committed bundle (grep `"access_token"` → `index-*.js` chunk,
-  hoisted as `var Zr="access_token"` across the v0.99.15, v0.99.16, v0.99.17 and v0.99.19 builds — `var Hr=` at v0.99.14;
+  re-verified at the v0.99.20 re-pin (2026-11-06): the bare literals still ship in the committed bundle (grep `"access_token"` → `index-*.js` chunk,
+  hoisted as `var Zr="access_token"` across the v0.99.15, v0.99.16, v0.99.17, v0.99.19 and v0.99.20 builds — `var Hr=` at v0.99.14;
   the hoist NAME is minifier churn, grep the LITERAL, not a
   `setItem('access_token` spelling, which minification never emits).
 
