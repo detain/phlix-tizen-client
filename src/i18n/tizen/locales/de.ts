@@ -58,6 +58,7 @@ const menu = {
 
 const boot = {
   failedStart: 'Phlix konnte nicht gestartet werden: {message}',
+  retryHint: 'Schließ Phlix und öffne die App erneut.',
   recentFailures: 'Letzte Fehler:',
   splashHint: 'Wird gestartet',
 };

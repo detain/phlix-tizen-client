@@ -1,3 +1,10 @@
+# VERIFICATION — Tizen client implementation ledger
+
+Reading guide: each `# Category N` section records what was verified, adapted,
+or deliberately not built for one original gap category; sections run in the
+order they were appended (4, 2, 1, 3, 5, 6), not logical order, and dated
+stamps mark the day the line-cites and counts below were last re-derived.
+
 <!-- s424-doc-honesty-census-2026-09-04 -->
 
 > **S424 doc-honesty sweep (2026-09-04).** Every tizen-repo line-cite and count below was re-derived at tip `f5b9fff9` on 2026-09-04 and restated to the measured value; suite re-run measured **312 tests / 20 files** (was "74 PASS" in the Gates rows). Citations pointing **inside `@phlix/ui` source** (`usePlayerStore.ts`, `hls-playback.ts`, `playback.ts`, `MediaGrid.vue`, `Player.vue`, `PlayerPage.vue`, `client.ts`, `recommendations.ts`, `ApiClient.d.ts`) were measured 2026-07-31 against the then-installed `@phlix/ui` v0.98.33 SOURCE tree and are **HISTORICAL**: `@phlix/ui` v0.99.0 ships only `dist/`, so those line numbers are not re-derivable here and may have drifted. Vendored-copy claims that ARE re-derivable from `dist/` (token occurrence counts, admin-module count, bundle filenames) were re-measured and restated. Ritual survival token (S424 census): s424-doc-honesty-census-2026-09-04

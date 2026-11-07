@@ -34,6 +34,39 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — the boot-failure screen states the recovery step; entry-doc honesty pass — 2026-11-07
+
+- **What users see:** when boot fails hard enough to replace the app with
+  the raw failure screen, the headline is now followed directly by a
+  recovery line — 'Try closing Phlix and opening it again.' — in all seven
+  locales. Previously the screen showed the headline plus the diagnostic
+  ring only, leaving a stuck viewer no next move to try.
+  `renderBootFailure` (src/main.ts) emits the new `boot.retryHint` between
+  the headline and the 'Recent failures:' ring (diagnostics stay the tail);
+  the key lands in all seven Tizen catalogs (189 to 190 — the key-set
+  identity, byte-parity and call-site pins rotated from measured reds) and
+  two new `main.test.ts` pins lock the text-adjacency and the ordering
+  above the ring, red-first at parent.
+- Docs truth pass: `DEVELOPER.md` architecture diagram rebuilt with
+  border-accurate box widths and tee/connector column alignment
+  (interiors verbatim, whitespace-only restructure) (RT-076); the
+  DevTools-dispatch snippet gains the Chromium-only caveat for the
+  non-standard `keyCode` init member plus the portable
+  `Object.defineProperty` form `remote/gamepadBridge.ts` already ships
+  (RT-078); `VERIFICATION.md` gains an H1 and a reading guide stating the
+  append-order ledger's category sequence and dated-stamp meaning
+  (RT-077); the `docs/i18n.md` messages-seam bullet cites the
+  `messages` member of `PhlixAppConfig` instead of a reflow-prone
+  `types.d.ts` line-range (RT-081); two stale `CALIBER_LEARNINGS.md`
+  entries now tell the current truth — the lock is committed and
+  `npm ci --allow-git=all` with setup-node cache is live, and the pin
+  convention spans the five gated doc surfaces — each keeping a
+  historic-note tail (RT-079).
+- `package/` assets regenerated: the entry chunk carries the new catalog
+  strings, so its hash rotated and every importer re-hashed in cascade
+  (31 renames + `index.html` script ref); rebuild verified deterministic
+  x2.
+
 ### Fixed — remote digit presses echo the joined buffer as you type — 2026-11-07
 
 - **What users see:** a number key on the remote now shows its digits on

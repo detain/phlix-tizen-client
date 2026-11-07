@@ -64,6 +64,9 @@ const menu = {
 
 const boot = {
   failedStart: 'Phlix failed to start: {message}',
+  // The stated next step for a first-day user (casualgamer ledger): always
+  // shown under the headline, above the raw diagnostic ring.
+  retryHint: 'Try closing Phlix and opening it again.',
   // Label for the raw on-device failure ring quoted under the boot-failure
   // screen (error-visibility brief). The entries themselves stay untranslated
   // engine text (ja.ts precedent: translate the prose, quote the diagnostic).

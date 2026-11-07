@@ -1049,7 +1049,53 @@ describe('runtime failure visibility (error-visibility brief)', () => {
       const mod = await import('@/main');
       await mod.boot(); // healthy → ring untouched
       mod.renderBootFailure(new Error('config exploded'));
-      expect(host.textContent).toBe('Phlix failed to start: config exploded');
+      expect(host.textContent).toBe(
+        'Phlix failed to start: config exploded\nTry closing Phlix and opening it again.',
+      );
+    } finally {
+      document.body.innerHTML = '';
+    }
+  });
+
+  it('the boot-failure screen states the recovery step directly under the headline', async () => {
+    // A first-day user gets a stated recovery action, not a dead-looking
+    // black page (casualgamer ledger: honest diagnostics, no next step).
+    document.body.innerHTML = '<div id="phlix-app"></div>';
+    const host = document.getElementById('phlix-app')!;
+    try {
+      const mod = await import('@/main');
+      await mod.boot(); // healthy → ring empty
+      mod.renderBootFailure(new Error('first-run exploded'));
+      const text = host.textContent ?? '';
+      expect(text).toContain('Try closing Phlix and opening it again.');
+      expect(text).toContain(
+        'Phlix failed to start: first-run exploded\nTry closing Phlix and opening it again.',
+      );
+    } finally {
+      document.body.innerHTML = '';
+    }
+  });
+
+  it('the recovery guidance sits ABOVE the raw failure ring (diagnostics stay the tail)', async () => {
+    document.body.innerHTML = '<div id="phlix-app"></div>';
+    const host = document.getElementById('phlix-app')!;
+    try {
+      globalThis.localStorage.setItem('phlix.serverUrl', 'http://my-tv:8096');
+      globalThis.localStorage.setItem('phlix.deviceId', 'tizen-fixed');
+      const mod = await import('@/main');
+      await mod.boot();
+      const errorEvent = new Event('error');
+      Object.defineProperty(errorEvent, 'message', { value: 'TypeError: shelf is undefined' });
+      Object.defineProperty(errorEvent, 'filename', { value: 'app://-/assets/index.js' });
+      Object.defineProperty(errorEvent, 'lineno', { value: 42 });
+      window.dispatchEvent(errorEvent);
+      mod.renderBootFailure(new Error('mount exploded'));
+      const text = host.textContent ?? '';
+      const guide = text.indexOf('Try closing Phlix and opening it again.');
+      const ring = text.indexOf('Recent failures:');
+      expect(guide, 'guidance line missing').toBeGreaterThan(-1);
+      expect(ring, 'ring tail missing').toBeGreaterThan(-1);
+      expect(guide).toBeLessThan(ring);
     } finally {
       document.body.innerHTML = '';
     }

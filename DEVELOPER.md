@@ -19,34 +19,34 @@ Pinned dependencies (source of truth: `package.json`; drift-gated by `tests/unit
                             index.html  (repo root = Vite root)
                                   │  loads /src/main.ts
                                   ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                         src/main.ts  boot()                            │
-│  1. import './polyfills'  (structuredClone first)                      │
-│  2. resolveAppConfig({serverUrl, envUrl})  → { app:'server', apiBase } │
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         src/main.ts  boot()                             │
+│  1. import './polyfills'  (structuredClone first)                       │
+│  2. resolveAppConfig({serverUrl, envUrl})  → { app:'server', apiBase }  │
 │  3. resolveDeviceId(localStorage)          → 'tizen-…'                  │
 │  4. buildPhlixHeaders({deviceType:'samsung-tizen'})  (@phlix/contracts) │
 │  5. createPhlixApp({ … playerHlsConfig:TIZEN_HLS_CONFIG }) (@phlix/ui)  │
-│         .mount('#phlix-app')                                           │
-│  6. installTizenBridge(app)                                            │
-│  7. createApp(SpatialNavHost).use(pinia).use(router)                   │
-│         .mount('#phlix-spatial-host')   (2nd app, shared pinia+router) │
-└───────────────┬───────────────────────────────────────┬───────────────┘
+│         .mount('#phlix-app')                                            │
+│  6. installTizenBridge(app)                                             │
+│  7. createApp(SpatialNavHost).use(pinia).use(router)                    │
+│         .mount('#phlix-spatial-host')   (2nd app, shared pinia+router)  │
+└───────────────┬─────────────────────────────────────────┬───────────────┘
                 │                                         │
                 ▼                                         ▼
-   ┌────────────────────────┐               ┌──────────────────────────┐
-   │   @phlix/ui app          │               │  SpatialNavHost.vue        │
-   │   (#phlix-app)           │               │  (#phlix-spatial-host)     │
-   │  all browse/detail/      │               │  useSpatialNav({ enabled })│
-   │  player/settings/auth    │               │  D-pad nav, off on player  │
-   └──────────┬───────────────┘               └──────────────────────────┘
+   ┌───────────────────────┐                 ┌─────────────────────────────┐
+   │   @phlix/ui app       │                 │  SpatialNavHost.vue         │
+   │   (#phlix-app)        │                 │  (#phlix-spatial-host)      │
+   │  all browse/detail/   │                 │  useSpatialNav({ enabled }) │
+   │  player/settings/auth │                 │  D-pad nav, off on player   │
+   └──────────┬────────────┘                 └─────────────────────────────┘
               │ usePlayerStore / vue-router
               ▼
-   ┌────────────────────────┐    'action' events    ┌─────────────────────┐
-   │   tizenBridge.ts         │ ◄──────────────────── │  remote/RemoteManager│
-   │  wireTizenBridge(...)    │                       │  (singleton)         │
-   │  PLAY/PAUSE/STOP/FF/REW/ │                       │  remote/KeyMapping   │
-   │  BACK/HOME/YEL           │                       │  (Samsung key codes) │
-   └────────────────────────┘                       └─────────────────────┘
+   ┌──────────────────────────┐   'action' events   ┌───────────────────────┐
+   │   tizenBridge.ts         │ ◄────────────────── │  remote/RemoteManager │
+   │  wireTizenBridge(...)    │ ◄────────────────── │  (singleton)          │
+   │  PLAY/PAUSE/STOP/FF/REW/ │ ◄────────────────── │  remote/KeyMapping    │
+   │  BACK/HOME/YEL           │ ◄────────────────── │  (Samsung key codes)  │
+   └──────────────────────────┘                     └───────────────────────┘
 ```
 
 ### Why two Vue apps?
@@ -413,10 +413,16 @@ built to vanish off-device:
     B → synthetic `10009` BACK. It installs as a silent no-op where
     `navigator.getGamepads` is absent, and is the closest thing to a remote a
     desk setup gets.
-  - **DevTools dispatch** — from the browser console:
+  - **DevTools dispatch** — from the browser console (Chromium-only: passing
+    `keyCode` through the `KeyboardEvent` init dictionary is a non-standard
+    extension — other engines construct the event and dispatch `keyCode: 0`,
+    so the one-liner silently does nothing):
     `document.dispatchEvent(new KeyboardEvent('keydown', { keyCode: 10009 }))`
     reaches `RemoteManager` exactly like the TV's event would. The same seam
-    drives any other transport key using the codes in `KeyMapping`.
+    drives any other transport key using the codes in `KeyMapping`. The
+    portable form is the one `remote/gamepadBridge.ts` (:210) uses — build a
+    standard event, then `Object.defineProperty(event, 'keyCode', { get: () =>
+    code })` before dispatching.
 - The Tizen Studio **TV Simulator** ships for Windows and macOS only (it is a
   VirtualBox VM) — there is no Linux host build. On a Linux workstation the
   browser loop above plus the fake-driven test suite is the development

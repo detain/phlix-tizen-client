@@ -262,7 +262,10 @@ const BOOT_FAILURE_TAIL_COUNT = 3;
  * on-device failure ring: the fatal is recorded (`boot-fatal`) and the last
  * few failures captured BEFORE it (by `./runtimeDiagnostics`) are quoted
  * underneath, so a support conversation starts from what actually died, not
- * from a blank TV. The entry just written is always last, so the tail drops
+ * from a blank TV. One translated recovery sentence (`boot.retryHint`) rides
+ * directly under the headline — a first-day user always sees a next step — and
+ * the raw diagnostic tail stays below it. The entry just written is always
+ * last, so the tail drops
  * it and shows only prior context; raw `[kind] HH:MM:SS message` lines stay
  * untranslated data under one translated label (the catalog's own ja.ts
  * precedent: "developer-facing diagnostic quoted from code, translated only
@@ -274,7 +277,7 @@ export function renderBootFailure(error: unknown): void {
   const storage = probeStorage();
   recordRuntimeFailure({ storage, now: () => Date.now() }, { kind: 'boot-fatal', message });
   const prior = readRuntimeFailures(storage).slice(0, -1).slice(-BOOT_FAILURE_TAIL_COUNT);
-  const lines = [tTizen('boot.failedStart', { message })];
+  const lines = [tTizen('boot.failedStart', { message }), tTizen('boot.retryHint')];
   if (prior.length > 0) {
     lines.push(tTizen('boot.recentFailures'));
     for (const failure of prior) lines.push(formatRuntimeFailureLine(failure));
