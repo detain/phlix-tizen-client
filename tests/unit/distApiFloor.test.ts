@@ -221,7 +221,7 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
    * where an unsupported selector/property silently DROPS THE WHOLE RULE. The
    * census below is measured 2026-11-03 from the committed single CSS file;
    * every figure is an exact re-pin target (rotation law + docs/runtime-floor.md
-   * "CSS features above 85"). The pair law: the 156 `:focus-visible` sites are
+   * "CSS features above 85"). The pair law: the 153 `:focus-visible` sites are
    * admitted ONLY because the vendored `[data-tv] :focus` fallback rides in
    * the same file — both halves are asserted together, so a re-vendor that
    * drops the fallback reddens the suite instead of shipping blind D-pad focus.

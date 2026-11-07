@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RemoteManager } from '@/remote/RemoteManager';
+import { DIGIT_BUFFER_MAX } from '@/remote/DigitBuffer';
 
 // The keyCode → action mapping is exercised via KeyMapping elsewhere; here we
 // drive `onKeyDown` with a minimal fake event (jsdom does not reliably surface
@@ -678,6 +679,67 @@ describe('RemoteManager digit-commit buffer (S535)', () => {
     rm.onKeyUp(fakeKeyEvent(50));
     vi.advanceTimersByTime(2000);
     expect(actions(handler)).toEqual([{ key: 'DIGIT_COMMIT', value: '12' }]);
+  });
+
+  // Per-press echo: a lone accepted digit used to produce NOTHING on any
+  // channel until the (silent) drain two seconds later — the remote
+  // dead-armed the viewer mid-burst. pressDigit now echoes the joined buffer
+  // on a dedicated 'digit' observation channel. The commit law above is
+  // untouched: 'action' still receives exactly ONE silent DIGIT_COMMIT per
+  // burst, and the echo never duplicates or relocates it.
+  it('echoes every accepted digit on the "digit" channel with the joined pending value', () => {
+    const echo = vi.fn();
+    const action = vi.fn();
+    rm.on('digit', echo);
+    rm.on('action', action);
+
+    rm.onKeyDown(fakeKeyEvent(49)); // '1'
+    rm.onKeyDown(fakeKeyEvent(50)); // '2' joins behind it
+    expect(actions(echo)).toEqual([
+      { key: 'DIGIT_1', value: '1' },
+      { key: 'DIGIT_2', value: '12' }
+    ]);
+
+    vi.advanceTimersByTime(2000);
+    expect(actions(action)).toEqual([{ key: 'DIGIT_COMMIT', value: '12' }]);
+  });
+
+  it('the voice pressDigit seam echoes too — one buffer, one observation channel', () => {
+    const echo = vi.fn();
+    rm.on('digit', echo);
+
+    rm.pressDigit('DIGIT_7');
+    expect(actions(echo)).toEqual([{ key: 'DIGIT_7', value: '7' }]);
+  });
+
+  // The HARD-LAW posture extends to the echo: a digit the manager REFUSED to
+  // queue (typed through to an input, auto-repeat, non-digit name) has no
+  // buffer value to honestly echo — it must not surface on either channel.
+  it('refused digits echo NOTHING (typing target / auto-repeat / non-digit)', () => {
+    const input = document.createElement('input');
+    input.type = 'search';
+    const echo = vi.fn();
+    rm.on('digit', echo);
+
+    rm.onKeyDown(fakeKeyEvent(49, input)); // typed through — the input IS the feedback
+    rm.onKeyDown(fakeKeyEvent(50, undefined, true)); // auto-repeat refused (review m1)
+    rm.pressDigit('PLAY'); // non-digit refused
+
+    expect(echo).not.toHaveBeenCalled();
+  });
+
+  it('the flood-cap overflow goes echo-silent — an abandoned burst has no value to echo', () => {
+    const echo = vi.fn();
+    rm.on('digit', echo);
+
+    for (let i = 0; i < DIGIT_BUFFER_MAX; i++) rm.pressDigit('DIGIT_5');
+    rm.pressDigit('DIGIT_5'); // overflow abandons the whole burst (buffer Law 4)
+
+    expect(echo).toHaveBeenCalledTimes(DIGIT_BUFFER_MAX);
+    expect(actions(echo)[DIGIT_BUFFER_MAX - 1]).toEqual({
+      key: 'DIGIT_5',
+      value: '5'.repeat(DIGIT_BUFFER_MAX)
+    });
   });
 });
 

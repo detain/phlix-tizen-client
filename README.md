@@ -515,7 +515,13 @@ phlix-tizen-client/
 │   └── config.xml           # Tizen .wgt manifest (privileges, app id, version)
 ├── scripts/
 │   ├── package.js           # assembles package/ from dist/ + config.xml (ESM)
-│   └── audit-gate.mjs       # npm-audit allow-list gate (CI Test final step; M-TIZEN-13)
+│   ├── audit-gate.mjs       # npm-audit allow-list gate (CI Test final step; M-TIZEN-13)
+│   ├── audit-gate.d.mts     # type declarations for the gate's pure core (tests import it)
+│   ├── version-sync.mjs     # stamps package.json version into app/config.xml + telemetry carrier BEFORE build (chain pinned by versionStamping.test.ts)
+│   ├── version-sync.d.mts   # type declarations for the sync CLI's pure core
+│   ├── sync-ui-locale-bundles.mjs  # re-vendors @phlix/ui locale bundles + PIN manifest (docs/i18n.md)
+│   ├── make-icon.js         # deterministic app/icon.png generator (npm run icon:gen)
+│   └── add-copyright.mjs    # idempotent @copyright header injector (npm run copyright:headers)
 ├── tests/
 │   ├── test-setup.ts        # in-memory localStorage mock
 │   ├── fixtures/

@@ -440,7 +440,7 @@ sanity-checks that both `index.html` and `config.xml` land there. Tizen Studio
 (or the `tizen` CLI) then signs the `package/` contents into a signed `.wgt`.
 See `docs/signing.md` for the full certificate + signing flow.
 
-### Reproducible asset + header scripts (RT-066)
+### Reproducible asset + header scripts
 
 Two maintenance scripts were long un-referenced from any npm/doc surface even
 though one of them is the sole provenance record for a shipped binary:

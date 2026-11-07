@@ -125,6 +125,8 @@
 ## Step 2.3.4 - SleepTimerOverlay.vue vs SleepTimer.vue
 **Status**: TV-SPECIFIC (justified) - duplicate
 **Finding**: phlix-ui's SleepTimer lacks 10min preset and custom input (1-180 min). Tizen has 5, 10, 15, 30, 45, 60 min presets + custom input. Consolidation requires phlix-ui to add 10min preset and custom input support.
+
+**Currency (2026-11-07, S501 T-06 reconciliation)**: `SleepTimerOverlay.vue` was DELETED at S501 (PR #87, 2026-09-16) — its `defineExpose({ show, toggle })` had zero callers, and the sleep-timer surface ships inside @phlix/ui's PlayerPage bundle. No presets live in this repo today; the historical comparison above is preserved verbatim per the history law.
 **Code Changes**: None (comment added)
 
 ## Step 2.3.5 - AudioTrackList.vue
@@ -210,6 +212,8 @@
 ## Step 3.2 - Up Next Card
 **Decision**: TV-SPECIFIC (PARTIAL duplicate)
 **Rationale**: Tizen has UpNextOverlay.vue at `src/components/UpNextOverlay.vue` — a 596-line (re-measured `wc -l` at tip 2026-09-04) TV-specific component with D-pad navigation, countdown ring, and next-item loading. Since S280 the next item comes from the registered `GET /api/v1/users/me/next-up` rail (lines 130-150), NOT the old `GET /api/v1/media/{id}/playlist` call (that route was never registered server-side — the component docblock at :117-128 records this). It uses polling (250ms `setInterval` at lines 169-183) vs phlix-ui's reactive UpNext.vue props. The test file `tests/unit/UpNextOverlay.test.ts` exists and tests props, emits, accessibility, and countdown ring calculations. This was also documented in Category 2 Step 2.3.3 as TV-SPECIFIC with tech debt (polling vs reactive). The architectural difference (polling vs reactive) is justified by TV webview constraints.
+
+**Currency (2026-11-07, S501 T-04 reconciliation)**: `UpNextOverlay.vue` and `tests/unit/UpNextOverlay.test.ts` were DELETED at S501 (PR #87, 2026-09-16) — mounted as a root app left its `counting` prop false forever (it could never render), and the next-up card ships inside @phlix/ui's PlayerPage bundle. The 596-line component and its suite no longer exist at tip; README's "Overlay Missing" section states the live truth. The text above is preserved verbatim per this ledger's history law.
 **Code Changes**: None (TV-specific component already exists with documented tech debt)
 
 ## Step 3.3 - Transcode Notice
@@ -747,6 +751,8 @@ All 23 admin feature steps are **NOT TV-APPLICABLE**. Admin features (user manag
 ## Step 9.1 - Polling Instead of Reactivity (HIGH)
 **Decision**: TV-SPECIFIC
 **Finding**: ChapterOverlay.vue:297-316, SkipIntroOverlay.vue:127-141, and UpNextOverlay.vue:169-183 all use setInterval at 250ms to poll player position from playerStore (line refs re-derived at tip 2026-09-04). This is explicitly documented in each component's header as "tech debt but necessary for the TV webview context." The cat_9.md notes Tizen WebView may have unreliable timeupdate event firing - the polling approach is a deliberate TV-specific workaround. The alternative requestVideoFrameCallback is not used. Core player store updateProgress() is called via Player.vue's onTimeUpdate in @phlix/ui - the issue is that overlays poll separately rather than using reactive subscriptions.
+
+**Currency (2026-11-07)**: Of the polling trio above, `UpNextOverlay.vue` was deleted at S501 (see Step 3.2's Currency note); `ChapterOverlay.vue` and `SkipIntroOverlay.vue` remain live and still poll.
 **Code Changes**: None (documented TV-specific tech debt)
 
 ## Step 9.2 - Missing Resume System (HIGH)
@@ -758,6 +764,8 @@ All 23 admin feature steps are **NOT TV-APPLICABLE**. Admin features (user manag
 **Decision**: NOT TV-APPLICABLE
 **Finding**: *(Restated at tip 2026-09-04 — the audit-date "fetches `/api/v1/media/{id}/playlist`" was falsified by S280: that route was never registered server-side.)* UpNextOverlay.vue:130-150 (`loadUpNextMedia`) fetches `GET /api/v1/users/me/next-up` via `client.get` and picks the first non-self item client-side. This is a TV-specific implementation that doesn't use playerStore.setQueue()/next(). The cat_9.md notes PlayerPage.vue:213-268 — *HISTORICAL src ref* — shows proper queue management with player.setQueue() and player.next() - but these are in @phlix/ui's PlayerPage, not in tizen. Tizen's UpNextOverlay works differently (API-based) and achieves the same UX.
 **Code Changes**: None (UpNextOverlay uses different but equivalent approach)
+
+**Currency (2026-11-07)**: The UpNextOverlay implementation described above was deleted at S501 — the live next-up surface is @phlix/ui's PlayerPage (see Step 3.2's Currency note). Preserved verbatim.
 
 ## Step 9.4 - Missing Media Session (MEDIUM)
 **Decision**: NOT TV-APPLICABLE
@@ -802,7 +810,7 @@ All 23 admin feature steps are **NOT TV-APPLICABLE**. Admin features (user manag
 |------|---------|----------|-------|
 | 9.1 | Polling Instead of Reactivity | TV-SPECIFIC | 250ms setInterval polling in overlays - documented tech debt |
 | 9.2 | Missing Resume System | TV-SPECIFIC | BridgePlayer intentionally minimal; overlays use playerStore directly |
-| 9.3 | Missing Queue/Up-Next | NOT TV-APPLICABLE | UpNextOverlay fetches via API directly |
+| 9.3 | Missing Queue/Up-Next | NOT TV-APPLICABLE | UpNextOverlay fetches via API directly *(deleted at S501 — see Step 3.2's Currency note)* |
 | 9.4 | Missing Media Session | NOT TV-APPLICABLE | RemoteManager handles TV remote; no navigator.mediaSession |
 | 9.5 | Missing Preferences Seeding | TV-SPECIFIC (PARTIAL) | seedFromPreferences not called but prefs initialized at store creation |
 | 9.6 | lastCommand Bus | ALREADY SUFFICIENT | player.seekBy() writes to lastCommand internally; works correctly |
@@ -942,6 +950,8 @@ The tizen implementation has a 71-line REST client (392-462, measured) plus tize
 ## Step 12.6 - Next Up API
 **Decision**: NOT USED
 **Finding**: *(Restated at tip 2026-09-04 — the audit-date playlist-route claim was falsified by S280.)* No tizen source file imports phlix-ui's `nextUp.ts` module; but since S280 UpNextOverlay.vue hits the SAME registered endpoint it wraps — `GET /api/v1/users/me/next-up` via raw `client.get` (UpNextOverlay.vue:138-141) — to pick the next item. "Next Up" continue-watching for BrowsePage rails remains handled by @phlix/ui automatically.
+
+**Currency (2026-11-07)**: `UpNextOverlay.vue` was deleted at S501 (see Step 3.2's Currency note) — the raw-fetch site cited above no longer exists in this repo; the continue-watching rail remains @phlix/ui-owned.
 **Code Changes**: None (already handled differently)
 
 ## Step 12.7 - Photos API
@@ -975,7 +985,7 @@ The tizen implementation has a 71-line REST client (392-462, measured) plus tize
 | 12.3 | Libraries | ALREADY SUFFICIENT | Delegated to @phlix/ui via `libraryLinks: true` |
 | 12.4 | Invite Links | NOT USED | Admin/web feature, not TV use case |
 | 12.5 | Most Watched | NOT USED | Analytics feature, not TV use case |
-| 12.6 | Next Up | NOT USED | UpNextOverlay uses direct API |
+| 12.6 | Next Up | NOT USED | UpNextOverlay uses direct API *(deleted at S501 — see Step 3.2's Currency note)* |
 | 12.7 | Photos | NOT USED | Not a TV use case |
 | 12.8 | Claim Server | NOT USED | Server setup via web UI |
 | 12.9 | Avatar | NOT USED | Handled via @phlix/ui profile |
@@ -1205,6 +1215,8 @@ Tizen imports `@phlix/ui/style.css` and thus inherits the full token set. TV mod
 **Decision**: TV-SPECIFIC (by design)
 **Finding**: Available themes (nocturne/daylight/midnight) are all implemented in CSS and the theme infrastructure. `main.ts:174` (re-derived at tip) hardcodes `defaultTheme: 'nocturne'` with no user-accessible theme switcher. Three overlays (`ChapterOverlay`, `SleepTimerOverlay`, `SkipIntroOverlay`) are hardcoded to "dark TV UI (nocturne theme)" via comments but use CSS custom properties — they inherit any theme. `ThemeToggle` component exists in `PhlixApp.vue` (internal to @phlix/ui) but is not accessible via tizen's custom overlays.
 
+**Currency (2026-11-07)**: Two overlays named above (`SleepTimerOverlay`, `UpNextOverlay`) were deleted at S501; the theme-inheritance observation stands unchanged for the remaining overlays.
+
 Hardcoding `nocturne` for a TV client is a **reasonable UX decision** — TV apps in dark living rooms/bedrooms overwhelmingly benefit from dark themes. However, if theme switching is desired in future, the infrastructure (`data-theme` attribute, CSS variables, `useTheme()` composable) already works — it just needs a theme selector UI accessible via D-pad navigation.
 **Code Changes**: None (deliberate UX constraint — not a gap)
 
@@ -1235,6 +1247,8 @@ Hardcoding `nocturne` for a TV client is a **reasonable UX decision** — TV app
 ## Step 15.1 - 6 Separate Vue Apps (HIGH)
 **Decision**: TV-SPECIFIC
 **Rationale**: main.ts:193-229 mounts 7 separate Vue apps (main :193 + SpatialNavHost :208 + five overlays :213-229; refs re-derived at tip — audit-date block was 119-149) sharing pinia/router via `globalProperties`. This architecture enables independent overlay lifecycle management with shared state. The overlays (ChapterOverlay, SleepTimerOverlay, SkipIntroOverlay, PiPController, UpNextOverlay, SpatialNavHost) are intentionally separate apps for TV-specific z-index layering and visibility control. Consolidation via Vue Teleport would require significant refactoring with no user-facing benefit on TV hardware.
+
+**Currency (2026-11-07, mount list re-derived at tip 75ae590b)**: `main.ts` mounts NINE separate Vue apps today: main `#phlix-app`, `SpatialNavHost`, then seven overlay/panel hosts — `ChapterOverlay`, `SkipIntroOverlay`, `PiPController`, `ActionToastOverlay` (S516), `QuickConnectPanel` (S520), `TelemetryConsent` (S521), `ScreenSaverOverlay` (S523). The UpNext/SleepTimer apps above were deleted at S501; the architecture (independent root apps sharing pinia/router via globals) is unchanged.
 **Code Changes**: None (architectural decision - no code needed)
 
 ## Step 15.2 - DOM-based Quality Control (MEDIUM)
@@ -1260,6 +1274,8 @@ Hardcoding `nocturne` for a TV client is a **reasonable UX decision** — TV app
 ## Step 15.6 - Multiple Mount Points (MEDIUM)
 **Decision**: TV-SPECIFIC (same architectural decision as 15.1)
 **Rationale**: index.html has 7 mount points (`#phlix-app`, `#phlix-spatial-host`, `#phlix-chapter-overlay`, `#phlix-sleep-timer-overlay`, `#phlix-skip-intro-overlay`, `#phlix-pip-overlay`, `#phlix-up-next-overlay`). This is the same architectural decision as Step 15.1 - separate apps for independent overlay visibility control and z-index layering. Single mount with Teleport would complicate overlay lifecycle management with no TV user-facing benefit.
+
+**Currency (2026-11-07, re-verified at tip)**: `index.html`'s host set no longer matches the seven above — the `#phlix-sleep-timer-overlay` and `#phlix-up-next-overlay` divs were removed with the S501 deletions, and `#phlix-action-toast-overlay`, `#phlix-quick-connect`, `#phlix-telemetry-consent`, `#phlix-screensaver` plus the CSS-only `#phlix-splash` were added; ten `id="phlix-*"` divs at tip, machine-pinned against the mount list by the `docsTestListings` parity arm.
 **Code Changes**: None (architectural decision - no code needed)
 
 ---
@@ -1306,9 +1322,9 @@ This category examines i18n (internationalization) / l10n (localization) infrast
 | 13.1 | **NOT USED** | `useMessages()` is NOT USED anywhere in tizen-client (0 references to useMessages, createTranslator, i18n, or messages in src/). @phlix/ui has complete i18n infrastructure but tizen is a single-language TV app. |
 | 13.2 | **NOT USED** | Music page has hardcoded "tracks" strings (MusicPage.vue:286 and :294 at tip — re-derived; :233 was the audit-date position) instead of `t('music.tracks')`. All music UI strings are hardcoded English. |
 | 13.3 | **NOT TV-APPLICABLE** | Deprecated `music.of` key is not used anywhere in tizen. No pager implementation exists in tizen music browsing — it shows first 100 rows only. |
-| 13.4 | **NOT USED** | CONFIRMED extensive hardcoded English strings across multiple components (MusicPage, SkipIntroOverlay, SleepTimerOverlay, main.ts, stores). Single-language English deployment is by design, not a gap *(S424: the previously-quoted AGENTS.md sentence does not exist at tip — see Overview note; strings empirically re-verified hardcoded)*. |
+| 13.4 | **NOT USED** | CONFIRMED extensive hardcoded English strings across multiple components (MusicPage, SkipIntroOverlay, SleepTimerOverlay, main.ts, stores) *(2026-11-07: SleepTimerOverlay deleted at S501 — historical in that list; the other named sources remain live)*. Single-language English deployment is by design, not a gap *(S424: the previously-quoted AGENTS.md sentence does not exist at tip — see Overview note; strings empirically re-verified hardcoded)*. |
 | 13.5 | **NOT TV-APPLICABLE** | No pager implementation in tizen. Music browsing shows first 100 rows with no pagination controls. Pager i18n keys (pageOf, prevPage, nextPage, firstPage, lastPage) are not used. |
-| 13.6 | **NOT USED** | Player overlay strings are hardcoded: "Skip Intro", "Skip Outro" in SkipIntroOverlay.vue; "5 min", "10 min", etc. in SleepTimerOverlay.vue; "Sleep Timer" title. |
+| 13.6 | **NOT USED** | Player overlay strings are hardcoded: "Skip Intro", "Skip Outro" in SkipIntroOverlay.vue; "5 min", "10 min", etc. in SleepTimerOverlay.vue; "Sleep Timer" title *(2026-11-07: SleepTimerOverlay deleted at S501 — strings historical)*. |
 | 13.7 | **NOT USED** | Error messages are hardcoded in stores (lines re-derived at tip — see Key Finding 3): useMusicStore.ts 'Failed to load artists/albums/album/track' (+ 'load more' variants since S125); useSyncPlayStore.ts 'Failed to parse WebSocket message' etc. — *S424: the audit-date 'WebSocket error' literal no longer exists (client onError interpolates `` `${code}: ${message}` `` at :584)*; ChapterOverlay.vue 'Failed to load chapters' (:97). |
 
 ## Decision Distribution
@@ -1340,7 +1356,7 @@ This category examines i18n (internationalization) / l10n (localization) infrast
 - Line 204: `<span class="skip-intro-overlay__label">Skip Intro</span>` (re-verified exact at tip)
 - Line 211: `aria-label="Skip outro"` (re-verified exact at tip; also `Skip Outro` label at :235)
 
-**SleepTimerOverlay.vue** (src/components/SleepTimerOverlay.vue) — lines re-derived at tip:
+**SleepTimerOverlay.vue** (src/components/SleepTimerOverlay.vue; DELETED at S501, 2026-09-16 — inventory below is historical) — lines re-derived at tip:
 - Lines 32-37: `{ label: '5 min', minutes: 5 }` … `{ label: '60 min', minutes: 60 }` (PRESETS array — re-verified exact)
 - Line 150: `<h2 class="sleep-timer-overlay__title">` (renders the Sleep Timer title; audit ref 143)
 - Line 183: `{{ preset.label }}` (audit ref 175)
@@ -1433,12 +1449,16 @@ The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/u
 ## Step 17.6 - Finished signal (v0.98.13)
 **Decision**: TV-SPECIFIC
 **Rationale**: @phlix/ui includes `useResumeReporter` which calls `finish()` on video end to notify server to remove item from continue-watching *(v0.98.33-era observation — HISTORICAL)*. Tizen's `UpNextOverlay.vue` (file is 596 lines at tip; polling at :169-183, emits 'play-now'/:155, :205 and 'cancel'/:162) does NOT reference `useResumeReporter` at all — re-verified: `grep -rn "useResumeSync\|useResumeReporter" src/` → 0 hits at tip. Whatever finished-signal tizen sends comes only from @phlix/ui's own player internals, not tizen code. TV-SPECIFIC designation retained.
+
+**Currency (2026-11-07)**: `UpNextOverlay.vue` was deleted at S501 (see Step 3.2's Currency note) — the event-emission implementation above is historical; the live up-next path is @phlix/ui's PlayerPage. Designation preserved verbatim as record.
 **Code Changes**: None (tech debt - UpNextOverlay uses event emission pattern, not reactive)
 
 ## Step 17.7 - Up-next race condition (v0.98.10)
 **Decision**: TV-SPECIFIC
 **Rationale**: @phlix/ui v0.98.10 fixed queue race conditions with atomic `setQueue()`/`enqueue()`/`next()` operations in `usePlayerStore` *(HISTORICAL src ref)*. Tizen's `UpNextOverlay.vue` (since S280: `loadUpNextMedia` at :130-150) fetches `GET /api/v1/users/me/next-up` and picks the first non-self item client-side — the audit-date `/api/v1/media/{id}/playlist` fetch no longer exists (that route was never server-registered; the component docblock :117-128 records the S280 finding). It remains a different architecture — tizen manages its own up-next logic rather than relying on @phlix/ui's player store queue, which tizen bypasses. The race-condition fix concern still applies structurally.
 **Code Changes**: None (tizen uses custom up-next architecture with different queue semantics)
+
+**Currency (2026-11-07)**: `UpNextOverlay.vue` was deleted at S501 (see Step 3.2's Currency note); tizen's custom up-next architecture no longer exists. Preserved verbatim as record.
 
 ## Step 17.8 - Menu positioning (v0.66.0)
 **Decision**: ALREADY SUFFICIENT
@@ -1463,7 +1483,7 @@ The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/u
 - `package.json`: @phlix/ui pinned to v0.98.33 (includes all v0.81.0+ fixes)
 - `src/main.ts`: `createPhlixApp()` with `playerHlsConfig: TIZEN_HLS_CONFIG`
 - `src/stores/useMusicStore.ts`: paged ApiClient-helper calls with limit/offset + server-side artist filter at tip (17.3/17.4 IMPLEMENTED — S125 restatements)
-- `src/components/UpNextOverlay.vue`: Polling-based overlay with event emission, not reactive, sourcing `users/me/next-up` (17.6/17.7 TV-SPECIFIC — restated)
+- `src/components/UpNextOverlay.vue`: Polling-based overlay with event emission, not reactive, sourcing `users/me/next-up` (17.6/17.7 TV-SPECIFIC — restated) *(DELETED at S501, 2026-09-16 — see Step 3.2's Currency note)*
 - `src/tizenBridge.ts`: Uses `usePlayerStore` from @phlix/ui for remote bridge
 
 ### Architecture context
@@ -1490,8 +1510,8 @@ The tizen-client intentionally does NOT use i18n infrastructure despite @phlix/u
 | 17.3 | Music album filtering | 0.98.32 | IMPLEMENTED (S424 restatement) | listAlbums({artist}) server-side filter live since S125 |
 | 17.4 | Music paging missing | 0.98.32 | IMPLEMENTED (S424 restatement) | limit/offset paging + load-more live since S125 |
 | 17.5 | Resume on HLS fallback | 0.80.0 | ALREADY SUFFICIENT | @phlix/ui hls-playback has fix, TIZEN_HLS_CONFIG is buffer tuning only |
-| 17.6 | Finished signal | 0.98.13 | TV-SPECIFIC | UpNextOverlay uses event emission, not useResumeReporter.finish() |
-| 17.7 | Up-next race condition | 0.98.10 | TV-SPECIFIC | UpNextOverlay uses custom polling architecture, not player store queue |
+| 17.6 | Finished signal | 0.98.13 | TV-SPECIFIC | UpNextOverlay uses event emission, not useResumeReporter.finish() *(superseded — deleted at S501)* |
+| 17.7 | Up-next race condition | 0.98.10 | TV-SPECIFIC | UpNextOverlay uses custom polling architecture, not player store queue *(superseded — deleted at S501)* |
 | 17.8 | Menu positioning | 0.66.0 | ALREADY SUFFICIENT | @phlix/ui Menu component has fix |
 | 17.9 | HLS bandwidth persistence | 0.80.x | ALREADY SUFFICIENT | @phlix/ui hls-playback has localStorage persistence |
 | 17.10 | Codec probing | 0.80.x | ALREADY SUFFICIENT | @phlix/ui playback.ts has probeCodecSupport() |
@@ -1502,7 +1522,7 @@ Most bug fixes (6/10 ALREADY SUFFICIENT) flow through automatically because tize
 
 Two items (17.3, 17.4) were NOT IMPLEMENTED at audit date because `useMusicStore.ts` used raw API calls predating the v0.98.32 paged API changes — **restated at tip as IMPLEMENTED**: S125 + `894bf96` adopted the paged helpers, the server-side `?artist=` filter, and envelope-unwrapping (see Category 8 restatements).
 
-Two items (17.6, 17.7) are TV-SPECIFIC because tizen has custom overlay components (UpNextOverlay) that use polling/event-emission architecture rather than @phlix/ui's reactive patterns. This is documented tech debt in the codebase comments.
+Two items (17.6, 17.7) are TV-SPECIFIC because tizen has custom overlay components (UpNextOverlay) that use polling/event-emission architecture rather than @phlix/ui's reactive patterns. This is documented tech debt in the codebase comments. *(2026-11-07: the named custom overlays were deleted at S501 — see Step 3.2's Currency note; the designation stands as historical record.)*
 
 No code changes required for this category - the findings are documentation of architectural decisions and known gaps.
 
@@ -1574,7 +1594,7 @@ This category audits 22 features added between v0.81.0 (old stale version) and v
 **Decision**: ALREADY SUFFICIENT
 **Rationale**: Deterministic queue implemented in S12 with `applyItem()` ordering logic. Player.vue `onEnded` handler uses deterministic up-next queue. `useResumeReporter.ts` calls `finish()` before chrome-pin/up-next logic. Tizen benefits from `createPhlixApp()` player implementation which includes this feature.
 **Code Changes**: None (works via createPhlixApp player)
-**Evidence**: S12 worklog; Step 3.2/3.13 confirm TV-specific UpNextOverlay.vue works with queue
+**Evidence**: S12 worklog; Step 3.2/3.13 confirm TV-specific UpNextOverlay.vue works with queue *(2026-11-07: UpNextOverlay deleted at S501 — see Step 3.2's Currency note; the createPhlixApp path remains the live one)*
 
 ## Step 16.11 - Per-library relay throttle/quota (v0.98.30)
 **Decision**: NOT TV-APPLICABLE

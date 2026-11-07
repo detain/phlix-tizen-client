@@ -34,6 +34,53 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — remote digit presses echo the joined buffer as you type — 2026-11-07
+
+- **What users see:** a number key on the remote now shows its digits on
+  screen while they are being entered. A digit press previously produced
+  ZERO feedback for the full 2 s buffer window — the caption layer stayed
+  dead-air because the drain event itself is silent (no consumer yet).
+  `RemoteManager.pressDigit` now echoes every ACCEPTED press with the joined
+  pending value on a new `digit` observation channel, and
+  `ActionToastOverlay` captions it ('1', then '12', …). The commit law is
+  unchanged: `action` still carries exactly ONE silent `DIGIT_COMMIT` per
+  burst (M-TIZEN-32's law untouched — the echo is per-press feedback, not a
+  re-badged drain), refused digits (typing targets, auto-repeat, non-digit
+  names) echo nothing, and the flood-cap overflow stays echo-silent — an
+  abandoned burst has no value to honestly echo. Five new pins across the
+  existing RemoteManager/ActionToastOverlay suites; committed sources
+  rebuilt deterministically (package/ ×3). RT-070 (review tizen__gameux
+  Info #6).
+
+### Changed — documentation truth pass: S501 currency notes, locale-PIN lineage prose, scripts tree, ledger IDs out of public docs — 2026-11-07
+
+- **What users see:** nothing on the TV surface — docs, comments and
+  config prose only.
+- `VERIFICATION.md`: every step and summary row citing `UpNextOverlay.vue`,
+  `tests/unit/UpNextOverlay.test.ts` or `SleepTimerOverlay.vue` as LIVE now
+  carries a **Currency (2026-11-07, S501 reconciliation)** note or marker —
+  both components (and the UpNext suite) were deleted at S501 (PR #87,
+  2026-09-16) as never-renderable duplicates of the @phlix/ui PlayerPage
+  surfaces; the live truth was already in README/AGENTS. Historical text
+  preserved verbatim per the history law (RT-071).
+- `docs/i18n.md`: the 46-line run-on `@phlix/ui` seam paragraph is now short
+  sentences plus a newest-first bulleted PIN lineage (v0.99.8 → .22 — all
+  shas, `git diff -- src/i18n` outcomes, key counts and the 12-of-14 hash
+  rotation law preserved), led by the current state and the measured fact
+  that the installed v0.99.22 moved NO locale SOURCE (vendor holds at
+  `01acaa12`). The present-tense '~412 strings' figure becomes the
+  era-bound 526 (the v0.99.5-era historical '412 keys' row stands verbatim)
+  (RT-072/RT-073).
+- `README.md`: the `scripts/` tree now lists all eight files with one-line
+  purposes (was two) (RT-074).
+- Ledger hygiene (rows banked by the w09-L4 review): RT-## ticket IDs are
+  scrubbed from `docs/`, `DEVELOPER.md` and `.github/` prose — sentences
+  name the behavior, not the ticket; `.github/dependabot.yml` keeps ONE
+  copy of the github-actions rationale (it had been stated twice); the
+  `tests/unit/distApiFloor.test.ts` CSS census banner says 153 alongside
+  its moved pin (the rotation-history comments keep their figures as
+  history).
+
 ### Changed — w09-L4 Info-review hygiene: CI/Dependabot triggers, maintenance-script exposure, `100dvh`/`:focus-visible` governance pins, dead CSS removal — 2026-11-06
 
 - **What users see:** nothing on the TV surface. These are registered Info-class

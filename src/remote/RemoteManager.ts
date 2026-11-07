@@ -13,7 +13,11 @@
  * While a typing target holds focus, digits stay byte-identical to the old
  * passthrough — no buffer, no preventDefault. Recognised numeric voice
  * phrases (S531) enter through the SAME `pressDigit` seam — never a forked
- * digit path.
+ * digit path. Every ACCEPTED press additionally echoes the joined buffer on
+ * a live `digit` observation channel: a press must never dead-air while its
+ * burst is pending. The commit law is unchanged — `action` still carries
+ * exactly ONE silent DIGIT_COMMIT per burst, and a refused or flood-abandoned
+ * digit emits on neither channel.
  *
  * M-TIZEN-09 (review tizen__gameux M1): transport taps go LIVE and the hold
  * cadence is throttled. FAST_FORWARD/REWIND are now immediate AND repeatable
@@ -54,7 +58,11 @@ const IMMEDIATE_ACTION_FLOOR_MS = 250;
 export interface ActionEvent {
   key: ActionName;
   repeat?: boolean;
-  /** Joined digit string carried by the S535 DIGIT_COMMIT drain (buffer value). */
+  /**
+   * Joined digit string: carried by the S535 DIGIT_COMMIT drain on the
+   * `action` channel AND by every per-press echo on the live `digit`
+   * observation channel (the buffer value at the moment of the press).
+   */
   value?: string;
 }
 
@@ -63,7 +71,7 @@ export interface KeyEvent {
   mappedKey: ActionName;
 }
 
-type RemoteEventName = 'action' | 'keydown' | 'keyup';
+type RemoteEventName = 'action' | 'digit' | 'keydown' | 'keyup';
 type Handler = (_data: ActionEvent | KeyEvent) => void;
 
 export class RemoteManager {
@@ -269,11 +277,21 @@ export class RemoteManager {
    * commit buffer (S535). Routed keydowns and recognised numeric voice phrases
    * both arrive here — the ONE-buffer law's choke point. Non-digit names are
    * refused without touching the queue.
+   *
+   * An ACCEPTED push echoes the joined buffer on the live `digit` channel —
+   * the remote must never dead-air mid-burst (the drain itself stays silent
+   * on `action`). A refused name queues nothing, so nothing echoes; the
+   * flood-cap overflow abandons the burst (pending() === ''), and there is
+   * no honest value to echo — the guard stays quiet.
    */
   pressDigit(action: ActionName): void {
     const digit = KeyMapping.digitValue(action);
     if (digit === null) return;
     this.digitBuffer.push(digit);
+    const pending = this.digitBuffer.pending();
+    if (pending !== '') {
+      this.emit('digit', { key: action, value: pending });
+    }
   }
 
   /** Register an action handler (convenience wrapper). */

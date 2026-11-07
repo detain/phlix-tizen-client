@@ -60,16 +60,17 @@ whole bundle emits exactly one CSS file), all figures re-derived from disk;
 re-measured 2026-11-06 after the `@phlix/ui` #v0.99.22 re-vendor — the ambient
 canvas cure (`.player__ambient`) emits one more `inset:` site (41→42, the two
 negative-inset declarations of the new keyframed layers minus one media-query
-rule hoisted at build time); re-measured again 2026-11-06 at tip 1c09f99 for
-RT-068 — dropping the two host `:focus-visible:focus-visible` redundant double
-arms (AudioTrackList / SubtitleTrackList, mirroring the ChapterList m14 cure)
-removed 4 `:focus-visible` tokens (157→153); RT-069's deletion of the dead
-`@media (max-width:640px)` density fallbacks removed no above-floor token, so
-every other figure held; the `100dvh` row is added this wave (RT-067):
+rule hoisted at build time); re-measured again 2026-11-06 at tip 1c09f99 —
+dropping the two host `:focus-visible:focus-visible` redundant double arms
+(AudioTrackList / SubtitleTrackList, mirroring the ChapterList m14 cure)
+removed 4 `:focus-visible` tokens (157→153); the deletion of the dead
+`@media (max-width:640px)` density fallbacks, reviewed in the same round,
+removed no above-floor token, so every other figure held; the `100dvh` row
+is added this wave:
 
 | Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
 |---|---|---|---|
-| `:focus-visible` | Chrome **86** | 153 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (RT-068 dropped 4 from 157 by collapsing two host `:focus-visible:focus-visible` double arms.) |
+| `:focus-visible` | Chrome **86** | 153 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (4 dropped from 157 by collapsing two host `:focus-visible:focus-visible` double arms.) |
 | `inset:` | Chrome **87** | 42 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
 | `aspect-ratio` | Chrome **88** | 36 | Boxes size from content/height instead of the ratio — cards may stretch. |
 | `accent-color` | Chrome **93** | 8 | Form controls keep UA default colors — cosmetic only. |
