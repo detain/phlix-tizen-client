@@ -269,7 +269,15 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // pre-existing red at the v0.99.22 re-vendor commit, attributed by a
       // selector-set diff of index-u1vjsYdH.css vs index-DzrZJodb.css and
       // cured here; docs/runtime-floor.md table re-measured in the same change).
-      expect(countAcrossCss(':focus-visible')).toBe(157);
+      // 157→153: RT-068 (w09-L4) dropped the two host redundant double arms
+      // `.audio-track-list__item:focus-visible:focus-visible` and
+      // `.subtitle-track-list__item:focus-visible:focus-visible`, mirroring the
+      // earlier ChapterList m14 cure. Each doubled selector carried TWO
+      // `:focus-visible` tokens; collapsing to one arm removed 2 per file × 2
+      // files = −4 (host surface, attributed). Other figures held (RT-069's
+      // removal of the dead `@media (max-width:640px)` density fallbacks in
+      // RecommendationsScreen/MusicPage deleted no above-floor token).
+      expect(countAcrossCss(':focus-visible')).toBe(153);
       expect(countAcrossCss('inset:')).toBe(42);
       expect(countAcrossCss('aspect-ratio')).toBe(36);
       expect(countAcrossCss('accent-color')).toBe(8);
@@ -291,6 +299,31 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // `:has(` arrival is a new dependency on ≥ 105 parsing and needs eyes.
       expect(countOccurrences(css, ':has(')).toBe(1);
       expect(css).toContain(':has(input:checked)');
+    });
+
+    it('pins the 100dvh (Chrome 108) census with its guarded/unguarded split (RT-067)', () => {
+      // docs/runtime-floor.md "CSS features above 85" carries the matching row.
+      // Measured 2026-11-06 at tip 1c09f99 — 7 `100dvh` tokens, all in the
+      // VENDORED @phlix/ui stylesheet (the tizen host styles use none):
+      //   * 5 GUARDED — the two theater-mode heights (`.player.is-theater`
+      //     height/max-height + `.player-page.is-theater .player-page__stage`
+      //     height) each sit behind a `@supports not (height:100dvh){…100vh}`
+      //     fallback; the token appears once in each guarded rule AND once in
+      //     each of the two @supports conditions (3 + 2 = 5) → these degrade to
+      //     100vh on ≤ 107, no clamp loss.
+      //   * 2 UNGUARDED — `.phlix-menu__list{max-height:calc(100dvh - 16px)}`
+      //     and `.usermenu__panel{max-height:calc(100dvh - var(--space-4))}`
+      //     have no vh fallback: on ≤ 107 the declaration drops and long menus
+      //     lose their viewport clamp (cosmetic overflow, no crash — the cure is
+      //     an upstream @phlix/ui double-declare, out of this repo's pin scope).
+      // A count move here means the vendored menu/theater CSS reshaped →
+      // re-derive this split and the floor-doc row together (tripwire law).
+      const css = readFileSync(join(ASSETS_DIR, entryCssName()), 'utf8');
+      expect(countAcrossCss('100dvh')).toBe(7);
+      expect(countOccurrences(css, '@supports not (height:100dvh)')).toBe(2);
+      // The two unguarded clamps — named so their removal upstream is noticed.
+      expect(css).toContain('max-height:calc(100dvh - 16px)');
+      expect(css).toContain('max-height:calc(100dvh - var(--space-4))');
     });
   });
 

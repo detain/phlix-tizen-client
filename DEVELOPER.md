@@ -440,6 +440,27 @@ sanity-checks that both `index.html` and `config.xml` land there. Tizen Studio
 (or the `tizen` CLI) then signs the `package/` contents into a signed `.wgt`.
 See `docs/signing.md` for the full certificate + signing flow.
 
+### Reproducible asset + header scripts (RT-066)
+
+Two maintenance scripts were long un-referenced from any npm/doc surface even
+though one of them is the sole provenance record for a shipped binary:
+
+```bash
+npm run icon:gen            # node scripts/make-icon.js
+npm run copyright:headers   # node scripts/add-copyright.mjs
+```
+
+- **`scripts/make-icon.js`** (`npm run icon:gen`) regenerates the tracked
+  `app/icon.png` — the tile `config.xml` declares and `scripts/package.js:50`
+  copies into every widget. It is a hand-built, deterministic PNG (no image
+  library, no timestamp), so the shipped binary's provenance is fully auditable
+  and re-derivable from source.
+- **`scripts/add-copyright.mjs`** (`npm run copyright:headers`) is an idempotent
+  header injector for `src/`: re-running it on a compliant tree writes nothing.
+  It is never part of `npm run package` or any CI gate — a local maintenance
+  tool, now discoverable.
+
+
 > `base: './'` in `vite.config.ts` is MANDATORY — a `.wgt` runs from a `file://`
 > origin on the TV, so absolute `/assets` paths would 404.
 

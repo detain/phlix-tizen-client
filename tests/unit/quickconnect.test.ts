@@ -6,7 +6,7 @@
  * status requests, transient faults back off exponentially and stop rather than
  * hammer, and denied/expired/abandoned resolve calm non-fatal phases without
  * throwing. The transport tests lock the exact served path shapes so a drift off
- * the 410-tuple manifest is caught here too.
+ * the 415-tuple manifest is caught here too.
  *
  * RT-058 cure (w08-L4 adversarial review): the fakes speak the SERVER'S wire,
  * not a wish. `initiate` answers carry the 43-char base64url pairing secret the

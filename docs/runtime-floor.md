@@ -60,15 +60,21 @@ whole bundle emits exactly one CSS file), all figures re-derived from disk;
 re-measured 2026-11-06 after the `@phlix/ui` #v0.99.22 re-vendor — the ambient
 canvas cure (`.player__ambient`) emits one more `inset:` site (41→42, the two
 negative-inset declarations of the new keyframed layers minus one media-query
-rule hoisted at build time); every other figure held:
+rule hoisted at build time); re-measured again 2026-11-06 at tip 1c09f99 for
+RT-068 — dropping the two host `:focus-visible:focus-visible` redundant double
+arms (AudioTrackList / SubtitleTrackList, mirroring the ChapterList m14 cure)
+removed 4 `:focus-visible` tokens (157→153); RT-069's deletion of the dead
+`@media (max-width:640px)` density fallbacks removed no above-floor token, so
+every other figure held; the `100dvh` row is added this wave (RT-067):
 
 | Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
 |---|---|---|---|
-| `:focus-visible` | Chrome **86** | 157 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. |
+| `:focus-visible` | Chrome **86** | 153 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (RT-068 dropped 4 from 157 by collapsing two host `:focus-visible:focus-visible` double arms.) |
 | `inset:` | Chrome **87** | 42 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
 | `aspect-ratio` | Chrome **88** | 36 | Boxes size from content/height instead of the ratio — cards may stretch. |
 | `accent-color` | Chrome **93** | 8 | Form controls keep UA default colors — cosmetic only. |
 | `:has()` | Chrome **105** | 1 | The one rule (`.register-form__segment:has(input:checked)`, a segmented-control highlight) drops — the state stays unstyled. Upstream cosmetic half (ui repo), pinned here so its arrival/movement is visible. |
+| `100dvh` | Chrome **108** | 7 | All vendored `@phlix/ui`. 5 GUARDED: the two theater-mode heights ride `@supports not (height:100dvh){…100vh}` fallbacks (token appears in each guarded rule + each `@supports` condition = 3+2) → they degrade to `100vh` on ≤ 107, no clamp loss. 2 UNGUARDED: `.phlix-menu__list` / `.usermenu__panel` `max-height:calc(100dvh …)` have no vh fallback → on ≤ 107 the clamp drops and long menus overflow (cosmetic, no crash). Cure is an upstream `@phlix/ui` double-declare (out of this repo's pin scope); pinned count=7 so any reshaping vendored menu/theater CSS shows up here. |
 
 The load-bearing cure is the vendored 10-foot fallback carried in the same
 stylesheet:
@@ -81,7 +87,7 @@ stylesheet:
 surface `src/styles/tv-typography.css` documents), so on ≤ 85 engines the D-pad
 focus ring still renders — through plain `:focus`, universally supported. The
 tripwire test **hard-asserts** that selector pair verbatim: if a re-vendor ever
-drops it, the 157 `:focus-visible` census sites become unsupported-with-no-
+drops it, the 153 `:focus-visible` census sites become unsupported-with-no-
 fallback and the suite reddens on the same law that admits them today.
 
 ## Governance law (tripwire rotation rules)

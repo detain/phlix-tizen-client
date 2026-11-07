@@ -34,6 +34,57 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — w09-L4 Info-review hygiene: CI/Dependabot triggers, maintenance-script exposure, `100dvh`/`:focus-visible` governance pins, dead CSS removal — 2026-11-06
+
+- **What users see:** nothing on the TV surface. These are registered Info-class
+  review findings (crossfe/devops/gameux), and every change is either tooling
+  wiring, a governance pin, or the deletion of code that never ran: the doubled
+  `:focus-visible:focus-visible` arm was a no-op (an element cannot be "more"
+  focused) and the `@media (max-width:640px)` density fallbacks could never fire
+  on the fixed 1920 canvas. The widget rebuilds deterministically; the CSS
+  surface is byte-identical apart from the removed dead rules.
+- **RT-064 (devops Info #6):** `.github/workflows/lint.yml` + `test.yml` dropped
+  `develop` from their `push`/`pull_request` branch lists (both already `[ master,
+  main ]`); the repo has no `develop` branch, and `build.yml` already named only
+  master/main — pure trigger hygiene.
+- **RT-065 (devops Info #1):** `.github/dependabot.yml` gains a `github-actions`
+  package-ecosystem alongside npm (weekly). The workflows float action MAJOR tags
+  (checkout@v6 / setup-node@v6 / upload-artifact@v7 / download-artifact@v8 /
+  softprops/action-gh-release@v3), so a new action major could previously ship
+  with no PR signal.
+- **RT-066 (devops Info #8):** `scripts/make-icon.js` (the sole provenance record
+  for the shipped `app/icon.png`, copied into every widget by
+  `scripts/package.js:50`) and `scripts/add-copyright.mjs` (idempotent header
+  injector, never part of build/CI) are now exposed as `npm run icon:gen` /
+  `npm run copyright:headers`, with a DEVELOPER.md pointer making the provenance
+  chain discoverable. The `package` chain string is untouched, so
+  `versionStamping.test.ts` stays green.
+- **RT-067 (crossfe Info #6):** `tests/unit/distApiFloor.test.ts` pins the
+  `100dvh` (Chrome 108) census at the measured 7 with its guard split (5 guarded
+  theater heights behind `@supports not (height:100dvh)` fallbacks + 2 unguarded
+  vendored menu/userpanel `max-height` clamps whose only loss on ≤ 107 is a
+  cosmetic overflow clamp), and `docs/runtime-floor.md` gains the matching
+  "CSS features above 85" row. The `@phlix/ui` double-declare cure for the two
+  unguarded sites is upstream, outside this repo's pin scope.
+- **RT-068 (crossfe Info #7 / gameux Info #1):** removed the redundant
+  `.audio-track-list__item:focus-visible:focus-visible` and
+  `.subtitle-track-list__item:focus-visible:focus-visible` arms in
+  `src/components/AudioTrackList.vue` + `SubtitleTrackList.vue`, mirroring the
+  ChapterList m14 cure. Bundle `:focus-visible` census moved 157→153 (−2 tokens
+  per doubled selector × 2 files); the distApiFloor pin and the floor-doc
+  table/attribution re-measured from the rebuilt bundle in the same commit.
+- **RT-069 (gameux Info #7):** deleted the dead `@media (max-width: 640px)`
+  density fallbacks in `src/screens/RecommendationsScreen.vue` +
+  `src/pages/MusicPage.vue`; `index.html` pins the viewport `width=1920` so a
+  desktop-width breakpoint can never fire. The live `minmax(200px)`/`minmax(180px)`
+  auto-fill grids are the only density control; the legitimate
+  `@media (prefers-reduced-motion)` queries are kept.
+- **Banked add-on (one-token):** `tests/unit/quickconnect.test.ts:9` header said
+  "the 410-tuple manifest"; the vendored manifest `provenance.total` is 415
+  (serverSha `58530ec2`, matching `routeManifest.gate.test.ts:454`) — corrected
+  to 415. The "410-tuple cs#47 canonical" note in `routeManifest.gate.test.ts:56`
+  is accurate historical narrative and stands verbatim.
+
 ### Fixed — quick-connect redeem carries the pairing secret the server requires; the RT-058 posture note is corrected — 2026-11-06
 
 - **What users see:** a TV pairing can now be redeemed at all. The shipped flow

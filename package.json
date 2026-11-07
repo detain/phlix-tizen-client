@@ -15,6 +15,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "version:sync": "node scripts/version-sync.mjs",
+    "icon:gen": "node scripts/make-icon.js",
+    "copyright:headers": "node scripts/add-copyright.mjs",
     "package": "node scripts/version-sync.mjs && npm run build && node scripts/package.js"
   },
   "keywords": [

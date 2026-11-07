@@ -15,3 +15,19 @@ updates:
       npm_and_yarn:
         patterns:
           - "*"
+
+  # RT-065 (review tizen__devops, 2026-11-04): the workflows float action MAJOR
+  # tags (actions/checkout@v6, setup-node@v6, upload-artifact@v7,
+  # download-artifact@v8, softprops/action-gh-release@v3), so a new action major
+  # can ship silently — the estate has taken breakage exactly this way before.
+  # Declaring the github-actions ecosystem alongside npm gives a weekly PR signal
+  # when a pinned major advances.
+  # RT-065 (review tizen__devops Info #1): the workflows float action MAJOR tags
+  # (actions/checkout@v6, setup-node@v6, upload/download-artifact@v7/@v8,
+  # softprops/action-gh-release@v3), so a new action major can ship with no PR
+  # signal — an estate-observed breakage class. This ecosystem adds the weekly
+  # Dependabot bump signal alongside the npm entry above.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

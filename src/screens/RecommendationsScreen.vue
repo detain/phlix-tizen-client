@@ -273,17 +273,14 @@ onMounted(load);
 }
 
 /* ── Grid ── */
+/* RT-069 (review tizen__gameux Info #7): a former `@media (max-width: 640px)`
+ * density fallback here was dead code — index.html pins the viewport to
+ * width=1920, so a desktop-width breakpoint can never fire on the fixed TV
+ * canvas. The minmax(200px) auto-fill below is the only live density control. */
 .recommendations-screen__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: var(--space-6, 1.5rem);
-}
-
-@media (max-width: 640px) {
-  .recommendations-screen__grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: var(--space-4, 1rem);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

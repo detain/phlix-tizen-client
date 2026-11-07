@@ -416,17 +416,14 @@ watch(() => musicStore.currentView, loadInitialData);
 }
 
 /* ── Grid ── */
+/* RT-069 (review tizen__gameux Info #7): a former `@media (max-width: 640px)`
+ * density fallback here was dead code — index.html pins the viewport to
+ * width=1920, so a desktop-width breakpoint can never fire on the fixed TV
+ * canvas. The minmax(180px) auto-fill below is the only live density control. */
 .music-page__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: var(--space-6, 1.5rem);
-}
-
-@media (max-width: 640px) {
-  .music-page__grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: var(--space-4, 1rem);
-  }
 }
 
 /* ── Load more (D-pad reachable: a real focusable button, no hover affordance) ── */

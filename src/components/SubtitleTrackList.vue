@@ -208,8 +208,11 @@ const totalCount = computed(() => props.tracks.length);
   border-color: var(--border-subtle, #3f3f46);
 }
 
-.subtitle-track-list__item:focus-visible,
-.subtitle-track-list__item:focus-visible:focus-visible {
+/* RT-068 (review tizen__crossfe Info #7 / gameux Info #1): former duplicate arm
+ * `.subtitle-track-list__item:focus-visible:focus-visible` was a redundant
+ * editing artifact — the same element cannot be "more" focused — dropped to one
+ * arm, mirroring the ChapterList m14 cure. */
+.subtitle-track-list__item:focus-visible {
   box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
   border-color: var(--accent, #f59e0b);
 }
