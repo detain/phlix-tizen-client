@@ -34,6 +34,17 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — forward-record: the RT-076 diagram prose above overstated its diff — 2026-11-07
+
+- The w11-L2 entry labels the DEVELOPER.md architecture-diagram rebuild
+  "whitespace-only restructure". Measured truth: of the 21 replaced lines,
+  12 differ ONLY in space counts and 9 pairs change box-drawing glyphs
+  (equalized border widths, tee/connector columns, the unclosed
+  `tizenBridge.ts` right edge, per-row `◄` arrows on the action-events
+  link). Text interiors are verbatim; the FRAME geometry is redrawn —
+  which is exactly what the misalignment finding asked for. The entry
+  above stands verbatim per history law; this row is the correction.
+
 ### Fixed — the boot-failure screen states the recovery step; entry-doc honesty pass — 2026-11-07
 
 - **What users see:** when boot fails hard enough to replace the app with
