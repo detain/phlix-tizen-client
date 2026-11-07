@@ -34,6 +34,117 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — code sign-in is now a CHOSEN path, not the default takeover (RT-097) — 2026-11-08
+
+- **What users see:** a TV with a server set but no session no longer slaps a
+  pairing code in your face the moment the app opens. The takeover now arrives
+  as a chooser — "Sign in with password" is the primary amber action (it works
+  against every server today), "Sign in with a pairing code" is the secondary
+  one, and the card states honestly that no companion app can approve a code
+  yet. Only choosing the code path starts a session; the chooser itself issues
+  ZERO requests.
+  Mechanism (src/quickconnect/QuickConnectPanel.vue): a `mode` ref gates the
+  ceremony — the session watcher moved from `eligible` to `pairingActive`
+  (eligible AND mode==='pairing'), and a base change re-offers the takeover
+  back AT the chooser, never mid-ceremony. Estate verification 2026-11-08 at
+  current tips: ui and mobile carry the quick-connect ROUTE FIXTURES only — no
+  approve UI ships anywhere — which is why the code path is opt-in copy, not
+  the buried-default. Four new `quickConnect.choose*` keys × seven locales
+  (190 to 194 — the key-set identity, byte-parity and call-site pins rotated
+  from measured reds, plus re-wrote `instruction`/`hint` to the honest pairing
+  copy); nine existing ceremony pins converted through the chooser click;
+  three new chooser legs (arrival-zero-request, choose-code-arms-one-session,
+  choose-password-retires-clean).
+
+### Fixed — BACK on a page that cannot go back exits instead of dying (RT-098) — 2026-11-08
+
+- **What users see:** on a screen the back-walk cannot move (a deep link whose
+  history segment is empty, an app opened cold into a details page), the FIRST
+  BACK still tries the walk; if the screen did not move, the NEXT BACK quits
+  the app cleanly. Previously every further press did nothing at all — the
+  dead-end button the exploit review walked into.
+  Mechanism: `BackSnapshot` gains `priorBackInert` and `decideBackRung`
+  escalates it to `exit-app` (row-snap and modal-close still outrank — nearest
+  absorbable thing first). `tizenBridge.ts` observes the walk by route key
+  (`name` + `fullPath ?? path`): the observation pairs ONLY two adjacent
+  presses, is consumed on every press, and any route movement or non-walk rung
+  disarms it, so a genuine multi-step walk never false-exits. Three pure-table
+  arms + three bridge integration legs (stub-router inert → exit; moving fake
+  → keeps walking; interleaved modal-close resets) red-first; README +
+  DEVELOPER BACK rows carry the escalation clause.
+
+### Fixed — track-preference memory cannot fill device storage or throw (RT-084) — 2026-11-08
+
+- **What users see:** nothing when it works — and nothing when it doesn't.
+  Choosing audio/subtitle languages per title no longer accumulates one
+  permanent localStorage slot per watched title forever; the oldest choices
+  age out past 100 live slots, and on a quota-full TV webview store the
+  picker quietly keeps working instead of erroring.
+  Mechanism (src/stores/useTrackPreferenceStore.ts): a most-recent-first LRU
+  index key (`phlix.trackPref.index`) with an exported `PER_ITEM_SLOT_CAP`
+  of 100; writes are preceded by cap-eviction, a rejected write evicts to
+  half-cap and retries exactly once, a still-rejected write is swallowed
+  (the fail-soft contract header law now states it covers local storage too;
+  in-session refs + the account PUT are untouched). A corrupt/absent index
+  re-derives by storage enumeration, so the cap never trusts the bookkeeping.
+  Six new legs (cap eviction + index order, front-promotion, corruption
+  re-derive, quota retry-lands at 51 live slots, dead-store cannot throw,
+  clear un-indexes) on a scripted fake store — the repo's shared test-setup
+  mock has no key()/length and cannot fail on demand.
+
+### Fixed — two HLS buffer knobs were ABOVE hls.js defaults, now restored (RT-083) — 2026-11-08
+
+- **What users see:** unchanged playback with a smaller resident buffer on
+  RAM-tight Samsung webviews (the config keeps its bounded 180s forward
+  ceiling and 90s back window — both BELOW the library defaults).
+  Mechanism (src/main.ts `TIZEN_HLS_CONFIG`): measured against the resolved
+  hls.js 1.6.16 DefaultConfig, `maxBufferLength 60` and `maxBufferSize
+  100MB` were DOUBLE and ~1.7× the defaults the review note had itself
+  mis-stated (the note's "default 60/30" premise is partly wrong — the 180
+  and 90 legs were already down-default). 60→30, 100e6→60e6; the docblock
+  now states every knob against the default it overrides. The `main.test.ts`
+  config pin rotated from measured red to a FULL six-key `toEqual` (drift
+  up reddens); DEVELOPER.md's mirrored block re-synced (the vendored player
+  merges `playerHlsConfig` after its own values — verified at #v0.99.22 —
+  so these numbers win).
+
+### Changed — the relay-URL shorthand reads `wss://` like the law it documents (RT-082) — 2026-11-08
+
+- Comments only: README's file-tree annotation and `src/api/hubRelay.ts`'s
+  header both described the hub relay as `ws://<hub>:8804` while the same
+  header's bullets enforce TLS-always with a named build-time dev hatch for
+  plaintext. Both now say `wss://` (the README notes the hatch exists); no
+  behavior, no bundle delta. RT-086 (the superseded dependabot vite PR) is
+  an OWNER-FILES decision, recorded not acted.
+
+### Fixed — forward-record: the RT-076 12/9 split needs its counting rule stated — 2026-11-08
+
+- The 2026-11-07 forward-record above announces "12 space-only / 9 glyph"
+  but does not define the classification that reproduces it. Rule: a row
+  counts as space-only when its content characters match the old row after
+  collapsing runs of spaces — which counts the first `◄` action-events
+  link-row as space-FILL compensation (its right-edge shift absorbs the
+  glyph), yielding 12/9. Under a strict character-classification (any
+  differing non-space character, including added glyphs, is a glyph change)
+  the same 21 lines measure 11 space-only / 10 glyph-changed. Both totals
+  are honest; the entry's 21-line scope and interiors-verbatim law stand.
+
+### Changed — doc currency: reading guide enumerates all 17 sections; learnings label matches the gate; i18n counts caught up — 2026-11-08
+
+- VERIFICATION.md's reading guide "(4, 2, 1, 3, 5, 6)" was the six-era list
+  never extended to seventeen; the guide now enumerates the full appended
+  order (4, 2, 1, 3, 5, 6, 7, 9, 8, 12, 10, 11, 14, 15, 13, 17, 16 —
+  grep-verified against the section headers at tip 30649d0).
+- CALIBER_LEARNINGS.md's pin-drift convention called the set "FIVE doc
+  surfaces" while listing package.json + four docs; the gate
+  (`docsPinConsistency.test.ts`) machines FIVE DOC files (README,
+  DEVELOPER, docs/i18n, AGENTS, CLAUDE) with package.json as the source of
+  truth — the entry now describes six surfaces with the gate's five named,
+  plus a historic note recording the old mislabel.
+- docs/i18n.md still said 189 keys while tip pinned 190 (the w11L2 boot-
+  retryHint row missed the doc); all three mentions read 194 now, moving
+  with this wave's `choose*` additions.
+
 ### Fixed — forward-record: the RT-076 diagram prose above overstated its diff — 2026-11-07
 
 - The w11-L2 entry labels the DEVELOPER.md architecture-diagram rebuild

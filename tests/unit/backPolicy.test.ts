@@ -63,6 +63,35 @@ describe('decideBackRung — the ladder order is the law', () => {
     );
   });
 
+  // w12: RT-098 — the inert-walk escalation legs of the ladder.
+  it('a prior history-back that left the route unmoved ESCALATES to exit-app (dead-end cure)', () => {
+    expect(
+      decideBackRung({ rowScrolled: false, openLayers: closed, atAppRoot: false, priorBackInert: true })
+    ).toBe('exit-app');
+  });
+
+  it('row-snap still outranks the inert escalation (nearest absorbable first)', () => {
+    expect(
+      decideBackRung({ rowScrolled: true, openLayers: closed, atAppRoot: false, priorBackInert: true })
+    ).toBe('row-snap');
+  });
+
+  it('modal-close still outranks the inert escalation', () => {
+    expect(
+      decideBackRung({
+        rowScrolled: false,
+        openLayers: [layer('rating-modal', true)],
+        atAppRoot: false,
+        priorBackInert: true
+      })
+    ).toBe('modal-close');
+  });
+
+  it('escalation is pure data too: the same inert snapshot re-decides identically', () => {
+    const snapshot = { rowScrolled: false, openLayers: closed, atAppRoot: false, priorBackInert: true };
+    expect(decideBackRung(snapshot)).toBe(decideBackRung(snapshot));
+  });
+
   it('an OPEN-LAYERS LIST of closed layers is not a layer: decision falls through', () => {
     // decideBackRung reads the ALREADY-FILTERED list; openBackLayers is the
     // filter — this pins the pair composes honestly.

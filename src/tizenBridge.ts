@@ -63,6 +63,11 @@ export interface BridgeRouter {
 
 export interface BridgeRoute {
   name?: string | symbol | null;
+  /** vue-router's route path (the fakes carry it; the root rung reads it). */
+  path?: string;
+  /** vue-router's path+query+hash — the inert-walk key prefers it so a genuine
+   *  query-step back is observed as movement (w12: RT-098). */
+  fullPath?: string;
 }
 
 /**
@@ -438,13 +443,29 @@ export function wireTizenBridge(
   const findRow = back.findRow ?? activeScrolledRow;
   const snapRow = back.snapRow ?? snapRowToStart;
 
+  // RT-098 inert-walk observation (w12): the route key of the most recent press
+  // that took the history-back rung. The NEXT consecutive press that sees the
+  // SAME key knows the walk did not move the viewer anywhere — that press
+  // escalates to exit-app instead of re-poking an inert history.back(). Cleared
+  // by every press (the observation is consumed once) and by every non-walk
+  // rung, so escalation can only ever pair two immediately adjacent presses.
+  let lastBackWalkKey: string | null = null;
+  const backRouteKey = (route: BridgeRoute): string =>
+    `${String(route.name ?? '')} ${route.fullPath ?? route.path ?? ''}`;
+
   const handleBack = (): void => {
+    const route = getRoute();
+    const routeKey = backRouteKey(route);
+    const priorBackInert = lastBackWalkKey !== null && lastBackWalkKey === routeKey;
+    lastBackWalkKey = null;
+
     const row = findRow();
     const open = openBackLayers(backLayers);
     const rung = decideBackRung({
       rowScrolled: row !== null,
       openLayers: open,
-      atAppRoot: isAppRootRoute(getRoute())
+      atAppRoot: isAppRootRoute(route),
+      priorBackInert
     });
     if (rung === 'row-snap' && row) {
       snapRow(row);
@@ -458,8 +479,10 @@ export function wireTizenBridge(
       (back.exit ?? defaultExitApplication)();
       return;
     }
-    // history-back — the pre-S526 behavior, unchanged.
-    if (getRoute().name === 'player') {
+    // history-back — the pre-S526 behavior, armed with the RT-098 observation:
+    // if this walk leaves the route key unchanged, the next press exits.
+    lastBackWalkKey = routeKey;
+    if (route.name === 'player') {
       player.closePlayer();
     }
     router.back();

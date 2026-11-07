@@ -208,8 +208,13 @@ const quickConnect = {
   aria: 'Pareie com seu celular',
   eyebrow: 'Phlix para Samsung TV',
   title: 'Entre sem teclado',
+  // RT-097 chooser (the takeover opens on this decision, not on a ceremony).
+  chooseTitle: 'Entre nesta TV',
+  chooseLead: 'Como você quer entrar?',
+  choosePassword: 'Entrar com senha',
+  chooseCode: 'Entrar com um código de pareamento',
   preparing: 'Preparando seu código…',
-  instruction: 'Abra o Phlix no seu celular e digite este código',
+  instruction: 'Digite este código em outro dispositivo Phlix com sessão ativa para parear a TV',
   declined: 'O pareamento foi recusado.',
   expired: 'Esse código expirou.',
   unreachable: 'Não foi possível acessar o servidor.',
@@ -217,7 +222,7 @@ const quickConnect = {
   expiryNote: 'Expira em alguns minutos — sem pressa.',
   tryAgain: 'Tentar novamente',
   usePassword: 'Digitar a senha em vez disso',
-  hint: 'No seu celular, abra o Phlix → Entrar na TV → digite o código.',
+  hint: 'Nenhum aplicativo companheiro pode aprovar um código ainda — se ele expirar, use sua senha.',
 };
 
 const days = {

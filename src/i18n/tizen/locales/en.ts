@@ -247,8 +247,13 @@ const quickConnect = {
   aria: 'Pair with your phone',
   eyebrow: 'Phlix for Samsung TV',
   title: 'Sign in without a keyboard',
+  // RT-097 chooser (the takeover opens on this decision, not on a ceremony).
+  chooseTitle: 'Sign in on this TV',
+  chooseLead: 'How do you want to sign in?',
+  choosePassword: 'Sign in with password',
+  chooseCode: 'Sign in with a pairing code',
   preparing: 'Preparing your code…',
-  instruction: 'Open Phlix on your phone and enter this code',
+  instruction: 'Enter this code on another signed-in Phlix device to pair the TV',
   declined: 'Pairing was declined.',
   expired: 'That code expired.',
   unreachable: 'Could not reach the server.',
@@ -256,7 +261,7 @@ const quickConnect = {
   expiryNote: 'Expires in a few minutes — no need to hurry.',
   tryAgain: 'Try again',
   usePassword: 'Enter password instead',
-  hint: 'On your phone, open Phlix → Sign in on TV → type the code.',
+  hint: 'No companion app can approve a code yet — if the code expires, use your password.',
 } satisfies Record<string, string>;
 
 const days = {

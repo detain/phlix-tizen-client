@@ -79,9 +79,9 @@ style="display:none">`); its only job is to call `useSpatialNav` with an
 
 ```ts
 const TIZEN_HLS_CONFIG = {
-  maxBufferLength: 60,
+  maxBufferLength: 30,
   maxMaxBufferLength: 180,
-  maxBufferSize: 100 * 1000 * 1000,
+  maxBufferSize: 60 * 1000 * 1000,
   backBufferLength: 90,
   capLevelToPlayerSize: true,
   enableSoftwareAES: true
@@ -89,7 +89,9 @@ const TIZEN_HLS_CONFIG = {
 ```
 
 This is forwarded to `@phlix/ui`'s player via `playerHlsConfig` to keep HLS
-buffers bounded on RAM-constrained Samsung webviews. **Tune HLS here, not in
+buffers bounded on RAM-constrained Samsung webviews — every value sits at or
+below the hls.js 1.6.x default (the docblock in `main.ts` states each one
+against the default it overrides). **Tune HLS here, not in
 `phlix-ui`.**
 
 ### Config resolution (`src/resolveConfig.ts`)
@@ -205,7 +207,7 @@ Action map:
 | `STOP`            | `player.closePlayer()`, then — when `route.name === 'player'` — `router.back()` (M-TIZEN-02/33: STOP leaves the player, it does not park the viewer on a blanked player route; off the player route it stays a pure teardown) |
 | `FAST_FORWARD`    | `player.seekBy(repeat ? 30 : 10)`                                   |
 | `REWIND`          | `player.seekBy(repeat ? -30 : -10)`                                 |
-| `BACK`            | four-rung ladder via `remote/backPolicy.decideBackRung`: row-snap a panned shelf → close the TOPMOST open `BackLayer` (quick-connect, rating modal, generic ui focus-trap, quality picker — quality close restores the pre-open focus) → history-back (on `route.name === 'player'` this means `closePlayer()` + `router.back()`) → at the app root, `tizen.application.getCurrentApplication().exit()` (never a blind `history.back()` on an empty stack) |
+| `BACK`            | four-rung ladder via `remote/backPolicy.decideBackRung`: row-snap a panned shelf → close the TOPMOST open `BackLayer` (quick-connect, rating modal, generic ui focus-trap, quality picker — quality close restores the pre-open focus) → history-back (on `route.name === 'player'` this means `closePlayer()` + `router.back()`) → at the app root, `tizen.application.getCurrentApplication().exit()` (never a blind `history.back()` on an empty stack). A history-back is observed by route key (`name` + `fullPath ?? path`): if the immediately following BACK press still sees the SAME key, the walk was inert and the ladder escalates to `exit-app` — a dead-end button is answered, not repeated. Any route movement, or any press that took a different rung, disarms the escalation (the observation is consumed once, and only pairs adjacent presses) |
 | `HOME`            | `router.push('/app')`                                               |
 | `YELLOW`          | on the player route only, and only when the picker actually has a menu to show (`quality.isAvailable()`): toggle quality-selection mode (`quality.activate()` / `deactivate()`) |
 | arrows / ENTER / other color keys / etc. | **not bridged directly** — spatial-nav + native focus own them, EXCEPT while quality mode is active (see below) |

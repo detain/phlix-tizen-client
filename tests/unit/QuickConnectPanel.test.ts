@@ -8,6 +8,10 @@
  * that landing a session retires the surface. `@phlix/ui` and the session
  * factory are faked so nothing touches the network or real timers.
  *
+ * RT-097 (w12): the takeover ARRIVES AS A CHOOSER. Every case that drives the
+ * session's captured deps must first walk the viewer through the code choice —
+ * `chooseCode()` is that click — and arrival itself is pinned ZERO-request.
+ *
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
@@ -39,12 +43,19 @@ const captured: {
 };
 
 // `@phlix/ui` fakes are module singletons; every mount must be unmounted or a
-// stale instance's `eligible` watcher keeps reacting and contaminates the count.
+// stale instance's `pairingActive` watcher keeps reacting and contaminates the
+// count.
 const mounts: { unmount: () => void }[] = [];
 function mkPanel() {
   const wrapper = mount(QuickConnectPanel);
   mounts.push(wrapper);
   return wrapper;
+}
+
+/** RT-097: the ONE action that arms a ceremony — the chooser's code pill. */
+async function chooseCode(wrapper: ReturnType<typeof mkPanel>) {
+  await wrapper.find('[data-testid="qc-choose-code"]').trigger('click');
+  await nextTick();
 }
 
 vi.mock('@phlix/ui', async () => ({
@@ -78,7 +89,7 @@ vi.mock('@/quickconnect/quickConnectSession', () => ({
 
 function reset() {
   // unmount any component still live from the previous case FIRST, so its
-  // `eligible` watcher cannot react to the singleton mock refs below.
+  // `pairingActive` watcher cannot react to the singleton mock refs below.
   while (mounts.length) mounts.pop()!.unmount();
   apiBaseRef.value = '';
   auth.isLoggedIn = false;
@@ -117,19 +128,58 @@ describe('QuickConnectPanel — placement + token-store seam', () => {
     expect(captured.runCalls).toBe(0);
   });
 
-  it('starts pairing once a server exists but no session does (kills password-on-remote)', async () => {
+  // RT-097: arrival is a DECISION, not a ceremony. The takeover must render the
+  // chooser with zero network movement — the pre-fix auto-takeover buried the
+  // only working sign-in path under a code nothing in the estate can approve.
+  it('RT-097: a server base with no session shows the CHOOSER and starts NO pairing', async () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
     expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="qc-choose-password"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="qc-choose-code"]').exists()).toBe(true);
+    // Password is the PRIMARY (amber) control, code the ghost secondary.
+    expect(wrapper.find('[data-testid="qc-choose-password"]').classes()).toContain('quick-connect__retry');
+    expect(wrapper.find('[data-testid="qc-choose-code"]').classes()).toContain('quick-connect__dismiss');
+    // Nothing pairy has happened: no session, no code box, no initiate.
+    expect(captured.runCalls).toBe(0);
+    expect(captured.deps).toBeUndefined();
+    expect(wrapper.find('[data-testid="qc-code"]').exists()).toBe(false);
+    // And the hint honestly discloses the approve-leg situation.
+    expect(wrapper.find('.quick-connect__hint').text()).toBe(
+      'No companion app can approve a code yet — if the code expires, use your password.',
+    );
+  });
+
+  it('RT-097: choosing the code path starts exactly one session and shows the pairing card', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    await chooseCode(wrapper);
     expect(captured.runCalls).toBe(1);
     expect(captured.deps).toBeDefined();
+    expect(wrapper.find('[data-testid="qc-dismiss"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="qc-choose-password"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="qc-choose-code"]').exists()).toBe(false);
+  });
+
+  it('RT-097: choosing password retires the takeover with the ceremony never started', async () => {
+    apiBaseRef.value = 'http://tv:8096';
+    const wrapper = mkPanel();
+    await nextTick();
+    await wrapper.find('[data-testid="qc-choose-password"]').trigger('click');
+    await nextTick();
+    await nextTick();
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(false);
+    expect(captured.runCalls).toBe(0);
+    expect(captured.deps).toBeUndefined();
   });
 
   it('lands the token pair through the EXISTING useAuthStore().setTokens seam', async () => {
     apiBaseRef.value = 'http://tv:8096';
-    mkPanel();
+    const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     const applyTokens = captured.deps!.applyTokens as (t: { accessToken: string; refreshToken: string }) => void;
     applyTokens({ accessToken: 'ACC', refreshToken: 'REF' });
     // The app's one and only auth store received the pair; nothing else did.
@@ -146,8 +196,9 @@ describe('QuickConnectPanel — placement + token-store seam', () => {
     // nothing passed it through the storage gate at all. Post-cure the mirror
     // reuses resolveConfig's own writers, so both slots agree.
     apiBaseRef.value = 'http://tv:8096';
-    mkPanel();
+    const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     (captured.deps!.applyTokens as (t: unknown) => void)({ accessToken: 'ACC', refreshToken: 'REF' });
     expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBe('http://tv:8096');
     const history = JSON.parse(globalThis.localStorage.getItem('phlix.serverHistory') ?? '[]') as string[];
@@ -163,7 +214,8 @@ describe('QuickConnectPanel — placement + token-store seam', () => {
     apiBaseRef.value = 'javascript:alert(1)';
     const wrapper = mkPanel();
     await nextTick();
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(true); // base present → panel offered
+    expect(wrapper.find('[role="dialog"]').exists()).toBe(true); // base present → takeover offered
+    await chooseCode(wrapper); // the ceremony starts only down the code path
     (captured.deps!.applyTokens as (t: unknown) => void)({ accessToken: 'ACC', refreshToken: 'REF' });
     expect(auth.setTokens).toHaveBeenCalledWith('ACC', 'REF');
     expect(globalThis.localStorage.getItem('phlix.serverUrl')).toBeNull();
@@ -174,6 +226,7 @@ describe('QuickConnectPanel — placement + token-store seam', () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     const onCode = captured.deps!.onCode as (code: string, exp: number | null, owner: unknown) => void;
     // RT-055: the publisher stamps its own session handle; the surface accepts
     // a code only from the session it currently holds.
@@ -187,16 +240,22 @@ describe('QuickConnectPanel — placement + token-store seam', () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     const first = captured.handles[0]!;
     const firstDeps = captured.deps!;
     // A dismissal retires the session, and choosing a different base re-offers
-    // pairing (C16 contract) — the re-offer SUPERSEDES the dead session whose
-    // initiate answer may still land late.
+    // the takeover — which lands back AT THE CHOOSER (RT-097: a re-offer never
+    // presumes the code path). The re-offered, re-chosen session SUPERSEDES the
+    // dead one whose initiate answer may still land late.
     await wrapper.find('[data-testid="qc-dismiss"]').trigger('click');
+    await nextTick();
     await nextTick();
     apiBaseRef.value = 'http://tv2:8096';
     await nextTick();
     await nextTick();
+    expect(wrapper.find('[data-testid="qc-choose-code"]').exists()).toBe(true); // chooser, not ceremony
+    expect(captured.handles).toHaveLength(1);
+    await chooseCode(wrapper);
     expect(captured.handles).toHaveLength(2);
 
     // The DEAD session reaches the (shared) onCode closure carrying its OWN
@@ -218,6 +277,7 @@ describe('QuickConnectPanel — placement + token-store seam', () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     expect((captured.deps!.isVisible as () => boolean)()).toBe(true);
     // Landing a session (isLoggedIn → true) must stop polling and retire the surface.
     auth.isLoggedIn = true;
@@ -252,6 +312,7 @@ describe('QuickConnectPanel — C16 dismissal contract', () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     const dismiss = wrapper.find('[data-testid="qc-dismiss"]');
     expect(dismiss.exists()).toBe(true);
     expect(dismiss.text()).toBe('Enter password instead');
@@ -264,6 +325,7 @@ describe('QuickConnectPanel — C16 dismissal contract', () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     (captured.deps!.onStatusChange as (p: string) => void)('pairing');
     await nextTick();
     expect(wrapper.find('[data-testid="qc-dismiss"]').exists()).toBe(true);
@@ -278,6 +340,7 @@ describe('QuickConnectPanel — C16 dismissal contract', () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     expect((captured.deps!.isVisible as () => boolean)()).toBe(true);
     await wrapper.find('[data-testid="qc-dismiss"]').trigger('click');
     await nextTick();
@@ -293,6 +356,7 @@ describe('QuickConnectPanel — C16 dismissal contract', () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper); // a session must be live for the stop-leg to be observable
     // EXACTLY what the bridge's quick-connect layer close() dispatches (C16 test
     // in tizenBridge.test.ts pins the sender; this pins the receiver).
     wrapper
@@ -304,10 +368,11 @@ describe('QuickConnectPanel — C16 dismissal contract', () => {
     expect(captured.stopCalls).toBeGreaterThanOrEqual(1);
   });
 
-  it('a DIFFERENT server base re-offers pairing after a dismissal', async () => {
+  it('a DIFFERENT server base re-offers the takeover after a dismissal — back at the chooser', async () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     await wrapper.find('[data-testid="qc-dismiss"]').trigger('click');
     await nextTick();
     await nextTick();
@@ -316,6 +381,12 @@ describe('QuickConnectPanel — C16 dismissal contract', () => {
     await nextTick();
     await nextTick();
     expect(wrapper.find('[role="dialog"]').exists()).toBe(true);
+    // RT-097: the re-offer is the CHOOSER — the previous code choice does not
+    // carry across bases, and the new base is not pinged until the choice lands.
+    expect(wrapper.find('[data-testid="qc-choose-code"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="qc-dismiss"]').exists()).toBe(false);
+    expect(captured.runCalls).toBe(1);
+    await chooseCode(wrapper);
     expect(wrapper.find('[data-testid="qc-dismiss"]').exists()).toBe(true);
     expect(captured.runCalls).toBe(2);
   });
@@ -355,6 +426,7 @@ describe('QuickConnectPanel — RT-050 error-copy arms', () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     (captured.deps!.onStatusChange as (p: string) => void)('unsupported');
     await nextTick();
     expect(wrapper.find('.quick-connect__lead').text()).toBe(
@@ -368,6 +440,7 @@ describe('QuickConnectPanel — RT-050 error-copy arms', () => {
     apiBaseRef.value = 'http://tv:8096';
     const wrapper = mkPanel();
     await nextTick();
+    await chooseCode(wrapper);
     (captured.deps!.onStatusChange as (p: string) => void)('error');
     await nextTick();
     expect(wrapper.find('.quick-connect__lead').text()).toBe('Could not reach the server.');

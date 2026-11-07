@@ -210,8 +210,13 @@ const quickConnect = {
   aria: 'Empareja con tu teléfono',
   eyebrow: 'Phlix para Samsung TV',
   title: 'Inicia sesión sin teclado',
+  // RT-097 chooser (the takeover opens on this decision, not on a ceremony).
+  chooseTitle: 'Inicia sesión en este TV',
+  chooseLead: '¿Cómo quieres iniciar sesión?',
+  choosePassword: 'Iniciar sesión con contraseña',
+  chooseCode: 'Iniciar sesión con código de emparejamiento',
   preparing: 'Preparando tu código…',
-  instruction: 'Abre Phlix en tu teléfono e introduce este código',
+  instruction: 'Introduce este código en otro dispositivo Phlix con sesión iniciada para emparejar el TV',
   declined: 'El emparejamiento fue rechazado.',
   expired: 'Ese código caducó.',
   unreachable: 'No se pudo contactar con el servidor.',
@@ -219,7 +224,7 @@ const quickConnect = {
   expiryNote: 'Caduca en unos minutos — no hay prisa.',
   tryAgain: 'Intentar de nuevo',
   usePassword: 'Introducir la contraseña en su lugar',
-  hint: 'En tu teléfono, abre Phlix → Iniciar sesión en TV → escribe el código.',
+  hint: 'Ninguna app compañera puede aprobar un código todavía — si caduca, usa tu contraseña.',
 };
 
 const days = {

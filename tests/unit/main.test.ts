@@ -238,8 +238,15 @@ describe('boot (Tizen renderer entry)', () => {
 
     const cfg = createPhlixApp.mock.calls[0][0] as { playerHlsConfig?: Record<string, unknown> };
     expect(cfg.playerHlsConfig).toBeDefined();
-    expect(cfg.playerHlsConfig).toMatchObject({
-      maxBufferLength: 60,
+    // Full six-key pin (w12: RT-083 cure). Each value is the deliberate choice
+    // against the hls.js 1.6.16 default it overrides — see the docblock on
+    // TIZEN_HLS_CONFIG in src/main.ts; 30/60MB sit AT default, 180/90 sit
+    // BELOW it, nothing above. A silent drift up reddens here.
+    expect(cfg.playerHlsConfig).toEqual({
+      maxBufferLength: 30,
+      maxMaxBufferLength: 180,
+      maxBufferSize: 60 * 1000 * 1000,
+      backBufferLength: 90,
       capLevelToPlayerSize: true,
       enableSoftwareAES: true
     });

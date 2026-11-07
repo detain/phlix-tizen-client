@@ -1,53 +1,68 @@
 <script setup lang="ts">
 /**
- * QuickConnectPanel — the TV's password-free pairing surface (S520 / AD-25).
+ * QuickConnectPanel — the TV's pairing-code sign-in surface (S520 / AD-25).
  *
  * A no-keyboard device should never make you type a password on a remote. When
  * the app has a server base chosen but NO session yet, this always-mounted root
- * app shows a short code; you type THAT on your phone/companion, and the TV
- * polls, then lands the returned token pair through the app's EXISTING
- * `useAuthStore().setTokens` seam (no second store, no QR). The companion's
- * approve action is deliberately out of scope here — this is the TV half only.
+ * app offers a CHOICE: sign in with your password (the ordinary ui Connect
+ * form, one control away), or sign in with a short code typed on another
+ * signed-in Phlix device — the TV polls, then lands the returned token pair
+ * through the app's EXISTING `useAuthStore().setTokens` seam (no second store,
+ * no QR).
  *
- * PLACEMENT / SCOPE (honest): mounted as a sibling root app that shares the main
- * app's pinia — the exact pattern every other TV overlay uses — and rendered
- * full-bleed opaque ONLY while `eligible` (server set AND logged out AND still on
- * screen AND not dismissed). The empty-base first-run Connect screen stays owned
- * by `@phlix/ui` (nothing to pair against yet); this surface takes over the
- * instant a base exists but a session does not, and retires itself the moment
- * `setTokens` makes `isLoggedIn` true. It introduces no route and touches no
+ * CHOOSER-FIRST (w12: RT-097 — review tizen__casualgamer #1): the takeover used
+ * to auto-start the pairing ceremony the moment it arrived, burying the ONLY
+ * working sign-in path under a code that nothing in the estate can approve
+ * (estate verification 2026-11-08, current tips: ui and mobile carry the
+ * quick-connect ROUTE FIXTURES only — no approve UI ships anywhere; the server
+ * serves the ceremony, the companion half does not exist yet). Arrival now
+ * shows a door, not a wall: "Sign in with password" is the PRIMARY amber
+ * action and retires the takeover; "Sign in with a pairing code" is the
+ * secondary action, and only after choosing it does any session start. A
+ * choose-mode panel issues ZERO requests — the initiate fetch cannot happen
+ * until the code path is picked — and the hint states honestly that no
+ * companion app can approve a code yet, so the choice is informed, not a trap.
+ *
+ * PLACEMENT / SCOPE (honest): mounted as a sibling root app that shares the
+ * main app's pinia — the exact pattern every other TV overlay uses — and
+ * rendered full-bleed opaque ONLY while `eligible` (server set AND logged out
+ * AND still on screen AND not dismissed). The empty-base first-run Connect
+ * screen stays owned by `@phlix/ui` (nothing to pair against yet); this surface
+ * takes over the instant a base exists but a session does not — AS A CHOOSER —
+ * and retires itself the moment `setTokens` makes `isLoggedIn` true, or the
+ * viewer picks the password path. It introduces no route and touches no
  * `@phlix/ui` internals.
  *
  * DISMISSIBLE (C16 / tizen__casualgamer — a takeover is a door, never a wall):
- * the ceremony's companion half is not shippable yet (no estate client approves
- * a code), so the takeover must never bury the ONLY login path beneath it. Two
- * exits, both remote-operable: a persistent "Enter password instead" control
- * retires the panel and stops the ceremony, and BACK reaches the same retire
- * through the S526 ladder — the panel registers itself as a closable layer by
- * carrying `data-quick-connect-panel` on its takeover root, the bridge rings an
- * `Escape` keydown bell on it, and THIS component alone decides what closing
- * means (mirroring the generic focus-trap layer's contract exactly). Dismissal
- * is per-base: choosing a DIFFERENT server re-offers the pairing code. RT-050
- * (review tizen__casualgamer #2) sharpens the failure copy: an old server that
- * refuses the quick-connect route with an answered 4xx now reads "this server
- * can't do code sign-in yet — use your password" (naming the pill that is
- * already on screen) instead of the network-blaming "could not reach"; genuine
- * no-answer failures keep the unreachable wording.
+ * both modes exit remote-operably. In chooser mode the password pill retires
+ * the takeover; in pairing mode the persistent "Enter password instead" control
+ * retires it and stops the ceremony, and BACK reaches the same retire through
+ * the S526 ladder — the panel registers itself as a closable layer by carrying
+ * `data-quick-connect-panel` on its takeover root, the bridge rings an `Escape`
+ * keydown bell on it, and THIS component alone decides what closing means
+ * (mirroring the generic focus-trap layer's contract exactly). Dismissal is
+ * per-base: choosing a DIFFERENT server re-offers the takeover — always back at
+ * the chooser. RT-050 (review tizen__casualgamer #2) sharpens the pairing
+ * failure copy: an old server that refuses the quick-connect route with an
+ * answered 4xx now reads "this server can't do code sign-in yet — use your
+ * password" (naming the pill that is already on screen) instead of the
+ * network-blaming "could not reach"; genuine no-answer failures keep the
+ * unreachable wording.
  *
  * FOCUS-SAFE (S512 containment doctrine, honored): this never calls `focus()`
  * and never grabs focus on mount — the takeover is never a trap; its controls
- * (the always-present dismiss button, plus "Try again" in the non-fatal terminal
- * phases) are plain focusable nodes a D-pad walk reaches, and BACK escapes the
- * surface even while focus sits invisibly beneath it. C2 (review tizen__gameux)
- * closes the other half of that sentence: carrying `data-spatial-takeover`
- * makes the candidate watcher (src/spatial/focusCandidates.ts) treat this
- * subtree as the ONLY spatial region while it is mounted — hidden controls
- * beneath are swept from the pool and a focus parked under the panel is
- * released, so the D-pad can neither land on nor fire an unseen action. It
- * issues no request while
- * hidden or dismissed (`isVisible` folds in `document` visibility + the mount,
- * auth and dismissal state), so a backgrounded, logged-in or retired TV polls
- * zero times.
+ * (the chooser's two pills; in pairing mode the always-present dismiss button,
+ * plus "Try again" in the non-fatal terminal phases) are plain focusable nodes
+ * a D-pad walk reaches, and BACK escapes the surface even while focus sits
+ * invisibly beneath it. C2 (review tizen__gameux) closes the other half of that
+ * sentence: carrying `data-spatial-takeover` makes the candidate watcher
+ * (src/spatial/focusCandidates.ts) treat this subtree as the ONLY spatial
+ * region while it is mounted — hidden controls beneath are swept from the pool
+ * and a focus parked under the panel is released, so the D-pad can neither land
+ * on nor fire an unseen action. It issues no request while hidden, dismissed,
+ * or still in choose mode (`isVisible` folds in `document` visibility, the
+ * mount, auth and dismissal state; a session exists only in pairing mode), so
+ * a backgrounded, logged-in or retired TV polls zero times.
  *
  * @category TV-Specific Component
  * @duplicate No phlix-ui equivalent — @phlix/ui's Connect screen picks a server;
@@ -68,17 +83,28 @@ const auth = useAuthStore();
 const mounted = ref(false);
 const onScreen = ref(true);
 const dismissed = ref(false);
+/**
+ * RT-097: the takeover arrives in `choose` mode — a two-path sign-in chooser
+ * that requests nothing. Only the explicit code choice flips it to `pairing`,
+ * which is what arms (and disarms) the ceremony session.
+ */
+const mode = ref<'choose' | 'pairing'>('choose');
 const code = ref('');
 const expiresAtSeconds = ref<number | null>(null);
 const phase = ref<PairingPhase | null>(null);
 
 let session: PairingSession | null = null;
 
-/** Show + poll only when there is a server to pair against, no session yet,
- * and the viewer has not retired the takeover for THIS base (C16). */
+/** Show the takeover when there is a server to pair against, no session yet,
+ * and the viewer has not retired it for THIS base (C16). */
 const eligible = computed(
   () => mounted.value && Boolean(apiBase.value) && !auth.isLoggedIn && !dismissed.value
 );
+
+/** The ceremony runs ONLY in pairing mode: the watcher below is the single
+ * seam that can start or stop a session (RT-097 — arrival alone never
+ * initiates). */
+const pairingActive = computed(() => eligible.value && mode.value === 'pairing');
 
 /** Terminal-but-recoverable states that offer a fresh attempt rather than a dead end.
  *  RT-050: `unsupported` is deliberately ABSENT — re-initiating against the same
@@ -119,7 +145,8 @@ function beginSession(): void {
   session = createPairingSession({
     client,
     identity: { deviceName: 'Phlix for Samsung TV', deviceType: 'samsung-tizen' },
-    isVisible: () => mounted.value && onScreen.value && !auth.isLoggedIn && !dismissed.value,
+    isVisible: () =>
+      mounted.value && onScreen.value && !auth.isLoggedIn && !dismissed.value && mode.value === 'pairing',
     applyTokens: (tokens) => {
       // The existing auth seam is the ONLY token store; the base we paired
       // against is already the app's server, mirrored back idempotently.
@@ -166,20 +193,27 @@ function onVisibilityChange(): void {
 }
 
 /** Retire the takeover and stop the ceremony — exposes the password sign-in
- * form the opaque panel was covering (C16). The eligible watcher does the
- * session teardown; this only flips the per-base dismissal decision. */
+ * form the opaque panel was covering (C16). The pairingActive watcher does the
+ * session teardown; this only flips the per-base dismissal decision. Serves
+ * BOTH modes: the chooser's primary pill and the pairing card's escape. */
 function dismiss(): void {
   dismissed.value = true;
+}
+
+/** RT-097: the code path is a CHOSEN path — only this click arms the
+ * ceremony; nothing before it has touched the network. */
+function startPairing(): void {
+  mode.value = 'pairing';
 }
 
 onMounted(() => {
   mounted.value = true;
   onScreen.value = document.visibilityState !== 'hidden';
   document.addEventListener('visibilitychange', onVisibilityChange);
-  // Pairing start is driven SOLELY by the `eligible` watcher: setting
-  // `mounted` here flips the computed false→true and the watcher begins exactly
-  // one session. An eager `beginSession()` here would double-start (once now,
-  // once on the watcher flush), firing a redundant initiate.
+  // Pairing start is driven SOLELY by the `pairingActive` watcher: arrival
+  // lands in choose mode, where the computed stays false and ZERO requests
+  // happen (RT-097). An eager `beginSession()` here — or on `eligible` — would
+  // re-create the auto-takeover this cure removes.
 });
 
 onBeforeUnmount(() => {
@@ -188,16 +222,20 @@ onBeforeUnmount(() => {
   endSession();
 });
 
-// Dismissal retires the panel FOR THE BASE IT WAS MADE AGAINST: choosing a
-// different server is a fresh pairing opportunity, so a new base re-offers the
-// code and the eligible watcher below starts exactly one session as at birth.
+// Dismissal retires the takeover FOR THE BASE IT WAS MADE AGAINST: choosing a
+// different server is a fresh sign-in opportunity, so a new base re-offers the
+// takeover — always back at the chooser (RT-097: a re-offer never presumes the
+// viewer wanted the code path just because they tried it on the old base).
 watch(apiBase, () => {
   dismissed.value = false;
+  mode.value = 'choose';
 });
 
-// A base arriving (Connect commit) or the session dropping (logout) starts or
-// stops pairing without a remount; a fresh login (eligible → false) tears it down.
-watch(eligible, (active) => {
+// A base arriving (Connect commit) or the session dropping (logout) shows or
+// retires the takeover; choosing the code path (or a fresh login / dismissal
+// ending it) starts or stops the ceremony. This watcher is the session's ONLY
+// starter — the chooser cannot fire it by accident.
+watch(pairingActive, (active) => {
   if (active) beginSession();
   else endSession();
 });
@@ -218,59 +256,101 @@ watch(eligible, (active) => {
       <p class="quick-connect__eyebrow">
         {{ tTizen('quickConnect.eyebrow') }}
       </p>
-      <h1 class="quick-connect__title">
-        {{ tTizen('quickConnect.title') }}
-      </h1>
-      <p class="quick-connect__lead">
-        {{ currentStatusText() }}
-      </p>
 
-      <p
-        v-if="code"
-        class="quick-connect__code"
-        data-testid="qc-code"
-      >
-        {{ code }}
-      </p>
-      <p
-        v-else
-        class="quick-connect__code quick-connect__code--empty"
-        aria-hidden="true"
-      >
-        ••••
-      </p>
+      <!-- RT-097 chooser mode: the two sign-in paths, honest about what each
+           can do TODAY. Password is the PRIMARY pill (it works against every
+           server that has one); the code path is secondary precisely because
+           its companion half does not ship yet. Reusing the pairing card's
+           two button roles: __retry is the amber primary, __dismiss the ghost
+           secondary — one row, D-pad reachable, no new visual language. -->
+      <template v-if="mode === 'choose'">
+        <h1 class="quick-connect__title">
+          {{ tTizen('quickConnect.chooseTitle') }}
+        </h1>
+        <p class="quick-connect__lead">
+          {{ tTizen('quickConnect.chooseLead') }}
+        </p>
 
-      <p
-        v-if="expiresAtSeconds"
-        class="quick-connect__meta"
-      >
-        {{ tTizen('quickConnect.expiryNote') }}
-      </p>
+        <div class="quick-connect__actions">
+          <button
+            type="button"
+            class="quick-connect__retry"
+            data-testid="qc-choose-password"
+            @click="dismiss"
+          >
+            {{ tTizen('quickConnect.choosePassword') }}
+          </button>
 
-      <div class="quick-connect__actions">
-        <button
-          v-if="retryable"
-          type="button"
-          class="quick-connect__retry"
-          data-testid="qc-retry"
-          @click="beginSession"
+          <button
+            type="button"
+            class="quick-connect__dismiss"
+            data-testid="qc-choose-code"
+            @click="startPairing"
+          >
+            {{ tTizen('quickConnect.chooseCode') }}
+          </button>
+        </div>
+
+        <p class="quick-connect__hint">
+          {{ tTizen('quickConnect.hint') }}
+        </p>
+      </template>
+
+      <template v-else>
+        <h1 class="quick-connect__title">
+          {{ tTizen('quickConnect.title') }}
+        </h1>
+        <p class="quick-connect__lead">
+          {{ currentStatusText() }}
+        </p>
+
+        <p
+          v-if="code"
+          class="quick-connect__code"
+          data-testid="qc-code"
         >
-          {{ tTizen('quickConnect.tryAgain') }}
-        </button>
-
-        <button
-          type="button"
-          class="quick-connect__dismiss"
-          data-testid="qc-dismiss"
-          @click="dismiss"
+          {{ code }}
+        </p>
+        <p
+          v-else
+          class="quick-connect__code quick-connect__code--empty"
+          aria-hidden="true"
         >
-          {{ tTizen('quickConnect.usePassword') }}
-        </button>
-      </div>
+          ••••
+        </p>
 
-      <p class="quick-connect__hint">
-        {{ tTizen('quickConnect.hint') }}
-      </p>
+        <p
+          v-if="expiresAtSeconds"
+          class="quick-connect__meta"
+        >
+          {{ tTizen('quickConnect.expiryNote') }}
+        </p>
+
+        <div class="quick-connect__actions">
+          <button
+            v-if="retryable"
+            type="button"
+            class="quick-connect__retry"
+            data-testid="qc-retry"
+            @click="beginSession"
+          >
+            {{ tTizen('quickConnect.tryAgain') }}
+          </button>
+
+          <button
+            type="button"
+            class="quick-connect__dismiss"
+            data-testid="qc-dismiss"
+            @click="dismiss"
+          >
+            {{ tTizen('quickConnect.usePassword') }}
+          </button>
+        </div>
+
+        <p class="quick-connect__hint">
+          {{ tTizen('quickConnect.hint') }}
+        </p>
+      </template>
     </div>
   </div>
 </template>
@@ -370,7 +450,9 @@ watch(eligible, (active) => {
 }
 /* C16 exit row: the amber CTA stays the pairing focal action; the persistent
  * "Enter password instead" escape is a ghost pill — reachable, legible, never
- * competing. Both live on one flex row so terminal phases sit side by side. */
+ * competing. Both live on one flex row so terminal phases sit side by side.
+ * RT-097 reuses the pair of roles in the chooser: amber = the path that works
+ * today (password), ghost = the optional pairing-code path. */
 .quick-connect__actions {
   display: flex;
   align-items: center;

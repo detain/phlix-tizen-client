@@ -16,7 +16,10 @@
  *   4. `exit-app`    — already at the app root with nothing above it: BACK
  *      EXITS the app explicitly instead of poking `history.back()` against an
  *      empty stack (the zombie-webview class: the webview sits there having
- *      done nothing, panel awake, app unaddressable).
+ *      done nothing, panel awake, app unaddressable). The same exit answers a
+ *      SECOND consecutive history-back press that left the route unmoved —
+ *      an inert back-walk is a dead-end rung, not a permanent button (w12:
+ *      RT-098, see `BackSnapshot.priorBackInert`).
  *
  * The whole module is PURE — the rung decision is data in / data out, the row
  * probe walks a structural node shape, and the focus memory is a plain LIFO
@@ -74,16 +77,26 @@ export interface BackSnapshot {
   openLayers: readonly BackLayer[];
   /** The route is the app root (see `isAppRootRoute`). */
   atAppRoot: boolean;
+  /**
+   * The PREVIOUS BACK press took the `history-back` rung on this very route and
+   * the route did not move (w12: RT-098 — the dead-end leg: a back-press into
+   * an empty history segment is inert, and repeating it left the viewer with a
+   * dead button). When set, `history-back` escalates to `exit-app` so the
+   * second consecutive no-op press is answered by an explicit exit instead of
+   * zombie-webview silence. Row-snap and modal-close still outrank it: nearest
+   * absorbable thing first, escalation only reclassifies the walk itself.
+   */
+  priorBackInert?: boolean;
 }
 
 /**
  * The ladder as a pure function: same snapshot → same rung, every time.
- * Order is the law: row-snap before modal-close before root-exit.
+ * Order is the law: row-snap before modal-close before (root OR inert) exit.
  */
 export function decideBackRung(snapshot: BackSnapshot): BackRung {
   if (snapshot.rowScrolled) return 'row-snap';
   if (snapshot.openLayers.length > 0) return 'modal-close';
-  if (snapshot.atAppRoot) return 'exit-app';
+  if (snapshot.atAppRoot || snapshot.priorBackInert) return 'exit-app';
   return 'history-back';
 }
 

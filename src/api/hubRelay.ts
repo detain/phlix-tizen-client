@@ -2,7 +2,9 @@
  * Hub relay pending-command consumer (S298, tizen half).
  *
  * The ONLY Phlix surface that can receive "Alexa, play X" is the hub's SyncPlay
- * relay WebSocket (`ws://<hub>:8804/syncplay/{server_id}`). This module is the
+ * relay WebSocket (`wss://<hub>:8804/syncplay/{server_id}` — TLS by law; the
+ * plaintext form exists only behind the build-time dev hatch named below).
+ * This module is the
  * Tizen TV's consumer. It is a faithful port of the proven `@phlix/ui` v0.99.0+
  * consumer (`src/api/hubRelay.ts` in phlix-ui, S298 ui half) adapted to the
  * Tizen boot glue. Port ledger + mirror-lag duties (M-TIZEN-08):

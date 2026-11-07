@@ -140,15 +140,29 @@ export function buildExtraRoutes(): RouteRecordRaw[] {
   ];
 }
 
-// RAM-conscious HLS tuning for Samsung TV webviews (bounded buffers; cap level
-// to player size; software AES so DRM-free HLS still plays on weaker decoders).
-// Passed through to @phlix/ui's player via the `playerHlsConfig` field of
-// `PhlixAppConfig` (the pinned @phlix/ui; seam re-verified present in the
-// vendored dist).
+// RAM-conscious HLS tuning for Samsung TV webviews. Each knob is stated
+// against the hls.js 1.6.x DefaultConfig it overrides (measured against the
+// resolved 1.6.16 dist, not the review note's premise, which mis-stated two
+// of them):
+//   maxBufferLength   30  — back to the hls.js default (was 60, double it);
+//                           time-forward buffer per level.
+//   maxMaxBufferLength 180 — BELOW the 600 default: the hard ceiling when the
+//                           player stutters and hls.js tries to grow buffers.
+//   maxBufferSize     60MB — back to the default (was 100MB); the byte-side
+//                           twin of maxBufferLength.
+//   backBufferLength  90  — bounded, vs the Infinity default: played seconds
+//                           kept resident (seek-back room) instead of all.
+//   capLevelToPlayerSize true — never fetch ladders wider than the TV box.
+//   enableSoftwareAES true — DRM-free AES HLS plays on weaker TV decoders.
+// Net shape: nothing above default remains; the two RAM legs (180s forward
+// ceiling, 90s back window) are deliberate down-default choices. Passed
+// through to @phlix/ui's player via the `playerHlsConfig` field of
+// `PhlixAppConfig`; the vendored player merges this object AFTER its own
+// defaults, so these values win (player dist merge verified at #v0.99.22).
 const TIZEN_HLS_CONFIG = {
-  maxBufferLength: 60,
+  maxBufferLength: 30,
   maxMaxBufferLength: 180,
-  maxBufferSize: 100 * 1000 * 1000,
+  maxBufferSize: 60 * 1000 * 1000,
   backBufferLength: 90,
   capLevelToPlayerSize: true,
   enableSoftwareAES: true

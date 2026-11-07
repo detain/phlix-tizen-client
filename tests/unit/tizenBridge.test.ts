@@ -443,6 +443,74 @@ describe('wireTizenBridge', () => {
       expect(exit).not.toHaveBeenCalled();
     });
 
+    // w12: RT-098 — the bridge-side dead-end legs of the escalation. The pure
+    // table (backPolicy.test.ts) says inert→exit; these pin that the bridge
+    // OBSERVES inertness: a walk is paired only with the immediately next
+    // press on the same route key, movement (or any other rung) disarms it.
+    it('RT-098: a walk that left the route unchanged escalates the NEXT BACK to the exit rung', () => {
+      const router = makeRouter();
+      const exit = vi.fn();
+      wireTizenBridge(remote, makePlayer(), router, deepBrowse, makeQuality({ active: false }), {
+        exit,
+        findRow: () => null
+      });
+      remote.fire({ key: 'BACK' }); // press 1: history-back (stub router never moves the route)
+      expect(router.back).toHaveBeenCalledTimes(1);
+      expect(exit).not.toHaveBeenCalled();
+      remote.fire({ key: 'BACK' }); // press 2: same route key → the walk was inert → explicit exit
+      expect(exit).toHaveBeenCalledTimes(1);
+      expect(router.back).toHaveBeenCalledTimes(1); // no further blind pokes
+    });
+
+    it('RT-098: observed route movement disarms the escalation (walks keep walking)', () => {
+      let route: BridgeRoute = { name: 'browse', path: '/app/library/2' };
+      const router = makeRouter();
+      router.back.mockImplementation(() => {
+        route = { name: 'browse', path: '/app/library/1' };
+      });
+      const exit = vi.fn();
+      wireTizenBridge(
+        remote,
+        makePlayer(),
+        router,
+        () => route,
+        makeQuality({ active: false }),
+        { exit, findRow: () => null }
+      );
+      remote.fire({ key: 'BACK' }); // press 1: walks; route MOVES
+      remote.fire({ key: 'BACK' }); // press 2: different key → walks again, no escalation
+      expect(router.back).toHaveBeenCalledTimes(2);
+      expect(exit).not.toHaveBeenCalled();
+      remote.fire({ key: 'BACK' }); // press 3: route stuck → this walk was inert → escalate
+      expect(exit).toHaveBeenCalledTimes(1);
+      expect(router.back).toHaveBeenCalledTimes(2);
+    });
+
+    it('RT-098: a non-walk rung (modal close) between presses resets the observation', () => {
+      let open = true;
+      const layer: BackLayer & { close: ReturnType<typeof vi.fn> } = {
+        id: 'probe-layer',
+        isOpen: () => open,
+        close: vi.fn(() => {
+          open = false;
+        })
+      };
+      const router = makeRouter();
+      const exit = vi.fn();
+      wireTizenBridge(remote, makePlayer(), router, deepBrowse, makeQuality({ active: false }), {
+        exit,
+        findRow: () => null,
+        layers: [layer]
+      });
+      remote.fire({ key: 'BACK' }); // press 1: modal-close — arms nothing (not a walk)
+      expect(layer.close).toHaveBeenCalledTimes(1);
+      remote.fire({ key: 'BACK' }); // press 2: walk on unchanged route → arms the observation
+      expect(router.back).toHaveBeenCalledTimes(1);
+      remote.fire({ key: 'BACK' }); // press 3: same key → escalate
+      expect(exit).toHaveBeenCalledTimes(1);
+      expect(router.back).toHaveBeenCalledTimes(1);
+    });
+
     it('focus memory: YELLOW remembers the opener; the quality layer’s BACK returns focus to it', () => {
       const opener = document.createElement('button');
       document.body.appendChild(opener);

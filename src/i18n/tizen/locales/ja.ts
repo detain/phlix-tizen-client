@@ -208,8 +208,13 @@ const quickConnect = {
   aria: 'スマートフォンと連携',
   eyebrow: 'Samsung TV用 Phlix',
   title: 'キーボードなしでサインイン',
+  // RT-097 chooser (the takeover opens on this decision, not on a ceremony).
+  chooseTitle: 'このテレビでサインイン',
+  chooseLead: 'サインイン方法を選択してください',
+  choosePassword: 'パスワードでサインイン',
+  chooseCode: 'ペアリングコードでサインイン',
   preparing: 'コードを準備しています…',
-  instruction: 'スマートフォンでPhlixを開いてこのコードを入力してください',
+  instruction: 'このコードをサインイン済みの他のPhlixデバイスに入力してテレビを連携します',
   declined: '連携が拒否されました。',
   expired: 'このコードは期限切れです。',
   unreachable: 'サーバーに接続できませんでした。',
@@ -217,7 +222,7 @@ const quickConnect = {
   expiryNote: '数分で期限切れになります — 急がなくて大丈夫です。',
   tryAgain: 'もう一度お試しください',
   usePassword: '代わりにパスワードを入力',
-  hint: 'スマートフォンでPhlixを開く → テレビにサインイン → コードを入力。',
+  hint: '現時点でコードを承認できるコンパニオンアプリはありません — コードが期限切れの場合はパスワードをご利用ください。',
 };
 
 const days = {

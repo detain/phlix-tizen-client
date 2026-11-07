@@ -206,8 +206,13 @@ const quickConnect = {
   aria: 'Mit dem Telefon koppeln',
   eyebrow: 'Phlix für Samsung TV',
   title: 'Ohne Tastatur anmelden',
+  // RT-097 chooser (the takeover opens on this decision, not on a ceremony).
+  chooseTitle: 'An diesem TV anmelden',
+  chooseLead: 'Wie möchtest du dich anmelden?',
+  choosePassword: 'Mit Passwort anmelden',
+  chooseCode: 'Mit einem Kopplungscode anmelden',
   preparing: 'Dein Code wird vorbereitet…',
-  instruction: 'Öffne Phlix auf dem Telefon und gib diesen Code ein',
+  instruction: 'Gib diesen Code auf einem anderen angemeldeten Phlix-Gerät ein, um den TV zu koppeln',
   declined: 'Die Kopplung wurde abgelehnt.',
   expired: 'Dieser Code ist abgelaufen.',
   unreachable: 'Der Server konnte nicht erreicht werden.',
@@ -215,7 +220,7 @@ const quickConnect = {
   expiryNote: 'Läuft in wenigen Minuten ab — kein Grund zur Eile.',
   tryAgain: 'Erneut versuchen',
   usePassword: 'Stattdessen Passwort eingeben',
-  hint: 'Öffne auf dem Telefon Phlix → Am TV anmelden → Code eingeben.',
+  hint: 'Noch kann keine Companion-App einen Code bestätigen — wenn der Code abläuft, verwende dein Passwort.',
 };
 
 const days = {

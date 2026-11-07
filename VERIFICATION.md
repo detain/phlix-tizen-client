@@ -2,8 +2,10 @@
 
 Reading guide: each `# Category N` section records what was verified, adapted,
 or deliberately not built for one original gap category; sections run in the
-order they were appended (4, 2, 1, 3, 5, 6), not logical order, and dated
-stamps mark the day the line-cites and counts below were last re-derived.
+order they were appended — all seventeen of them, in this exact sequence:
+4, 2, 1, 3, 5, 6, 7, 9, 8, 12, 10, 11, 14, 15, 13, 17, 16 — not logical order,
+and dated stamps mark the day the line-cites and counts below were last
+re-derived.
 
 <!-- s424-doc-honesty-census-2026-09-04 -->
 

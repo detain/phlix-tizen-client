@@ -15,9 +15,9 @@
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license MIT
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { useTrackPreferenceStore } from '@/stores/useTrackPreferenceStore';
+import { useTrackPreferenceStore, PER_ITEM_SLOT_CAP } from '@/stores/useTrackPreferenceStore';
 
 const apiCalls: { method: string; url: string; body?: unknown }[] = [];
 let getResponse: unknown = { settings: {} };
@@ -175,5 +175,136 @@ describe('useTrackPreferenceStore — resolveDefault runs the ladder over stored
     const store = useTrackPreferenceStore();
     const r = store.resolveDefault('media-9', 'audio', ['eng', 'spa']);
     expect(r).toEqual({ language: null, source: 'none' });
+  });
+});
+
+// w12: RT-084 — the LRU cap + quota-fail-soft contract. These tests import the
+// cap constant so a silent drift of the number itself reddens here. They run on
+// a scripted fake store (the repo's shared test-setup mock has no key()/length
+// enumeration and cannot fail on demand), swapped in through the mock's own
+// writable `localStorage` data property — never defineProperty (it is
+// non-configurable there).
+describe('useTrackPreferenceStore — RT-084 LRU cap + quota fail-soft', () => {
+  const slotKey = (id: string): string => `phlix.trackPref.audio.${id}`;
+  const INDEX = 'phlix.trackPref.index';
+
+  /** Storage double: real enumeration + scripted write failures. */
+  class FakeStore {
+    readonly map = new Map<string, string>();
+    /** Number of upcoming SLOT-key writes that throw before succeeding again. */
+    failNextWrites = 0;
+    /** When true every slot write throws (permanently dead store leg). */
+    failForever = false;
+
+    getItem(key: string): string | null {
+      return this.map.get(key) ?? null;
+    }
+    setItem(key: string, value: string): void {
+      const isSlot = key.startsWith('phlix.trackPref.') && key !== INDEX;
+      if (isSlot && (this.failForever || this.failNextWrites > 0)) {
+        if (!this.failForever) this.failNextWrites -= 1;
+        throw new Error('QuotaExceededError');
+      }
+      this.map.set(key, value);
+    }
+    removeItem(key: string): void {
+      this.map.delete(key);
+    }
+    key(index: number): string | null {
+      return [...this.map.keys()][index] ?? null;
+    }
+    get length(): number {
+      return this.map.size;
+    }
+    liveSlots(): string[] {
+      return [...this.map.keys()].filter((k) => k.startsWith('phlix.trackPref.') && k !== INDEX);
+    }
+    index(): string[] {
+      const raw = this.map.get(INDEX);
+      return raw === undefined ? [] : (JSON.parse(raw) as string[]);
+    }
+  }
+
+  let fake = new FakeStore();
+  const original = globalThis.localStorage;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    apiCalls.length = 0;
+    fake = new FakeStore();
+    globalThis.localStorage = fake as unknown as Storage;
+  });
+  afterEach(() => {
+    globalThis.localStorage = original;
+  });
+
+  it('writes past the cap evict the oldest slots and keep the index at cap', () => {
+    const store = useTrackPreferenceStore();
+    for (let i = 0; i <= PER_ITEM_SLOT_CAP; i++) {
+      store.setPerItem(`media-${i}`, 'audio', 'eng');
+    }
+    const live = fake.liveSlots();
+    expect(live).toHaveLength(PER_ITEM_SLOT_CAP);
+    expect(live).not.toContain(slotKey('media-0')); // oldest gone
+    expect(live).toContain(slotKey(`media-${PER_ITEM_SLOT_CAP}`)); // newest survives
+    const index = fake.index();
+    expect(index).toHaveLength(PER_ITEM_SLOT_CAP);
+    expect(index[0]).toBe(slotKey(`media-${PER_ITEM_SLOT_CAP}`)); // most-recent-first
+  });
+
+  it('re-writing an old slot promotes it to the front of the LRU index', () => {
+    const store = useTrackPreferenceStore();
+    for (const id of ['a', 'b', 'c']) store.setPerItem(id, 'audio', 'eng');
+    expect(fake.index()[2]).toBe(slotKey('a'));
+    store.setPerItem('a', 'audio', 'fra'); // same item, new language → front
+    expect(fake.index()[0]).toBe(slotKey('a'));
+    expect(store.getPerItem('a', 'audio')).toBe('fra');
+  });
+
+  it('a full live-set survives index corruption by re-deriving via enumeration', () => {
+    // Seed 100 slots behind the store's back, then poison the index.
+    for (let i = 0; i < PER_ITEM_SLOT_CAP; i++) fake.map.set(slotKey(`seed-${i}`), 'eng');
+    fake.map.set(INDEX, '{"corrupt":true}');
+
+    const store = useTrackPreferenceStore();
+    store.setPerItem('fresh', 'audio', 'spa');
+
+    expect(store.getPerItem('fresh', 'audio')).toBe('spa');
+    const index = fake.index();
+    expect(index[0]).toBe(slotKey('fresh')); // rebuilt + front-promoted
+    expect(index).toHaveLength(PER_ITEM_SLOT_CAP);
+    expect(fake.liveSlots()).toHaveLength(PER_ITEM_SLOT_CAP);
+    expect(fake.map.get(slotKey('seed-99'))).toBeUndefined(); // oldest evicted
+  });
+
+  it('a write rejected by quota evicts to half-cap and the single retry succeeds', () => {
+    for (let i = 0; i < PER_ITEM_SLOT_CAP; i++) fake.map.set(slotKey(`old-${i}`), 'eng');
+    fake.map.set(INDEX, JSON.stringify([...Array(PER_ITEM_SLOT_CAP).keys()].map((i) => slotKey(`old-${i}`))));
+    fake.failNextWrites = 1; // the first slot write throws, retry lands
+
+    const store = useTrackPreferenceStore();
+    store.setPerItem('new', 'audio', 'kor'); // must not propagate the throw
+
+    expect(fake.map.get(slotKey('new'))).toBe('kor');
+    // Half-cap recovery: 50 survivors kept, then the new head → 51 live slots.
+    expect(fake.liveSlots()).toHaveLength(Math.floor(PER_ITEM_SLOT_CAP / 2) + 1);
+    expect(fake.index()[0]).toBe(slotKey('new'));
+  });
+
+  it('a permanently rejecting store cannot throw out of setPerItem (fail-soft law)', () => {
+    fake.map.set(slotKey('keep'), 'eng');
+    fake.failForever = true;
+
+    const store = useTrackPreferenceStore();
+    expect(() => store.setPerItem('dead', 'audio', 'fra')).not.toThrow();
+    expect(store.getPerItem('dead', 'audio')).toBeNull(); // value never landed
+  });
+
+  it('clearing a choice removes it from both storage and the LRU index', () => {
+    const store = useTrackPreferenceStore();
+    store.setPerItem('x', 'audio', 'eng');
+    store.setPerItem('x', 'audio', null);
+    expect(fake.map.get(slotKey('x'))).toBeUndefined();
+    expect(fake.index()).not.toContain(slotKey('x'));
   });
 });

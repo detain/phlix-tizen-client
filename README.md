@@ -449,7 +449,7 @@ element under `document.body` (links, buttons, inputs, selects, textareas,
 |--------|--------|
 | Arrow Up/Down/Left/Right | Spatial navigation between focusable items |
 | OK / Enter | Activate the focused item (native focus) |
-| Back | Walks the four-rung BACK ladder (`src/remote/backPolicy.ts`): snap a panned shelf row back to its start, else close the topmost open layer (quick-connect, rating modal, `@phlix/ui` modal, quality picker), else navigate back (on the player this closes playback first), else at the home route exit the app |
+| Back | Walks the four-rung BACK ladder (`src/remote/backPolicy.ts`): snap a panned shelf row back to its start, else close the topmost open layer (quick-connect, rating modal, `@phlix/ui` modal, quality picker), else navigate back (on the player this closes playback first), else at the home route exit the app. A navigate-back that leaves the screen unchanged is a dead end: the next BACK exits the app instead of repeating a press that does nothing |
 | Home | Return to the home route (`/app`) |
 | Play / Pause | Toggle playback |
 | Stop | Close the player; when the player route is what's on screen, also returns to where you came from (off the player route it is a plain player teardown, no navigation) |
@@ -503,7 +503,7 @@ phlix-tizen-client/
 │   ├── SpatialNavHost.vue   # renderless useSpatialNav gate (off on player route)
 │   ├── tizenBridge.ts       # RemoteManager 'action' → usePlayerStore + router; Yellow/Back drive the QualityMenu
 │   ├── api/
-│   │   └── hubRelay.ts      # hub-relay pending_command WebSocket consumer (ws://<hub>:8804)
+│   │   └── hubRelay.ts      # hub-relay pending_command WebSocket consumer (wss://<hub>:8804; plaintext only behind a build-time dev hatch)
 │   ├── components/          # TV overlays (ChapterOverlay, SkipIntroOverlay, PiPController, ActionToastOverlay, TelemetryConsent, ScreenSaverOverlay) + D-pad lists/cards
 │   ├── pages/               # ChaptersPage, AudioTracksPage, SubtitleTracksPage, MusicPage, ParentalControlsPage
 │   ├── screens/             # RecommendationsScreen

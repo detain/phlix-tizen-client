@@ -25,7 +25,10 @@
  * Fail-soft by contract: a settings fetch failure leaves the account preference
  * `null` (the ladder then behaves as "absent"); an account write failure still
  * keeps the per-item memory (local write happens first). Both are deliberate —
- * preference memory must never be able to break playback.
+ * preference memory must never be able to break playback. The per-item memory
+ * itself is LRU-capped at `PER_ITEM_SLOT_CAP` live slots and cannot throw out
+ * of `setPerItem` (w12: RT-084) — a quota-full webview store silently keeps
+ * only its most recent pages of choices instead of erroring the picker.
  *
  * The API client is constructed per call from an explicit `baseUrl` argument
  * (the page owns `useApiBase()`), mirroring `fetchPlaybackInfoTracks` rather
@@ -55,8 +58,30 @@ interface UserSettingsResponse {
 
 const PER_ITEM_KEY_PREFIX = 'phlix.trackPref';
 
+/**
+ * LRU bookkeeping for the per-item slots (w12: RT-084 cure). Every
+ * `phlix.trackPref.<kind>.<itemId>` write is tracked in a most-recent-first
+ * key index under one extra localStorage key, and the number of live slots is
+ * capped at {@link PER_ITEM_SLOT_CAP}. Before this, the TV accumulated one
+ * permanent slot per watched title for the life of the device: on the capped
+ * webview storage (~5 MB, shared with the whole app) a heavy viewer could
+ * reach quota, and a throwing `setItem` propagated out of a "can never break
+ * playback" store. The index is the cap's bookkeeping; a corrupt/absent index
+ * is re-derived by enumerating the storage, so the cap never depends on the
+ * index being trustworthy.
+ */
+export const PER_ITEM_SLOT_CAP = 100;
+
+/** Half-cap eviction floor used by the quota-recovery retry. */
+const PER_ITEM_EVICT_FLOOR = Math.floor(PER_ITEM_SLOT_CAP / 2);
+
+const PER_ITEM_INDEX_KEY = `${PER_ITEM_KEY_PREFIX}.index`;
+
+/** Storage slice used by the per-item memory (enumeration included for the re-derive path). */
+type TrackStorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem' | 'key' | 'length'>;
+
 /** SSR/Tizen-safe localStorage accessor — null when storage is unavailable. */
-function trackStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | null {
+function trackStorage(): TrackStorageLike | null {
   try {
     const store = globalThis.localStorage;
     return store ?? null;
@@ -67,6 +92,86 @@ function trackStorage(): Pick<Storage, 'getItem' | 'setItem' | 'removeItem'> | n
 
 function perItemKey(itemId: string, kind: TrackKind): string {
   return `${PER_ITEM_KEY_PREFIX}.${kind}.${itemId}`;
+}
+
+function isSlotKey(key: string | null): key is string {
+  return !!key && key.startsWith(`${PER_ITEM_KEY_PREFIX}.`) && key !== PER_ITEM_INDEX_KEY;
+}
+
+/** Parse the LRU index; anything malformed reads as absent (re-derive follows). */
+function readIndex(store: TrackStorageLike): string[] | null {
+  const raw = store.getItem(PER_ITEM_INDEX_KEY);
+  if (typeof raw !== 'string') return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.filter((entry): entry is string => typeof entry === 'string');
+  } catch {
+    return null;
+  }
+}
+
+/** Fallback slot discovery when the index is absent/corrupt: walk the storage. */
+function enumerateSlotKeys(store: TrackStorageLike): string[] {
+  const keys: string[] = [];
+  for (let i = 0; i < store.length; i++) {
+    const key = store.key(i);
+    if (isSlotKey(key)) keys.push(key);
+  }
+  return keys;
+}
+
+/** Live slots, most-recent-first; ghosts (indexed but gone) are filtered. */
+function currentSlots(store: TrackStorageLike): string[] {
+  const candidates = readIndex(store) ?? enumerateSlotKeys(store);
+  return candidates.filter((key) => store.getItem(key) !== null);
+}
+
+function writeIndex(store: TrackStorageLike, slots: readonly string[]): void {
+  try {
+    store.setItem(PER_ITEM_INDEX_KEY, JSON.stringify(slots));
+  } catch {
+    // Index write is bookkeeping, never the payload: a missing entry only
+    // costs cap precision until the next enumeration re-derives it.
+  }
+}
+
+/** Promote `key` to the front of the LRU index and evict anything past the cap. */
+function rememberSlot(store: TrackStorageLike, key: string): void {
+  const slots = [key, ...currentSlots(store).filter((slot) => slot !== key)];
+  const kept = slots.slice(0, PER_ITEM_SLOT_CAP);
+  for (const evicted of slots.slice(kept.length)) {
+    try {
+      store.removeItem(evicted);
+    } catch {
+      // Already off the index; a stuck eviction cannot strand quota room.
+    }
+  }
+  writeIndex(store, kept);
+}
+
+/** Drop `key` from storage and index (clear path). */
+function forgetSlot(store: TrackStorageLike, key: string): void {
+  try {
+    store.removeItem(key);
+  } catch {
+    return; // removeItem throwing means storage is unhealthy; nothing to un-index
+  }
+  writeIndex(store, currentSlots(store).filter((slot) => slot !== key));
+}
+
+/** Quota recovery: trim the live set to half-cap so a retry has room. */
+function evictToHalfCap(store: TrackStorageLike): void {
+  const slots = currentSlots(store);
+  const kept = slots.slice(0, PER_ITEM_EVICT_FLOOR);
+  for (const evicted of slots.slice(kept.length)) {
+    try {
+      store.removeItem(evicted);
+    } catch {
+      // best-effort room-making; the retry below still stands or fails on its own
+    }
+  }
+  writeIndex(store, kept);
 }
 
 function accountField(kind: TrackKind): 'preferred_audio_language' | 'preferred_subtitle_language' {
@@ -103,16 +208,38 @@ export const useTrackPreferenceStore = defineStore('trackPreference', () => {
     return trackStorage()?.getItem(perItemKey(itemId, kind)) ?? null;
   }
 
-  /** Store (or, with an empty language, clear) the per-title choice locally. */
+  /**
+   * Store (or, with an empty language, clear) the per-title choice locally.
+   * LRU-capped and quota-safe (w12: RT-084): the write is preceded by a
+   * cap-enforcing promotion, a rejected write evicts down to half-cap and
+   * retries exactly once, and a still-rejected write is swallowed — the
+   * in-session state and the account PUT in {@link persist} are unaffected,
+   * honoring the fail-soft contract above (a preference memory that throws is
+   * the bug this cures).
+   */
   function setPerItem(itemId: string, kind: TrackKind, language: string | null): void {
     const store = trackStorage();
     if (!store) return;
     const key = perItemKey(itemId, kind);
     if (language === null || language === '') {
-      store.removeItem(key);
+      forgetSlot(store, key);
       return;
     }
-    store.setItem(key, language);
+    rememberSlot(store, key);
+    try {
+      store.setItem(key, language);
+      return;
+    } catch {
+      // Quota (or an unhealthy webview store): make room and try once more.
+    }
+    evictToHalfCap(store);
+    rememberSlot(store, key);
+    try {
+      store.setItem(key, language);
+    } catch {
+      // Fail-soft by contract: local memory is best-effort. The choice still
+      // lives in-session (persist's refs) and on the account row.
+    }
   }
 
   /**
