@@ -61,7 +61,15 @@ vi.mock('@phlix/ui', async () => ({
         return { tags: [] } as T;
       }
       if (url.endsWith('/stream-limits')) {
-        return { max_streams: 2 } as T;
+        // v0.5.7 wire truth: the DTO rides the `{ stream_limits }` envelope
+        // (server StreamLimitController; contracts StreamSession docblock).
+        return {
+          stream_limits: {
+            profile_id: 'prof-1',
+            max_concurrent_streams: 2,
+            max_total_bandwidth_kbps: null
+          }
+        } as T;
       }
       throw new Error('unexpected GET ' + url);
     }

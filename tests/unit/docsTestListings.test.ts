@@ -33,7 +33,11 @@
  *      cited NAMES exist but nothing pinned the COUNT, so the parenthetical
  *      that claims to carry a re-measure drifted one wave after landing).
  *      Adding or removing a suite reddens this arm until the same commit
- *      re-measures both entry maps.
+ *      re-measures both entry maps;
+ *  (f) the docs/i18n.md `(NNN keys)` / `(M groups)` census of the tizen-own
+ *      catalog equals the real en.ts leaf/group counts (RE-REVIEW2-w15L10
+ *      minor: the 194→186 census just survived a manual sweep with nothing
+ *      machine-pinning the doc form — this arm closes that, one layer up).
  *
  * Zero runtime imports (docsPinConsistency/docsDeployWalk idiom): reads doc,
  * README, index.html and src/main.ts as TEXT plus the tests/ directory only,
@@ -195,4 +199,36 @@ describe('docsTestListings — doc-citation truth (M-TIZEN-16)', () => {
       });
     }
   });
+  describe('(f) tizen-own catalog census in docs/i18n.md is machine-pinned', () => {
+    // RE-REVIEW2-w15L10tizen minor: arms (a)-(e) pin cited NAMES, overlay
+    // counts, host parity and the suite census — but the "(186 keys)" /
+    // "(15 groups)" forms in docs/i18n.md were prose riding no pin, exactly
+    // the M1 fossilization class one layer up. Machine truth stays TEXT-only
+    // per this file's zero-runtime-import idiom; in the flat two-level en.ts
+    // shape the leaf lines ARE the runtime catalog (the shape guard below
+    // pins that equivalence, and the cross-check to the i18nLocales
+    // EN_TIZEN.size literal ties the text count to the runtime law).
+    const enTs = read('src/i18n/tizen/locales/en.ts');
+    const keyLines = [...enTs.matchAll(/^ {2}[A-Za-z][A-Za-z0-9]*:/gm)];
+    const groupLines = [...enTs.matchAll(/^const [A-Za-z][A-Za-z0-9]* = \{/gm)];
+    it('en.ts keeps the flat shape the text census relies on', () => {
+      // No nested group objects, no multi-line leaf values with embedded
+      // `word:` lines at two-space indent: any such drift would make the
+      // text count lie, so the arm fails LOUD instead of mis-pinning docs.
+      expect(enTs.match(/^ {2}[A-Za-z][A-Za-z0-9]*: \{/m), 'nested value object in en.ts').toBeNull();
+      const runtimePin = /expect\(EN_TIZEN\.size\)\.toBe\((\d+)\)/.exec(read('tests/unit/i18nLocales.test.ts'));
+      expect(runtimePin, 'i18nLocales carries the EN_TIZEN.size census pin').not.toBeNull();
+      expect(keyLines.length, 'text leaf count vs runtime EN_TIZEN.size pin').toBe(Number(runtimePin![1]));
+    });
+    it('docs/i18n.md (NNN keys) / (M groups) claims equal the catalog', () => {
+      const claims = [...read('docs/i18n.md').matchAll(/\((\d+) keys(?: \/ (\d+) groups)?\)/g)];
+      expect(claims.length, 'docs/i18n.md carries the (NNN keys) census sites').toBeGreaterThanOrEqual(3);
+      for (const m of claims) {
+        expect(Number(m[1]), `docs/i18n.md "${m[0]}" key count`).toBe(keyLines.length);
+        if (m[2] !== undefined)
+          expect(Number(m[2]), `docs/i18n.md "${m[0]}" group count`).toBe(groupLines.length);
+      }
+    });
+  });
+
 });

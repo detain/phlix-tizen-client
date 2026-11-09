@@ -6,10 +6,15 @@
  * `@phlix/contracts` pins in its `test/fixtures/stream-track-vectors.json`
  * (embedded text with a bitmap ordinal gap, an external download row, and
  * the full audio pair). They are asserted against the key-list constants
- * exported by the INSTALLED `@phlix/contracts` package (the shipped dist,
- * via the v0.4.5 pin), so this test reddens if either the consumer pin or
+ * exported by the INSTALLED `@phlix/contracts` package (the shipped dist;
+ * first wired at the v0.4.5 pin), so this test reddens if either the consumer pin or
  * the shipped contract shape drifts from the wire — the exact bug class S404
  * closed (contracts once demanded a `display_title` the server never emitted).
+ * S507 (AD-8) later ADDED a member: every playback-info subtitle row is
+ * delivered as an EXTERNALLY-served signed sidecar, so the wire carries
+ * `delivery: 'external'` between `source` and `hearing_impaired` (LW-069
+ * dump authority server `a63dc0db`). Rows re-attested at the #v0.5.7
+ * type-truth re-pin (2026-11-09, this wave).
  */
 import { describe, it, expect } from 'vitest';
 import { AUDIO_TRACK_KEYS, SUBTITLE_TRACK_KEYS } from '@phlix/contracts';
@@ -51,6 +56,7 @@ const GOLDEN_SUBTITLES: SubtitleTrack[] = [
     label: 'eng',
     codec: 'subrip',
     source: null,
+    delivery: 'external',
     hearing_impaired: true,
     url: '/api/v1/media/11111111-2222-3333-4444-555555555555/subtitles/0',
   },
@@ -62,6 +68,7 @@ const GOLDEN_SUBTITLES: SubtitleTrack[] = [
     label: 'Español (Forzada)',
     codec: 'mov_text',
     source: null,
+    delivery: 'external',
     hearing_impaired: false,
     url: '/api/v1/media/11111111-2222-3333-4444-555555555555/subtitles/2',
   },
@@ -73,6 +80,7 @@ const GOLDEN_SUBTITLES: SubtitleTrack[] = [
     label: 'Subtitle 1',
     codec: 'webvtt',
     source: 'opensubtitles',
+    delivery: 'external',
     hearing_impaired: true,
     url: '/api/v1/media/11111111-2222-3333-4444-555555555555/subtitles/external/ss-ext',
   },
@@ -83,7 +91,7 @@ describe('TrackWireShape (S404 golden vectors)', () => {
     expect(GOLDEN_AUDIO.length).toBeGreaterThan(0);
     expect(GOLDEN_SUBTITLES.length).toBeGreaterThan(0);
     expect(AUDIO_TRACK_KEYS.length).toBe(9);
-    expect(SUBTITLE_TRACK_KEYS.length).toBe(9);
+    expect(SUBTITLE_TRACK_KEYS.length).toBe(10);
   });
 
   it('audio golden rows carry the shipped contract key set exactly, in order', () => {

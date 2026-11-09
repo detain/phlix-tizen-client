@@ -283,8 +283,15 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // (`.toggle-pill:focus-visible`) = −1. Attributed by selector-set diff
       // of the old vs new committed host CSS chunk; docs/runtime-floor.md
       // table re-measured in the same change.
+      // 42→43: ui #v0.99.25 re-vendor — the vendored `.album-card__link`
+      // overlay (anchor-music-nav wave ui `c7f96bc7`, .23-era payload) adds
+      // one `position:absolute;inset:0` site; a scoped-hash-stripped
+      // selector-set diff of index-B3a2zLUG.css vs index-BVpuTFMB.css shows
+      // the other 42 rules as hash twins with this single net addition
+      // (measured red at this re-vendor, cured here; docs/runtime-floor.md
+      // table re-measured in the same change).
       expect(countAcrossCss(':focus-visible')).toBe(152);
-      expect(countAcrossCss('inset:')).toBe(42);
+      expect(countAcrossCss('inset:')).toBe(43);
       expect(countAcrossCss('aspect-ratio')).toBe(36);
       // 8→7: RT-103 (w15-L10) replaced the native schedule checkbox (whose
       // 1.25rem `accent-color` arm was the 8th site) with the D-pad-operable

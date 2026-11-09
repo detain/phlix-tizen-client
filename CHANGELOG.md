@@ -34,6 +34,75 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — `@phlix/ui` #v0.99.25 re-vendor; Parental stream-limits finally live — 2026-11-09
+
+- **What viewers see:** the Parental Controls → Stream Limits section works
+  for the first time. The server wraps the DTO in `{ stream_limits }` and
+  speaks snake_case on BOTH verbs (`StreamLimitController`, declared by
+  contracts `ProfileStreamLimit` since LW-065); the page's camelCase reads
+  and save body never matched that wire — the resting display was pinned at
+  '—' and every save 400'd. The #v0.5.7 type-truth bump made the compiler
+  say so (5 typecheck errors), and the cure landed with it: boundary
+  unwrap/rewrite in `ParentalControlsPage.vue`, envelope-true test mocks, and
+  a new whole-tuple PUT pin in `ParentalControlsWireShape.test.ts` (convicted
+  by re-widening the src body to camel — exactly 1 red, restored).
+  Riding in from the vendored bundle: the stacked-overlay focus-routing and
+  SyncPlay reconnect PARK ladder (ui `b9adc481`) — the room socket no longer
+  dies after its budget; it waits for a visible window and re-asks — plus
+  the localized browse-rail strings (Continue watching / Next up / …) across
+  all seven ui locale bundles.
+- **Pin leg.** `package.json` advances ui #v0.99.22→#v0.99.25 and contracts
+  #v0.5.6→#v0.5.7 (the .25 tag payload declares .5.7; holding .5.6 would
+  force an unratified nested divergence era — the estate .25 plan names the
+  re-pin in this wave); syncplay holds #v0.1.7 (v0.1.8 is a separate owner-
+  gated RE-BASELINE, and #v0.99.23 stays NEVER-pin, the truthful red-CI
+  orphan). npm11 install, lock surgical 7+/7- (two spec echoes, the ui node
+  to `6e1ce2d8`, the contracts node to `bedfe69b` fresh-minted — no stale
+  hoist — and the ui-node edge echo), idempotent x2, and a lockless
+  fresh-resolve oracle reproduces the committed triple exactly. Registry
+  trio bytes (`5d1783a7…` error-codes etc.) verified unmoved — the .5.7 delta
+  is types/docblocks, which the two cures above show is NOT docs-only for
+  tizen.
+- **Locale leg (REAL rotation).** The .23–.25 source carried 16 new leaves
+  (browse group + rails/error/guidance keys): red-first on the installed
+  .25 bytes before sync (`es missing installed keys …(15)`,
+  `expected 542 to be 526`), then `scripts/sync-ui-locale-bundles.mjs --ref
+  6e1ce2d8` rotated the six bundles and the catalog PIN 526→542 (12/14
+  bundle pin hashes moved; the `index.ts` pair holds for the fifth
+  consecutive wave, `f5c2011a`/`fb4fa495`); post-sync `i18nLocales` 45/45
+  including the local SOURCE-parity leg against the ui repo at the real peel.
+- **Widget leg.** `package/assets/` re-vendored deterministically (x2
+  `diff -r` clean, 42 files): entry CSS `index-B3a2zLUG.css` →
+  `index-BVpuTFMB.css` (the .23 color-mix/browse-rail styles crossed it),
+  player carrier `PlayerPage-BbWPOZn8-*` → `PlayerPage-Bp-fkb06-DNvJApVL.js`,
+  32 of 39 assets rename; stamp `0.99.25` exactly once, zero 0.99.2x residue;
+  law greps (playlist_url/_master, theme seam, picker literal, CSP-escape,
+  watch glob) all live on the new bytes; aggregate md5s (recipes disclosed in
+  the wave register) `f7a2aaee…` / `f186cdf0…`.
+- **Ledger re-verification (docs law #2).** All six `ui-port-divergence` rows
+  re-grepped at .25 bytes: all FACT-UNCHANGED, three honest attribution
+  corrections (invite DTO chunks, `new Audio` dist-side move, escape-pattern
+  chunk), the `canManagePlaylist` recursive census read 5 again, and the bare
+  `access_token` literals still ship (hoist `var Pi=` in the widget entry;
+  `var M`/`var yt` in dist — grep-the-LITERAL law unchanged).
+- **Census rotations (measured reds, attributed).** `distApiFloor`: `inset:`
+  42→43 (the vendored `.album-card__link` overlay; selector-set diff), and
+  `docs/runtime-floor.md` re-measured in the same change — including a new
+  unpinned-Info note for the `color-mix()` 1→49 jump riding the ui .23
+  fallback cure. `TrackWireShape` golden subtitle vectors + the
+  `SUBTITLE_TRACK_KEYS.length` pin rotated 9→10 for S507 `delivery`, and the
+  M8 reconnect law moved its UNREADABLE probe to the host side because the
+  ui CU-078 contract made `LocalStorageTokenStore` never-throw (memory-mirror
+  degradation) — captured-token dial preserved, both M8 tests green.
+- **Fold-in.** `docsTestListings` gained arm (f): the `docs/i18n.md`
+  186-keys/15-groups census is now machine-pinned against `en.ts` (red-first
+  convicted x2 by perturbing each number in scratch).
+- **Gates.** typecheck/typecheck:tests/lint 0 errors; full vitest serial
+  65 files 1197/1197 (parent at 64ba6655 measured 1194 — +2 arm-(f), +1 PUT
+  pin); docsPin 9/9; audit-gate PASS on the exact allow-set {GHSA-3g3m,
+  GHSA-g3hv} (re-verify 2027-04-30 stands); build determinism above.
+
+
 ### Fixed — the i18n census prose and audit trails read the true 186 / 15 (w15-L10 round 2) — 2026-11-09
 
 - **What viewers see:** the docs finally match the shipped catalog. The RT-100

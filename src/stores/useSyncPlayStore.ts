@@ -8,7 +8,7 @@
  * `@phlix/ui` does not export its player-side SyncPlay API (`getSyncPlayApi`,
  * `openSyncPlayConnection`, `sendSyncPlayCommand` are internal to the package),
  * so the REST client and the WebSocket layer live here, typed against
- * `@phlix/contracts` v0.5.6 (S415 type truth: `SyncPlayGroup` IS the
+ * `@phlix/contracts` v0.5.7 (S415 type truth: `SyncPlayGroup` IS the
  * `GroupState::getState()` emission with a DICT `members`, the list-row
  * vocabulary lives on `SyncPlayGroupListItem`, and the five REST envelopes
  * are declared) and framed by `@phlix/syncplay` v0.1.7.
@@ -32,6 +32,14 @@
  * not copied). Historically-scoped cites in this file
  * and its test (the S415 `retired in contracts v0.4.6` note, the
  * v0.1.2/v0.1.4 fold history) stay verbatim per the changelog law.
+ * The 2026-11-09 #v0.99.25 re-vendor leg advanced this store to #v0.5.7 —
+ * NOT a registry-only move: the LW-065/LW-069 type-truth pass changed two
+ * surfaces this file's neighborhood touches (`ProfileStreamLimit` snake_case
+ * + `{ stream_limits }` envelope — cured in ParentalControlsPage.vue the same
+ * wave; `SubtitleTrack.delivery` — golden vectors rotated in
+ * tests/unit/TrackWireShape.test.ts). That wave's ground also shifted under
+ * the M8 ladder seam via the ui CU-078 token-store contract — see the dated
+ * note on liveAccessTokenForReconnect.
  *
  * Port ledger (M-TIZEN-08): this file is one of the sealed-ui local ports —
  * mirror-lag duties and the re-pin law live in `docs/ui-port-divergence.md`.
@@ -901,13 +909,31 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
    *                 named.
    * A slot that dialed anonymously and has since logged in still re-dials
    * authenticated: the same credential the next manual dial would present.
+   *
+   * .25 ground-move (this wave, discovered red-first): the ui CU-078 storage-
+   * failure contract (ui `db768b84`, .23-era payload, live in #v0.99.24 and
+   * #v0.99.25) made `LocalStorageTokenStore` NEVER throw — an unreachable
+   * seam degrades the instance to an in-memory mirror that answers `null`,
+   * indistinguishable from the READABLE-AND-EMPTY case. The undefined branch
+   * therefore can no longer be driven through the store's return value, so
+   * the reachability test moves to the host side, where it was always
+   * tizen's own to own: touching the platform seam HERE separates kiosk-
+   * lockdown UNREADABLE (throwing getter → undefined → captured token rides,
+   * M8 law preserved) from a reachable seam, which delegates to the store
+   * exactly as before. The belt catch stays: a future host-custody TokenStore
+   * may still raise.
    */
   function liveAccessTokenForReconnect(): string | null | undefined {
+    try {
+      void window.localStorage; // probe the platform seam itself (.25 CU-078)
+    } catch {
+      return undefined; // store unreadable — the captured token decides (M8)
+    }
     try {
       const live = new LocalStorageTokenStore().getAccessToken();
       return live ? live : null;
     } catch {
-      return undefined; // store unreadable — the captured token decides (M8)
+      return undefined; // belt: a throwing custom-custody seam is unreadable too
     }
   }
 

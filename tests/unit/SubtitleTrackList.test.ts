@@ -6,7 +6,8 @@ import type { SubtitleTrack } from '@phlix/contracts';
 /**
  * S404: the list is typed as the playback-info WIRE `SubtitleTrack`
  * (StreamTrackShaper::subtitleTracks() shape). A full honest fixture carries
- * ALL nine wire keys — `title`/`isForced`/`isDefault` are NOT on the subtitle
+ * ALL ten wire keys at #v0.5.7 (S507 added the `delivery` literal; the count
+ * was nine pre-S507) — `title`/`isForced`/`isDefault` are NOT on the subtitle
  * wire (the pre-S404 fixture pinned that fiction; rewritten, not deleted).
  */
 const createTrack = (overrides: Partial<SubtitleTrack> = {}): SubtitleTrack => ({
@@ -17,6 +18,7 @@ const createTrack = (overrides: Partial<SubtitleTrack> = {}): SubtitleTrack => (
   label: 'en-US',
   codec: 'webvtt',
   source: null,
+  delivery: 'external',
   hearing_impaired: false,
   url: '/api/v1/media/item-1/subtitles/0?exp=1800000000&sig=dGVzdC1zaWc',
   ...overrides

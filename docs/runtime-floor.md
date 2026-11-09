@@ -66,16 +66,35 @@ dropping the two host `:focus-visible:focus-visible` redundant double arms
 removed 4 `:focus-visible` tokens (157→153); the deletion of the dead
 `@media (max-width:640px)` density fallbacks, reviewed in the same round,
 removed no above-floor token, so every other figure held; the `100dvh` row
-is added this wave:
+is added this wave; re-measured again 2026-11-09 at the `@phlix/ui`
+#v0.99.25 re-vendor — the vendored `.album-card__link` overlay (anchor-music-
+nav cure ui `c7f96bc7`) adds one `inset:` site (42→43, attributed by a
+scoped-hash-stripped selector-set diff; every other pinned figure held), and
+the unpinned `color-mix()` census jumped 1→49 — see the note under the
+table:
 
 | Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
 |---|---|---|---|
 | `:focus-visible` | Chrome **86** | 152 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (4 dropped from 157 by collapsing two host `:focus-visible:focus-visible` double arms.) |
-| `inset:` | Chrome **87** | 42 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
+| `inset:` | Chrome **87** | 43 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
 | `aspect-ratio` | Chrome **88** | 36 | Boxes size from content/height instead of the ratio — cards may stretch. |
 | `accent-color` | Chrome **93** | 7 | Form controls keep UA default colors — cosmetic only. |
 | `:has()` | Chrome **105** | 1 | The one rule (`.register-form__segment:has(input:checked)`, a segmented-control highlight) drops — the state stays unstyled. Upstream cosmetic half (ui repo), pinned here so its arrival/movement is visible. |
 | `100dvh` | Chrome **108** | 7 | All vendored `@phlix/ui`. 5 GUARDED: the two theater-mode heights ride `@supports not (height:100dvh){…100vh}` fallbacks (token appears in each guarded rule + each `@supports` condition = 3+2) → they degrade to `100vh` on ≤ 107, no clamp loss. 2 UNGUARDED: `.phlix-menu__list` / `.usermenu__panel` `max-height:calc(100dvh …)` have no vh fallback → on ≤ 107 the clamp drops and long menus overflow (cosmetic, no crash). Cure is an upstream `@phlix/ui` double-declare (out of this repo's pin scope); pinned count=7 so any reshaping vendored menu/theater CSS shows up here. |
+
+**`color-mix()` note (2026-11-09, #v0.99.25 re-vendor — Info, unpinned).**
+The stylesheet's `color-mix()` sites jumped 1→49 with the ui .23-era
+"color-mix CSS floor fallbacks" cure (ui `c7f96bc7`). The feature is Chrome
+111, but its drop granularity is per-DECLARATION (a same-property fallback
+declared earlier in the rule survives; whole-rule loss only comes from
+unsupported SELECTORS), and the vendored CSS guards in two forms: double
+declarations and explicit `@supports not (color:color-mix(in srgb,red,blue))`
+blocks. A same-rule scan finds 38 sites without a preceding fallback
+declaration — several of those ride `@supports` or token-level guards rather
+than double declaration. A full per-site classification is a dedicated
+adjudication owed whenever this file next has business (candidate: pin a
+`color-mix` census like the four above); expected degradation on ≤ 111 where
+unguarded is gradient/tint loss (cosmetic), not geometry shift.
 
 The load-bearing cure is the vendored 10-foot fallback carried in the same
 stylesheet:

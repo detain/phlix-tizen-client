@@ -82,7 +82,15 @@ vi.mock('@phlix/ui', async () => ({
         return { tags: TAGS } as T;
       }
       if (url.endsWith('/stream-limits')) {
-        return { max_streams: 2 } as T;
+        // v0.5.7 wire truth: the DTO rides the `{ stream_limits }` envelope
+        // (server StreamLimitController; contracts StreamSession docblock).
+        return {
+          stream_limits: {
+            profile_id: 'prof-1',
+            max_concurrent_streams: 2,
+            max_total_bandwidth_kbps: null
+          }
+        } as T;
       }
       throw new Error('unexpected GET ' + url);
     }
@@ -216,6 +224,40 @@ describe('ParentalControlsPage wire shape (S325b)', () => {
     // (createForProfile always INSERTs; it never upserts an id from the body).
     expect(apiCalls.some(c => c.method === 'POST' && c.url.endsWith('/schedules'))).toBe(false);
     expect(apiCalls.some(c => c.method === 'PUT' && c.url === '/api/v1/profiles/prof-1/schedules/7')).toBe(true);
+  });
+
+  // ── LW-065 / #v0.5.7: stream limits speak the envelope + snake PUT ─────
+
+  it('reads the { stream_limits } envelope and saves with the snake_case PUT tuple (v0.5.7 wire truth)', async () => {
+    // The contracts #v0.5.7 type-truth pass made the DTO visible to the
+    // compiler — and exposed that this section had NEVER matched the wire:
+    // the server (StreamLimitController) wraps the DTO in `{ stream_limits }`
+    // on both verbs and parses ONLY `max_concurrent_streams` /
+    // `max_total_bandwidth_kbps`, so the old camel reads rendered '—' forever
+    // and the old camel PUT was a guaranteed 400. Both halves are pinned
+    // here against the true envelope the mock above now serves.
+    const wrapper = mount(ParentalControlsPage);
+    await flushPromises();
+
+    // Read half: the unwrapped DTO feeds the resting display (mock carries 2).
+    expect(wrapper.find('.limit-item__value').text()).toBe('2');
+
+    // Write half: open the form, change the stream count, save.
+    await wrapper.find('.limit-display .section__action').trigger('click'); // startEditLimit
+    await wrapper.find('#limit-streams').setValue('3');
+    await wrapper.find('.save-btn').trigger('click');
+    await flushPromises();
+
+    // Whole-tuple pin (S502 law): verb + path + snake body. A camel member,
+    // an unwrapped DTO, or the value landing anywhere else reddens here —
+    // not on the TV.
+    const writes = apiCalls.filter(c => c.method === 'PUT');
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toEqual({
+      method: 'PUT',
+      url: '/api/v1/profiles/prof-1/stream-limits',
+      body: { max_concurrent_streams: 3, max_total_bandwidth_kbps: null }
+    });
   });
 
   // ── R1-F1: section headers ride the catalog, not bare literals ──────────

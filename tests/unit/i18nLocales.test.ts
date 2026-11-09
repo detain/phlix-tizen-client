@@ -345,24 +345,45 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ 01acaa12 == @phlix/ui v0.99.21 — RE-SYNCED at this pin (the
-    // a6c9d466-era held run ended here): the v0.99.21 theme-persistence wave
-    // moved ui locale SOURCE — `git diff a6c9d466..01acaa12 -- src/i18n`
+    // Vendored @ 6e1ce2d8 == @phlix/ui v0.99.25 — RE-SYNCED at this pin (the
+    // 01acaa12-era held run ended here): the .23→.25 review-cure payload
+    // moved ui locale SOURCE — `git diff 01acaa12..6e1ce2d8 -- src/i18n`
     // NON-empty: the six bundle files + the messages.ts catalog each gained
-    // the two `settings.themeCatalogueUnavailable` / `settings.themeSavedLocally`
-    // leaves (524→526 keys; the Appearance-picker disclosures ui ships when the
-    // theme catalogue fails or a theme PUT stays on-device-only). The
-    // errors.ts + errors.test.ts deltas in that range are 524→526-key prose
-    // and ui-internal test growth — never vendored; the installed↔bundle
-    // key-set equality demanded the conscious re-sync this leg took (both
-    // equality legs measured RED on the v0.99.21 install BEFORE the sync —
+    // sixteen leaves (526→542 keys: a new `browse` group — continueWatching,
+    // nextUp, recommended, mostWatched plus the noLibraries pair — the
+    // auth-recovery trio passwordRecoveryHint/confirmPasswordRequired/
+    // sessionExpired, the library noMedia pair, the playlist/season
+    // loadErrorTitle pair and the parental loadErrorSchedules/Tags/
+    // StreamLimits trio). The errors.ts / locales.test.ts / handCodedRails
+    // deltas in that range are ui-internal prose and test growth — never
+    // vendored; the installed↔bundle key-set equality demanded the
+    // conscious re-sync this leg took (both equality legs measured RED on
+    // the v0.99.25 install BEFORE the sync — `es missing installed keys:
+    // [ 'auth.passwordRecoveryHint', …(15) ]` + `expected 542 to be 526`):
+    // ref re-anchored 01acaa12→6e1ce2d8 and 12 of the fourteen PIN hashes
+    // rotated with it, the index.ts pair HOLDING for the fifth consecutive
+    // real re-vendor wave because ui's locales/index.ts is byte-stable
+    // across those pins (re-verified at the tag payload); bundles and the
+    // installed copy re-synced TOGETHER here, so both equality directions
+    // hold by construction again. Prior eras for the record: 01acaa12 ==
+    // v0.99.21 (re-synced at its pin — the theme-persistence wave moved ui
+    // locale SOURCE, `git diff a6c9d466..01acaa12 -- src/i18n` NON-empty:
+    // the same six-file + messages.ts move, the two
+    // `settings.themeCatalogueUnavailable` / `settings.themeSavedLocally`
+    // leaves (524→526; the Appearance-picker disclosures ui ships when the
+    // theme catalogue fails or a theme PUT stays on-device-only; the
+    // errors.ts + errors.test.ts deltas in that range were 524→526-key
+    // prose and ui-internal test growth — never vendored); both equality
+    // legs measured RED on the v0.99.21 install BEFORE the sync —
     // `es missing installed keys: ['settings.themeCatalogueUnavailable',
-    // 'settings.themeSavedLocally']` + `526 ≠ 524`): ref re-anchored
-    // a6c9d466→01acaa12 and 12 of the fourteen PIN hashes rotated with it,
-    // the index.ts pair HOLDING because ui's locales/index.ts is byte-stable
-    // across those pins; bundles and the installed copy re-synced TOGETHER
-    // here, so both equality directions hold by construction again. Prior
-    // eras for the record: a6c9d466 == v0.99.19 (re-synced at its pin —
+    // 'settings.themeSavedLocally']` + `526 ≠ 524`; 12 of fourteen hashes
+    // rotated, index pair holding), then HELD at the v0.99.22 re-pin
+    // (`git diff 01acaa12..a4ede939 -- src/i18n` EMPTY — the
+    // ambient-canvas fps cure moved only ui player code + the stamp-bearing
+    // dist entries; all seven tag-payload locale files re-hashed
+    // byte-identical to their PIN source hashes — ref, all fourteen hashes
+    // and SOURCE_REF untouched, era comment advanced stamp-only); then
+    // a6c9d466 == v0.99.19 (re-synced at its pin —
     // `git diff 2158564a..a6c9d466 -- src/i18n` NON-empty: the same six-file
     // SOURCE move, each bundle + messages.ts gaining the one
     // `player.audioOriginal` leaf (523→524; the copy behind ui's synthesized

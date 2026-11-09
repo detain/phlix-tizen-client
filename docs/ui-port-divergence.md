@@ -2,7 +2,7 @@
 
 **What this document is.** The Tizen client renders its app UI from the vendored
 `@phlix/ui` bundle, but three behaviors could not ride that bundle because
-`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.22).
+`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.25).
 They are therefore **re-implemented locally** in this repo. Local ports drift:
 every ui release can change the thing being ported while the port stands still.
 This ledger names every port, what it is sealed behind, and the known
@@ -15,30 +15,30 @@ leave a port behind.
 | `src/api/hubRelay.ts` | the ui's hub-relay pending-command consumer (ui S298 half) | boot glue differs (tizen config resolution, S2a token mint); documented as a faithful port in its header |
 | `src/syncplayDispatch.ts` | the ui's `Player.vue` pending-media load path (`resolvePendingMedia` prop era) | the player page lives inside the sealed bundle; this is the host-side watcher driving the shared player store |
 
-## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.22`)
+## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.25`)
 
 Verified against the vendored bundle in `package/assets/` and the local sources
-at this commit, not from memory (rows re-grepped at the 2026-11-06 v0.99.21
-re-pin onto the v0.99.21 bytes — two pins crossed since .19: the .20 signed-URL
-cure (pinned-quality loads consume the server-minted `playlist_url`/`url`
-verbatim; the `_master`-suffix-after-query incident class is structurally gone,
-derivation survives only for un-advertised rungs, strictly PATH-scoped), then
-the .21 theme-persistence wave (the Appearance theme choice now round-trips
-per-user through the EXISTING `GET|PUT /api/v1/users/me/settings` account
-endpoint — same seam the language-memory store reuses; catalogue-failure and
-device-only-save disclosures; catalogue force-refresh at mount; per-user
-plugin copy — and the six `settings.themeCatalogueUnavailable` +
-`settings.themeSavedLocally` locale leaves, catalog 524→526, which rotated the
-locale-bundle PIN to `01acaa12` with it); every row re-attested
-FACT-UNCHANGED from the 2026-11-06 v0.99.20 wave, with 31 JS chunk
-content-hash renames aside — and the entry CSS chunk `index-BqeiLgxA.css`
-ROTATES this wave → `index-u1vjsYdH.css` (the `.aps__hint` disclosure styles
-from the .21 theme wave crossed it; it had held since the .17 re-greps):
+at this commit, not from memory (rows re-grepped at the 2026-11-09 v0.99.25
+re-pin onto the v0.99.25 bytes — three pins crossed since .21: the .22 perf
+release (ambient-canvas fps cure), the .23 syncplay-pin erratum cycle
+(v0.99.23 landed red-CI riding #v0.1.8; erratum `1a9f5472` reverted the ride —
+a truthful orphan, NEVER pin it — and .24 re-cut clean), then the .23–.25
+feature set (login guidance, anchor music nav, catalog-rails i18n, color-mix
+theming, stacked-overlay focus routing, SyncPlay reconnect park ladder);
+every row re-attested FACT-UNCHANGED at v0.99.25 — two rows carry honest
+chunk-ATTRIBUTION corrections (invite DTO, hand-rolled escape) and one a
+chunk-MOVEMENT note (picker literal dist-side), with 32 of 39 asset files
+renaming aside (the seven byte-stable: episode-order/hls/recommendations/
+useMediaItemCache chunks + three fonts) — and the entry CSS chunk
+`index-B3a2zLUG.css` ROTATES this wave → `index-BVpuTFMB.css` (the .23
+color-mix + browse-rail styles crossed it; it had held since the .22
+re-vendor), the player carrier `PlayerPage-BbWPOZn8-*` →
+`PlayerPage-Bp-fkb06-*`, and the `playlist_url`/`_master.m3u8` signed-URL
+cure law re-greps live on the new carrier bytes):
 
 - **SyncPlay socket hint seam (`wsUrl` / `wsPath`).** The ui gained a
   `socketHint` seam so hosts can point the player's SyncPlay dial at
-  a custom URL/path; it SHIPS at the pinned v0.99.21 (re-grepped at the 2026-11-06 v0.99.21 wave → `SyncPlayModal-*.js` + `index-*.js` chunks; keys typed in
-  the bundle's `app/types.d.ts`-era config). The host-side seam (M-TIZEN-07,
+  a custom URL/path; it SHIPS at the pinned v0.99.25 (re-grepped at the 2026-11-06 v0.99.21 wave → `SyncPlayModal-*.js` + `index-*.js` chunks; at the 2026-11-09 v0.99.25 re-pin the dist graph names it `socketHint-*.js` + `SyncPlayModal-*.js` + the `phlix-ui.js`/`player.js` entries; keys still typed in the bundle's `app/types.d.ts` (`wsUrl?`/`wsPath?`). The host-side seam (M-TIZEN-07,
   W-min171)
   `src/endpointOverrides.ts` — validating `phlix.syncplayPort` /
   `phlix.relayPort` / `phlix.relayPath` storage rows at every dial —
@@ -60,9 +60,13 @@ from the .21 theme wave crossed it; it had held since the .17 re-greps):
   re-grep the 23-site figure was a RECURSIVE dist count over `.map`/`.d.ts`
   too — the identifier never survives in the minified `.js` bodies; at the
   v0.99.15 re-pin (2026-11-04) that recursive count read 5 (1 `.d.ts` + 4
-  `.map` sourcesContent) purely from bundler map granularity — RE-MEASURED 5 at the v0.99.16 re-pin (2026-11-04), 5 again at the v0.99.17 re-pin, 5 again at the v0.99.19 re-pin, 5 again at the v0.99.20 re-pin and 5 again at the v0.99.21 re-pin (2026-11-06) — so re-attest via the shipped `(shared — read-only)` picker literal — at v0.99.21 it still rides the
-  committed `index-*.js` chunk (this widget build folds MediaCard
-  into index; no standalone `MediaCard-*.js`), gate proven live.
+  `.map` sourcesContent) purely from bundler map granularity — RE-MEASURED 5 at the v0.99.16 re-pin (2026-11-04), 5 again at the v0.99.17 re-pin, 5 again at the v0.99.19 re-pin, 5 again at the v0.99.20 re-pin and 5 again at the v0.99.21 re-pin (2026-11-06) and 5 again at the v0.99.25
+  re-pin (2026-11-09) — so re-attest via the shipped
+  `(shared — read-only)` picker literal — at v0.99.25 the dist graph emits a
+  STANDALONE `MediaCard-*.js` chunk carrying it again, while this widget build
+  still folds the literal into the committed `index-*.js` chunk
+  (package/assets grep → `index-D1c6SPMk.js`; no standalone `MediaCard-*.js`
+  in the widget graph), gate proven live.
   Row kept as the closed bookend; delete
   it in the next touch that has other business in this file.
 - **Invite create-token DTO.** NOT lagged — the two-leg create-token invite
@@ -70,7 +74,11 @@ from the .21 theme wave crossed it; it had held since the .17 re-greps):
   `invite-links` path plus the `invite_link_not_found` /
   `invite_expired_or_exhausted` codes and the `redeem` leg ride the committed
   bundle — `invite-links` greps to the `McpTokensPage-*.js` chunk, the codes
-  and `redeem` to `index-*.js`; the wording at v0.99.16 additionally listed
+  and `redeem` to `index-*.js`; at the 2026-11-09 v0.99.25 re-pin this
+  attribution MOVES (FACT-CHANGED): `invite-links` now greps to the dist
+  `hubHelpLinks-*.js` chunk plus entry-inline in `phlix-ui.js`, the two codes
+  to `client-*.js` + `player.js`, and `redeem` to `phlix-ui.js` — the
+  `McpTokensPage-*.js` chunk still builds but carries none of it; the wording at v0.99.16 additionally listed
   `index-*.js` for `invite-links`, imprecise even at those bytes — count 0 —
   corrected from this wave's grep). Recorded so nobody re-audits
   it twice; it re-enters the list only if the DTO moves again.
@@ -85,16 +93,28 @@ from the .21 theme wave crossed it; it had held since the .17 re-greps):
   this row; the probe's reappearance pin (bundle grep `new Audio` in
   `package/assets/Music*.js`) reddens on any re-pin that moves the
   construction site first. Re-verified at the v0.99.21 re-pin (2026-11-06): the `MusicLibraryPage-*.js` chunk still builds it (1 site) and `mediaSession`
-  still appears only in the video-path `index-*.js` chunk — observer posture
-  unchanged, watch pin green.
+  still appears only in the video-path `index-*.js` chunk. Re-verified again
+  at the 2026-11-09 v0.99.25 re-pin: the construction site is still exactly 1;
+  in the dist graph it MOVES to `MusicAlbumCard-*.js` (`MusicLibraryPage-*.js`
+  carries 0 hits there — attribution FACT-CHANGED), while the widget build
+  still folds it into the committed `MusicLibraryPage-*.js` chunk
+  (package/assets grep → 1 site, `MusicLibraryPage-7wf4WY0X-*.js`), so the
+  `package/assets/Music*.js` watch glob stays green; `mediaSession` still
+  rides the video path only (dist: `player.js` + `usePlayerStore-*.js`;
+  widget: entry) — observer posture unchanged, watch pin green.
 - **Vendored `MetadataMatchModal` hand-rolled innerHTML escape (M-TIZEN-22
   backstop).** The bundle escapes `&,"<>` per string then assigns innerHTML —
   a hand-rolled sanitizer in frozen bytes this repo cannot edit. Carried as an
   UPSTREAM item: replace with a text binding in @phlix/ui. Meanwhile the client
   hardened its own boundary: `script-src 'self'` (no 'unsafe-inline') makes any
   future escape regression non-executable inline (tests/unit/cspPolicy.test.ts). Re-verified at the v0.99.21 re-pin (2026-11-06): the pattern STILL ships
-  (grep `replace(/&/g` → `useItemInspector-*.js` chunk), so the row stands and
-  the strict CSP stays load-bearing. The row retires only when a future
+  (grep `replace(/&/g` → `useItemInspector-*.js` chunk); re-verified again at
+  the 2026-11-09 v0.99.25 re-pin it STILL ships — at .25 dist the pattern
+  greps to `MetadataMatchModal-*.js` + `LogsPage-*.js` (the .21-era
+  `useItemInspector-*.js` dist attribution is FACT-CHANGED by bundler
+  regrouping) while the committed widget bytes still ride
+  `useItemInspector-CC5nNuXm-*.js` — so the row stands and the strict CSP
+  stays load-bearing. The row retires only when a future
   bundle loses the pattern — grep it at every re-pin.
 - **Bare token storage keys in the ui auth store (M-TIZEN-23 note).** The
   widget's webdata (now encrypted at rest via config.xml `encryption="enable"`)
@@ -104,7 +124,11 @@ from the .21 theme wave crossed it; it had held since the .17 re-greps):
   keeps, and renaming them is a STORE-LEVEL migration only ui can make.
   Carried upstream: prefix (or consolidate) the auth store's storage keys;
   re-verified at the v0.99.21 re-pin (2026-11-06): the bare literals still ship in the committed bundle (grep `"access_token"` → `index-*.js` chunk,
-  hoisted as `var Xr="access_token"` at the v0.99.21 build — `var Zr=` across the v0.99.15, v0.99.16, v0.99.17, v0.99.19 and v0.99.20 builds — `var Hr=` at v0.99.14;
+  hoisted as `var Xr="access_token"` at the v0.99.21 build — `var Zr=` across the v0.99.15, v0.99.16, v0.99.17, v0.99.19 and v0.99.20 builds — `var Hr=` at v0.99.14; re-verified again at the
+  2026-11-09 v0.99.25 re-pin the bare literals STILL ship: the widget bytes
+  hoist `var Pi="access_token"` in the committed `index-*.js` chunk, and the
+  .25 dist graph carries `var M = "access_token"` (`client-*.js`) plus
+  `var yt = "access_token"` (`player.js`);
   the hoist NAME is minifier churn, grep the LITERAL, not a
   `setItem('access_token` spelling, which minification never emits).
 

@@ -300,6 +300,13 @@ async function removeTag(tagId: number): Promise<void> {
 }
 
 // ── Stream limits ───────────────────────────────────────────────────────────
+// Wire truth (contracts #v0.5.7 ProfileStreamLimit — snake_case members,
+// dump-parity-tested; server StreamLimitController parses ONLY the snake
+// keys): the GET response and the PUT body both speak `max_concurrent_streams`
+// / `max_total_bandwidth_kbps`. The camelCase spellings this section used
+// until the .5.7 type-truth re-pin read properties the wire never carries
+// (display pinned at '—', saves 400'd server-side); the internal form refs
+// stay camel — mapping happens AT the boundary.
 
 const limitForm = ref({
   maxConcurrentStreams: 1,
@@ -311,8 +318,8 @@ const editingLimit = ref(false);
 function startEditLimit(): void {
   editingLimit.value = true;
   limitForm.value = {
-    maxConcurrentStreams: streamLimit.value?.maxConcurrentStreams ?? 1,
-    maxTotalBandwidthKbps: streamLimit.value?.maxTotalBandwidthKbps ?? null
+    maxConcurrentStreams: streamLimit.value?.max_concurrent_streams ?? 1,
+    maxTotalBandwidthKbps: streamLimit.value?.max_total_bandwidth_kbps ?? null
   };
 }
 
@@ -328,8 +335,8 @@ async function saveLimit(): Promise<void> {
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
     await client.put(`/api/v1/profiles/${seg(pid)}/stream-limits`, {
-      maxConcurrentStreams: limitForm.value.maxConcurrentStreams,
-      maxTotalBandwidthKbps: limitForm.value.maxTotalBandwidthKbps
+      max_concurrent_streams: limitForm.value.maxConcurrentStreams,
+      max_total_bandwidth_kbps: limitForm.value.maxTotalBandwidthKbps
     });
     editingLimit.value = false;
     await loadStreamLimit();
@@ -407,10 +414,13 @@ async function loadStreamLimit(): Promise<void> {
 
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
-    const data = await client.get<ProfileStreamLimit>(
+    // Server emits the DTO WRAPPED: `{ stream_limits: {...} }` (contracts
+    // #v0.5.7 StreamSession docblock; controller :82) — the envelope unwrap is
+    // part of the wire law, not optional shaping.
+    const data = await client.get<{ stream_limits?: ProfileStreamLimit }>(
       `/api/v1/profiles/${seg(pid)}/stream-limits`
     );
-    streamLimit.value = data;
+    streamLimit.value = data?.stream_limits ?? null;
   } catch (e) {
     errorLimits.value = e instanceof Error ? e.message : tTizen('parentalControls.failedStreamLimits');
     streamLimit.value = null;
@@ -1076,7 +1086,7 @@ onMounted(loadAll);
               {{ tTizen('parentalControls.maxConcurrentStreams') }}
             </dt>
             <dd class="limit-item__value">
-              {{ streamLimit?.maxConcurrentStreams ?? '—' }}
+              {{ streamLimit?.max_concurrent_streams ?? '—' }}
             </dd>
           </div>
           <div class="limit-item">
@@ -1084,7 +1094,7 @@ onMounted(loadAll);
               {{ tTizen('parentalControls.maxTotalBandwidth') }}
             </dt>
             <dd class="limit-item__value">
-              {{ streamLimit?.maxTotalBandwidthKbps ? tTizen('parentalControls.bandwidthKbps', { kbps: streamLimit.maxTotalBandwidthKbps }) : tTizen('common.unlimited') }}
+              {{ streamLimit?.max_total_bandwidth_kbps ? tTizen('parentalControls.bandwidthKbps', { kbps: streamLimit.max_total_bandwidth_kbps }) : tTizen('common.unlimited') }}
             </dd>
           </div>
         </dl>
