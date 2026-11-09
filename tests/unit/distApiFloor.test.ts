@@ -277,10 +277,20 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // files = −4 (host surface, attributed). Other figures held (RT-069's
       // removal of the dead `@media (max-width:640px)` density fallbacks in
       // RecommendationsScreen/MusicPage deleted no above-floor token).
-      expect(countAcrossCss(':focus-visible')).toBe(153);
+      // 153→152: RT-100/RT-101 (w13-L4) deleted the three overlay components —
+      // their compiled focus arms left the bundle — and RT-103 added the
+      // toggle-pill ring back: net −2 (two deleted host overlay arms) + 1
+      // (`.toggle-pill:focus-visible`) = −1. Attributed by selector-set diff
+      // of the old vs new committed host CSS chunk; docs/runtime-floor.md
+      // table re-measured in the same change.
+      expect(countAcrossCss(':focus-visible')).toBe(152);
       expect(countAcrossCss('inset:')).toBe(42);
       expect(countAcrossCss('aspect-ratio')).toBe(36);
-      expect(countAcrossCss('accent-color')).toBe(8);
+      // 8→7: RT-103 (w15-L10) replaced the native schedule checkbox (whose
+      // 1.25rem `accent-color` arm was the 8th site) with the D-pad-operable
+      // toggle pill — border-color driven, no accent-color. Attribution: the
+      // removed `.form__checkbox` rule is the only delta in this census.
+      expect(countAcrossCss('accent-color')).toBe(7);
     });
 
     it('carries the vendored [data-tv] plain-:focus fallback the census depends on', () => {

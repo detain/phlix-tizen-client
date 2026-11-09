@@ -784,11 +784,16 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
         // M-TIZEN-06: recovered — drop any dormant visible-window wait so a
         // stale listener can never fire a second live dial (listener-paired).
         disarmVisibleWindowRetry();
+        // RT-104: a fresh open is (re)started silence-wise from NOW, and the
+        // standby black-hole watch rides this socket's whole life.
+        stampServerFrame();
+        armLivenessWatch();
         // (Re)join the group over the socket once connected.
         client.joinGroup(roomId);
       };
 
       ws.onmessage = (event) => {
+        stampServerFrame(); // RT-104: bytes first, semantics later
         // m5 (review tizen__exploiter): parse and handling are DISTINCT
         // failures — the old single try mislabeled a handler throw (e.g. an
         // out-of-domain epoch inside applyGroupState) as a parse error.
@@ -935,6 +940,61 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   let reconnectVisibilityCleanup: (() => void) | null = null;
   let syncPlayVisibilitySource: SyncPlayVisibilitySource | null | undefined;
 
+  // ---- RT-104 (w13-L4, crossfe#3): standby black-hole liveness ----------------
+  //
+  // The reconnect ladder arms ONLY from socket close/error. After a TV standby
+  // the panel can hold a nominally-OPEN WebSocket whose remote end is gone —
+  // no close event ever arrives, the room looks connected, and group state
+  // freezes forever. The @phlix/syncplay client ships no client-side heartbeat
+  // of its own, so the observable signal is INBOUND SILENCE: while a group
+  // plays, the server echoes canonical state every few seconds, so a healthy
+  // link is never quiet for long.
+  const SYNCPLAY_LIVENESS_SILENCE_MS = 30_000;
+  /** Timestamp of the last byte the server actually sent (0 = nothing yet). */
+  const lastServerFrameAt = ref(0);
+  let livenessCleanup: (() => void) | null = null;
+  let livenessWasHidden = false;
+
+  /** Mark "the server just spoke" — every inbound frame counts, even a
+   *  malformed one: bytes on the wire prove the link, parsing proves the peer. */
+  function stampServerFrame(): void {
+    lastServerFrameAt.value = Date.now();
+  }
+
+  /**
+   * Watch the visibility edge on the SAME seam armVisibleWindowRetry uses
+   * (setSyncPlayVisibilitySource / document fallback). On a hidden→visible
+   * transition with a socket that is open but silent past the threshold,
+   * force-close it: the existing onclose identity-guarded ladder takes the
+   * reconnect exactly as if the standby had been honest enough to fire an
+   * event. Fresh sockets and absent connections are no-ops.
+   */
+  function armLivenessWatch(): void {
+    if (livenessCleanup !== null) return; // already watching — never double-listen
+    const source = resolveSyncPlayVisibilitySource();
+    if (!source) return; // no visibility signal here (opt-out / non-DOM): nothing to watch
+    const onVisibilityChange = () => {
+      if (source.visibilityState !== 'visible') {
+        livenessWasHidden = true;
+        return;
+      }
+      if (!livenessWasHidden) return; // only a REAL hidden→visible edge
+      livenessWasHidden = false;
+      const conn = wsConnection.value;
+      if (conn === null) return; // not our problem: the ladder/rejoin lanes own this state
+      if (Date.now() - lastServerFrameAt.value <= SYNCPLAY_LIVENESS_SILENCE_MS) return; // link is talking
+      conn.close(4000, 'liveness-silence');
+    };
+    source.addEventListener('visibilitychange', onVisibilityChange);
+    livenessCleanup = () => source.removeEventListener('visibilitychange', onVisibilityChange);
+  }
+
+  function disarmLivenessWatch(): void {
+    livenessCleanup?.();
+    livenessCleanup = null;
+    livenessWasHidden = false;
+  }
+
   function resolveSyncPlayVisibilitySource(): SyncPlayVisibilitySource | null {
     if (syncPlayVisibilitySource !== undefined) return syncPlayVisibilitySource;
     return typeof document !== 'undefined'
@@ -1027,6 +1087,7 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     // M-TIZEN-06: an explicit disconnect cancels the dormant visible-window
     // wait too — the user left; nothing may re-dial behind their back.
     disarmVisibleWindowRetry();
+    disarmLivenessWatch(); // RT-104: same listener-pairing law for the liveness watch
 
     if (syncPlayClient) {
       syncPlayClient.leaveGroup();
@@ -1337,6 +1398,9 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
     // wait flag (tests drive a fake source; UI may show 'waiting' semantics).
     reconnectVisibilityReset,
     setSyncPlayVisibilitySource,
+    // RT-104 (w13-L4): the liveness stamp is exported as the test/ops seam —
+    // tests drive it beside setSyncPlayVisibilitySource; nothing else reads it.
+    lastServerFrameAt,
     wsError,
     // T-15: cumulative count of frames outside the canonical syncplay_* set
     // (forward-compat signal; 0 means the hub only speaks known vocabulary).

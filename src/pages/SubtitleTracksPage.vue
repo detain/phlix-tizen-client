@@ -124,7 +124,10 @@ async function loadSubtitleTracks(): Promise<void> {
  * S511: a real (non-off) choice is also remembered — per-item immediately and
  * pushed to the account via the existing settings endpoint. Turning subtitles
  * OFF is a session action, not a stored preference, so only a positive language
- * is persisted.
+ * is persisted. w13: RT-085 — rapid picks are coalesced latest-wins inside the
+ * store, so leaving the page mid-burst cannot scramble the account row; this
+ * page renders no confirmation note, so the resolved boolean has nothing to
+ * gate here (the audio twin does).
  */
 function onSelectTrack(track: SubtitleTrack | null): void {
   const language = track?.language ?? null;
@@ -184,6 +187,7 @@ watch(mediaId, loadSubtitleTracks);
       aria-busy="true"
       :aria-label="tTizen('subtitleTracks.loadingAria')"
     >
+      <div class="tv-loading-skeleton" aria-hidden="true"><span /><span /><span /></div>
       <p>{{ tTizen('subtitleTracks.loading') }}</p>
     </div>
 

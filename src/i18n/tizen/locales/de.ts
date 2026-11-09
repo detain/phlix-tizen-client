@@ -14,11 +14,11 @@
  *   the segment law keeps two slots so the mechanism stays uniform.
  * - Values legitimately identical to English (allow-listed in
  *   tests/unit/i18nLocales.test.ts): common.name, tracks.durationAria,
- *   chapters.itemAria, chapters.markerIntro, chapters.markerOutro,
+ *   chapters.itemAria,
  *   audioTracks.bitrateKbps, audioTracks.mono, audioTracks.stereo,
  *   parentalControls.bandwidthKbps,
  *   parentalControls.timeAm, parentalControls.timePm,
- *   pictureInPicture.enterLabel, subtitleTracks.sdhBadge.
+ *   subtitleTracks.sdhBadge.
  *   parentalControls.stepMinusHour, parentalControls.stepMinusQuarter,
  *   parentalControls.stepPlusQuarter, parentalControls.stepPlusHour
  *   (m3 schedule-stepper symbols, 2026-11-03).
@@ -67,17 +67,8 @@ const hub = {
   pausedNotice: 'Hub-Verbindung pausiert — setzt ein, wenn du die App erneut öffnest',
 };
 
-const skip = {
-  controlsAria: 'Skip-Steuerung',
-  introAria: 'Intro überspringen',
-  introLabel: 'Intro überspringen',
-  outroAria: 'Outro überspringen',
-  outroLabel: 'Outro überspringen',
-};
-
 const chapters = {
   loadFailed: 'Kapitel konnten nicht geladen werden',
-  adBadge: 'Werbung',
   fallbackTitle: 'Kapitel {index}',
   listAria: 'Kapitelliste',
   countAria: '{count} Kapitel | {count} Kapitel',
@@ -89,16 +80,6 @@ const chapters = {
   empty: 'Für dieses Medium sind keine Kapitel verfügbar.',
   countHeadingOne: '{count} Kapitel',
   countHeadingOther: '{count} Kapitel',
-  markerIntro: 'Intro',
-  markerOutro: 'Outro',
-  markerCredits: 'Abspann',
-};
-
-const pictureInPicture = {
-  enterAria: 'Bild-im-Bild starten',
-  exitAria: 'Bild-im-Bild beenden',
-  enterLabel: 'PiP',
-  exitLabel: 'PiP beenden',
 };
 
 const screensaver = {
@@ -129,6 +110,7 @@ const audioTracks = {
   headingOther: '{count} Audiospuren',
   preferredNote: 'Bevorzugt für diesen Titel: {language}',
   rememberedNote: '{language} wurde als bevorzugte Audiosprache für diesen Titel gemerkt.',
+  saveFailedNote: '{language} konnte nicht in deinem Konto gespeichert werden — dieses Gerät merkt sich deine Auswahl trotzdem.',
   applyRefusal: 'Dieser Player kann noch keine Audiospuren umschalten — deine Auswahl wird für das nächste Mal gemerkt.',
 };
 
@@ -238,6 +220,8 @@ const parentalControls = {
   failedSchedules: 'Zeitpläne konnten nicht geladen werden',
   failedTags: 'Tags konnten nicht geladen werden',
   failedStreamLimits: 'Stream-Limit konnte nicht geladen werden',
+  tagMutationFailed: 'Die Tag-Änderung konnte nicht gespeichert werden — versuche es erneut.',
+  scheduleDeleteFailed: 'Der Zeitplan konnte nicht gelöscht werden — versuche es erneut.',
   timeAm: 'AM',
   timePm: 'PM',
   noDaysSet: 'Keine Tage festgelegt',
@@ -274,6 +258,8 @@ const parentalControls = {
   stepMinusQuarter: '-15',
   stepPlusQuarter: '+15',
   stepPlusHour: '+60',
+  stepDownAria: 'Verringern',
+  stepUpAria: 'Erhöhen',
 };
 
 /**
@@ -285,9 +271,7 @@ export const DE_TIZEN_MESSAGES = {
   menu,
   boot,
   hub,
-  skip,
   chapters,
-  pictureInPicture,
   screensaver,
   telemetry,
   audioTracks,

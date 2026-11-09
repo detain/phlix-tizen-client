@@ -1131,4 +1131,103 @@ describe('useSyncPlayStore', () => {
       store.disconnectWs();
     });
   });
+  // ---- RT-104 (w13-L4, tizen__crossfe#3): the standby black-hole liveness watch ----
+  // The ladder arms only from close/error. A TV that sleeps mid-group can hold a
+  // nominally-OPEN socket the server stopped talking through: no close event, no
+  // frames, frozen room. The cure treats INBOUND SILENCE as the observable: every
+  // byte stamps the clock; a hidden→visible edge over a stale stamp force-closes
+  // the zombie so the existing, identity-guarded ladder reconnects like normal.
+  describe('RT-104 liveness watch', () => {
+    function fakeSource() {
+      const src = {
+        visibilityState: 'hidden' as string,
+        handlers: [] as Array<() => void>,
+        addEventListener(_t: string, cb: () => void) { src.handlers.push(cb); },
+        removeEventListener(_t: string, cb: () => void) {
+          const i = src.handlers.indexOf(cb);
+          if (i >= 0) src.handlers.splice(i, 1);
+        },
+        fire(state: string) {
+          src.visibilityState = state;
+          src.handlers.slice().forEach((h) => h());
+        },
+      };
+      return src;
+    }
+
+    function connectAndOpen(store: ReturnType<typeof useSyncPlayStore>) {
+      store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+      const socket = lastSocket();
+      socket.onopen?.({} as never);
+      return socket;
+    }
+
+    it('an open stamps the liveness clock', () => {
+      const store = useSyncPlayStore();
+      store.lastServerFrameAt = 0;
+      connectAndOpen(store);
+      expect(store.lastServerFrameAt).toBeGreaterThan(0);
+      store.disconnectWs();
+    });
+
+    it('EVERY inbound frame re-stamps it — malformed bytes included (the link is alive regardless)', () => {
+      const store = useSyncPlayStore();
+      const socket = connectAndOpen(store);
+      store.lastServerFrameAt = 0;
+      socket.onmessage?.({ data: '{not json' });
+      expect(store.lastServerFrameAt).toBeGreaterThan(0);
+      store.disconnectWs();
+    });
+
+    it('hidden→visible over an open-but-silent socket force-closes the zombie into the ladder', () => {
+      const src = fakeSource();
+      const store = useSyncPlayStore();
+      store.setSyncPlayVisibilitySource(src);
+      const socket = connectAndOpen(store);
+      expect(src.handlers.length).toBe(1); // the watch rides this socket from open
+      // Backdate: silent far past the threshold, exactly the standby hole.
+      store.lastServerFrameAt = Date.now() - 31_000;
+      src.fire('hidden');
+      expect(socket.close).not.toHaveBeenCalled(); // away is not an edge
+      src.fire('visible');
+      expect(socket.close).toHaveBeenCalledTimes(1);
+      expect((socket.close as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe(4000);
+      store.disconnectWs();
+    });
+
+    it('a recently-answered socket survives the return edge untouched', () => {
+      const src = fakeSource();
+      const store = useSyncPlayStore();
+      store.setSyncPlayVisibilitySource(src);
+      const socket = connectAndOpen(store);
+      store.lastServerFrameAt = Date.now();
+      src.fire('hidden');
+      src.fire('visible');
+      expect(socket.close).not.toHaveBeenCalled();
+      store.disconnectWs();
+    });
+
+    it('a visible edge with NO live connection closes nothing (the ladder/rejoin lanes own that state)', () => {
+      const src = fakeSource();
+      const store = useSyncPlayStore();
+      store.setSyncPlayVisibilitySource(src);
+      connectAndOpen(store);
+      store.disconnectWs(); // kills the socket + disarms the watch
+      src.fire('hidden');
+      src.fire('visible');
+      expect(src.handlers).toHaveLength(0); // paired away by disconnect
+    });
+
+    it('the watch never double-listens across reconnects and dies with the connection it armed', () => {
+      const src = fakeSource();
+      const store = useSyncPlayStore();
+      store.setSyncPlayVisibilitySource(src);
+      const s1 = connectAndOpen(store);
+      s1.onclose?.({ code: 1006 }); // honest death: identity guard passes (same raw handle)
+      connectAndOpen(store);        // a fresh dial re-arms on the new socket
+      expect(src.handlers.length).toBe(1);
+      store.disconnectWs();
+      expect(src.handlers).toHaveLength(0);
+    });
+  });
 });

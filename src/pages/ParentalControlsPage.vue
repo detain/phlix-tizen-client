@@ -20,7 +20,7 @@ import { ApiClient } from '@phlix/ui';
 import { useApiBase } from '@phlix/ui';
 import { useAuthStore, type AuthUser } from '@phlix/ui';
 import { tTizen, type TizenMessageKey } from '../i18n/tizen';
-import { stepTime, STEP_QUARTER_MINUTES, STEP_HOUR_MINUTES } from '../parentalTimeStepper';
+import { stepTime, stepNumber, STEP_QUARTER_MINUTES, STEP_HOUR_MINUTES, STEP_BANDWIDTH_KBPS } from '../parentalTimeStepper';
 import { normalizeScheduleRows } from '../parentalScheduleRows';
 import type {
   AccessSchedule,
@@ -70,6 +70,34 @@ const loadingLimits = ref(false);
 const errorSchedules = ref<string | null>(null);
 const errorTags = ref<string | null>(null);
 const errorLimits = ref<string | null>(null);
+
+/**
+ * w13: RT-099 (review tizen__exploiter #2) — inline mutation disclosures.
+ * The section-level `errorX` panels REPLACE the whole list (load-failure
+ * shape); a rejected add/remove/delete must not blank healthy rows, so each
+ * mutation failure lands in one of these refs instead and renders as a small
+ * role="alert" note inside the list branch. Cleared at the start of every new
+ * mutation attempt (a retry, or any later press, resets the slate).
+ */
+const scheduleMutationError = ref<string | null>(null);
+const tagMutationError = ref<string | null>(null);
+
+/**
+ * w13: RT-099 — per-row in-flight bookkeeping for the two DELETE paths. A Set
+ * because the page can hold several rows and each id is independently busy;
+ * the mirrored :disabled keeps the press that would double-fire visibly dead
+ * (the guard inside the handler is the actual law — this is its shadow).
+ */
+const deletingScheduleIds = ref(new Set<number>());
+const removingTagIds = ref(new Set<number>());
+
+function scheduleDeleting(id: number): boolean {
+  return deletingScheduleIds.value.has(id);
+}
+
+function tagRemoving(id: number): boolean {
+  return removingTagIds.value.has(id);
+}
 
 // ── Schedule editing ───────────────────────────────────────────────────────
 
@@ -192,12 +220,23 @@ async function deleteSchedule(scheduleId: number): Promise<void> {
   const pid = profileId.value;
   if (!pid) return;
 
+  // w13: RT-099 — early exit while this row's delete is still in flight:
+  // every press used to fire its own DELETE plus a full reload, and a held
+  // remote key turned one intent into a request storm against one row.
+  if (deletingScheduleIds.value.has(scheduleId)) return;
+  deletingScheduleIds.value.add(scheduleId);
+  scheduleMutationError.value = null;
+
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
     await client.delete(`/api/v1/profiles/${seg(pid)}/schedules/${seg(scheduleId)}`);
     await loadSchedules();
   } catch {
-    // Silently fail delete
+    // w13: RT-099 — disclose, never pretend: the old bare catch let a rejected
+    // DELETE look like a success until the reload proved otherwise (or didn't).
+    scheduleMutationError.value = tTizen('parentalControls.scheduleDeleteFailed');
+  } finally {
+    deletingScheduleIds.value.delete(scheduleId);
   }
 }
 
@@ -213,7 +252,13 @@ async function addTag(): Promise<void> {
   const pid = profileId.value;
   if (!pid) return;
 
+  // w13: RT-099 — the button's :disabled(addingTag) was never a guard: the
+  // input's @keyup.enter called addTag directly, bypassing it, so a held
+  // ENTER key fired one POST /profiles/{pid}/tags per repeat. The guard now
+  // lives in the handler itself — every entry path obeys it.
+  if (addingTag.value) return;
   addingTag.value = true;
+  tagMutationError.value = null;
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
     await client.post(`/api/v1/profiles/${seg(pid)}/tags`, {
@@ -225,7 +270,9 @@ async function addTag(): Promise<void> {
     newTagInput.value = '';
     await loadTags();
   } catch {
-    // Silently fail
+    // w13: RT-099 — disclose the rejection; the typed text survives so a
+    // second press costs the viewer nothing they did not already type.
+    tagMutationError.value = tTizen('parentalControls.tagMutationFailed');
   } finally {
     addingTag.value = false;
   }
@@ -235,12 +282,20 @@ async function removeTag(tagId: number): Promise<void> {
   const pid = profileId.value;
   if (!pid) return;
 
+  // w13: RT-099 — per-row in-flight guard, mirroring deleteSchedule above.
+  if (removingTagIds.value.has(tagId)) return;
+  removingTagIds.value.add(tagId);
+  tagMutationError.value = null;
+
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
     await client.delete(`/api/v1/profiles/${seg(pid)}/tags/${seg(tagId)}`);
     await loadTags();
   } catch {
-    // Silently fail
+    // w13: RT-099 — disclose, never pretend.
+    tagMutationError.value = tTizen('parentalControls.tagMutationFailed');
+  } finally {
+    removingTagIds.value.delete(tagId);
   }
 }
 
@@ -399,6 +454,32 @@ function stepScheduleTime(field: 'startTime' | 'endTime', deltaMinutes: number):
   };
 }
 
+/**
+ * w13: RT-103 (deferred review m3's number sibling): the stream-limit fields
+ * were bare `type="number"` inputs — their only step affordance was the
+ * pointer wheel/spinner arrows a TV remote cannot produce. These handlers drive
+ * the new symbol buttons; the inputs STAY (typing a precise value is still the
+ * fastest path when a keyboard is available), and the buttons round-trip
+ * through the same v-model fields saveLimit sends raw, so the S502 PUT wire
+ * shape is untouched. Streams step ±1 inside its 1..10 admission; bandwidth
+ * steps ±1000 kbps (its display rung) from 0, where 0 keeps meaning
+ * "unlimited" — pressing − on unlimited lands on 0, which already reads as
+ * unlimited, and + starts a finite cap.
+ */
+function stepStreams(delta: number): void {
+  limitForm.value = {
+    ...limitForm.value,
+    maxConcurrentStreams: stepNumber(limitForm.value.maxConcurrentStreams, delta, 1, 10)
+  };
+}
+
+function stepBandwidth(delta: number): void {
+  limitForm.value = {
+    ...limitForm.value,
+    maxTotalBandwidthKbps: stepNumber(limitForm.value.maxTotalBandwidthKbps, delta, 0, Number.MAX_SAFE_INTEGER)
+  };
+}
+
 function formatDays(days: DayOfWeek[]): string {
   if (days.length === 0) return tTizen('parentalControls.noDaysSet');
   if (days.length === 7) return tTizen('parentalControls.everyDay');
@@ -500,6 +581,7 @@ onMounted(loadAll);
         role="status"
         aria-busy="true"
       >
+        <div class="tv-loading-skeleton" aria-hidden="true"><span /><span /><span /></div>
         <p>{{ tTizen('parentalControls.loadingSchedules') }}</p>
       </div>
 
@@ -556,6 +638,7 @@ onMounted(loadAll);
             <button
               type="button"
               class="action-btn action-btn--danger"
+              :disabled="scheduleDeleting(schedule.id)"
               @click="deleteSchedule(schedule.id)"
             >
               {{ tTizen('common.delete') }}
@@ -563,6 +646,17 @@ onMounted(loadAll);
           </div>
         </li>
       </ul>
+
+      <!-- w13: RT-099 — the rejected DELETE says so, next to the rows it
+           failed against (the section-level error panel above is the LOAD
+           failure surface; a mutation failure must not blank healthy rows). -->
+      <p
+        v-if="scheduleMutationError"
+        class="mutation-notice"
+        role="alert"
+      >
+        {{ scheduleMutationError }}
+      </p>
 
       <!-- Schedule Form -->
       <div
@@ -693,16 +787,25 @@ onMounted(loadAll);
         </div>
 
         <div class="form__field form__field--row">
-          <label
-            class="form__label"
-            for="schedule-active"
-          >{{ tTizen('common.active') }}</label>
-          <input
-            id="schedule-active"
-            v-model="scheduleForm.isActive"
-            type="checkbox"
-            class="form__checkbox"
+          <span class="form__label">{{ tTizen('common.active') }}</span>
+          <!--
+            w13: RT-103 (review tizen__gameux #4): this was a 1.25rem native
+            checkbox with no focus-ring rule — a 30px tick unreadable at TV
+            distance whose focus law (docs/runtime-floor.md governance item 6)
+            the stylesheet never joined. It is now a D-pad toggle pill on the
+            day-btn pattern: role=switch carries state for AT, the word IS the
+            state for the eye, and the 5px ring is never in question.
+          -->
+          <button
+            type="button"
+            role="switch"
+            class="toggle-pill"
+            :class="{ 'toggle-pill--on': scheduleForm.isActive }"
+            :aria-checked="scheduleForm.isActive ? 'true' : 'false'"
+            @click="scheduleForm.isActive = !scheduleForm.isActive"
           >
+            {{ scheduleForm.isActive ? tTizen('common.active') : tTizen('common.inactive') }}
+          </button>
         </div>
 
         <div class="form__actions">
@@ -751,6 +854,7 @@ onMounted(loadAll);
         role="status"
         aria-busy="true"
       >
+        <div class="tv-loading-skeleton" aria-hidden="true"><span /><span /><span /></div>
         <p>{{ tTizen('parentalControls.loadingTags') }}</p>
       </div>
 
@@ -770,6 +874,13 @@ onMounted(loadAll);
       </div>
 
       <div v-else>
+        <p
+          v-if="tagMutationError"
+          class="mutation-notice"
+          role="alert"
+        >
+          {{ tagMutationError }}
+        </p>
         <div class="tag-add">
           <input
             v-model="newTagInput"
@@ -803,6 +914,7 @@ onMounted(loadAll);
               type="button"
               class="tag-item__remove"
               :aria-label="tTizen('parentalControls.removeTagAria')"
+              :disabled="tagRemoving(tag.id)"
               @click="removeTag(tag.id)"
             >
               ×
@@ -840,6 +952,7 @@ onMounted(loadAll);
         role="status"
         aria-busy="true"
       >
+        <div class="tv-loading-skeleton" aria-hidden="true"><span /><span /><span /></div>
         <p>{{ tTizen('parentalControls.loadingLimits') }}</p>
       </div>
 
@@ -867,14 +980,37 @@ onMounted(loadAll);
             class="form__label"
             for="limit-streams"
           >{{ tTizen('parentalControls.maxConcurrentStreams') }}</label>
-          <input
-            id="limit-streams"
-            v-model.number="limitForm.maxConcurrentStreams"
-            type="number"
-            min="1"
-            max="10"
-            class="form__input form__input--number"
+          <!-- w13: RT-103 — symbol steppers on the m3 time-stepper pattern;
+               the input stays the precise typing path, native spinners are
+               killed in the stylesheet (pointer-only theater on a remote). -->
+          <div
+            class="number-stepper"
+            role="group"
+            :aria-label="tTizen('parentalControls.maxConcurrentStreams')"
           >
+            <button
+              type="button"
+              class="stepper-btn"
+              :disabled="savingLimit"
+              :aria-label="tTizen('parentalControls.stepDownAria')"
+              @click="stepStreams(-1)"
+            >−</button>
+            <input
+              id="limit-streams"
+              v-model.number="limitForm.maxConcurrentStreams"
+              type="number"
+              min="1"
+              max="10"
+              class="form__input form__input--number"
+            >
+            <button
+              type="button"
+              class="stepper-btn"
+              :disabled="savingLimit"
+              :aria-label="tTizen('parentalControls.stepUpAria')"
+              @click="stepStreams(1)"
+            >+</button>
+          </div>
         </div>
 
         <div class="form__field">
@@ -882,13 +1018,33 @@ onMounted(loadAll);
             class="form__label"
             for="limit-bandwidth"
           >{{ tTizen('parentalControls.maxBandwidthLabel') }}</label>
-          <input
-            id="limit-bandwidth"
-            v-model.number="limitForm.maxTotalBandwidthKbps"
-            type="number"
-            min="0"
-            class="form__input form__input--number"
+          <div
+            class="number-stepper"
+            role="group"
+            :aria-label="tTizen('parentalControls.maxBandwidthLabel')"
           >
+            <button
+              type="button"
+              class="stepper-btn"
+              :disabled="savingLimit"
+              :aria-label="tTizen('parentalControls.stepDownAria')"
+              @click="stepBandwidth(-STEP_BANDWIDTH_KBPS)"
+            >−</button>
+            <input
+              id="limit-bandwidth"
+              v-model.number="limitForm.maxTotalBandwidthKbps"
+              type="number"
+              min="0"
+              class="form__input form__input--number"
+            >
+            <button
+              type="button"
+              class="stepper-btn"
+              :disabled="savingLimit"
+              :aria-label="tTizen('parentalControls.stepUpAria')"
+              @click="stepBandwidth(STEP_BANDWIDTH_KBPS)"
+            >+</button>
+          </div>
         </div>
 
         <div class="form__actions">
@@ -1173,6 +1329,13 @@ onMounted(loadAll);
   background: rgba(239, 68, 68, 0.1);
 }
 
+/* w13: RT-099 — the mirrored :disabled needs the host dead-look (opacity law
+ * shared by .save-btn/.add-tag-btn/.stepper-btn). */
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .action-btn:focus-visible {
   outline: none;
   box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
@@ -1235,10 +1398,61 @@ onMounted(loadAll);
   width: 120px;
 }
 
-.form__checkbox {
-  width: 1.25rem;
-  height: 1.25rem;
-  accent-color: var(--accent, #f59e0b);
+/* w13: RT-103 — the schedule-active checkbox (pointer-era tick, no ring law)
+ * is gone; its successor is a D-pad toggle pill on the day-btn pattern, and
+ * the ring follows the host 5px focus law (docs/runtime-floor.md governance
+ * item 6). */
+.toggle-pill {
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  border: 1px solid var(--border-strong, #52525b);
+  border-radius: var(--radius-full, 9999px);
+  background: transparent;
+  color: var(--text-muted, #a1a1aa);
+  font-size: var(--text-sm, 0.875rem);
+  min-width: 9ch;
+  cursor: pointer;
+  transition: background var(--dur-fast, 150ms) var(--ease-out, ease-out),
+              color var(--dur-fast, 150ms) var(--ease-out, ease-out),
+              border-color var(--dur-fast, 150ms) var(--ease-out, ease-out);
+}
+
+.toggle-pill--on {
+  background: var(--accent, #f59e0b);
+  border-color: var(--accent, #f59e0b);
+  color: var(--surface-1, #18181b);
+}
+
+.toggle-pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
+}
+
+/* w13: RT-103 — number steppers reuse the .stepper-btn ring family; the
+ * native wheel/spinner arrows are pointer-only, so they are killed here and
+ * the buttons above become the remote path. */
+.number-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+
+.number-stepper .form__input--number {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.number-stepper .form__input--number::-webkit-outer-spin-button,
+.number-stepper .form__input--number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* w13: RT-099 — mutation-failure disclosure (distinct from the section-level
+ * load-error panel; this note sits INSIDE a healthy list). */
+.mutation-notice {
+  margin: 0 0 var(--space-3, 0.75rem);
+  color: #ef4444;
+  font-size: var(--text-sm, 0.875rem);
 }
 
 .form__row {
@@ -1482,6 +1696,12 @@ onMounted(loadAll);
   background: rgba(239, 68, 68, 0.4);
 }
 
+/* w13: RT-099 — in-flight mirror for the per-row removal guard. */
+.tag-item__remove:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .tag-item__remove:focus-visible {
   outline: none;
   box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
@@ -1537,6 +1757,8 @@ onMounted(loadAll);
   .retry-btn,
   .add-tag-btn,
   .day-btn,
+  .stepper-btn,
+  .toggle-pill,
   .tag-item__remove {
     transition: none;
   }

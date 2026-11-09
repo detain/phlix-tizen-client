@@ -97,3 +97,71 @@ describe('tvMotion — shipped-source pins', () => {
     expect(mainSource).toMatch(/applyTvMotionClass\(storage,\s*document\.body\)/);
   });
 });
+
+// ---- RT-102 (w13-L4, gameux#3): loading must LOOK like loading at 10 feet ----
+// The per-screen loading branches used to be one static sentence — visually
+// identical to a hung app on a wall-mounted panel. The shared skeleton layer
+// now breathes under the SAME compositor-choir posture this suite polices:
+// opacity + transform only, no blur/backdrop anywhere in it, and the reduced-
+// motion escape kills the animation outright. Its token VALUES live in
+// tv-typography.css because the blanket policy grep above only scans
+// tv-motion.css — pinning that split here keeps the grep's scope honest.
+describe('RT-102 loading-skeleton layer', () => {
+  const skeletonCss = readFileSync(path.join(REPO, 'src', 'styles', 'tv-loading.css'), 'utf8');
+  const mainSource = readFileSync(path.join(REPO, 'src', 'main.ts'), 'utf8');
+
+  it('the layer exists, breathes with keyframes, and stops under prefers-reduced-motion', () => {
+    expect(skeletonCss).toMatch(/@keyframes\s+tv-skeleton-breath/);
+    expect(skeletonCss).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?animation:\s*none/);
+  });
+
+  it('uses ONLY compositor-cheap properties (the M-TIZEN-35 law, re-applied to the new layer)', () => {
+    // Judge the RULES, not the header prose (the header NAMES the banned
+    // properties to explain the ban — matching it there would be the test
+    // tripping on its own caption).
+    const rules = skeletonCss.replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(rules).toMatch(/opacity:/);
+    expect(rules).toMatch(/transform:/);
+    expect(rules).not.toMatch(/backdrop-filter/);
+    expect(rules).not.toMatch(/[^-]filter:/);
+    expect(rules).not.toMatch(/box-shadow/);
+    expect(rules).not.toMatch(/\bblur\(/);
+  });
+
+  it('the skeleton tokens live in tv-typography.css, OUT OF the policy-scanned tv-motion.css', () => {
+    const typography = readFileSync(path.join(REPO, 'src', 'styles', 'tv-typography.css'), 'utf8');
+    const motion = readFileSync(path.join(REPO, 'src', 'styles', 'tv-motion.css'), 'utf8');
+    expect(typography).toMatch(/--tv-skeleton-breathe-ms/);
+    expect(motion).not.toMatch(/--tv-skeleton/);
+  });
+
+  it('main.ts imports the layer AFTER the motion layer (cascade order is the whole mitigation)', () => {
+    const motion = mainSource.indexOf("import './styles/tv-motion.css'");
+    const loading = mainSource.indexOf("import './styles/tv-loading.css'");
+    expect(motion).toBeGreaterThan(-1);
+    expect(loading, 'tv-loading.css imported by main.ts').toBeGreaterThan(-1);
+    expect(loading).toBeGreaterThan(motion);
+  });
+
+  it('every loading branch that used to be a static sentence now carries the skeleton', () => {
+    const files = [
+      'src/screens/RecommendationsScreen.vue',
+      'src/pages/AudioTracksPage.vue',
+      'src/pages/SubtitleTracksPage.vue',
+      'src/pages/ChaptersPage.vue',
+      'src/pages/ParentalControlsPage.vue',
+    ];
+    for (const rel of files) {
+      const src = readFileSync(path.join(REPO, rel), 'utf8');
+      expect(src, rel + ' carries the skeleton').toContain('tv-loading-skeleton');
+      // aria-hidden: the breathing bars decorate the status label; they are
+      // never announced themselves (the sentence keeps the role=status job).
+      for (const line of src.split('\n')) {
+        if (line.includes('tv-loading-skeleton')) expect(line).toContain('aria-hidden');
+      }
+    }
+    // ParentalControls has three loading sections — each one gets the treatment.
+    const parental = readFileSync(path.join(REPO, 'src/pages/ParentalControlsPage.vue'), 'utf8');
+    expect(parental.match(/tv-loading-skeleton/g)?.length).toBe(3);
+  });
+});

@@ -121,6 +121,7 @@ watch(mediaId, loadChapters);
       aria-busy="true"
       :aria-label="tTizen('chapters.loadingAria')"
     >
+      <div class="tv-loading-skeleton" aria-hidden="true"><span /><span /><span /></div>
       <p>{{ tTizen('chapters.loading') }}</p>
     </div>
 

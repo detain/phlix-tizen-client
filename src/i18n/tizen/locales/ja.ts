@@ -14,7 +14,7 @@
  * - The non-CJK allow-list for tests/unit/i18nLocales.test.ts is exactly:
  *   tracks.durationAria, chapters.itemAria (pure {placeholder} templates),
  *   audioTracks.bitrateKbps, parentalControls.bandwidthKbps (unit formats),
- *   pictureInPicture.enterLabel ('PiP'), subtitleTracks.sdhBadge ('SDH').
+ *   subtitleTracks.sdhBadge ('SDH').
  *   The m3 stepper symbols (parentalControls.stepMinusHour/-Quarter,
  *   stepPlusQuarter/+Hour, 2026-11-03) are pure numerals — same allowance.
  *   Katakana UI words (スキップ, チャプター…) are NOT allow-listed — they are
@@ -69,17 +69,8 @@ const hub = {
   pausedNotice: 'ハブへの接続は一時停止中です — アプリを再度開くと再開されます',
 };
 
-const skip = {
-  controlsAria: 'スキップ操作',
-  introAria: 'イントロをスキップ',
-  introLabel: 'イントロをスキップ',
-  outroAria: 'アウトロをスキップ',
-  outroLabel: 'アウトロをスキップ',
-};
-
 const chapters = {
   loadFailed: 'チャプターを読み込めませんでした',
-  adBadge: '広告',
   fallbackTitle: 'チャプター {index}',
   listAria: 'チャプター一覧',
   countAria: '{count}章',
@@ -91,16 +82,6 @@ const chapters = {
   empty: 'このメディアにはチャプターがありません。',
   countHeadingOne: '{count}章',
   countHeadingOther: '{count}章',
-  markerIntro: 'イントロ',
-  markerOutro: 'アウトロ',
-  markerCredits: 'エンドロール',
-};
-
-const pictureInPicture = {
-  enterAria: 'ピクチャーインピクチャーを開始',
-  exitAria: 'ピクチャーインピクチャーを終了',
-  enterLabel: 'PiP',
-  exitLabel: 'PiPを終了',
 };
 
 const screensaver = {
@@ -131,6 +112,7 @@ const audioTracks = {
   headingOther: '{count}本の音声トラック',
   preferredNote: 'この作品の優先言語: {language}',
   rememberedNote: 'この作品の優先音声言語として{language}を記憶しました。',
+  saveFailedNote: '{language}をアカウントに保存できませんでした — この端末には選択が記憶されています。',
   applyRefusal: 'このプレイヤーはまだ音声トラックを切り替えられません — 選択は保存されて次回に引き継がれます。',
 };
 
@@ -240,6 +222,8 @@ const parentalControls = {
   failedSchedules: 'スケジュールを読み込めませんでした',
   failedTags: 'タグを読み込めませんでした',
   failedStreamLimits: 'ストリーム制限を読み込めませんでした',
+  tagMutationFailed: 'タグの変更を保存できませんでした — もう一度お試しください。',
+  scheduleDeleteFailed: 'そのスケジュールを削除できませんでした — もう一度お試しください。',
   timeAm: '午前',
   timePm: '午後',
   noDaysSet: '曜日未設定',
@@ -276,6 +260,8 @@ const parentalControls = {
   stepMinusQuarter: '-15',
   stepPlusQuarter: '+15',
   stepPlusHour: '+60',
+  stepDownAria: '減らす',
+  stepUpAria: '増やす',
 };
 
 /**
@@ -288,9 +274,7 @@ export const JA_TIZEN_MESSAGES = {
   menu,
   boot,
   hub,
-  skip,
   chapters,
-  pictureInPicture,
   screensaver,
   telemetry,
   audioTracks,

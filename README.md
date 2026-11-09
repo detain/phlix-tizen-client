@@ -307,7 +307,7 @@ npm run test:watch
 
 ```bash
 npx vitest run tests/unit/tizenBridge.test.ts
-npx vitest run tests/unit/SkipIntroOverlay.test.ts
+npx vitest run tests/unit/QuickConnectPanel.test.ts
 npx vitest run tests/unit/routeManifest.gate.test.ts
 npx vitest run -t "BACK"
 ```
@@ -492,10 +492,10 @@ decodable format.
 
 ```
 phlix-tizen-client/
-├── index.html               # Vite entry (repo root); mounts #phlix-app, #phlix-spatial-host + 7 overlay hosts
+├── index.html               # Vite entry (repo root); mounts #phlix-app, #phlix-spatial-host + 4 overlay hosts
 ├── vite-env.d.ts            # ALL build-time env knobs (7 declared — see Configuration)
 ├── src/
-│   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host + 7 overlay apps; TIZEN_HLS_CONFIG, buildMenu, buildExtraRoutes
+│   ├── main.ts              # boot(): createPhlixApp + bridge + spatial-nav host + 4 overlay apps; TIZEN_HLS_CONFIG, buildMenu, buildExtraRoutes
 │   ├── polyfills.ts         # structuredClone fallback (imported first)
 │   ├── resolveConfig.ts     # pure resolveAppConfig({serverUrl, envUrl})
 │   ├── deviceId.ts          # pure resolveDeviceId(storage) → persisted phlix.deviceId
@@ -504,7 +504,7 @@ phlix-tizen-client/
 │   ├── tizenBridge.ts       # RemoteManager 'action' → usePlayerStore + router; Yellow/Back drive the QualityMenu
 │   ├── api/
 │   │   └── hubRelay.ts      # hub-relay pending_command WebSocket consumer (wss://<hub>:8804; plaintext only behind a build-time dev hatch)
-│   ├── components/          # TV overlays (ChapterOverlay, SkipIntroOverlay, PiPController, ActionToastOverlay, TelemetryConsent, ScreenSaverOverlay) + D-pad lists/cards
+│   ├── components/          # TV overlays (ActionToastOverlay, TelemetryConsent, ScreenSaverOverlay) + D-pad lists/cards
 │   ├── pages/               # ChaptersPage, AudioTracksPage, SubtitleTracksPage, MusicPage, ParentalControlsPage
 │   ├── screens/             # RecommendationsScreen
 │   ├── stores/              # useMusicStore, useSyncPlayStore (Pinia)
@@ -532,7 +532,7 @@ phlix-tizen-client/
 │       ├── tizenBridge.test.ts
 │       ├── SpatialNavHost.test.ts
 │       ├── RemoteManager.test.ts
-│       ├── ChapterOverlay.test.ts
+│       ├── ParentalControlsTimeStepper.test.ts
 │       ├── hubRelay.test.ts
 │       ├── syncplayDispatch.test.ts
 │       ├── routeManifest.gate.test.ts
@@ -570,16 +570,18 @@ phlix-tizen-client/
 2. Quality/transcode decisions are made server-side from the `X-Phlix-Device-Type: samsung-tizen` header
 3. Check server logs for codec/transcode warnings
 
-### Overlay Missing (chapters, skip intro, PiP, action toast, quick connect, telemetry, screensaver)
+### Overlay Missing (action toast, quick connect, telemetry, screensaver)
 
 1. Each Tizen-hosted overlay is its own mounted app — confirm its host `<div>`
-   exists in `index.html` (`#phlix-chapter-overlay`, `#phlix-skip-intro-overlay`,
-   `#phlix-pip-overlay`, `#phlix-action-toast-overlay`, `#phlix-quick-connect`,
+   exists in `index.html` (`#phlix-action-toast-overlay`, `#phlix-quick-connect`,
    `#phlix-telemetry-consent`, `#phlix-screensaver`) and the matching
    `createApp(...).mount(...)` call is present in `src/main.ts`
-2. The chapter and skip-intro overlays need their endpoints
-   (`GET /api/v1/media/{id}/chapters` and `/markers`) to return data for the
-   current media id
+2. Chapters, skip-intro and picture-in-picture are **not** Tizen-hosted since
+   RT-100 / RT-101 (w13-L4): the sealed `@phlix/ui` PlayerPage bundle ships the
+   operable surfaces for all three (its marker timeline is on by default), and
+   the host-mounted twins that used to duplicate them could never receive the
+   remote. If one looks "missing" on screen, the surface to inspect is the
+   vendored Player, not this tree.
 
 Sleep timer and the end-of-video "Up next" card are **not** Tizen-hosted. They
 render from `@phlix/ui`'s PlayerPage bundle — the former

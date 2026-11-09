@@ -256,20 +256,18 @@ describe('tvTypography — M-TIZEN-11 TV couch-legibility laws', () => {
     expect(offenders, `font sizes must consume the --text-* ladder:\n${offenders.join('\n')}`).toEqual([]);
   });
 
-  it('tokenizes the review-named ChapterOverlay evidence anchors', () => {
-    const css = stripCssComments(styleBlocksOf(readFileSync(join(SRC, 'components', 'ChapterOverlay.vue'), 'utf8')));
-    // The tooltip-label/tooltip-time anchors M-TIZEN-11 enumerated here left
-    // with the pointer machinery (deferred review m10, 2026-11-03): the
-    // chrome is gone, its 12/10px evidence with it. The px-ban test above
-    // reddens any resurrection that bypasses the ladder.
-    for (const selector of [
-      'chapter-overlay__ad-badge',
-      'chapter-overlay__label',
-    ]) {
-      const rule = new RegExp(`\\.${selector}\\s*\\{([^}]*)\\}`).exec(css);
-      expect(rule, `.${selector} must exist`).not.toBeNull();
-      expect(rule![1], `.${selector} still bypasses the ladder`).toMatch(/font-size:\s*var\(--text-/);
-    }
-    expect(css).not.toContain('chapter-overlay__tooltip');
+  it('retires the review-named overlay evidence anchors with the components (RT-100)', () => {
+    // RT-100 (w13-L4) deleted ChapterOverlay outright — an unreachable host
+    // twin of the vendored player's own chapter surface — so the anchors
+    // M-TIZEN-11 enumerated here (already gutted of tooltip chrome by the
+    // deferred review m10, 2026-11-03) leave with their file. This arm now
+    // pins the DELETION itself: SkipIntroOverlay and PiPController were twins
+    // of the same ruling (S501 T-04/T-06 shape). A resurrection must walk
+    // back through the px-ban sweep above — it enumerates the src tree, so a
+    // reborn file is judged automatically — and land as an OPERABLE surface,
+    // never a second unreachable twin.
+    expect(existsSync(join(SRC, 'components', 'ChapterOverlay.vue'))).toBe(false);
+    expect(existsSync(join(SRC, 'components', 'SkipIntroOverlay.vue'))).toBe(false);
+    expect(existsSync(join(SRC, 'components', 'PiPController.vue'))).toBe(false);
   });
 });

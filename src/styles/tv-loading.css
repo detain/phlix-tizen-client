@@ -1,0 +1,57 @@
+/**
+ * RT-102 (w13-L4, gameux#3): loading must LOOK like loading at 10 feet.
+ *
+ * The per-screen loading branches used to render one static sentence with
+ * zero motion — on a wall-mounted TV that is visually identical to a hung
+ * app. This layer adds a shared skeleton-row treatment: three soft bars
+ * breathing out of phase, opacity + transform only (the same TV-compositor
+ * cost policy M-TIZEN-35 applies to every animation this client ships —
+ * backdrop-filter and blur are banned, the breathing splash boot already
+ * ships is opacity-only). Under prefers-reduced-motion the breath stops and
+ * the bars hold their static state — the sentence beside them is role=status
+ * and carries the message either way.
+ *
+ * The token values live in tv-typography.css because the motion policy grep
+ * (M-TIZEN-35) only scans tv-motion.css (test-pinned scope).
+ */
+
+.tv-loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.tv-loading-skeleton span {
+  height: 14px;
+  border-radius: 7px;
+  background: var(--tv-skeleton-bg);
+  opacity: var(--tv-skeleton-idle-opacity);
+  transform: scaleX(var(--tv-skeleton-idle-scale));
+  transform-origin: left center;
+  animation: tv-skeleton-breath var(--tv-skeleton-breathe-ms) ease-in-out infinite;
+}
+
+.tv-loading-skeleton span:nth-child(1) { width: 72%; }
+.tv-loading-skeleton span:nth-child(2) { width: 94%; animation-delay: 160ms; }
+.tv-loading-skeleton span:nth-child(3) { width: 58%; animation-delay: 320ms; }
+
+@keyframes tv-skeleton-breath {
+  0%,
+  100% {
+    opacity: var(--tv-skeleton-idle-opacity);
+    transform: scaleX(var(--tv-skeleton-idle-scale));
+  }
+  50% {
+    opacity: var(--tv-skeleton-live-opacity);
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-loading-skeleton span {
+    animation: none;
+    opacity: var(--tv-skeleton-live-opacity);
+    transform: scaleX(1);
+  }
+}

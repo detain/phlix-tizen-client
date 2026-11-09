@@ -11,8 +11,8 @@
  * panel with no error surface (review tizen__exploiter #5).
  *
  * The contract for this boundary is the estate's reject-poison-per-row idiom
- * (mirrors `saneMarker` in SkipIntroOverlay.vue and the S234 boundary
- * parsers): a row renders ONLY when every field the renderer will
+ * (mirrors the S234 boundary parsers; its original exemplar `saneMarker`
+ * lived in the SkipIntroOverlay that RT-100 deleted): a row renders ONLY when every field the renderer will
  * dereference carries its declared type; a rejected row is dropped while its
  * siblings survive. Dropping is the SAFE direction for parental controls by
  * construction — an AccessSchedule declares the window during which a profile

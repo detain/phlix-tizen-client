@@ -122,6 +122,7 @@ onMounted(load);
       aria-busy="true"
       :aria-label="tTizen('recommendations.loadingAria')"
     >
+      <div class="tv-loading-skeleton" aria-hidden="true"><span /><span /><span /></div>
       <p>{{ tTizen('recommendations.loading') }}</p>
     </div>
 

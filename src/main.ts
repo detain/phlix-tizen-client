@@ -21,6 +21,9 @@ import './styles/tv-typography.css';
 // M-TIZEN-35 — TV-era GPU posture layer. Same after-vendor order law as the
 // typography layer above (the class it keys on is applied in boot()).
 import './styles/tv-motion.css';
+// RT-102 (w13-L4): the shared loading-skeleton layer (global like the two
+// above it; the per-screen loading branches only add the empty structure).
+import './styles/tv-loading.css';
 import { resolveAppConfig, pushAddressHistory, sanitizeServerAddress, resolveCredentialBase, CredentialTransportInsecureError } from './resolveConfig';
 import { createConnectScan } from './discovery/connectScan';
 import { resolveLocale, messagesForLocale } from './i18n';
@@ -39,9 +42,6 @@ import { applySyncPlaySocketHint } from './syncplaySocketHint';
 import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
 import { buildTelemetryDeps, getConsent, startTelemetry } from './telemetry';
 import SpatialNavHost from './SpatialNavHost.vue';
-import ChapterOverlay from './components/ChapterOverlay.vue';
-import SkipIntroOverlay from './components/SkipIntroOverlay.vue';
-import PiPController from './components/PiPController.vue';
 import ActionToastOverlay from './components/ActionToastOverlay.vue';
 import ChaptersPage from './pages/ChaptersPage.vue';
 import AudioTracksPage from './pages/AudioTracksPage.vue';
@@ -628,27 +628,24 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   // exposes the active pinia/router on globalProperties.
   createApp(SpatialNavHost).use(pinia).use(router).mount('#phlix-spatial-host');
 
-  // Mount the chapter overlay as a THIRD app sharing the main app's pinia +
-  // router, so it observes the same route state and can display chapter
-  // tick marks and labels on the player seekbar.
-  createApp(ChapterOverlay).use(pinia).use(router).mount('#phlix-chapter-overlay');
+  // RT-100 + RT-101 (w13-L4): a chapter rail, a skip-intro control and a PiP
+  // surface originally shipped as root-mounted apps here (AD-16/AD-15 era).
+  // All three are DELETED: the vendored Player — already the sole owner of
+  // playback on this route — ships its own operable chapters panel, skip
+  // controls, marker timeline (showMarkerTimeline is on by default) and PiP
+  // button at the same screen regions, so the host twins could never reach
+  // the remote while still polling player position through the shared ticker.
+  // S501 T-04/T-06 ruled this exact shape once already (UpNext + sleep-timer).
+  // The routeManifest scan now covers ZERO overlay request sites: chapters +
+  // markers GETs live in the vendored bundle.
 
-  // Mount the skip intro/outro overlay as a FOURTH app sharing the main app's
-  // pinia + router, so it observes the same route state and can display skip
-  // markers.
-  createApp(SkipIntroOverlay).use(pinia).use(router).mount('#phlix-skip-intro-overlay');
-
-  // Mount the PiP controller overlay as a FIFTH app sharing the main app's pinia
-  // + router, so it observes the same route state and can toggle picture-in-picture.
-  createApp(PiPController).use(pinia).use(router).mount('#phlix-pip-overlay');
-
-  // S516 AD-13 — mount the transient action-toast overlay as a SIXTH app sharing
+  // S516 AD-13 — mount the transient action-toast overlay as the FOURTH app sharing
   // the main app's pinia (one caption store, one slot), so every remote key and
   // D-pad landing gets its ~1 s glanceable echo. Presentational only: it never
   // takes focus (no tabindex, aria-hidden) and dismisses on the next key press.
   createApp(ActionToastOverlay).use(pinia).mount('#phlix-action-toast-overlay');
 
-  // S520 AD-25 — mount the quick-connect pairing surface as a SEVENTH root app
+  // S520 AD-25 — mount the quick-connect pairing surface as a FIFTH root app
   // sharing the main app's pinia (one auth store), so it observes the SAME
   // logged-in/server state the shell does. It self-gates: it renders and polls
   // ONLY when a server base exists but no session does, retires itself the
@@ -657,7 +654,7 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   // second token store is introduced anywhere in the flow.
   createApp(QuickConnectPanel).use(pinia).mount('#phlix-quick-connect');
 
-  // S521 AD-27 — mount the one-time telemetry consent card as an EIGHTH root app
+  // S521 AD-27 — mount the one-time telemetry consent card as a SIXTH root app
   // sharing the main app's pinia. It self-gates on "never decided && a server is
   // set", so a decided install renders nothing. Telemetry is OFF by default: the
   // heartbeat sender is only armed here when consent was ALREADY granted on a
@@ -668,7 +665,7 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
     startTelemetry(buildTelemetryDeps({ storage, baseUrl: apiBase }));
   }
 
-  // S523 AD-21 — mount the idle screensaver overlay as a NINTH root app sharing
+  // S523 AD-21 — mount the idle screensaver overlay as a SEVENTH root app sharing
   // the main app's pinia, so its 1 s tick reads the SAME usePlayerStore().playing
   // signal the shell does and the overlay can never engage during active
   // playback. Any key routed through the RemoteManager seam wakes it. Zero

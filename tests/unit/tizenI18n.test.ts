@@ -76,13 +76,7 @@ const EXPECTED: Record<string, string> = {
   "boot.recentFailures": "Recent failures:",
   "boot.splashHint": "Booting",
   "hub.pausedNotice": "Hub connection paused — resumes when you open the app again",
-  "skip.controlsAria": "Skip controls",
-  "skip.introAria": "Skip intro",
-  "skip.introLabel": "Skip intro",
-  "skip.outroAria": "Skip outro",
-  "skip.outroLabel": "Skip outro",
   "chapters.loadFailed": "Failed to load chapters",
-  "chapters.adBadge": "Ad",
   "chapters.fallbackTitle": "Chapter {index}",
   "chapters.listAria": "Chapter list",
   "chapters.countAria": "{count} chapters",
@@ -94,13 +88,6 @@ const EXPECTED: Record<string, string> = {
   "chapters.empty": "No chapters available for this media.",
   "chapters.countHeadingOne": "{count} Chapter",
   "chapters.countHeadingOther": "{count} Chapters",
-  "chapters.markerIntro": "Intro",
-  "chapters.markerOutro": "Outro",
-  "chapters.markerCredits": "Credits",
-  "pictureInPicture.enterAria": "Enter picture-in-picture",
-  "pictureInPicture.exitAria": "Exit picture-in-picture",
-  "pictureInPicture.enterLabel": "PiP",
-  "pictureInPicture.exitLabel": "Exit PiP",
   "screensaver.wakeHint": "Press any key to wake",
   "telemetry.aria": "Help improve Phlix",
   "telemetry.title": "Share anonymous usage stats?",
@@ -242,7 +229,12 @@ const EXPECTED: Record<string, string> = {
   "parentalControls.stepMinusHour": "-60",
   "parentalControls.stepMinusQuarter": "-15",
   "parentalControls.stepPlusQuarter": "+15",
-  "parentalControls.stepPlusHour": "+60",};
+  "parentalControls.stepPlusHour": "+60",
+  "parentalControls.stepDownAria": "Decrease",
+  "parentalControls.stepUpAria": "Increase",
+  "parentalControls.tagMutationFailed": "The blocked-tag change could not be saved — try again.",
+  "parentalControls.scheduleDeleteFailed": "That schedule could not be deleted — try again.",
+  "audioTracks.saveFailedNote": "Could not save {language} to your account — this device still remembers your choice.",};
 
 describe('tizen-own catalog — byte identity', () => {
   const actual = flatten(TIZEN_EN);

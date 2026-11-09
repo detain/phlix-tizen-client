@@ -102,8 +102,17 @@ const error = ref<string | null>(null);
 const refusal = ref<string | null>(null);
 /** S511: the remembered audio language for this title (ladder result), if any. */
 const preferredLanguage = ref<string | null>(null);
-/** S511: transient confirmation that a pick was remembered. */
+/** S511: transient confirmation that a pick was remembered (shown only once the account write settled — w13: RT-085). */
 const savedConfirmation = ref<string | null>(null);
+/** w13: RT-085 honest counterpart — the account write failed; local memory still holds. */
+const saveFailure = ref<string | null>(null);
+/**
+ * w13: RT-085 last-choice sequence. Rapid picks collapse to one coalesced
+ * write upstream; each in-flight callback carries the seq of the pick that
+ * owned the note, and a callback for a superseded pick must not overwrite the
+ * newer one's note when it finally settles.
+ */
+let persistSeq = 0;
 
 const mediaId = computed(() => String(route.params.id ?? ''));
 
@@ -164,15 +173,30 @@ async function loadAudioTracks(): Promise<void> {
  * S511: alongside the honest refusal, the choice is RECALLED to memory (per-item
  * + account) and a saved-confirmation shown — the pick is not lost even though it
  * cannot be applied live on this store today.
+ *
+ * w13: RT-085 — the confirmation is no longer printed BEFORE the write. The
+ * store coalesces rapid picks (latest-wins) and resolves whether the account
+ * PUT actually settled; only then does this page claim the choice is
+ * "Remembered", or honestly say it is kept on the device alone.
  */
 function onSelectTrack(track: AudioTrack): void {
   refusal.value = tTizen('audioTracks.applyRefusal');
   const language = track.language;
-  if (language) {
-    preferredLanguage.value = language;
-    savedConfirmation.value = tTizen('audioTracks.rememberedNote', { language });
-    void trackPreference.persist(apiBase.value, mediaId.value, 'audio', language);
-  }
+  if (!language) return;
+  preferredLanguage.value = language;
+  const seq = ++persistSeq;
+  savedConfirmation.value = null;
+  saveFailure.value = null;
+  void trackPreference.persist(apiBase.value, mediaId.value, 'audio', language).then(
+    (settled) => {
+      if (seq !== persistSeq) return; // a newer pick owns the note now
+      if (settled) {
+        savedConfirmation.value = tTizen('audioTracks.rememberedNote', { language });
+      } else {
+        saveFailure.value = tTizen('audioTracks.saveFailedNote', { language });
+      }
+    },
+  );
 }
 
 function goBack(): void {
@@ -224,6 +248,7 @@ watch(mediaId, loadAudioTracks);
       aria-busy="true"
       :aria-label="tTizen('audioTracks.loadingAria')"
     >
+      <div class="tv-loading-skeleton" aria-hidden="true"><span /><span /><span /></div>
       <p>{{ tTizen('audioTracks.loading') }}</p>
     </div>
 
@@ -251,7 +276,7 @@ watch(mediaId, loadAudioTracks);
 
     <template v-else>
       <p
-        v-if="preferredLanguage && !savedConfirmation"
+        v-if="preferredLanguage && !savedConfirmation && !saveFailure"
         class="audio-tracks-page__preferred"
         role="status"
       >
@@ -263,6 +288,13 @@ watch(mediaId, loadAudioTracks);
         role="status"
       >
         {{ savedConfirmation }}
+      </p>
+      <p
+        v-if="saveFailure"
+        class="audio-tracks-page__save-failed"
+        role="status"
+      >
+        {{ saveFailure }}
       </p>
       <p
         v-if="refusal"
@@ -383,7 +415,8 @@ watch(mediaId, loadAudioTracks);
 }
 
 .audio-tracks-page__preferred,
-.audio-tracks-page__saved {
+.audio-tracks-page__saved,
+.audio-tracks-page__save-failed {
   margin: 0 0 var(--space-3, 0.75rem);
   color: var(--text-muted, #a1a1aa);
   font-size: var(--text-sm, 0.875rem);

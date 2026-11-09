@@ -304,8 +304,6 @@ function scan(): Site[] {
  * UpNext, so its single request site no longer belongs in this map.)
  */
 const PER_FILE_COVERAGE: Record<string, number> = {
-  'src/components/ChapterOverlay.vue': 2,
-  'src/components/SkipIntroOverlay.vue': 1,
   'src/main.ts': 1,
   'src/pages/AudioTracksPage.vue': 1,
   'src/pages/ChaptersPage.vue': 1,
@@ -446,6 +444,14 @@ export const S531_VOICE_CONTROL_TOKEN = 'S531VOICECTRLX9P10';
 // is BYTE-IDENTICAL — buffered digits need no new `<feature>`, and the TN-2 voicecontrol
 // adjudication stays deferred exactly as S531 left it. Era law kept: no new routes, no
 // contracts change, zero server change.
+// RT-100/RT-101 (w13-L4, 2026-11-09): ChapterOverlay (2 sites) and SkipIntroOverlay
+// (1 site) are DELETED — root-mounted host twins of the vendored player's OWN operable
+// chapters panel, skip controls and marker timeline (showMarkerTimeline is on by
+// default), unreachable by the remote exactly as S501 T-04/T-06 ruled for UpNext +
+// sleep-timer. Their GETs now live only in the sealed @phlix/ui bundle (outside this
+// scanner's tree), so the client-side per-file map drops them and the scan moves
+// 27 -> 24; the vendored manifest is byte-identical (server routes unchanged), and
+// no other file mints a request site this wave.
 export const S535_DIGIT_BUFFER_TOKEN = 'S535DIGITBUFX9P1';
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {

@@ -44,6 +44,8 @@ const playerState = {
 
 let settingsBody: unknown = { settings: {} };
 let playbackBody: unknown = { audio_tracks: [], subtitle_tracks: [] };
+/** w13: RT-085 — makes the mock account PUT reject, to pin the failure note. */
+let putShouldThrow = false;
 
 vi.mock('vue-router', () => ({
   useRoute: () => ({ params: { id: MEDIA_ID } }),
@@ -66,6 +68,7 @@ vi.mock('@phlix/ui', async () => ({
     }
     async put<T = unknown>(url: string, body?: unknown): Promise<T> {
       calls.push({ method: 'PUT', url, body });
+      if (putShouldThrow) throw new Error('account write rejected');
       return { message: 'Settings updated' } as T;
     }
   },
@@ -200,6 +203,7 @@ describe('AudioTracksPage — remembers the audio language despite the live-appl
   beforeEach(() => {
     calls.length = 0;
     settingsBody = { settings: {} };
+    putShouldThrow = false;
     globalThis.localStorage.clear();
   });
 
@@ -259,5 +263,66 @@ describe('AudioTracksPage — remembers the audio language despite the live-appl
 
     expect(wrapper.find('.audio-tracks-page__preferred').exists()).toBe(false);
     expect(wrapper.find('.audio-tracks-page__saved').exists()).toBe(false);
+  });
+
+  // w13: RT-085 — the confirmation is earned, not promised.
+  it('the remembered note appears only AFTER the account write settles', async () => {
+    playbackBody = { audio_tracks: [audioRow('a1', 'jpn')] };
+    const wrapper = mount(AudioTracksPage, { global: { plugins: [createPinia()] } });
+    await flushPromises();
+
+    const select = wrapper.findComponent(AudioTrackList).props('onSelect') as (
+      t: unknown,
+    ) => void;
+    select(audioRow('a1', 'jpn'));
+
+    // Same tick as the click: nothing has been confirmed yet — the PUT has not
+    // even been attempted by the time this assertion runs.
+    expect(wrapper.find('.audio-tracks-page__saved').exists()).toBe(false);
+    expect(wrapper.find('.audio-tracks-page__save-failed').exists()).toBe(false);
+
+    await flushPromises();
+    expect(wrapper.find('.audio-tracks-page__saved').exists()).toBe(true);
+    expect(wrapper.find('.audio-tracks-page__save-failed').exists()).toBe(false);
+  });
+
+  it('a failed account write shows the honest device-only note, never the confirmation', async () => {
+    playbackBody = { audio_tracks: [audioRow('a2', 'jpn')] };
+    putShouldThrow = true;
+    const wrapper = mount(AudioTracksPage, { global: { plugins: [createPinia()] } });
+    await flushPromises();
+
+    const select = wrapper.findComponent(AudioTrackList).props('onSelect') as (
+      t: unknown,
+    ) => void;
+    select(audioRow('a2', 'jpn'));
+    await flushPromises();
+
+    const failed = wrapper.find('.audio-tracks-page__save-failed');
+    expect(failed.exists()).toBe(true);
+    expect(failed.text()).toContain('jpn');
+    expect(wrapper.find('.audio-tracks-page__saved').exists()).toBe(false);
+    // The refusal still stands — this page cannot apply audio either way.
+    expect(wrapper.find('.audio-tracks-page__refusal').exists()).toBe(true);
+  });
+
+  it('two rapid picks leave exactly the latest pick disclosed', async () => {
+    playbackBody = { audio_tracks: [audioRow('a1', 'eng'), audioRow('a2', 'jpn')] };
+    const wrapper = mount(AudioTracksPage, { global: { plugins: [createPinia()] } });
+    await flushPromises();
+
+    const select = wrapper.findComponent(AudioTrackList).props('onSelect') as (
+      t: unknown,
+    ) => void;
+    select(audioRow('a1', 'eng'));
+    select(audioRow('a2', 'jpn'));
+    await flushPromises();
+
+    // The first pick's settle-callback is stale-seq and must have dropped.
+    const saved = wrapper.findAll('.audio-tracks-page__saved');
+    expect(saved).toHaveLength(1);
+    expect(saved[0].text()).toContain('jpn');
+    expect(saved[0].text()).not.toContain('eng');
+    expect(wrapper.find('.audio-tracks-page__save-failed').exists()).toBe(false);
   });
 });

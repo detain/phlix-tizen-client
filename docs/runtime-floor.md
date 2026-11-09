@@ -70,10 +70,10 @@ is added this wave:
 
 | Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
 |---|---|---|---|
-| `:focus-visible` | Chrome **86** | 153 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (4 dropped from 157 by collapsing two host `:focus-visible:focus-visible` double arms.) |
+| `:focus-visible` | Chrome **86** | 152 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (4 dropped from 157 by collapsing two host `:focus-visible:focus-visible` double arms.) |
 | `inset:` | Chrome **87** | 42 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
 | `aspect-ratio` | Chrome **88** | 36 | Boxes size from content/height instead of the ratio — cards may stretch. |
-| `accent-color` | Chrome **93** | 8 | Form controls keep UA default colors — cosmetic only. |
+| `accent-color` | Chrome **93** | 7 | Form controls keep UA default colors — cosmetic only. |
 | `:has()` | Chrome **105** | 1 | The one rule (`.register-form__segment:has(input:checked)`, a segmented-control highlight) drops — the state stays unstyled. Upstream cosmetic half (ui repo), pinned here so its arrival/movement is visible. |
 | `100dvh` | Chrome **108** | 7 | All vendored `@phlix/ui`. 5 GUARDED: the two theater-mode heights ride `@supports not (height:100dvh){…100vh}` fallbacks (token appears in each guarded rule + each `@supports` condition = 3+2) → they degrade to `100vh` on ≤ 107, no clamp loss. 2 UNGUARDED: `.phlix-menu__list` / `.usermenu__panel` `max-height:calc(100dvh …)` have no vh fallback → on ≤ 107 the clamp drops and long menus overflow (cosmetic, no crash). Cure is an upstream `@phlix/ui` double-declare (out of this repo's pin scope); pinned count=7 so any reshaping vendored menu/theater CSS shows up here. |
 
@@ -88,7 +88,7 @@ stylesheet:
 surface `src/styles/tv-typography.css` documents), so on ≤ 85 engines the D-pad
 focus ring still renders — through plain `:focus`, universally supported. The
 tripwire test **hard-asserts** that selector pair verbatim: if a re-vendor ever
-drops it, the 153 `:focus-visible` census sites become unsupported-with-no-
+drops it, the 152 `:focus-visible` census sites become unsupported-with-no-
 fallback and the suite reddens on the same law that admits them today.
 
 ## Governance law (tripwire rotation rules)

@@ -23,12 +23,18 @@
  * Server untouched.
  *
  * Fail-soft by contract: a settings fetch failure leaves the account preference
- * `null` (the ladder then behaves as "absent"); an account write failure still
- * keeps the per-item memory (local write happens first). Both are deliberate —
+ * `null` (the ladder then behaves as "absent"); an account write failure keeps
+ * the per-item memory (local write happens first) AND is now DISCLOSED —
+ * {@link persist} resolves to whether the account PUT for the latest choice
+ * settled, so pages can show a "remembered on this device" note only once the
+ * server actually took the write (w13: RT-085). Both halves are deliberate —
  * preference memory must never be able to break playback. The per-item memory
- * itself is LRU-capped at `PER_ITEM_SLOT_CAP` live slots and cannot throw out
- * of `setPerItem` (w12: RT-084) — a quota-full webview store silently keeps
- * only its most recent pages of choices instead of erroring the picker.
+ * itself keeps its live slots in most-recently-WRITTEN order capped at
+ * `PER_ITEM_SLOT_CAP` and cannot throw out of `setPerItem` (w12: RT-084) — a
+ * quota-full webview store silently keeps only its most recent pages of
+ * choices instead of erroring the picker. (The order tracks WRITES, not reads:
+ * `getPerItem` never promotes — a title you keep opening but never re-choose
+ * can still age out. Honest name for what the cap does.)
  *
  * The API client is constructed per call from an explicit `baseUrl` argument
  * (the page owns `useApiBase()`), mirroring `fetchPlaybackInfoTracks` rather
@@ -56,10 +62,18 @@ interface UserSettingsResponse {
   } | null;
 }
 
+/** One queued account write (w13: RT-085 coalescing). */
+interface PendingAccountWrite {
+  baseUrl: string;
+  kind: TrackKind;
+  language: string;
+}
+
 const PER_ITEM_KEY_PREFIX = 'phlix.trackPref';
 
 /**
- * LRU bookkeeping for the per-item slots (w12: RT-084 cure). Every
+ * Write-order bookkeeping for the per-item slots (w12: RT-084 cure; named to
+ * what it does per w13 review info). Every
  * `phlix.trackPref.<kind>.<itemId>` write is tracked in a most-recent-first
  * key index under one extra localStorage key, and the number of live slots is
  * capped at {@link PER_ITEM_SLOT_CAP}. Before this, the TV accumulated one
@@ -68,7 +82,8 @@ const PER_ITEM_KEY_PREFIX = 'phlix.trackPref';
  * reach quota, and a throwing `setItem` propagated out of a "can never break
  * playback" store. The index is the cap's bookkeeping; a corrupt/absent index
  * is re-derived by enumerating the storage, so the cap never depends on the
- * index being trustworthy.
+ * index being trustworthy. Reads (`getPerItem`) deliberately do NOT promote —
+ * eviction age tracks when a choice was WRITTEN, not when it was last opened.
  */
 export const PER_ITEM_SLOT_CAP = 100;
 
@@ -98,7 +113,7 @@ function isSlotKey(key: string | null): key is string {
   return !!key && key.startsWith(`${PER_ITEM_KEY_PREFIX}.`) && key !== PER_ITEM_INDEX_KEY;
 }
 
-/** Parse the LRU index; anything malformed reads as absent (re-derive follows). */
+/** Parse the write-order index; anything malformed reads as absent (re-derive follows). */
 function readIndex(store: TrackStorageLike): string[] | null {
   const raw = store.getItem(PER_ITEM_INDEX_KEY);
   if (typeof raw !== 'string') return null;
@@ -136,7 +151,7 @@ function writeIndex(store: TrackStorageLike, slots: readonly string[]): void {
   }
 }
 
-/** Promote `key` to the front of the LRU index and evict anything past the cap. */
+/** Promote `key` to the front of the write-order index and evict anything past the cap. */
 function rememberSlot(store: TrackStorageLike, key: string): void {
   const slots = [key, ...currentSlots(store).filter((slot) => slot !== key)];
   const kept = slots.slice(0, PER_ITEM_SLOT_CAP);
@@ -184,6 +199,17 @@ export const useTrackPreferenceStore = defineStore('trackPreference', () => {
   const loaded = ref(false);
 
   /**
+   * Latest-wins coalescing state for the account write-back (w13: RT-085).
+   * Rapid track-picker clicks used to fire one PUT per click at the same
+   * settings row — a request storm whose OUTCOME order the network is free to
+   * scramble (an earlier click's PUT can land last and re-write the newer
+   * choice away). Per `(kind, itemId)` slot there is now at most one write
+   * loop alive; each queued entry holds only the newest desired value.
+   */
+  const pendingWrites = new Map<string, PendingAccountWrite>();
+  const inflightWrites = new Map<string, Promise<boolean>>();
+
+  /**
    * Read the account language preferences once. Fail-soft: on any error (or a
    * body missing the settings object) both stay `null` so the ladder treats the
    * server layer as absent. Marks `loaded` either way so callers don't re-fetch.
@@ -210,7 +236,7 @@ export const useTrackPreferenceStore = defineStore('trackPreference', () => {
 
   /**
    * Store (or, with an empty language, clear) the per-title choice locally.
-   * LRU-capped and quota-safe (w12: RT-084): the write is preceded by a
+   * Write-order-capped and quota-safe (w12: RT-084): the write is preceded by a
    * cap-enforcing promotion, a rejected write evicts down to half-cap and
    * retries exactly once, and a still-rejected write is swallowed — the
    * in-session state and the account PUT in {@link persist} are unaffected,
@@ -245,23 +271,67 @@ export const useTrackPreferenceStore = defineStore('trackPreference', () => {
   /**
    * Persist a chosen language: write the per-item memory first (immediate,
    * local, cannot fail the playback path), then push it to the account through
-   * the existing settings endpoint. The account write is best-effort — a
-   * rejected PUT is swallowed because the local memory already stands.
+   * the existing settings endpoint — coalesced per title+kind (w13: RT-085).
+   *
+   * Resolves `true` only when the LAST account write attempted for this slot
+   * succeeded, i.e. the server row reflects the newest choice this call queued.
+   * A call whose value is superseded by a later choice while a PUT is running
+   * resolves on that later write's outcome — the pair is the same decision.
+   * Local memory and in-session refs stand regardless; the boolean feeds the
+   * page's honest confirmation note, never the playback path.
    */
-  async function persist(
+  function persist(
     baseUrl: string,
     itemId: string,
     kind: TrackKind,
     language: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     setPerItem(itemId, kind, language);
     if (kind === 'audio') preferredAudio.value = language;
     else preferredSubtitle.value = language;
+    const slot = `${kind}:${itemId}`;
+    pendingWrites.set(slot, { baseUrl, kind, language });
+    const running = inflightWrites.get(slot);
+    if (running) return running;
+    const drain = drainAccountWrites(slot);
+    inflightWrites.set(slot, drain);
+    return drain;
+  }
+
+  /**
+   * Push account writes for one slot until none is queued newer. Each round
+   * takes the newest value at that moment, so a choice made while a PUT is in
+   * flight REPLACES the next request instead of adding one — the storm
+   * collapses to at most one live PUT plus one follow-up carrying the final
+   * pick. The loop's tail check, the `inflightWrites` release and the return
+   * share a single microtask (no `await` between them), so a caller can never
+   * observe "queue empty, slot still claimed" and drop a write on the floor.
+   */
+  async function drainAccountWrites(slot: string): Promise<boolean> {
+    let settled = false;
+    while (pendingWrites.has(slot)) {
+      const write = pendingWrites.get(slot) as PendingAccountWrite;
+      pendingWrites.delete(slot);
+      settled = await writeAccountPreference(write);
+    }
+    inflightWrites.delete(slot);
+    return settled;
+  }
+
+  /**
+   * One account PUT for one queued choice. Errors are swallowed here ONLY to
+   * convert them into the disclosed boolean — the per-item memory already
+   * stands, and the page shows the save-failed note when this returns false.
+   */
+  async function writeAccountPreference(write: PendingAccountWrite): Promise<boolean> {
     try {
-      const client = new ApiClient({ baseUrl });
-      await client.put('/api/v1/users/me/settings', { [accountField(kind)]: language });
+      const client = new ApiClient({ baseUrl: write.baseUrl });
+      await client.put('/api/v1/users/me/settings', {
+        [accountField(write.kind)]: write.language,
+      });
+      return true;
     } catch {
-      // Account write is best-effort; per-item memory + in-session state hold.
+      return false;
     }
   }
 

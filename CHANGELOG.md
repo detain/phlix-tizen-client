@@ -34,6 +34,118 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — track-preference saves coalesce instead of storming the wire (RT-085) — 2026-11-09
+
+- **What users see:** fast track picks (a held or rapid sequence on the audio
+  page) land as ONE save instead of a per-press PUT storm, and when a save
+  fails the page says so instead of silently claiming success. The
+  "Audio preference saved" note now appears only after the write has actually
+  settled; a rejected write leaves a localized failure note in its place and
+  the remembered selection rolls forward correctly when a later press won the
+  coalescing race.
+  Mechanism (src/stores/useTrackPreferenceStore.ts): `persist` returns a
+  `Promise<boolean>` — account writes per `kind:itemId` slot coalesce
+  latest-wins through pending/in-flight maps, so an in-flight PUT is never
+  duplicated and the trailing intent still lands. The audio page gates its
+  confirmation on the settle result through a persist-sequence guard.
+  New `audioTracks.saveFailedNote` × seven locales (194 to 195). Track
+  suites carry the new coalescing legs (three language-memory + four store
+  harness legs). (w15-L10 takeover: the lane inherited this as dead-lane WIP,
+  repaired a ReferenceError at its store-test tail, and gate-verified it.)
+
+### Fixed — parental guards hold against held repeats and say when they fail (RT-099) — 2026-11-09
+
+- **What users see:** holding ENTER in the blocked-tag field creates ONE tag,
+  not one per repeat (the held-key burst used to POST duplicates the server
+  happily stored); a rejected tag or schedule mutation now surfaces a localized
+  inline notice instead of vanishing, and the healthy rows beside it stay on
+  screen. Buttons disable while their own mutation is in flight.
+  Mechanism (src/pages/ParentalControlsPage.vue): `addTag` self-guards before
+  flipping its flag (the @keyup.enter path no longer bypasses the button
+  :disabled), remove-tag and delete-schedule gained per-row in-flight sets +
+  `:disabled` mirrors, and two new notice surfaces (`role=alert`
+  `.mutation-notice`) fed by `parentalControls.tagMutationFailed` /
+  `scheduleDeleteFailed` × seven locales (195 to 197). Five new
+  ParentalControlsWireShape legs pin one-POST-per-burst, mid-flight disable,
+  failure disclosure with rows preserved, and notice clearing on success.
+
+### Removed — unreachable chapter/skip/PiP host overlays deleted (RT-100, RT-101) — 2026-11-09
+
+- **What users see:** nothing less — everything MORE. The player route's
+  chapters panel, skip controls, marker timeline and PiP button were already
+  the vendored player's own (operable, focused); the host-mounted twins behind
+  them could never receive the remote and only added a position-poll tax.
+  Deleting them removes that dead weight and the false surface the reviews
+  kept re-tripping on.
+  Mechanism: `src/components/ChapterOverlay.vue`, `SkipIntroOverlay.vue`,
+  `PiPController.vue` and the shared `src/playerProgressTicker.ts` are DELETED
+  with their three suites (68 files to 65 — the AGENTS/CLAUDE census re-measured
+  in this same commit), plus the 3rd/4th/5th root mounts, their `index.html`
+  host divs, and the thirteen tizen locale keys that existed only to label them
+  (`chapters.marker*`+`adBadge`, `skip.*`, `pictureInPicture.*` — 199 pairs to
+  186 across all seven files). Verification re-executed against the CURRENT
+  vendored bundle (ui #v0.99.22): `showMarkerTimeline:!0` default-true, 12
+  `marker-timeline__tick` rules, `player__iconbtn` skip + PiP surfaces, and the
+  chapters panel all ship inside PlayerPage — the review's premise holds at
+  this pin. This is S501 T-04/T-06 (UpNext + sleep-timer) applied once more;
+  the routeManifest scan moved 27 to 24 sites, the vendored manifest itself
+  byte-identical. (RT-101 was w15-L10's anchor item "checkbox outside the
+  focus law" — the adjudicated landing for that card is this deletion: the
+  chapter tick rail it concerns lived wholly inside the deleted twin; the
+  surviving D-pad-operable chapter surface is the sealed player's.)
+
+### Fixed — loading states breathe on the TV (RT-102) — 2026-11-09
+
+- **What users see:** the recommendations, audio-track, subtitle-track,
+  chapters and parental pages no longer show a single static sentence that is
+  visually identical to a hang — three skeleton bars breathe above the copy
+  while loading, and stop breathing (holding their settled state) under
+  prefers-reduced-motion. The status sentence keeps the announcement job; the
+  bars are aria-hidden decoration.
+  Mechanism: new host CSS layer `src/styles/tv-loading.css` (imported after
+  tv-motion.css in `src/main.ts`), five skeleton token values parked in
+  tv-typography.css to keep the M-TIZEN-35 policy grep's scope strict, and the
+  `.tv-loading-skeleton` div added to six loading branches. tvMotion.test.ts
+  gained the layer's compositor-cheap + reduced-motion + import-order +
+  presence pins (five legs).
+
+### Fixed — parental forms are operable with a remote (RT-103) — 2026-11-09
+
+- **What users see:** the schedule "Active" control is a focusable toggle pill
+  (5px ring, switch semantics, text state) instead of a 1.25rem native
+  checkbox the D-pad could tab over but never SEE; the two limit fields
+  (concurrent streams, bandwidth) gained symbol −/+ steppers beside the
+  typing path, and the pointer-only native spinner arrows are gone.
+  Mechanism: `stepNumber(value, delta, min, max)` joins the pure
+  parentalTimeStepper module (garbage input degrades to the field floor —
+  parse-don't-validate, mirroring stepTime's stance) with
+  `STEP_BANDWIDTH_KBPS = 1000` as the coarse rung; two `aria-hidden`-safe new
+  locale keys `parentalControls.stepDownAria`/`stepUpAria` × seven (197 to
+  199 pairs; the i18n expectation tables and the key-count pin rotated from
+  measured reds). Five new TimeStepper arms + the wire-shape suite's
+  existing mount law cover the arithmetic; toggle/steppers are source-pinned.
+
+### Fixed — a standby-black-holed SyncPlay socket now recovers on its own (RT-104) — 2026-11-09
+
+- **What users see:** after the panel sleeps and wakes, a watch party whose
+  socket quietly died re-syncs within seconds — previously the room sat
+  "connected" with a frozen group state forever, because the reconnect ladder
+  only armed on close/error events that a black-holed link never fires.
+  Mechanism (src/stores/useSyncPlayStore.ts): every inbound byte (malformed
+  included) stamps a liveness clock; a visibility seam listener — the SAME
+  source `armVisibleWindowRetry` uses — on a hidden→visible edge force-closes
+  an open-but-silent (> 30 s) socket, handing recovery to the existing
+  identity-guarded ladder. Six new useSyncPlayStore legs pin stamping,
+  threshold behavior, no-op edges and listener pairing across reconnects.
+
+### Documentation — entry maps and audit trails carry the w13/w15 landing — 2026-11-09
+
+- AGENTS.md/CLAUDE.md/README.md/DEVELOPER.md/docs/i18n.md/.claude rules
+  renumbered to the four surviving overlay apps, host-div lists trimmed, the
+  overlay-missing debug section rewritten to point at the vendored player,
+  suite census 68 → 65, the vitest sample commands swapped to existing
+  suites, and the three T-07/saneMarker provenance notes re-homed honestly
+  (they name the deleted overlays as their origin, past tense).
 ### Fixed — code sign-in is now a CHOSEN path, not the default takeover (RT-097) — 2026-11-08
 
 - **What users see:** a TV with a server set but no session no longer slaps a

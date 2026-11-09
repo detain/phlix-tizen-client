@@ -1,5 +1,8 @@
 /**
- * parentalTimeStepper — pure minute-stepping for the parental schedule form.
+ * parentalTimeStepper — pure stepper arithmetic for the parental-control forms:
+ * minute-stepping for the schedule window (w13: RT-103 added the bounded
+ * number-stepping for the stream-limit fields; same module by design — both
+ * are the remote-press math the page must not own inline).
  *
  * The schedule window used two native `<input type="time">` fields (deferred
  * review m3): on a no-pointer, no-IME TV webview a segment-editing text
@@ -31,6 +34,34 @@
 export const STEP_QUARTER_MINUTES = 15;
 /** The long-press/coarse rung: sixty minutes. */
 export const STEP_HOUR_MINUTES = 60;
+
+/**
+ * w13: RT-103 (review tizen__gameux #4) — the stream-limit form's two
+ * `type="number"` fields kept the pointer era's wheel/spinner arrows on a
+ * no-pointer device. The page now renders D-pad symbol buttons around the
+ * SAME inputs (typing stays precise; the buttons are the remote path), and
+ * this module owns their arithmetic the same way {@link stepTime} owns the
+ * schedule window's.
+ *
+ * Total by contract, mirroring stepTime's stance: an absent or poisoned value
+ * (null — bandwidth's "unlimited" — or a non-finite read after the `.number`
+ * modifier chewed up an empty field) restarts at `min` rather than throwing
+ * or yielding NaN back into the form. Stepping DOWN from unlimited landing
+ * on `min` is deliberate: it means "cap this", the direction the remote press
+ * asked for; typed entry remains the precise path.
+ */
+export function stepNumber(
+  raw: number | null | undefined,
+  delta: number,
+  min: number,
+  max: number,
+): number {
+  const base = typeof raw === 'number' && Number.isFinite(raw) ? raw : min;
+  return Math.min(max, Math.max(min, base + delta));
+}
+
+/** One coarse press on a bandwidth field: 1000 kbps (the display unit's rung). */
+export const STEP_BANDWIDTH_KBPS = 1000;
 
 /** 'HH:MM' or 'HH:MM:SS' with numeric segments; nothing else parses. */
 const TIME_RE = /^(\d{1,2}):(\d{2})(:\d{2})?$/;

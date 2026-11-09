@@ -19,7 +19,7 @@
  *   audioTracks.bitrateKbps, audioTracks.mono, music.albumsTitle,
  *   music.albumCountOne, music.albumCountOther, parentalControls.bandwidthKbps,
  *   parentalControls.timeAm, parentalControls.timePm,
- *   pictureInPicture.enterLabel, subtitleTracks.sdhBadge.
+ *   subtitleTracks.sdhBadge.
  *   parentalControls.stepMinusHour, parentalControls.stepMinusQuarter,
  *   parentalControls.stepPlusQuarter, parentalControls.stepPlusHour
  *   (m3 schedule-stepper symbols, 2026-11-03).
@@ -68,17 +68,8 @@ const hub = {
   pausedNotice: 'Connexion au hub suspendue — elle reprend à la prochaine ouverture de l’application',
 };
 
-const skip = {
-  controlsAria: 'Commandes de saut',
-  introAria: 'Passer l’intro',
-  introLabel: 'Passer l’intro',
-  outroAria: 'Passer la fin',
-  outroLabel: 'Passer la fin',
-};
-
 const chapters = {
   loadFailed: 'Échec du chargement des chapitres',
-  adBadge: 'Pub',
   fallbackTitle: 'Chapitre {index}',
   listAria: 'Liste des chapitres',
   countAria: '{count} chapitre | {count} chapitres',
@@ -90,16 +81,6 @@ const chapters = {
   empty: 'Aucun chapitre disponible pour ce média.',
   countHeadingOne: '{count} Chapitre',
   countHeadingOther: '{count} Chapitres',
-  markerIntro: 'Introduction',
-  markerOutro: 'Fin',
-  markerCredits: 'Générique',
-};
-
-const pictureInPicture = {
-  enterAria: 'Activer l’image dans l’image',
-  exitAria: 'Désactiver l’image dans l’image',
-  enterLabel: 'PiP',
-  exitLabel: 'Quitter PiP',
 };
 
 const screensaver = {
@@ -130,6 +111,7 @@ const audioTracks = {
   headingOther: '{count} Pistes audio',
   preferredNote: 'Préférée pour ce titre : {language}',
   rememberedNote: '{language} a été mémorisée comme langue audio préférée pour ce titre.',
+  saveFailedNote: 'Impossible d’enregistrer {language} dans votre compte — cet appareil retient malgré tout votre choix.',
   applyRefusal: 'Ce lecteur ne peut pas encore changer de piste audio — votre choix est retenu pour la prochaine fois.',
 };
 
@@ -239,6 +221,8 @@ const parentalControls = {
   failedSchedules: 'Échec du chargement des horaires',
   failedTags: 'Échec du chargement des tags',
   failedStreamLimits: 'Échec du chargement de la limite de flux',
+  tagMutationFailed: 'Impossible d’enregistrer la modification des tags — réessayez.',
+  scheduleDeleteFailed: 'Impossible de supprimer cet horaire — réessayez.',
   timeAm: 'AM',
   timePm: 'PM',
   noDaysSet: 'Aucun jour défini',
@@ -275,6 +259,8 @@ const parentalControls = {
   stepMinusQuarter: '-15',
   stepPlusQuarter: '+15',
   stepPlusHour: '+60',
+  stepDownAria: 'Diminuer',
+  stepUpAria: 'Augmenter',
 };
 
 /**
@@ -286,9 +272,7 @@ export const FR_TIZEN_MESSAGES = {
   menu,
   boot,
   hub,
-  skip,
   chapters,
-  pictureInPicture,
   screensaver,
   telemetry,
   audioTracks,

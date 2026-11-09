@@ -71,4 +71,15 @@ html:root {
   --text-md: 32px;
   /* Section titles — kept above md and below xl (42, untouched clamp). */
   --text-lg: 36px;
+
+  /* RT-102 (w13-L4): the loading-skeleton layer (src/styles/tv-loading.css)
+     is its only consumer. Values live HERE because the M-TIZEN-35 motion-
+     policy grep (test-pinned) scans only tv-motion.css — gradient/opacity
+     values are policy-legal anywhere, but keeping them out of the scanned
+     file keeps the ban list honest as its strictest reading. */
+  --tv-skeleton-bg: linear-gradient(90deg, #212c42, #2a3650);
+  --tv-skeleton-breathe-ms: 1400ms;
+  --tv-skeleton-idle-opacity: 0.45;
+  --tv-skeleton-idle-scale: 0.96;
+  --tv-skeleton-live-opacity: 1;
 }

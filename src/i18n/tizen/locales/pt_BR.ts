@@ -19,7 +19,7 @@
  *   tests/unit/i18nLocales.test.ts): tracks.durationAria, chapters.itemAria,
  *   audioTracks.bitrateKbps, audioTracks.mono,
  *   parentalControls.bandwidthKbps, parentalControls.timeAm,
- *   parentalControls.timePm, pictureInPicture.enterLabel,
+ *   parentalControls.timePm,
  *   subtitleTracks.sdhBadge.
  *   parentalControls.stepMinusHour, parentalControls.stepMinusQuarter,
  *   parentalControls.stepPlusQuarter, parentalControls.stepPlusHour
@@ -69,17 +69,8 @@ const hub = {
   pausedNotice: 'Conexão com o hub pausada — retoma quando você abrir o app novamente',
 };
 
-const skip = {
-  controlsAria: 'Controles de pular',
-  introAria: 'Pular introdução',
-  introLabel: 'Pular introdução',
-  outroAria: 'Pular final',
-  outroLabel: 'Pular final',
-};
-
 const chapters = {
   loadFailed: 'Falha ao carregar os capítulos',
-  adBadge: 'Anúncio',
   fallbackTitle: 'Capítulo {index}',
   listAria: 'Lista de capítulos',
   countAria: '{count} capítulo | {count} capítulos',
@@ -91,16 +82,6 @@ const chapters = {
   empty: 'Nenhum capítulo disponível para esta mídia.',
   countHeadingOne: '{count} Capítulo',
   countHeadingOther: '{count} Capítulos',
-  markerIntro: 'Introdução',
-  markerOutro: 'Final',
-  markerCredits: 'Créditos',
-};
-
-const pictureInPicture = {
-  enterAria: 'Abrir imagem na imagem',
-  exitAria: 'Fechar imagem na imagem',
-  enterLabel: 'PiP',
-  exitLabel: 'Fechar PiP',
 };
 
 const screensaver = {
@@ -131,6 +112,7 @@ const audioTracks = {
   headingOther: '{count} Faixas de áudio',
   preferredNote: 'Preferida para este título: {language}',
   rememberedNote: '{language} foi definido como seu idioma de áudio preferido para este título.',
+  saveFailedNote: 'Não foi possível salvar {language} na sua conta — este dispositivo ainda lembra sua escolha.',
   applyRefusal: 'Este player ainda não pode trocar de faixa de áudio — sua escolha será lembrada para a próxima.',
 };
 
@@ -240,6 +222,8 @@ const parentalControls = {
   failedSchedules: 'Falha ao carregar as programações',
   failedTags: 'Falha ao carregar as tags',
   failedStreamLimits: 'Falha ao carregar o limite de transmissão',
+  tagMutationFailed: 'Não foi possível salvar a alteração de tags — tente novamente.',
+  scheduleDeleteFailed: 'Não foi possível excluir essa programação — tente novamente.',
   timeAm: 'AM',
   timePm: 'PM',
   noDaysSet: 'Nenhum dia definido',
@@ -276,6 +260,8 @@ const parentalControls = {
   stepMinusQuarter: '-15',
   stepPlusQuarter: '+15',
   stepPlusHour: '+60',
+  stepDownAria: 'Diminuir',
+  stepUpAria: 'Aumentar',
 };
 
 /**
@@ -287,9 +273,7 @@ export const PT_BR_TIZEN_MESSAGES = {
   menu,
   boot,
   hub,
-  skip,
   chapters,
-  pictureInPicture,
   screensaver,
   telemetry,
   audioTracks,

@@ -15,10 +15,10 @@
  *   pairs repeat the same noun in both segments (uniform two-slot law).
  * - Values legitimately identical to English (allow-listed in
  *   tests/unit/i18nLocales.test.ts): tracks.durationAria, chapters.itemAria,
- *   chapters.markerIntro, chapters.markerOutro, audioTracks.bitrateKbps,
+ *   audioTracks.bitrateKbps,
  *   audioTracks.mono, audioTracks.stereo, music.albumCountOne,
  *   parentalControls.bandwidthKbps, parentalControls.timeAm,
- *   parentalControls.timePm, pictureInPicture.enterLabel,
+ *   parentalControls.timePm,
  *   subtitleTracks.sdhBadge.
  *   parentalControls.stepMinusHour, parentalControls.stepMinusQuarter,
  *   parentalControls.stepPlusQuarter, parentalControls.stepPlusHour
@@ -68,17 +68,8 @@ const hub = {
   pausedNotice: 'Connessione all’hub in pausa — riprende quando riapri l’app',
 };
 
-const skip = {
-  controlsAria: 'Controlli di salto',
-  introAria: 'Salta introduzione',
-  introLabel: 'Salta introduzione',
-  outroAria: 'Salta finale',
-  outroLabel: 'Salta finale',
-};
-
 const chapters = {
   loadFailed: 'Impossibile caricare i capitoli',
-  adBadge: 'Annuncio',
   fallbackTitle: 'Capitolo {index}',
   listAria: 'Elenco capitoli',
   countAria: '{count} capitolo | {count} capitoli',
@@ -90,16 +81,6 @@ const chapters = {
   empty: 'Nessun capitolo disponibile per questo contenuto.',
   countHeadingOne: '{count} Capitolo',
   countHeadingOther: '{count} Capitoli',
-  markerIntro: 'Intro',
-  markerOutro: 'Outro',
-  markerCredits: 'Titoli di coda',
-};
-
-const pictureInPicture = {
-  enterAria: 'Apri immagine in immagine',
-  exitAria: 'Chiudi immagine in immagine',
-  enterLabel: 'PiP',
-  exitLabel: 'Chiudi PiP',
 };
 
 const screensaver = {
@@ -130,6 +111,7 @@ const audioTracks = {
   headingOther: '{count} Tracce audio',
   preferredNote: 'Preferita per questo titolo: {language}',
   rememberedNote: '{language} è stata salvata come lingua audio preferita per questo titolo.',
+  saveFailedNote: 'Impossibile salvare {language} nel tuo account — questo dispositivo ricorda comunque la tua scelta.',
   applyRefusal: 'Questo player non può ancora cambiare traccia audio — la tua scelta viene ricordata per la prossima volta.',
 };
 
@@ -239,6 +221,8 @@ const parentalControls = {
   failedSchedules: 'Impossibile caricare gli orari',
   failedTags: 'Impossibile caricare i tag',
   failedStreamLimits: 'Impossibile caricare il limite di streaming',
+  tagMutationFailed: 'Impossibile salvare la modifica dei tag — riprova.',
+  scheduleDeleteFailed: 'Impossibile eliminare questo orario — riprova.',
   timeAm: 'AM',
   timePm: 'PM',
   noDaysSet: 'Nessun giorno impostato',
@@ -275,6 +259,8 @@ const parentalControls = {
   stepMinusQuarter: '-15',
   stepPlusQuarter: '+15',
   stepPlusHour: '+60',
+  stepDownAria: 'Riduci',
+  stepUpAria: 'Aumenta',
 };
 
 /**
@@ -286,9 +272,7 @@ export const IT_TIZEN_MESSAGES = {
   menu,
   boot,
   hub,
-  skip,
   chapters,
-  pictureInPicture,
   screensaver,
   telemetry,
   audioTracks,

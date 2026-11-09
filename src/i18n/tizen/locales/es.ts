@@ -22,7 +22,7 @@
  *   tests/unit/i18nLocales.test.ts): tracks.durationAria, chapters.itemAria,
  *   audioTracks.bitrateKbps, audioTracks.mono, parentalControls.bandwidthKbps,
  *   parentalControls.timeAm, parentalControls.timePm,
- *   pictureInPicture.enterLabel, subtitleTracks.sdhBadge.
+ *   subtitleTracks.sdhBadge.
  *   parentalControls.stepMinusHour, parentalControls.stepMinusQuarter,
  *   parentalControls.stepPlusQuarter, parentalControls.stepPlusHour
  *   (m3 schedule-stepper symbols, 2026-11-03).
@@ -71,17 +71,8 @@ const hub = {
   pausedNotice: 'Conexión con el hub en pausa — se reanuda al abrir la aplicación de nuevo',
 };
 
-const skip = {
-  controlsAria: 'Controles de salto',
-  introAria: 'Saltar introducción',
-  introLabel: 'Saltar introducción',
-  outroAria: 'Saltar cierre',
-  outroLabel: 'Saltar cierre',
-};
-
 const chapters = {
   loadFailed: 'No se pudieron cargar los capítulos',
-  adBadge: 'Anuncio',
   fallbackTitle: 'Capítulo {index}',
   listAria: 'Lista de capítulos',
   countAria: '{count} capítulo | {count} capítulos',
@@ -93,16 +84,6 @@ const chapters = {
   empty: 'No hay capítulos disponibles para este contenido.',
   countHeadingOne: '{count} Capítulo',
   countHeadingOther: '{count} Capítulos',
-  markerIntro: 'Introducción',
-  markerOutro: 'Final',
-  markerCredits: 'Créditos',
-};
-
-const pictureInPicture = {
-  enterAria: 'Abrir imagen en imagen',
-  exitAria: 'Cerrar imagen en imagen',
-  enterLabel: 'PiP',
-  exitLabel: 'Salir de PiP',
 };
 
 const screensaver = {
@@ -133,6 +114,7 @@ const audioTracks = {
   headingOther: '{count} Pistas de audio',
   preferredNote: 'Preferida para este título: {language}',
   rememberedNote: 'Recordé {language} como tu idioma de audio preferido para este título.',
+  saveFailedNote: 'No se pudo guardar {language} en tu cuenta — este dispositivo recuerda igualmente tu elección.',
   applyRefusal: 'Este reproductor aún no puede cambiar de pista de audio — tu elección se recordará para la próxima.',
 };
 
@@ -242,6 +224,8 @@ const parentalControls = {
   failedSchedules: 'No se pudieron cargar los horarios',
   failedTags: 'No se pudieron cargar las etiquetas',
   failedStreamLimits: 'No se pudo cargar el límite de transmisión',
+  tagMutationFailed: 'No se pudo guardar el cambio de etiquetas — inténtalo de nuevo.',
+  scheduleDeleteFailed: 'No se pudo eliminar ese horario — inténtalo de nuevo.',
   timeAm: 'AM',
   timePm: 'PM',
   noDaysSet: 'Sin días definidos',
@@ -278,6 +262,8 @@ const parentalControls = {
   stepMinusQuarter: '-15',
   stepPlusQuarter: '+15',
   stepPlusHour: '+60',
+  stepDownAria: 'Disminuir',
+  stepUpAria: 'Aumentar',
 };
 
 /**
@@ -291,9 +277,7 @@ export const ES_TIZEN_MESSAGES = {
   menu,
   boot,
   hub,
-  skip,
   chapters,
-  pictureInPicture,
   screensaver,
   telemetry,
   audioTracks,

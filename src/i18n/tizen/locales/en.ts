@@ -83,22 +83,8 @@ const hub = {
   pausedNotice: 'Hub connection paused — resumes when you open the app again',
 } satisfies Record<string, string>;
 
-const skip = {
-  controlsAria: 'Skip controls',
-  // Deferred review m22 (2026-11-03): button labels ride SENTENCE CASE per the
-  // casing law written into docs/i18n.md; the title-cased 'Skip Intro' /
-  // 'Skip Outro' labels read one way on screen and announced another through
-  // their aria twins. Every translated mirror already shipped label === aria;
-  // English now matches its own mirrors.
-  introAria: 'Skip intro',
-  introLabel: 'Skip intro',
-  outroAria: 'Skip outro',
-  outroLabel: 'Skip outro',
-} satisfies Record<string, string>;
-
 const chapters = {
   loadFailed: 'Failed to load chapters',
-  adBadge: 'Ad',
   fallbackTitle: 'Chapter {index}',
   listAria: 'Chapter list',
   countAria: '{count} chapters',
@@ -114,19 +100,6 @@ const chapters = {
   empty: 'No chapters available for this media.',
   countHeadingOne: '{count} Chapter',
   countHeadingOther: '{count} Chapters',
-  // Tooltip fallback labels for marker types without a server-supplied label
-  // (contracts MarkerType union: intro | outro | credits | ad — 'Ad' reuses
-  // adBadge above, byte-identical to the source's capitalized wire type).
-  markerIntro: 'Intro',
-  markerOutro: 'Outro',
-  markerCredits: 'Credits',
-} satisfies Record<string, string>;
-
-const pictureInPicture = {
-  enterAria: 'Enter picture-in-picture',
-  exitAria: 'Exit picture-in-picture',
-  enterLabel: 'PiP',
-  exitLabel: 'Exit PiP',
 } satisfies Record<string, string>;
 
 const screensaver = {
@@ -165,6 +138,10 @@ const audioTracks = {
   preferredNote: 'Preferred for this title: {language}',
   rememberedNote:
     'Remembered {language} as your preferred audio language for this title.',
+  // w13 RT-085: the confirmation now rides the settled account write — this is
+  // the honest counterpart shown when that write failed (local memory holds).
+  saveFailedNote:
+    'Could not save {language} to your account — this device still remembers your choice.',
   applyRefusal:
     'This player can’t switch audio tracks yet — your choice is remembered for next time.',
 } satisfies Record<string, string>;
@@ -279,6 +256,10 @@ const parentalControls = {
   failedSchedules: 'Failed to load schedules',
   failedTags: 'Failed to load tags',
   failedStreamLimits: 'Failed to load stream limit',
+  // w13 RT-099: mutation-failure copy — the buttons no longer pretend a
+  // rejected add/remove/delete silently succeeded.
+  tagMutationFailed: 'The blocked-tag change could not be saved — try again.',
+  scheduleDeleteFailed: 'That schedule could not be deleted — try again.',
   timeAm: 'AM',
   timePm: 'PM',
   noDaysSet: 'No days set',
@@ -323,6 +304,9 @@ const parentalControls = {
   stepMinusQuarter: '-15',
   stepPlusQuarter: '+15',
   stepPlusHour: '+60',
+  // w13 RT-103: accessible names for the stream-limit symbol steppers.
+  stepDownAria: 'Decrease',
+  stepUpAria: 'Increase',
 } satisfies Record<string, string>;
 
 /**
@@ -336,9 +320,7 @@ export const TIZEN_EN = {
   menu,
   boot,
   hub,
-  skip,
   chapters,
-  pictureInPicture,
   screensaver,
   telemetry,
   audioTracks,

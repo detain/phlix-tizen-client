@@ -29,7 +29,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { flushPromises, mount } from '@vue/test-utils';
 import ParentalControlsPage from '@/pages/ParentalControlsPage.vue';
-import { stepTime } from '@/parentalTimeStepper';
+import { stepTime, stepNumber, STEP_BANDWIDTH_KBPS } from '@/parentalTimeStepper';
 
 const SCHEDULE = {
   id: 7,
@@ -190,5 +190,42 @@ describe('m3 source laws', () => {
     expect(source).toMatch(
       /\.stepper-btn:focus-visible\s*\{\s*outline:\s*none;\s*box-shadow:\s*0 0 0 5px var\(--accent-ring/
     );
+  });
+});
+
+// ---- RT-103 (w13-L4, gameux#4): the number sibling of the m3 stepper ----
+// The limits form used to ship native type=number fields: pointer-only
+// spinner arrows on a no-pointer panel. The page now wraps each field in
+// symbol buttons driven by stepNumber — the same parse-don't-validate
+// posture as stepTime: garbage input degrades to the field's own floor
+// instead of poisoning the form.
+describe('stepNumber (RT-103 pure arithmetic)', () => {
+  it('steps a finite value by the delta inside the range', () => {
+    expect(stepNumber(5, 1, 1, 10)).toBe(6);
+    expect(stepNumber(5, -1, 1, 10)).toBe(4);
+    expect(stepNumber(5000, STEP_BANDWIDTH_KBPS, 0, 1_000_000)).toBe(6000);
+    expect(stepNumber(5000, -STEP_BANDWIDTH_KBPS, 0, 1_000_000)).toBe(4000);
+  });
+
+  it('clamps at both rails instead of wrapping or overshooting', () => {
+    expect(stepNumber(10, 1, 1, 10)).toBe(10);
+    expect(stepNumber(1, -1, 1, 10)).toBe(1);
+    expect(stepNumber(0, -STEP_BANDWIDTH_KBPS, 0, 1_000_000)).toBe(0);
+  });
+
+  it('treats 0 (unlimited bandwidth) as the floor it is: stepping down stays unlimited', () => {
+    expect(stepNumber(0, -STEP_BANDWIDTH_KBPS, 0, 1_000_000)).toBe(0);
+    expect(stepNumber(0, STEP_BANDWIDTH_KBPS, 0, 1_000_000)).toBe(1000);
+  });
+
+  it('degrades null / undefined / non-finite to the field floor PLUS the delta', () => {
+    expect(stepNumber(null, STEP_BANDWIDTH_KBPS, 0, 1_000_000)).toBe(1000);
+    expect(stepNumber(undefined, 1, 1, 10)).toBe(2);
+    expect(stepNumber(NaN, 1, 1, 10)).toBe(2);
+    expect(stepNumber(Infinity, -1, 1, 10)).toBe(1); // garbage = floor, then the step
+  });
+
+  it('passes fractions through untouched by rounding (typing stays the precise path)', () => {
+    expect(stepNumber(2.5, 1, 1, 10)).toBe(3.5);
   });
 });

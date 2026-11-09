@@ -14,7 +14,7 @@
  * ## TN-8 hard law — reuse the T-07 generation idiom, add no second mechanism
  *
  * Superseded replies are dropped with the EXACT `++gen` / `gen !== cur` pattern
- * proven live in `ChapterOverlay.vue` / `SkipIntroOverlay.vue` (S501 T-07): every
+ * proven live in the S501-era `ChapterOverlay.vue` / `SkipIntroOverlay.vue` (T-07; those host overlays were since deleted by RT-100 — the idiom outlived them and is the ONLY race defense here): every
  * fetch mints `const gen = ++entry.gen`, and only a reply whose `gen` is still
  * `entry.gen` at settle-time is published. Coalescing SUBSUMES late-arrival
  * dropping (joiners share one promise), so the generation guard is the only place

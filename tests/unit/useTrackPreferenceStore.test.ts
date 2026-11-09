@@ -23,6 +23,12 @@ const apiCalls: { method: string; url: string; body?: unknown }[] = [];
 let getResponse: unknown = { settings: {} };
 let getShouldThrow = false;
 let putShouldThrow = false;
+/**
+ * w13: RT-085 gate — while set, every mock PUT awaits this promise before
+ * doing anything, so tests can hold a write in flight and fire rapid
+ * follow-up `persist()` calls at it (the storm the cure must collapse).
+ */
+let putGate: Promise<void> | null = null;
 
 vi.mock('@phlix/ui', () => ({
   ApiClient: class {
@@ -33,6 +39,7 @@ vi.mock('@phlix/ui', () => ({
       return getResponse as T;
     }
     async put<T = unknown>(url: string, body?: unknown): Promise<T> {
+      if (putGate) await putGate;
       apiCalls.push({ method: 'PUT', url, body });
       if (putShouldThrow) throw new Error('403');
       return { message: 'Settings updated' } as T;
@@ -104,11 +111,108 @@ describe('useTrackPreferenceStore — AC3 settings read/write contract', () => {
   it('persist() keeps the per-item memory even when the account PUT fails', async () => {
     putShouldThrow = true;
     const store = useTrackPreferenceStore();
-    await store.persist('http://server.test', 'media-42', 'audio', 'jpn');
+    const settled = await store.persist('http://server.test', 'media-42', 'audio', 'jpn');
 
     // No throw escaped; local memory + in-session state survived the failure.
     expect(store.getPerItem('media-42', 'audio')).toBe('jpn');
     expect(store.preferredAudio).toBe('jpn');
+    // w13: RT-085 — the failure is DISCLOSED, not swallowed silently.
+    expect(settled).toBe(false);
+  });
+});
+
+describe('useTrackPreferenceStore — RT-085 latest-wins write coalescing', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    apiCalls.length = 0;
+    getResponse = { settings: {} };
+    getShouldThrow = false;
+    putShouldThrow = false;
+    putGate = null;
+    globalThis.localStorage.clear();
+  });
+  afterEach(() => {
+    putGate = null;
+  });
+
+  it('rapid picks on one slot collapse to in-flight PUT + one latest follow-up', async () => {
+    const store = useTrackPreferenceStore();
+    let release!: () => void;
+    putGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const first = store.persist('http://server.test', 'media-7', 'audio', 'eng');
+    // Two more choices while the first PUT is still in flight: each queues
+    // only its newest value into the ONE live drain (pinia hands every caller
+    // its own promise wrapper, so coalescing is proven by the wire, not by
+    // object identity — see the request-count assertion below).
+    const second = store.persist('http://server.test', 'media-7', 'audio', 'spa');
+    const third = store.persist('http://server.test', 'media-7', 'audio', 'fra');
+
+    expect(apiCalls.filter((c) => c.method === 'PUT')).toHaveLength(0); // gate holds
+    release();
+    const [s1, s2, s3] = await Promise.all([first, second, third]);
+    expect(s1).toBe(true);
+    expect(s2).toBe(true);
+    expect(s3).toBe(true);
+
+    const bodies = apiCalls.filter((c) => c.method === 'PUT').map((c) => c.body);
+    // The already-sent request carries 'eng'; exactly ONE follow-up carries the
+    // final pick 'fra'. Three clicks — two requests, account ends on 'fra'.
+    expect(bodies).toEqual([
+      { preferred_audio_language: 'eng' },
+      { preferred_audio_language: 'fra' },
+    ]);
+    // (s1, s2, s3 are the coalesced drain's single promise — all three callers
+    // observe the LATEST write's outcome, asserted true above.)
+    expect(store.getPerItem('media-7', 'audio')).toBe('fra');
+  });
+
+  it('resolves false when the follow-up write for the latest pick fails', async () => {
+    const store = useTrackPreferenceStore();
+    let release!: () => void;
+    putGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const running = store.persist('http://server.test', 'media-7', 'audio', 'eng');
+    void store.persist('http://server.test', 'media-7', 'audio', 'spa');
+    release();
+    putShouldThrow = true; // both PUTs throw when they resume from the gate
+    const settled = await running;
+
+    expect(settled).toBe(false); // account row is stale → the page must disclose
+    expect(store.getPerItem('media-7', 'audio')).toBe('spa'); // local holds newest
+  });
+
+  it('different slots keep independent drains', async () => {
+    const store = useTrackPreferenceStore();
+    let release!: () => void;
+    putGate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const audio = store.persist('http://server.test', 'media-7', 'audio', 'eng');
+    const subtitle = store.persist('http://server.test', 'media-7', 'subtitle', 'spa');
+    expect(subtitle).not.toBe(audio); // (kind, itemId) slots never merge
+    release();
+
+    expect(await audio).toBe(true);
+    expect(await subtitle).toBe(true);
+    const urls = apiCalls.filter((c) => c.method === 'PUT');
+    expect(urls).toHaveLength(2);
+  });
+
+  it('a later pick after a settled drain starts a fresh write', async () => {
+    const store = useTrackPreferenceStore();
+    expect(await store.persist('http://server.test', 'media-7', 'audio', 'eng')).toBe(true);
+    expect(await store.persist('http://server.test', 'media-7', 'audio', 'fra')).toBe(true);
+    const bodies = apiCalls.filter((c) => c.method === 'PUT').map((c) => c.body);
+    expect(bodies).toEqual([
+      { preferred_audio_language: 'eng' },
+      { preferred_audio_language: 'fra' },
+    ]);
   });
 });
 

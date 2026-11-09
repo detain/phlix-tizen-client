@@ -9,8 +9,8 @@
  * null (reading 'split')` inside `formatTime` / `(reading 'length')` inside
  * `formatDays` — one poison row blanked the whole profile's control panel.
  *
- * The cure is the estate's reject-poison-per-row idiom (mirrors `saneMarker`
- * in SkipIntroOverlay.vue and the S234 boundary parsers): a row is rendered
+ * The cure is the estate's reject-poison-per-row idiom (mirrors the S234 boundary
+ * parsers; the `saneMarker` exemplar lived in the SkipIntroOverlay RT-100 deleted): a row is rendered
  * ONLY when every field it will dereference is of its declared type, and a
  * rejected row is dropped while its healthy siblings survive. Dropping is
  * the SAFE direction for parental controls on purpose — schedules declare

@@ -52,6 +52,13 @@ const TAGS = [
 const HEALTHY_SCHEDULES: unknown[] = [SCHEDULE];
 let schedulesPayload: unknown[] = HEALTHY_SCHEDULES;
 
+/**
+ * RT-099 (w13-L4): per-verb failure knobs. A rejected mutation must SURFACE
+ * (role=alert notice) instead of vanishing into a silent catch; the knobs are
+ * consumed once so one failing call cannot leak into the next.
+ */
+let failNext: { post?: boolean; delete?: boolean } = {};
+
 /** S502: verb-recording capture — `{ method, url, body? }`, not just `{ url, body? }`. */
 const apiCalls: { method: string; url: string; body?: unknown }[] = [];
 
@@ -82,6 +89,7 @@ vi.mock('@phlix/ui', async () => ({
 
     async post<T = unknown>(url: string, body?: unknown): Promise<T> {
       apiCalls.push({ method: 'POST', url, body });
+      if (failNext.post) { failNext.post = false; throw new Error('mock POST rejected'); }
       return {} as T;
     }
 
@@ -92,6 +100,7 @@ vi.mock('@phlix/ui', async () => ({
 
     async delete<T = unknown>(url: string): Promise<T> {
       apiCalls.push({ method: 'DELETE', url });
+      if (failNext.delete) { failNext.delete = false; throw new Error('mock DELETE rejected'); }
       return {} as T;
     }
   }
@@ -101,6 +110,7 @@ describe('ParentalControlsPage wire shape (S325b)', () => {
   beforeEach(() => {
     apiCalls.length = 0;
     schedulesPayload = HEALTHY_SCHEDULES;
+    failNext = {};
   });
 
   it('renders the server snake_case schedule fields instead of blanks', async () => {
@@ -282,5 +292,87 @@ describe('ParentalControlsPage wire shape (S325b)', () => {
     expect(items).toHaveLength(1);
     expect(items[0].find('.schedule-item__name').text()).toBe('Weekday window');
     expect(items[0].find('.schedule-item__time').text()).toContain('9:00');
+  });
+  // ---- RT-099 (w13-L4, tizen__exploiter#2): parental guards are not one-shot doors ----
+  describe('RT-099 mutation guards', () => {
+    it('a held ENTER on the tag field fires exactly ONE POST (keyup no longer bypasses the in-flight guard)', async () => {
+      const wrapper = mount(ParentalControlsPage);
+      await flushPromises();
+      const input = wrapper.find('.tag-input');
+      await input.setValue('noir-x');
+      // TWO keyup.enter beats without letting the first POST settle — the era
+      // this test reddens on had the guard ONLY on the button's :disabled, so
+      // a held/rapid Enter minted a duplicate POST /profiles/{pid}/tags per
+      // repeat and the server happily inserted N identical blocked tags.
+      await input.trigger('keyup', { key: 'Enter' });
+      await input.trigger('keyup', { key: 'Enter' });
+      expect(apiCalls.filter((c) => c.method === 'POST' && c.url.endsWith('/tags'))).toHaveLength(1);
+      await flushPromises();
+    });
+
+    it('the in-flight gate lets exactly one POST per Enter burst through and releases for the next intent', async () => {
+      const wrapper = mount(ParentalControlsPage);
+      await flushPromises();
+      const input = wrapper.find('.tag-input');
+      await input.setValue('noir-y');
+      await input.trigger('keyup', { key: 'Enter' });
+      expect(wrapper.find('.add-tag-btn').attributes('disabled')).toBeDefined(); // mid-flight
+      // A third intent while the first POST is still pending: guard holds.
+      await input.trigger('keyup', { key: 'Enter' });
+      expect(apiCalls.filter((c) => c.method === 'POST' && c.url.endsWith('/tags'))).toHaveLength(1);
+      await flushPromises();
+      // The burst settled as ONE success. A fresh intent after the gate
+      // released must POST again (the guard is per-flight, not per-session):
+      // clearing the field re-disables the button (needs text), so setValue
+      // first, and assert the SECOND POST lands — the observable half of the
+      // re-render race this suite must not lose.
+      await input.setValue('');
+      await input.setValue('noir-z');
+      await input.trigger('keyup', { key: 'Enter' });
+      await flushPromises();
+      expect(apiCalls.filter((c) => c.method === 'POST' && c.url.endsWith('/tags'))).toHaveLength(2);
+    });
+
+    it('a rejected schedule DELETE surfaces the localized notice, keeps the rows, and re-arms the button', async () => {
+      const wrapper = mount(ParentalControlsPage);
+      await flushPromises();
+      expect(wrapper.find('.mutation-notice').exists()).toBe(false);
+      failNext.delete = true;
+      await wrapper.find('.schedule-item .action-btn--danger').trigger('click');
+      await flushPromises();
+      const notice = wrapper.find('.mutation-notice');
+      expect(notice.exists()).toBe(true);
+      expect(notice.attributes('role')).toBe('alert');
+      expect(notice.text()).toBe('That schedule could not be deleted — try again.');
+      expect(wrapper.findAll('.schedule-item')).toHaveLength(1); // healthy rows NOT blanked
+      expect(wrapper.find('.schedule-item .action-btn--danger').attributes('disabled')).toBeUndefined();
+      expect(apiCalls.filter((c) => c.method === 'DELETE')).toHaveLength(1);
+    });
+
+    it('a rejected tag POST surfaces the localized notice and preserves what the user typed', async () => {
+      const wrapper = mount(ParentalControlsPage);
+      await flushPromises();
+      const input = wrapper.find('.tag-input');
+      await input.setValue('noir-z');
+      failNext.post = true;
+      await input.trigger('keyup', { key: 'Enter' });
+      await flushPromises();
+      const notice = wrapper.find('.mutation-notice');
+      expect(notice.exists()).toBe(true);
+      expect(notice.text()).toBe('The blocked-tag change could not be saved — try again.');
+      expect((input.element as HTMLInputElement).value).toBe('noir-z');
+    });
+
+    it('a later successful mutation clears a previous failure notice', async () => {
+      const wrapper = mount(ParentalControlsPage);
+      await flushPromises();
+      failNext.delete = true;
+      await wrapper.find('.schedule-item .action-btn--danger').trigger('click');
+      await flushPromises();
+      expect(wrapper.find('.mutation-notice').exists()).toBe(true);
+      await wrapper.find('.schedule-item .action-btn--danger').trigger('click'); // retry succeeds
+      await flushPromises();
+      expect(wrapper.find('.mutation-notice').exists()).toBe(false);
+    });
   });
 });

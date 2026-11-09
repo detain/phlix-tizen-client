@@ -110,12 +110,12 @@ const UI_ADDITIVE_PIPES: readonly string[] = ['player.subtitleDownloads'];
 // Keys whose value legitimately EQUALS English (brand tokens, unit formats,
 // {placeholder}-only templates). Verified BOTH directions per locale.
 const EN_LEAK_OK: Record<Locale, readonly string[]> = {
-  es: ['tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'pictureInPicture.enterLabel', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
-  fr: ['tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'music.albumsTitle', 'music.albumCountOne', 'music.albumCountOther', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'pictureInPicture.enterLabel', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
-  de: ['common.name', 'tracks.durationAria', 'chapters.itemAria', 'chapters.markerIntro', 'chapters.markerOutro', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'audioTracks.stereo', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'pictureInPicture.enterLabel', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
-  it: ['tracks.durationAria', 'chapters.itemAria', 'chapters.markerIntro', 'chapters.markerOutro', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'audioTracks.stereo', 'music.albumCountOne', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'pictureInPicture.enterLabel', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
-  pt_BR: ['tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'pictureInPicture.enterLabel', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
-  ja: ['tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'parentalControls.bandwidthKbps', 'pictureInPicture.enterLabel', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
+  es: ['tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
+  fr: ['tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'music.albumsTitle', 'music.albumCountOne', 'music.albumCountOther', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
+  de: ['common.name', 'tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'audioTracks.stereo', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
+  it: ['tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'audioTracks.stereo', 'music.albumCountOne', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
+  pt_BR: ['tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'audioTracks.mono', 'parentalControls.bandwidthKbps', 'parentalControls.timeAm', 'parentalControls.timePm', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
+  ja: ['tracks.durationAria', 'chapters.itemAria', 'audioTracks.bitrateKbps', 'parentalControls.bandwidthKbps', 'subtitleTracks.sdhBadge', 'parentalControls.stepMinusHour', 'parentalControls.stepMinusQuarter', 'parentalControls.stepPlusQuarter', 'parentalControls.stepPlusHour'],
 };
 
 const CJK = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/;
@@ -462,12 +462,12 @@ describe('ui bundles — key-set identity and installed coverage', () => {
 // ---------------------------------------------------------------------------
 
 describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
-  it('every locale table has EXACTLY the 194 English keys (both directions)', () => {
+  it('every locale table has EXACTLY the 186 English keys (both directions)', () => {
     const reference = keySet(TIZEN_EN as unknown as Table);
     for (const locale of LOCALES) {
       expect(keySet(TIZEN_TABLES[locale]), `${locale} key set differs from en`).toBe(reference);
     }
-    expect(EN_TIZEN.size).toBe(194);
+    expect(EN_TIZEN.size).toBe(186);
   });
 
   it('every value keeps its key\'s {placeholder} set verbatim', () => {
