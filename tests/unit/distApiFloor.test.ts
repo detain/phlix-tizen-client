@@ -32,6 +32,13 @@
  * defect was "bundle unparseable below 85 while the surface claims pre-85
  * support"). See the claim-side describe below for the three laws and why the
  * platform-version check is a non-claim pin, not a floor computation.
+ *
+ * RT-106 / RT-107 (lane w24-L3, 2026-11-09, review tizen__crossfe M1+M2 at
+ * 91e3848) close the two governance gaps that file named: the crypto.randomUUID
+ * (Chrome 92) install + per-chunk census (the vendored Menu call is the third
+ * polyfilled live-site class after `.at` and structuredClone), and the
+ * color-mix() (Chrome 111) CSS census + guard-completeness classifier, whose
+ * row restores the floor doc's "complete measured census" claim.
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -78,6 +85,95 @@ function countMatchesAcrossAssets(pattern: RegExp): number {
     total += matches ? matches.length : 0;
   }
   return total;
+}
+
+/** The exact @supports probe esbuild/rollup emit for the ui floor-fallbacks. */
+const COLOR_MIX_PROBE = '@supports not (color:color-mix(in srgb,red,blue))';
+
+interface ColorMixCensus {
+  /** innermost rules carrying a color-mix declaration (token = one site). */
+  declarationSites: number;
+  /** sites whose selector+property twin lives in an @supports-not guard body. */
+  blockGuarded: number;
+  /** sites preceded by a same-property declaration in the SAME rule. */
+  doubleDeclared: number;
+  /** sites with NEITHER guard form — accepted-drop candidates. */
+  unguarded: string[];
+}
+
+/**
+ * RT-107 census classifier — pure over the shipped stylesheet text. Walks
+ * every innermost rule (recursing through @media/@supports/@keyframes),
+ * and for each declaration containing `color-mix(` classifies its guard
+ * form. Whole-selector matching (main rule selector vs guard-body selector
+ * split on commas): a shape the classifier does not know lands in
+ * `unguarded` and reddens the pin — fail-loud by construction.
+ */
+function classifyColorMixSites(css: string): ColorMixCensus {
+  const openBrace = COLOR_MIX_PROBE.length + 1; // index offset of the block '{'
+  const guardSelectors = new Set<string>();
+  let idx = css.indexOf(COLOR_MIX_PROBE + '{');
+  while (idx !== -1) {
+    let depth = 0;
+    let j = idx + openBrace - 1;
+    const bodyStart = j + 1;
+    for (; j < css.length; j++) {
+      if (css[j] === '{') depth++;
+      else if (css[j] === '}') {
+        depth--;
+        if (depth === 0) break;
+      }
+    }
+    const body = css.slice(bodyStart, j);
+    const ruleRe = /([^{}]+)\{[^{}]*\}/g;
+    let r: RegExpExecArray | null;
+    while ((r = ruleRe.exec(body))) {
+      for (const sel of r[1].split(',')) guardSelectors.add(sel.trim());
+    }
+    idx = css.indexOf(COLOR_MIX_PROBE + '{', j);
+  }
+
+  const out: ColorMixCensus = { declarationSites: 0, blockGuarded: 0, doubleDeclared: 0, unguarded: [] };
+  function* rulesDeep(text: string): Generator<{ selector: string; body: string }> {
+    let i = 0;
+    while (i < text.length) {
+      const brace = text.indexOf('{', i);
+      if (brace === -1) return;
+      const prelude = text.slice(i, brace).trim();
+      let depth = 1;
+      let j = brace + 1;
+      while (j < text.length && depth > 0) {
+        if (text[j] === '{') depth++;
+        else if (text[j] === '}') depth--;
+        j++;
+      }
+      const body = text.slice(brace + 1, j - 1);
+      if (prelude.startsWith('@')) yield* rulesDeep(body);
+      else yield { selector: prelude, body };
+      i = j;
+    }
+  }
+  for (const { selector, body } of rulesDeep(css)) {
+    const seenProps = new Set<string>();
+    for (const decl of body.split(';')) {
+      if (!decl.includes('color-mix(')) {
+        const p = decl.split(':')[0]?.trim();
+        if (p) seenProps.add(p);
+        continue;
+      }
+      const prop = decl.split(':')[0].trim();
+      // Token math, not statement math: 35 tokens ride 31 declarations —
+      // the two ambient/backdrop scrim gradients each mix two colors in one
+      // `background:` value. Every bucket counts tokens so the three
+      // sub-counts partition declarationSites exactly.
+      const tokens = (decl.match(/color-mix\(/g) ?? []).length;
+      out.declarationSites += tokens;
+      if (seenProps.has(prop)) out.doubleDeclared += tokens;
+      else if (guardSelectors.has(selector)) out.blockGuarded += tokens;
+      else for (let t = 0; t < tokens; t++) out.unguarded.push(`${selector} {${prop}}`);
+    }
+  }
+  return out;
 }
 
 describe('distApiFloor — runtime engine floor of the committed package/ bundle', () => {
@@ -168,6 +264,60 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       expect(countMatchesAcrossAssets(/[^.]structuredClone\(/g)).toBe(0);
     });
 
+    /* ------------------------------------------------------------------
+     * RT-106 (review tizen__crossfe M1, lane w24-L3 2026-11-09) —
+     * crypto.randomUUID is Chrome 92, i.e. ABOVE the 85 floor, and the
+     * vendored @phlix/ui Menu component calls it UNGUARDED inside setup()
+     * (ui Menu.vue:62 `const baseId = crypto.randomUUID()`; still unguarded
+     * upstream at the #v0.99.25 pin). On the admitted 85–91 population the
+     * TypeError unmounts every Menu subtree — Player quality/captions/speed,
+     * UserMenu, MediaCard context menus, Libraries menus. The call site is
+     * vendored minified JS the client cannot edit, so — exactly the
+     * Array.prototype.at precedent — the cure installs at src/polyfills.ts:
+     * an RFC 4122 v4 shim over crypto.getRandomValues (ancient support).
+     * RED-ON-PARENT at cc8a40f8: both the entry-shape asserts below (no
+     * shim installed yet) and the token census (5 ≠ 7 pre-cure).
+     * ---------------------------------------------------------------- */
+    it('polyfills crypto.randomUUID (Chrome 92) at the entry chunk (RT-106)', () => {
+      // Minified install shape esbuild emits from src/polyfills.ts. Two
+      // folds, both measured 2026-11-09 post-cure: `typeof X !== "function"`
+      // keeps the string form with `!=` (same fold the structuredClone/at
+      // guards above are pinned in), while `typeof X !== "undefined"` is
+      // folded further, to the `<"u"` short-compare. The getRandomValues
+      // precondition is the shim's honesty clause: it only claims what the
+      // floor engine actually provides (Chrome 1-era API).
+      const entry = readAsset(entryChunkName());
+      expect(entry).toContain('typeof globalThis.crypto<"u"');
+      expect(entry).toContain('typeof globalThis.crypto.randomUUID!="function"');
+      expect(entry).toContain('typeof globalThis.crypto.getRandomValues=="function"');
+      expect(entry).toContain('Object.defineProperty(globalThis.crypto,"randomUUID"');
+    });
+
+    it('keeps the crypto.randomUUID token census pinned per chunk (RT-106)', () => {
+      // Measured 2026-11-09 post-cure. ENTRY 7 tokens = 5 vendored (1
+      // UNGUARDED Menu call + the web-/tizen-deviceId guarded sites) + 2
+      // shim-install (`randomUUID` in the typeof guard + the defineProperty
+      // key; esbuild strips the inner function name — the `at` install shows
+      // the same, so `function randomUUID` does NOT count). HLS 1 token =
+      // its own try/catch-guarded site with the Blob-URL fallback (safe
+      // pre-shim, unchanged by it). A count move = the vendored surface
+      // reshaped or a new above-floor arrival → re-adjudicate (header item 3).
+      const entry = readAsset(entryChunkName());
+      expect(countOccurrences(entry, 'randomUUID')).toBe(7);
+      const hls = assetFiles().find((f) => f.startsWith('hls-'));
+      expect(hls, 'hls chunk present').toBeTruthy();
+      expect(countOccurrences(readAsset(hls!), 'randomUUID')).toBe(1);
+      // The UNGUARDED vendored Menu call survives by design (client cannot
+      // edit it; the shim makes it safe on 85–91). Discriminator: a bare
+      // `crypto.randomUUID()` whose call closes directly into a `,` — the
+      // let-declaration continuation of Menu's setup body. Guarded sites
+      // read `…randomUUID=="function"?…randomUUID():fallback` (ternary,
+      // `:` after) or `try{…randomUUID()}catch` (`}` after). If upstream
+      // ever guards or drops the Menu call, THIS pin reddens — then retire
+      // it with attribution and keep the shim for the next arrival.
+      expect(countMatchesAcrossAssets(/crypto\.randomUUID\(\),/g)).toBe(1);
+    });
+
     it('pins Vue 3.5 reactive-array patcher defs as INERT (toSorted/toReversed/toSpliced, Chrome 110)', () => {
       // These defs live in the entry chunk and call the NATIVE method ONLY on
       // `X(this)` — Vue's toRaw-clone receiver. They are reachable only if app
@@ -205,10 +355,14 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
   });
 
   describe('the polyfill module is the sanctioned single point (source-level)', () => {
-    it('src/polyfills.ts guards BOTH above-floor installs and is imported first by main.ts', () => {
+    it('src/polyfills.ts guards ALL THREE above-floor installs and is imported first by main.ts', () => {
       const src = readFileSync(join(__dirname, '..', '..', 'src', 'polyfills.ts'), 'utf8');
       expect(src).toContain("typeof globalThis.structuredClone !== 'function'");
       expect(src).toContain("typeof Array.prototype.at !== 'function'");
+      // RT-106 (red-on-parent at cc8a40f8 — the randomUUID guard is the cure):
+      expect(src).toContain("typeof globalThis.crypto !== 'undefined'");
+      expect(src).toContain("typeof globalThis.crypto.randomUUID !== 'function'");
+      expect(src).toContain("typeof globalThis.crypto.getRandomValues === 'function'");
       const main = readFileSync(join(__dirname, '..', '..', 'src', 'main.ts'), 'utf8');
       // './polyfills' must be the first import in the entry (before @phlix/ui).
       const firstImport = main.match(/import '([^']+)'/);
@@ -341,6 +495,43 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // The two unguarded clamps — named so their removal upstream is noticed.
       expect(css).toContain('max-height:calc(100dvh - 16px)');
       expect(css).toContain('max-height:calc(100dvh - var(--space-4))');
+    });
+
+    /* ------------------------------------------------------------------
+     * RT-107 (review tizen__crossfe M2, lane w24-L3 2026-11-09) — the
+     * largest above-floor CSS feature was entirely unpinned, and the floor
+     * doc's "complete measured census" claim was falsified by its own file.
+     * The #v0.99.25 re-vendor carries the ui c7f96bc7 floor-fallbacks cure;
+     * this wave converts the doc's provisional "Info, unpinned" note into a
+     * governance PIN: exact token census + machine-checked guard
+     * completeness. RED-ON-PARENT at cc8a40f8: the floor-doc row asserts
+     * (the CSS bytes themselves were already correct — the gap was purely
+     * that nothing checked them).
+     * ---------------------------------------------------------------- */
+    it('pins the color-mix() (Chrome 111) census with machine-checked guard completeness (RT-107)', () => {
+      // Measured 2026-11-09 at cc8a40f8, single stylesheet (hash-agnostic).
+      // 49 `color-mix(` tokens = 14 @supports probe CONDITIONS (one per
+      // guard block, never declarations) + 35 declaration sites spread
+      // across the vendored auth/badge/syncplay/invite/ambient surfaces.
+      const css = readFileSync(join(ASSETS_DIR, entryCssName()), 'utf8');
+      expect(countAcrossCss('color-mix(')).toBe(49);
+      expect(countAcrossCss(COLOR_MIX_PROBE)).toBe(14);
+      // Guard completeness: every declaration site rides a plain-color twin
+      // of the SAME selector inside an @supports-not guard body. Zero same-
+      // rule double-declares, ZERO unguarded sites → on ≤ 110 the whole
+      // population renders the guard-body fallbacks: tint/gradient loss
+      // (cosmetic), no rule loss — color-mix is a VALUE, its drop
+      // granularity is the single declaration. An unguarded arrival upstream
+      // reddens this pin, it does not silently degrade the field.
+      const census = classifyColorMixSites(css);
+      expect(census.declarationSites).toBe(35);
+      expect(census.blockGuarded).toBe(35);
+      expect(census.doubleDeclared).toBe(0);
+      expect(census.unguarded.join(' , ')).toBe('');
+      // Floor-doc completeness (the claim RT-107 exists to restore): the
+      // census table must carry the color-mix row matching these numbers.
+      const doc = readFileSync(join(PKG_DIR, '..', 'docs', 'runtime-floor.md'), 'utf8');
+      expect(doc).toContain('| `color-mix()` | Chrome **111** | 49 (14 probes + 35 sites) |');
     });
   });
 

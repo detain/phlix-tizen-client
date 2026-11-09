@@ -292,4 +292,103 @@ describe('polyfills', () => {
       expect((Array.prototype as unknown as { at: unknown }).at).toBe(sentinel);
     });
   });
+
+  // RT-106 (review tizen__crossfe M1, lane w24-L3): crypto.randomUUID
+  // (Chromium 92, above the repo's 85 floor) is called UNGUARDED inside the
+  // vendored ui Menu component's setup() — a TypeError on 85–91 engines that
+  // kills every Menu surface. The cure is the src/polyfills.ts v4 shim over
+  // crypto.getRandomValues. jsdom 29 / Node have the native, so — same
+  // family as the structuredClone and Array.prototype.at suites — the native
+  // is hidden via defineProperty and the REAL module re-imported.
+  describe('src/polyfills.ts crypto.randomUUID fallback (RT-106)', () => {
+    const cryptoGlobal = globalThis.crypto;
+    // Both members may live on the jsdom/Node Crypto PROTOTYPE rather than
+    // as own properties; the restore below handles either shape so the
+    // shim's own-property install can never leak into sibling suites.
+    const ownBefore = {
+      randomUUID: Object.prototype.hasOwnProperty.call(cryptoGlobal, 'randomUUID'),
+      getRandomValues: Object.prototype.hasOwnProperty.call(cryptoGlobal, 'getRandomValues'),
+    };
+    const valueBefore = {
+      randomUUID: cryptoGlobal.randomUUID,
+      getRandomValues: cryptoGlobal.getRandomValues,
+    };
+
+    afterEach(() => {
+      for (const key of ['randomUUID', 'getRandomValues'] as const) {
+        if (ownBefore[key]) {
+          Object.defineProperty(cryptoGlobal, key, {
+            value: valueBefore[key],
+            configurable: true,
+            writable: true,
+          });
+        } else {
+          delete (cryptoGlobal as unknown as Record<string, unknown>)[key];
+        }
+      }
+      vi.resetModules();
+    });
+
+    async function importWithAbsentRandomUUID(hideGetRandomValues = false): Promise<void> {
+      vi.resetModules();
+      Object.defineProperty(cryptoGlobal, 'randomUUID', {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      });
+      if (hideGetRandomValues) {
+        Object.defineProperty(cryptoGlobal, 'getRandomValues', {
+          value: undefined,
+          configurable: true,
+          writable: true,
+        });
+      }
+      await import('@/polyfills');
+    }
+
+    it('installs an RFC 4122 v4 shim when native randomUUID is absent (RED-ON-PARENT cc8a40f8)', async () => {
+      await importWithAbsentRandomUUID();
+      const shim = (cryptoGlobal as unknown as { randomUUID?: unknown }).randomUUID;
+      expect(typeof shim).toBe('function');
+
+      const produced = cryptoGlobal.randomUUID();
+      // 8-4-4(version 4)-4(variant 10xx)-12 lowercase hex.
+      expect(produced).toMatch(
+        /^[\da-f]{8}-[\da-f]{4}-4[\da-f]{3}-[89ab][\da-f]{3}-[\da-f]{12}$/
+      );
+    });
+
+    it('produces unique values across rapid draws (entropy comes from getRandomValues)', async () => {
+      await importWithAbsentRandomUUID();
+      const seen = new Set<string>();
+      for (let i = 0; i < 200; i++) seen.add(cryptoGlobal.randomUUID());
+      expect(seen.size).toBe(200);
+    });
+
+    it('does not overwrite an already-present native randomUUID', async () => {
+      vi.resetModules();
+      const sentinel = function sentinelRandomUUID(): string {
+        return 'sentinel';
+      };
+      Object.defineProperty(cryptoGlobal, 'randomUUID', {
+        value: sentinel,
+        configurable: true,
+        writable: true,
+      });
+
+      await import('@/polyfills');
+
+      expect((cryptoGlobal as unknown as { randomUUID: unknown }).randomUUID).toBe(sentinel);
+    });
+
+    it('stays inert when crypto.getRandomValues is absent (precondition law)', async () => {
+      // The shim must never claim an engine the floor doesn't have: without
+      // getRandomValues there is no entropy source, so NO install happens —
+      // the vendored guarded sites keep their own fallbacks.
+      await importWithAbsentRandomUUID(true);
+      expect(
+        typeof (cryptoGlobal as unknown as { randomUUID?: unknown }).randomUUID
+      ).not.toBe('function');
+    });
+  });
 });

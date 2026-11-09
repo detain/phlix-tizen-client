@@ -17,7 +17,10 @@
 // with rationale in the floor doc). Current installs: structuredClone (Chrome
 // 98), Array.prototype.at (Chrome 92 — the vendored ui PosterPicker chunk
 // calls `.at(-1)` at three live sites; the call sites are vendored JS and
-// cannot be edited client-side).
+// cannot be edited client-side), crypto.randomUUID (Chrome 92 — RT-106: the
+// vendored ui Menu component calls it UNGUARDED in setup(), and on the
+// admitted 85–91 population the TypeError unmounts every Menu subtree; same
+// vendored-call-site constraint as `.at`, same cure shape: install here).
 
 // `at` is ES2022 (tsconfig lib is ES2020); declare the polyfilled shape
 // locally instead of widening the whole lib. DECLARED NON-OPTIONAL ON PURPOSE:
@@ -56,6 +59,42 @@ if (typeof Array.prototype.at !== 'function') {
       if (k < 0) k += length;
       if (k < 0 || k >= length) return undefined;
       return this[k];
+    },
+    writable: true,
+    configurable: true
+  });
+}
+
+if (
+  typeof globalThis.crypto !== 'undefined' &&
+  typeof globalThis.crypto.randomUUID !== 'function' &&
+  typeof globalThis.crypto.getRandomValues === 'function'
+) {
+  // crypto.randomUUID (Chromium 92) — RT-106. The vendored ui Menu component
+  // calls it UNGUARDED inside setup(); on the admitted 85–91 population the
+  // TypeError unmounts every Menu subtree. Call sites are vendored minified
+  // JS (same constraint as `.at` above), so the cure installs the canonical
+  // RFC 4122 v4 shape over crypto.getRandomValues (a Chrome 1-era API, safe
+  // to claim at the floor). The getRandomValues precondition is the honesty
+  // clause: with no entropy source present the shim stays inert and the
+  // vendored GUARDED sites keep their own fallbacks. Non-enumerable install
+  // via defineProperty mirrors the native descriptor; writable/configurable
+  // so a newer engine's own member wins.
+  Object.defineProperty(globalThis.crypto, 'randomUUID', {
+    value: function randomUUID(): string {
+      const bytes = new Uint8Array(16);
+      globalThis.crypto.getRandomValues(bytes);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+      bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10xx
+      let hex = '';
+      for (let i = 0; i < 16; i++) hex += (bytes[i] + 0x100).toString(16).slice(1);
+      return (
+        hex.slice(0, 8) +
+        '-' + hex.slice(8, 12) +
+        '-' + hex.slice(12, 16) +
+        '-' + hex.slice(16, 20) +
+        '-' + hex.slice(20, 32)
+      );
     },
     writable: true,
     configurable: true

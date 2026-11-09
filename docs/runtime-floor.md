@@ -39,6 +39,7 @@ engines the dist provably does not use.
 | API | Engine | Sites | Treatment |
 |---|---|---|---|
 | `Array.prototype.at` | Chrome 92 | **3 live calls** — all `.at(-1)` in the vendored ui `PosterPicker` chunk | **Polyfilled** in `src/polyfills.ts` (guard + `defineProperty`, non-enumerable). The call sites are vendored minified JS; the client-side polyfill point is the only place they can be cured — same precedent that installed the first one caught this class by hand. |
+| `crypto.randomUUID` | Chrome 92 | **6 tokens** in dist (measured 2026-11-09 at cc8a40f8, RT-106): entry 5 = **1 UNGUARDED live call** (vendored ui `Menu.vue` setup — `const baseId = crypto.randomUUID()`, still unguarded upstream at #v0.99.25) + web-/tizen-deviceId guarded ternaries; hls chunk 1 = try/catch-guarded with a Blob-URL fallback | **Polyfilled** in `src/polyfills.ts` — RT-106. On the admitted 85–91 population the unguarded Menu TypeError unmounts every Menu subtree (player quality/captions/speed, UserMenu, MediaCard context menus, Libraries), so the `.at` precedent applies: vendored call sites cannot be edited client-side, the shim (RFC 4122 v4 over `crypto.getRandomValues`, which Chrome has had since v1) installs at the sanctioned point. Census pinned per chunk (entry 7 post-shim = 5 vendored + 2 install tokens; hls 1) plus the exact unguarded-Menu discriminator `/crypto\.randomUUID\(\),/` count=1 — if upstream ever guards that call, the pin reddens for retirement. |
 | `structuredClone` | Chrome 98 | 2 tokens — **both are the install guard itself** in the entry chunk; zero raw call sites | Polyfilled in `src/polyfills.ts`. |
 | `toSorted` / `toReversed` / `toSpliced` | Chrome 110 | 2 tokens each, all in the entry chunk: one Vue 3.5 reactive-array patcher **def** + its internal native call on the `Fa(this)` (toRaw-clone) receiver | **Inert** — zero external callers (`\.NAME\(` outside the def body = 0). Pinned def-shape + per-file location by the tripwire; a future live caller reddens the census. |
 | `findLast` / `findLastIndex` | Chrome 97 | 4 / 2 tokens — Vue patcher defs (string-delegating, no dotted native call form) | **Inert** — pinned identically. |
@@ -70,8 +71,9 @@ is added this wave; re-measured again 2026-11-09 at the `@phlix/ui`
 #v0.99.25 re-vendor — the vendored `.album-card__link` overlay (anchor-music-
 nav cure ui `c7f96bc7`) adds one `inset:` site (42→43, attributed by a
 scoped-hash-stripped selector-set diff; every other pinned figure held), and
-the unpinned `color-mix()` census jumped 1→49 — see the note under the
-table:
+the `color-mix()` census that the same re-vendor jumped 1→49 is PINNED here
+for the first time (RT-107, adjudicated 2026-11-09) — see its row and note
+below the table:
 
 | Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
 |---|---|---|---|
@@ -81,20 +83,24 @@ table:
 | `accent-color` | Chrome **93** | 7 | Form controls keep UA default colors — cosmetic only. |
 | `:has()` | Chrome **105** | 1 | The one rule (`.register-form__segment:has(input:checked)`, a segmented-control highlight) drops — the state stays unstyled. Upstream cosmetic half (ui repo), pinned here so its arrival/movement is visible. |
 | `100dvh` | Chrome **108** | 7 | All vendored `@phlix/ui`. 5 GUARDED: the two theater-mode heights ride `@supports not (height:100dvh){…100vh}` fallbacks (token appears in each guarded rule + each `@supports` condition = 3+2) → they degrade to `100vh` on ≤ 107, no clamp loss. 2 UNGUARDED: `.phlix-menu__list` / `.usermenu__panel` `max-height:calc(100dvh …)` have no vh fallback → on ≤ 107 the clamp drops and long menus overflow (cosmetic, no crash). Cure is an upstream `@phlix/ui` double-declare (out of this repo's pin scope); pinned count=7 so any reshaping vendored menu/theater CSS shows up here. |
+| `color-mix()` | Chrome **111** | 49 (14 probes + 35 sites) | Adjudicated RT-107 (was the Info "unpinned" note under this table). Machine-checked classification: all 35 declaration sites ride a plain-color twin of the SAME selector inside an `@supports not (color:color-mix(in srgb,red,blue))` guard body — zero same-rule double-declares, ZERO unguarded sites. On ≤ 110 the whole population renders the guard-body colors: tint/gradient loss (cosmetic), no rule loss — color-mix is a VALUE, its drop granularity is the single declaration. Pinned by the census + guard-completeness asserts in the tripwire; an unguarded arrival upstream reddens the suite instead of silently degrading the field. |
 
-**`color-mix()` note (2026-11-09, #v0.99.25 re-vendor — Info, unpinned).**
+**`color-mix()` note (RT-107, adjudicated 2026-11-09 — history kept verbatim).**
 The stylesheet's `color-mix()` sites jumped 1→49 with the ui .23-era
-"color-mix CSS floor fallbacks" cure (ui `c7f96bc7`). The feature is Chrome
-111, but its drop granularity is per-DECLARATION (a same-property fallback
-declared earlier in the rule survives; whole-rule loss only comes from
-unsupported SELECTORS), and the vendored CSS guards in two forms: double
-declarations and explicit `@supports not (color:color-mix(in srgb,red,blue))`
-blocks. A same-rule scan finds 38 sites without a preceding fallback
-declaration — several of those ride `@supports` or token-level guards rather
-than double declaration. A full per-site classification is a dedicated
-adjudication owed whenever this file next has business (candidate: pin a
-`color-mix` census like the four above); expected degradation on ≤ 111 where
-unguarded is gradient/tint loss (cosmetic), not geometry shift.
+"color-mix CSS floor fallbacks" cure (ui `c7f96bc7`, riding #v0.99.25). The
+provisional same-rule scan from the re-vendor wave found "38 sites without a
+preceding fallback declaration" and left the census unpinned — RT-107
+(review `tizen__crossfe.md` M2) convicted exactly that gap: the floor doc
+claimed completeness while the newest, highest-engine feature carried no pin.
+Adjudication (measured 2026-11-09 at cc8a40f8, single stylesheet, hash-
+agnostic): the 49 `color-mix(` tokens split into 14 `@supports` PROBE
+conditions and 35 declaration sites, and a machine walk of every guard body
+shows all 35 sites have same-selector plain-color twins — the provisional
+"38 without a preceding fallback" figure counted only the same-RULE
+double-declaration form and missed the @supports-block form; it is superseded
+by the classification above. The census is now pinned (counts + guard
+completeness) in `tests/unit/distApiFloor.test.ts` under the same rotation
+law as every other figure.
 
 The load-bearing cure is the vendored 10-foot fallback carried in the same
 stylesheet:

@@ -34,6 +34,53 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — player/library menus survive pre-Chrome-92 webviews; CSS floor census pinned complete — 2026-11-09
+
+- **What viewers see:** on older Samsung webviews (the admitted Chromium 85–91
+  population) the player's quality/captions/speed menus, the user menu, the
+  card context menus and the Libraries menus can now open — previously the
+  vendored ui Menu component's unguarded `crypto.randomUUID()` call (Chrome
+  92) threw during setup and unmounted every Menu subtree in silence
+  (RT-106, review `tizen__crossfe.md` M1). No visual change on ≥ 92 engines.
+- **Mechanism (RT-106):** `src/polyfills.ts` gains the sanctioned install —
+  an RFC 4122 v4 shim over `crypto.getRandomValues`, guarded on the native
+  member being absent AND the entropy source present, following the
+  `Array.prototype.at` precedent for vendored call sites the client cannot
+  edit. `tests/unit/distApiFloor.test.ts` pins the minified install shape at
+  the entry chunk, the per-chunk token census (entry 7 = 5 vendored + 2
+  install; hls 1) and the unguarded-Menu call discriminator (count 1 — it
+  reddens when upstream guards the call, retiring the pin by design);
+  `tests/unit/polyfills.test.ts` adds the behavioral family (v4 shape,
+  200-draw uniqueness, native-not-overwritten, inert without
+  `getRandomValues`). Red-on-parent proof at `cc8a40f8`: six convictions
+  before the cure, green after. Upstream guard still owed at ui `Menu.vue:62`
+  (recorded in docs, out of this repo's edit scope).
+- **Mechanism (RT-107, review M2):** the `color-mix()` (Chrome 111) census —
+  49 tokens = 14 `@supports` probes + 35 declaration sites — is now pinned in
+  the tripwire with a machine-checked guard walk: every declaration site has
+  a plain-color twin inside its guard block, zero double-declares, zero
+  unguarded sites (the two ambient/backdrop scrim gradients contribute two
+  tokens each; buckets count tokens so the sub-counts partition exactly).
+  `docs/runtime-floor.md` gains both rows (randomUUID / color-mix), the
+  superseded provisional "38 without a preceding fallback" scan is replaced
+  by the adjudicated classification with its history kept, and the test
+  asserts the census row's presence — the doc-completeness claim RT-107
+  exists to restore.
+- **Bundle:** `package/` rebuilt deterministically (×2, aggregate md5
+  `fa4b86b150831c142a8610b9147588d7`). The entry chunk carries the shim
+  (`index-D1c6SPMk.js` → `index-CEKJyz_J.js`); every lazy chunk's
+  content-hash suffix rotated through the import-reference cascade (the
+  82–99%-similar renames — bodies otherwise unchanged, only embedded import
+  paths); the stylesheet is byte-identical (`index-BVpuTFMB.css`). Battery
+  65 files / 1204 tests (+7 exactly over the `cc8a40f8` baseline, all new,
+  no pins rotated gratuitously).
+- **LW-087 disclosure:** the row's re-pin legs (ui #v0.99.25, contracts
+  #v0.5.7) already landed at this parent via the `.25` re-vendor commit —
+  absorbed, not re-cut. syncplay holds #v0.1.7: the #v0.1.8 leg stays
+  owner-gated pending the RE-BASELINE wave (evidence: the mobile law-passer
+  review in `.reviews/2026-11-09/REVIEW-w23L2mobile.md`); locale/vendor PINs
+  ride `cc8a40f8` unchanged (0 new i18n keys this lane).
+
 ### Changed — `@phlix/ui` #v0.99.25 re-vendor; Parental stream-limits finally live — 2026-11-09
 
 - **What viewers see:** the Parental Controls → Stream Limits section works
