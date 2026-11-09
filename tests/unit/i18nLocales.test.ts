@@ -10,7 +10,7 @@
  *     (incl. the documented additive exception), diacritics/CJK sanity, and
  *     PIN/hash drift guards against the vendored files (CI-skipped source
  *     leg, see below).
- *  B. TIZEN-OWN: 194-key identity per locale, placeholder parity, the
+ *  B. TIZEN-OWN: 186-key identity per locale, placeholder parity, the
  *     additive-pipe plural doctrine (latin 2-seg on exactly 12 keys), JA zero
  *     pipes + counter phrases, per-locale English-LEAK allow-lists verified
  *     BOTH directions, diacritics aggregates.
@@ -589,7 +589,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     expect(nonCjk).toEqual([...EN_LEAK_OK.ja].sort());
   });
 
-  it('the 194-key type law: every locale compiles against TizenCatalog (satisfies)', () => {
+  it('the 186-key type law: every locale compiles against TizenCatalog (satisfies)', () => {
     // Compile-time guarantee, re-asserted at runtime via key-set identity;
     // this it() documents that the `satisfies TizenCatalog` annotations in
     // src/i18n/tizen/locales/*.ts are the FIRST line of that defense.

@@ -11,6 +11,22 @@ re-derived.
 
 > **S424 doc-honesty sweep (2026-09-04).** Every tizen-repo line-cite and count below was re-derived at tip `f5b9fff9` on 2026-09-04 and restated to the measured value; suite re-run measured **312 tests / 20 files** (was "74 PASS" in the Gates rows). Citations pointing **inside `@phlix/ui` source** (`usePlayerStore.ts`, `hls-playback.ts`, `playback.ts`, `MediaGrid.vue`, `Player.vue`, `PlayerPage.vue`, `client.ts`, `recommendations.ts`, `ApiClient.d.ts`) were measured 2026-07-31 against the then-installed `@phlix/ui` v0.98.33 SOURCE tree and are **HISTORICAL**: `@phlix/ui` v0.99.0 ships only `dist/`, so those line numbers are not re-derivable here and may have drifted. Vendored-copy claims that ARE re-derivable from `dist/` (token occurrence counts, admin-module count, bundle filenames) were re-measured and restated. Ritual survival token (S424 census): s424-doc-honesty-census-2026-09-04
 
+<!-- rt100-doc-honesty-currency-2026-11-09 -->
+
+> **RT-100 overlay-deletion currency (2026-11-09, tip `452ae44`).** Commit
+> `452ae44` (w13L4/w15L10 wave, RT-100/RT-101) DELETED `src/components/ChapterOverlay.vue`,
+> `src/components/SkipIntroOverlay.vue`, `src/components/PiPController.vue` and
+> `src/playerProgressTicker.ts` with their three suites. Every statement below that
+> calls those files (or their `ChapterOverlay:NN` / `SkipIntroOverlay:NN` line-cites,
+> "re-verified at tip" claims, hardcoded-string inventory sections, or the
+> nine-apps/seven-hosts mount enumeration) still LIVE is **HISTORICAL as of this
+> date** — the file bodies are preserved verbatim per estate history-verbatim law.
+> Steps carrying such now-historical prose: 2.3.2, 2.3.3, 2.3.7, 3.x rationale
+> blocks, 9.1/9.2 (see their own dated notes), 13.4/13.6/13.7 + the string
+> inventories beneath them, 15.1 (see its dated note) and 15.3. The vendored
+> player's own marker timeline, skip controls and PiP button are the live
+> surfaces (operability re-proven against ui `#v0.99.22` in the RT-100 landing).
+
 # Category 4 - Missing/Unused Stores
 
 ## Step 4.1 - useMediaStore
@@ -762,6 +778,7 @@ All 23 admin feature steps are **NOT TV-APPLICABLE**. Admin features (user manag
 **Finding**: ChapterOverlay.vue:297-316, SkipIntroOverlay.vue:127-141, and UpNextOverlay.vue:169-183 all use setInterval at 250ms to poll player position from playerStore (line refs re-derived at tip 2026-09-04). This is explicitly documented in each component's header as "tech debt but necessary for the TV webview context." The cat_9.md notes Tizen WebView may have unreliable timeupdate event firing - the polling approach is a deliberate TV-specific workaround. The alternative requestVideoFrameCallback is not used. Core player store updateProgress() is called via Player.vue's onTimeUpdate in @phlix/ui - the issue is that overlays poll separately rather than using reactive subscriptions.
 
 **Currency (2026-11-07)**: Of the polling trio above, `UpNextOverlay.vue` was deleted at S501 (see Step 3.2's Currency note); `ChapterOverlay.vue` and `SkipIntroOverlay.vue` remain live and still poll.
+**Currency (2026-11-09)**: SUPERSEDED by RT-100 (commit `452ae44`): `ChapterOverlay.vue` and `SkipIntroOverlay.vue` are now DELETED with their suites — the vendored player's own marker timeline/skip controls replaced the host twins. Of the polling trio, ZERO remain live; no host-side 250 ms position pollers exist in `src/` anymore.
 **Code Changes**: None (documented TV-specific tech debt)
 
 ## Step 9.2 - Missing Resume System (HIGH)
@@ -1258,6 +1275,7 @@ Hardcoding `nocturne` for a TV client is a **reasonable UX decision** — TV app
 **Rationale**: main.ts:193-229 mounts 7 separate Vue apps (main :193 + SpatialNavHost :208 + five overlays :213-229; refs re-derived at tip — audit-date block was 119-149) sharing pinia/router via `globalProperties`. This architecture enables independent overlay lifecycle management with shared state. The overlays (ChapterOverlay, SleepTimerOverlay, SkipIntroOverlay, PiPController, UpNextOverlay, SpatialNavHost) are intentionally separate apps for TV-specific z-index layering and visibility control. Consolidation via Vue Teleport would require significant refactoring with no user-facing benefit on TV hardware.
 
 **Currency (2026-11-07, mount list re-derived at tip 75ae590b)**: `main.ts` mounts NINE separate Vue apps today: main `#phlix-app`, `SpatialNavHost`, then seven overlay/panel hosts — `ChapterOverlay`, `SkipIntroOverlay`, `PiPController`, `ActionToastOverlay` (S516), `QuickConnectPanel` (S520), `TelemetryConsent` (S521), `ScreenSaverOverlay` (S523). The UpNext/SleepTimer apps above were deleted at S501; the architecture (independent root apps sharing pinia/router via globals) is unchanged.
+**Currency (2026-11-09, mount list re-derived at tip 452ae44)**: `main.ts` mounts FIVE separate Vue apps now: main `#phlix-app` (:607), `SpatialNavHost` (:629), then four overlay/panel hosts — `ActionToastOverlay` (:646), `QuickConnectPanel` (:655), `TelemetryConsent` (:663), `ScreenSaverOverlay` (:675). The `ChapterOverlay`, `SkipIntroOverlay` and `PiPController` apps above were deleted at RT-100 (this commit); the architecture (independent root apps sharing pinia/router via globals) is unchanged.
 **Code Changes**: None (architectural decision - no code needed)
 
 ## Step 15.2 - DOM-based Quality Control (MEDIUM)

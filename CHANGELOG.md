@@ -34,6 +34,39 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — the i18n census prose and audit trails read the true 186 / 15 (w15-L10 round 2) — 2026-11-09
+
+- **What viewers see:** the docs finally match the shipped catalog. The RT-100
+  purge deleted the whole `skip` and `pictureInPicture` groups (13 keys with the
+  marker trio + `adBadge`; net −8 over the five keys this wave added), moving
+  the tizen-own English base from 194 keys / 17 groups to **186 / 15**. The
+  landing rotated the machine pins but orphaned five PROSE census sites, which
+  this commit rotates from measured truth: three in `docs/i18n.md` (locale
+  matrix row, `src/i18n/` tree line, tizen-own Files section) and two in
+  `tests/unit/i18nLocales.test.ts` (the header law-list and the type-law test
+  title). Key count proven by a measured-red probe (flipping the `toBe` pin
+  reddens with `expected 186 to be 194`; probe reverted), group count by
+  `grep -c '^const '` on `en.ts`. Suite totals are unchanged by this commit
+  (test titles renamed are names, not cases).
+- **Ledger correction (forward per the verbatim-history law):** two
+  cross-references in the entries above stand corrected here; they stay
+  verbatim as the record. (1) The Removed entry's closing parenthetical calls
+  RT-101 "w15-L10's anchor item 'checkbox outside the focus law'" — wrong on
+  both axes: RT-101 is the duplicate chapter tick-rail card (w13L4, gameux#2),
+  and the checkbox item is **RT-103**, the actual w15L10 anchor (its own entry
+  lands below). The deletion narrative itself remains true; only the numbering
+  was garbled. (2) The RT-102 entry says the breathing skeleton covers "six
+  loading branches" — disk shows **seven** skeleton sites across five files
+  (RecommendationsScreen, SubtitleTracksPage, AudioTracksPage, ChaptersPage,
+  ParentalControlsPage ×3), matching `tvMotion.test.ts`'s own enumeration,
+  which the entry's text contradicts.
+- **Audit trail:** `VERIFICATION.md`, missed by the w13/w15 docs sweep, gets the
+  S501 precedent: a dated census note at the head declares every still-live /
+  re-verified-at-tip prose about the four RT-100-deleted files historical, and
+  Steps 9.1 and 15.1 each gain a 2026-11-09 counter-note to their falsified
+  2026-11-07 currency claims (disk truth: five mounted apps, four overlay/panel
+  hosts — `main.ts:607/:629/:646/:655/:663/:675`).
+
 ### Fixed — track-preference saves coalesce instead of storming the wire (RT-085) — 2026-11-09
 
 - **What users see:** fast track picks (a held or rapid sequence on the audio
