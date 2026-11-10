@@ -149,6 +149,15 @@ its own context from `localStorage['phlix.hubUrl']`, `['phlix.hubServerId']` and
 and `VITE_PHLIX_HUB_SERVER_ID` (all env vars are declared in `vite-env.d.ts`).
 Without a hub context nothing opens.
 
+**Token custody is device-class by design, not a deferral** (estate cookie-auth
+design, COOKIE-DESIGN §2.1/§4.6, owner ruling D6c, 2026-11-05). This widget runs
+cross-origin to the server it talks to, so a SameSite=Lax session cookie is never
+sent to it — the bearer token that `@phlix/ui`'s `LocalStorageTokenStore` keeps in
+`localStorage` and rides on the `Authorization` header is the permanent custody
+shape, and `phlix.hubAccessToken` above follows the same law. These rows never
+migrate to cookie custody; the estate's browser-session cookie path is for
+same-origin browser clients, a different device class.
+
 **Operator endpoint overrides (M-TIZEN-07, W-min171).** A deployment whose
 SyncPlay endpoints do not answer the baked defaults can set three runtime rows
 in `localStorage` (read live at each dial — no rebuild, mirrors the hub's

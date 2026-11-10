@@ -34,6 +34,20 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — docs (CP-023 [w35/L2]): device-class token-custody truth line added — the localStorage bearer is declared by design, not a migration target, per the estate cookie-auth design — 2026-11-10
+
+- **Why:** the estate cookie-auth design (`COOKIE-DESIGN.md`) settled the permanent split —
+  same-origin browser clients ride session cookies, device-class clients (this widget among
+  them) ride bearer custody forever. Its §4.6 assigned this repo final landing debt: the docs
+  stated the facts (which `localStorage` rows hold what) but never stated that the custody
+  shape is by design — leaving room to read the stored bearer as a stopgap awaiting cookie
+  custody. It is not: a cross-origin TV web app is never a cookie-credentialed party, because
+  a SameSite=Lax cookie is never sent to it.
+- **What:** a "Token custody" paragraph in README.md and a docblock over the composition-root
+  `ApiClient` construction in `src/main.ts`, both naming the law (COOKIE-DESIGN §2.1/§4.6,
+  owner ruling D6c, 2026-11-05). No behavior changed; the `phlix.hubAccessToken` row and every
+  existing custody law (M-TIZEN-06/12/23) are untouched.
+
 ### Changed — pinia ^4.1.0 manual bump (RT-087): one dep call above the floor shipped, answered with an entry-local polyfill and rotated census pins; package/ regenerated — 2026-11-10
 
 - **What viewers see:** nothing new on screen — this is a dependency

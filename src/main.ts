@@ -409,6 +409,15 @@ function wireHubRelayConsumer(
     },
   });
 
+  /**
+   * Device-class custody law (estate cookie-auth design, COOKIE-DESIGN
+   * §2.1/§4.6, owner ruling D6c, 2026-11-05): `LocalStorageTokenStore` bearer
+   * custody here is BY DESIGN, not a stopgap — a cross-origin TV web app is
+   * never a cookie-credentialed party (SameSite=Lax is never sent to it), so
+   * the stored bearer plus the `Authorization` header is the permanent carrier
+   * for every device-class client, `phlix.hubAccessToken` included. README
+   * "Token custody" states the same law for docs readers.
+   */
   const client = new ApiClient({
     baseUrl: apiBase,
     tokenStore: new LocalStorageTokenStore(),
