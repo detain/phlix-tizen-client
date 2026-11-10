@@ -391,4 +391,82 @@ describe('polyfills', () => {
       ).not.toBe('function');
     });
   });
+
+  // RT-087 (owner ruling (a), 2026-11-10, pinia ^4.1.0 manual bump): pinia 4's
+  // shipped dist calls Object.hasOwn (Chrome 93) at three live sites the
+  // client cannot edit. Same vendored-call-site constraint as `.at` and
+  // randomUUID, so the cure installs at src/polyfills.ts. RED-ON-PARENT for
+  // this lane: without the install block, hiding the native leaves the member
+  // undefined after re-import (the absent-shim assert below convicts it).
+  describe('src/polyfills.ts Object.hasOwn fallback (RT-087)', () => {
+    const nativeBefore = Object.getOwnPropertyDescriptor(Object, 'hasOwn');
+    if (!nativeBefore) throw new Error('runtime lacks native Object.hasOwn — test premise');
+
+    afterEach(() => {
+      if (nativeBefore) {
+        Object.defineProperty(Object, 'hasOwn', nativeBefore);
+      } else {
+        delete (Object as unknown as Record<string, unknown>).hasOwn;
+      }
+      vi.resetModules();
+    });
+
+    async function importWithAbsentHasOwn(): Promise<void> {
+      vi.resetModules();
+      Object.defineProperty(Object, 'hasOwn', {
+        value: undefined,
+        configurable: true,
+        writable: true,
+      });
+      await import('@/polyfills');
+    }
+
+    it('installs the own-property shim when native Object.hasOwn is absent (RED-ON-PARENT)', async () => {
+      await importWithAbsentHasOwn();
+      expect(typeof Object.hasOwn).toBe('function');
+    });
+
+    it('answers the OWN-property question with native-equivalent semantics', async () => {
+      await importWithAbsentHasOwn();
+      const own = { direct: 1, [Symbol.for('phlix.sym')]: 2 };
+      const proto = Object.create({ inherited: 3 });
+      (proto as Record<string, number>).own4 = 4;
+      expect(Object.hasOwn(own, 'direct')).toBe(true);
+      expect(Object.hasOwn(own, Symbol.for('phlix.sym'))).toBe(true);
+      expect(Object.hasOwn(proto, 'inherited')).toBe(false);
+      expect(Object.hasOwn(proto, 'own4')).toBe(true);
+      expect(Object.hasOwn(['a', 'b'], '1')).toBe(true);
+      expect(Object.hasOwn(['a', 'b'], 'length')).toBe(true); // array length is an OWN (non-enumerable) slot
+      // The spec signature restricts target to object; at runtime ToObject boxes
+      // primitives identically for native and shim, so the coercion legs run widened.
+      const coerced = Object.hasOwn as (target: unknown, key: PropertyKey) => boolean;
+      expect(coerced('phlix', 'length')).toBe(true); // ToObject boxes: primitive-exotic own
+      expect(coerced(3, 'toFixed')).toBe(false);
+      expect(() => Object.hasOwn(null as unknown as object, 'x')).toThrow(TypeError);
+      expect(() => Object.hasOwn(undefined as unknown as object, 'x')).toThrow(TypeError);
+    });
+
+    it('does not overwrite an already-present native hasOwn', async () => {
+      vi.resetModules();
+      const sentinel = function sentinelHasOwn(): boolean {
+        return true;
+      };
+      Object.defineProperty(Object, 'hasOwn', {
+        value: sentinel,
+        configurable: true,
+        writable: true,
+      });
+      await import('@/polyfills');
+      expect(Object.hasOwn as unknown as typeof sentinel).toBe(sentinel);
+    });
+
+    it('installs non-enumerable, writable, configurable (native descriptor shape)', async () => {
+      await importWithAbsentHasOwn();
+      const d = Object.getOwnPropertyDescriptor(Object, 'hasOwn');
+      expect(d).toBeDefined();
+      expect(d!.enumerable).toBe(false);
+      expect(d!.writable).toBe(true);
+      expect(d!.configurable).toBe(true);
+    });
+  });
 });

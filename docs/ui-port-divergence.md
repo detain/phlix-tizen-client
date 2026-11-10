@@ -43,7 +43,7 @@ carrier bytes):
 
 - **SyncPlay socket hint seam (`wsUrl` / `wsPath`).** The ui gained a
   `socketHint` seam so hosts can point the player's SyncPlay dial at
-  a custom URL/path; it SHIPS at the pinned v0.99.25 (re-grepped at the 2026-11-06 v0.99.21 wave → `SyncPlayModal-*.js` + `index-*.js` chunks; at the 2026-11-09 v0.99.25 re-pin the dist graph names it `socketHint-*.js` + `SyncPlayModal-*.js` + the `phlix-ui.js`/`player.js` entries; keys still typed in the bundle's `app/types.d.ts` (`wsUrl?`/`wsPath?`); re-attested at the 2026-11-10 v0.99.26 re-pin — dist names UNCHANGED (`socketHint-C0yqQROO.js` + `SyncPlayModal-hRQmGRs_.js` + both entries present), `wsUrl?`/`wsPath?` still typed in `app/types.d.ts`, and `wsUrl` re-greps 1 site in the widget entry `index-BD26Z3-N.js`. The host-side seam (M-TIZEN-07,
+  a custom URL/path; it SHIPS at the pinned v0.99.25 (re-grepped at the 2026-11-06 v0.99.21 wave → `SyncPlayModal-*.js` + `index-*.js` chunks; at the 2026-11-09 v0.99.25 re-pin the dist graph names it `socketHint-*.js` + `SyncPlayModal-*.js` + the `phlix-ui.js`/`player.js` entries; keys still typed in the bundle's `app/types.d.ts` (`wsUrl?`/`wsPath?`); re-attested at the 2026-11-10 v0.99.26 re-pin — dist names UNCHANGED (`socketHint-C0yqQROO.js` + `SyncPlayModal-hRQmGRs_.js` + both entries present), `wsUrl?`/`wsPath?` still typed in `app/types.d.ts`, and `wsUrl` re-greps 1 site in the widget entry `index-BD26Z3-N.js`; re-attested at the 2026-11-10 RT-087 pinia-4 rebuild — the widget entry re-hashes to `index-DgueOqPh.js` (pinia-4 dist relink + the RT-087 `Object.hasOwn` polyfill install; the three `@phlix/*` pins stay byte-identical, so no ui-graph mover rode this wave), `wsUrl` still exactly 1 widget site there (13 tokens, era-stable; the `.d.ts`/`.map` recursive count unchanged) + 2 tokens in `SyncPlayModal-hRQmGRs_*.js`. The host-side seam (M-TIZEN-07,
   W-min171)
   `src/endpointOverrides.ts` — validating `phlix.syncplayPort` /
   `phlix.relayPort` / `phlix.relayPath` storage rows at every dial —
@@ -70,7 +70,8 @@ carrier bytes):
   `(shared — read-only)` picker literal — at v0.99.25 the dist graph emits a
   STANDALONE `MediaCard-*.js` chunk carrying it again, while this widget build
   still folds the literal into the committed `index-*.js` chunk
-  (package/assets grep → `index-BD26Z3-N.js`; no standalone `MediaCard-*.js`
+  (package/assets grep → `index-BD26Z3-N.js`, re-grepped 1 site in the RT-087
+  era's `index-DgueOqPh.js`; no standalone `MediaCard-*.js`
   in the widget graph — the .26 re-pin re-greps the literal in exactly one dist
   `MediaCard-*.js` and exactly one widget chunk, gate proven live).
   Row kept as the closed bookend; delete
@@ -147,7 +148,11 @@ carrier bytes):
   `var Ni="access_token"` in the committed `index-*.js` chunk (the .25-era `Pi`
   name rotated with the minifier), and the .26 dist graph carries
   `var k = "access_token"` (`client-*.js`) plus `var vt = "access_token"`
-  (`player.js`);
+  (`player.js`); re-verified again at the 2026-11-10 RT-087 pinia-4 rebuild:
+  the widget bytes hoist `var Ri="access_token"` in the committed `index-*.js`
+  chunk (the .26-era `Ni` name rotated with the minifier on the pinia-4 relink;
+  the `@phlix/*` trees stayed byte-identical this wave, so the `client-*.js`
+  `var k` / `player.js` `var vt` aliases hold unrotated);
   the hoist NAME is minifier churn, grep the LITERAL, not a
   `setItem('access_token` spelling, which minification never emits).
 

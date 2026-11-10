@@ -39,6 +39,17 @@
  * polyfilled live-site class after `.at` and structuredClone), and the
  * color-mix() (Chrome 111) CSS census + guard-completeness classifier, whose
  * row restores the floor doc's "complete measured census" claim.
+ *
+ * RT-087 (pinia ^3.0.0 -> ^4.1.0 manual bump, 2026-11-10, owner ruling (a))
+ * is the first DEP arrival this tripwire was built for: pinia 4 rewrote its
+ * own-property checks from `Object.prototype.hasOwnProperty.call` to
+ * `Object.hasOwn(...)` — a Chrome 93 API, above the 85 floor — landing THREE
+ * live call sites inside the entry chunk's vendored pinia dist. The absent-
+ * by-accident pin (`Object.hasOwn` count 0, previously a one-liner inside the
+ * Error-cause test) reddened exactly as header item 3 prescribes; the cure is
+ * the sanctioned one (polyfill at src/polyfills.ts) and the pin rotates here,
+ * now living in its own named test with the install-shape asserts. Measured
+ * 2026-11-10 at the rebuilt package/ (entry index-DgueOqPh.js).
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -221,7 +232,52 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       for (const f of assetFiles()) total += countOccurrences(readAsset(f), '{cause:');
       expect(total).toBe(1);
       expect(countOccurrences(readAsset(assetFiles().find((f) => f.startsWith('hls-'))!), '{cause:')).toBe(1);
-      expect(countMatchesAcrossAssets(/Object\.hasOwn\(/g)).toBe(0);
+      // RT-087 (2026-11-10): the `Object.hasOwn` absent-pin that rode in this
+      // test (Chrome-93 neighbour, both were "absent by accident") rotated to
+      // its own named test below when pinia 4 made it a three-site LIVE class.
+    });
+
+    /* ------------------------------------------------------------------
+     * RT-087 (owner ruling (a), 2026-11-10, pinia ^4.1.0 manual bump) —
+     * `Object.hasOwn` is Chrome 93, above the 85 floor. pinia 4's shipped
+     * dist calls it at THREE live sites — two in the reactive-object state
+     * merge (`mergeReactiveObjects`: own-key loop + own-key guard on the
+     * recursion), one in the store-symbol membership check — all inside the
+     * entry chunk, all dependency-minified code the client cannot edit.
+     * RED-ON-PARENT for this lane: the pre-bump bundle measured 0 (the old
+     * absent pin), post-bump pre-polyfill measured 3 with no install guard,
+     * and the entry-shape asserts below are red on any tree that lost the
+     * src/polyfills.ts install. Cure = the sanctioned point, third precedent
+     * repeated; census law identical to randomUUID's (header item 3): a
+     * count move means pinia's dist reshaped → re-adjudicate.
+     * ---------------------------------------------------------------- */
+    it('polyfills Object.hasOwn (Chrome 93) at the entry chunk (RT-087)', () => {
+      const entry = readAsset(entryChunkName());
+      // Minified install shape from src/polyfills.ts (same fold class as the
+      // `.at`/structuredClone guards: a `!=` string compare survives). The
+      // guard must stay CALL-FREE (`typeof Object.hasOwn!=`, not `hasOwn(`)
+      // so the dep call-census below stays a pure pinia measure.
+      expect(entry).toContain('typeof Object.hasOwn!="function"');
+      expect(entry).toContain('Object.defineProperty(Object,"hasOwn"');
+      // esbuild strips the inner function name (same as the `at`/randomUUID
+      // installs): the shim body reaches for the ES1 hasOwnProperty directly.
+      expect(entry).not.toContain('function hasOwn');
+      expect(entry).toContain('hasOwnProperty.call');
+    });
+
+    it('keeps the Object.hasOwn census pinned: 3 dep call sites, all entry-local (RT-087)', () => {
+      // Measured 2026-11-10 at the RT-087 rebuild. ENTRY 4 bare `Object.hasOwn`
+      // tokens = 3 live calls + 1 typeof guard; zero `Object.hasOwn(` calls
+      // anywhere outside the entry (the guard is a call-free read). A count
+      // move = pinia's dist reshaped or a new above-floor arrival → re-
+      // adjudicate (header item 3), never silently re-number.
+      expect(countMatchesAcrossAssets(/Object\.hasOwn\(/g)).toBe(3);
+      const entry = readAsset(entryChunkName());
+      expect(countOccurrences(entry, 'Object.hasOwn')).toBe(4);
+      for (const f of assetFiles()) {
+        if (f === entryChunkName()) continue;
+        expect(countOccurrences(readAsset(f), 'Object.hasOwn')).toBe(0);
+      }
     });
 
     it('polyfills Array.prototype.at (Chrome 92) at the entry chunk', () => {

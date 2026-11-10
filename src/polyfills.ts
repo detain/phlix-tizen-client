@@ -20,7 +20,11 @@
 // cannot be edited client-side), crypto.randomUUID (Chrome 92 — RT-106: the
 // vendored ui Menu component calls it UNGUARDED in setup(), and on the
 // admitted 85–91 population the TypeError unmounts every Menu subtree; same
-// vendored-call-site constraint as `.at`, same cure shape: install here).
+// vendored-call-site constraint as `.at`, same cure shape: install here),
+// Object.hasOwn (Chrome 93 — RT-087: the pinia ^4.1.0 bump replaced pinia 3's
+// `Object.prototype.hasOwnProperty.call` uses with `Object.hasOwn(...)` at
+// three live sites in its patch/merge paths; dep-minified call sites, same
+// constraint, same cure shape).
 
 // `at` is ES2022 (tsconfig lib is ES2020); declare the polyfilled shape
 // locally instead of widening the whole lib. DECLARED NON-OPTIONAL ON PURPOSE:
@@ -32,6 +36,12 @@
 declare global {
   interface Array<T> {
     at(index: number): T | undefined;
+  }
+  // Same law as `at` above: ES2022 member declared against the ES2020 lib,
+  // NON-OPTIONAL because this module IS the existence guarantee. A future
+  // lib bump merges the identical native signature.
+  interface ObjectConstructor {
+    hasOwn(target: object, propertyKey: PropertyKey): boolean;
   }
 }
 
@@ -95,6 +105,31 @@ if (
         '-' + hex.slice(16, 20) +
         '-' + hex.slice(20, 32)
       );
+    },
+    writable: true,
+    configurable: true
+  });
+}
+
+if (typeof Object.hasOwn !== 'function') {
+  // Object.hasOwn (Chromium 93) — RT-087. pinia ^4.1.0 replaced pinia 3's
+  // `Object.prototype.hasOwnProperty.call(...)` idiom with `Object.hasOwn(...)`
+  // at three live sites in its shipped dist (two in the reactive-object state
+  // merge, one in the store-symbol membership check), and the call sites are
+  // dependency-minified JS the client cannot edit — same constraint as `.at`
+  // and `randomUUID` above, same cure: install at the sanctioned point. The
+  // shim body delegates to hasOwnProperty.call, which shares the native's
+  // observable semantics for the domain that matters: both ToObject-coerce
+  // the target (primitives box; `null`/`undefined` throw TypeError) and both
+  // answer the OWN-property question identically. `Object.prototype
+  // .hasOwnProperty` itself is ES1 — nothing to be honest about above the
+  // floor. Non-enumerable install via defineProperty mirrors the
+  // native descriptor; writable/configurable so a newer engine's own
+  // member wins. The guard reads `Object.hasOwn` WITHOUT a call — the
+  // distApiFloor call-census regex `/Object\.hasOwn\(/` stays dep-only.
+  Object.defineProperty(Object, 'hasOwn', {
+    value: function hasOwn(target: object, propertyKey: PropertyKey): boolean {
+      return Object.prototype.hasOwnProperty.call(target, propertyKey);
     },
     writable: true,
     configurable: true
