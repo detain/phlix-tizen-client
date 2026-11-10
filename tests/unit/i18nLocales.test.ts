@@ -365,7 +365,12 @@ describe('ui bundles — key-set identity and installed coverage', () => {
     // real re-vendor wave because ui's locales/index.ts is byte-stable
     // across those pins (re-verified at the tag payload); bundles and the
     // installed copy re-synced TOGETHER here, so both equality directions
-    // hold by construction again. Prior eras for the record: 01acaa12 ==
+    // hold by construction again; then HELD at the v0.99.26 re-pin
+    // (`git diff 6e1ce2d8..dc2e70fe -- src/i18n` EMPTY — the cookie-custody /
+    // 401-single-flight release moved only ui auth code + the stamp-bearing
+    // dist entries; all seven v0.99.26 tag-payload locale files re-hashed
+    // byte-identical to their PIN source hashes — ref, all fourteen hashes
+    // and SOURCE_REF untouched, era comment advanced stamp-only). Prior eras for the record: 01acaa12 ==
     // v0.99.21 (re-synced at its pin — the theme-persistence wave moved ui
     // locale SOURCE, `git diff a6c9d466..01acaa12 -- src/i18n` NON-empty:
     // the same six-file + messages.ts move, the two

@@ -34,6 +34,69 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — ui #v0.99.26 re-vendor: 401 refreshes collapse to one, the cookie-custody seam ships inert; locale PIN held; package/ regenerated — 2026-11-10
+
+- **What viewers see:** nothing new on screen — this is a resilience re-vendor.
+  When the session token expires mid-use, the vendored ui client now files ONE
+  refresh round-trip per burst (401 single-flight) instead of each failing call
+  stampeding its own refresh, and the logout leg of that path is explicit;
+  recovery from a stale sign-in is quieter and less likely to self-conflict.
+  The wave also carries ui's cookie token-custody seam (CookieTokenStore +
+  credentials policy + session probe) into the bundle — the widget keeps its
+  own localStorage custody and does NOT opt into it, so behavior on TVs is
+  unchanged by that half; and the pinia peer range widened (`^3 || ^4`), a
+  compile-time fact only.
+- **Pin leg:** `@phlix/ui` `#v0.99.25` → `#v0.99.26` (tag object
+  `74c120bc7053bdb7f5c42eb491a3ac5ee04ac6cf`, peel `dc2e70fea43355aa7f56bc29f5c8e78195be8628`
+  == ui master tip, ls-remote verified; codeload 200 @ 27,048,600 B md5
+  `937a8512fe3d35236fb7ece8893828fd` — own download, identity re-extracted
+  locally). `package-lock.json` surgical 4+/4- (root edge spec echo + ui node
+  version/resolved — resolved lands on the peel — plus the ui node's `peerDependencies.pinia`
+  line mirroring the tag's widened range, a lock-MIRROR of payload metadata,
+  zero resolution effect: tizen's own pinia root pin `^3.0.0` is untouched);
+  contracts `#v0.5.7` + syncplay `#v0.1.7` HELD — the tag's own `package.json`
+  carries the identical edges (read from the peel, not recalled). npm11
+  idempotency proven (2nd install byte-identical); fresh-resolve oracle
+  (lockless `--package-lock-only` re-resolve) reproduced the committed triple
+  EXACTLY (ui `0.99.26@dc2e70fe` / contracts `0.5.7@bedfe69b` / syncplay
+  `0.1.7@1a80b1d1`); no nested `@phlix/ui` divergence. Installed tree
+  `dist/phlix-ui.js` md5 `7cea63d44e4a8f5fdaed775b6e3506ab`, `dist/player.js`
+  `a6428a081dbcc2427e268e674434df1a`, carrier `PlayerPage-5onGq7ES.js`
+  `708772c4f3c6f6bc2ca4a314d5ce5357` — all match the .26 release register.
+  Docs rotated at measured red-first (the six docsPinConsistency arms reddened
+  on the bump: README badge + Tech Stack, DEVELOPER.md, `docs/i18n.md`
+  installed-pin, AGENTS.md, CLAUDE.md); `docs/ui-port-divergence.md` ledger
+  re-attested row-by-row against the NEW bytes (all six rows FACT-UNCHANGED;
+  widget-side chunk/hoist re-anchors: entry `index-D1c6SPMk.js`→`index-BD26Z3-N.js`
+  — the doc was one era stale via RT-106's `index-CEKJyz_J.js` —, music fold
+  `MusicLibraryPage-7wf4WY0X-*`→`DyAzEjsj-*`, hoist `var Pi`→`var Ni`).
+- **Locale leg:** PIN HELD — `git diff 6e1ce2d8..dc2e70fe -- src/i18n` in ui is
+  EMPTY (the .26 payload moved auth code + test pins, zero locale source), and
+  all seven v0.99.26 tag-payload locale files re-hashed EXACTLY to their PIN
+  source hashes; ref, fourteen hashes and SOURCE_REF untouched, era comments
+  advanced stamp-only (the .20/.22 branch of the law). `i18nLocales` 45/45
+  green on the installed .26 bytes without rotation.
+- **Widget leg:** `package/` regenerated via `npm run package` (version-sync
+  idempotent, zero config.xml/telemetry churn — widget version stays 1.0.0);
+  deterministic ×2 (`diff -r` clean; post-commit 3rd-build freshness sim clean);
+  42 files, aggregate md5 (`find package -type f | sort | xargs md5sum | md5sum`)
+  `6c45f9253df4526f6b22ba1648fe876e`; 31 of 39 assets renamed, the eight
+  byte-stable incl. the entry stylesheet `index-BVpuTFMB.css` (zero CSS delta —
+  the above-floor census arms stayed green unrotated, RT-106/107 JS pins too:
+  entry `randomUUID` census 7, unguarded-Menu discriminator 1, hls 1); ui stamp
+  `0.99.26` exactly once on `index-BD26Z3-N.js`, zero `0.99.25` residue
+  anywhere under `package/`; carrier `PlayerPage-5onGq7ES-BScSAF90.js` carries
+  the `playlist_url` + `_master.m3u8` law greps (1 each), entry carries
+  `(shared — read-only)`, `users/me/settings`, `themeCatalogueUnavailable`,
+  `Continue watching`, `var Ni="access_token"`; escape pattern 1 site
+  (`useItemInspector-CC5nNuXm-DoFVbEpT.js`), `new Audio` exactly 1 site
+  (`MusicLibraryPage-DyAzEjsj-*.js`).
+- **Gates:** vitest serial 65 files / 1204 tests at BOTH parent and tip — the
+  exact-zero-delta branch of the wave (no new tests: the payload demands none;
+  every sensitive pin measured, none moved); lint 0 errors (29 pre-existing
+  warnings held); typecheck 0; typecheck:tests 0; audit-gate PASS exact-set
+  {GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249} re-verify 2027-04-30 stands.
+
 ### Fixed — player/library menus survive pre-Chrome-92 webviews; CSS floor census pinned complete — 2026-11-09
 
 - **What viewers see:** on older Samsung webviews (the admitted Chromium 85–91
