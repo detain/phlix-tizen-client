@@ -121,13 +121,20 @@ describe('mediaActivity — the boot audio probe (M-TIZEN-30)', () => {
     const assets = readdirSync(path.join(REPO, 'package', 'assets'));
     const musicChunks = assets.filter((f) => /^Music.*\.js$/.test(f));
     expect(musicChunks.length, 'expected a vendored Music* page chunk in package/assets').toBeGreaterThan(0);
-    const total = musicChunks.reduce((acc, f) => {
-      const source = readFileSync(path.join(REPO, 'package', 'assets', f), 'utf8');
-      // `new Audio` — the minifier may drop the parens (verified: the vendored
-      // factory reads `let a=new Audio;return …`). Match the construction, not
-      // one spelling of it.
-      return acc + (source.match(/\bnew\s+Audio\b/g) ?? []).length;
-    }, 0);
+    // 2026-11-11 vite 8 wave: rolldown's chunking moved the vendored audio
+    // factory OUT of the Music* page chunk into the entry chunk. The probe
+    // law is the CONSTRUCTION (global `new Audio`), not its chunk address —
+    // summed across all assets; the Music* presence assert above still
+    // catches the page itself disappearing.
+    const total = assets
+      .filter((f) => f.endsWith('.js'))
+      .reduce((acc, f) => {
+        const source = readFileSync(path.join(REPO, 'package', 'assets', f), 'utf8');
+        // `new Audio` — the minifier may drop the parens (verified: the vendored
+        // factory reads `let a=new Audio;return …`). Match the construction, not
+        // one spelling of it.
+        return acc + (source.match(/\bnew\s+Audio\b/g) ?? []).length;
+      }, 0);
     expect(total, 'probe premise: ui music builds audio via global new Audio(').toBeGreaterThan(0);
   });
 });

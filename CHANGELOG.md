@@ -34,6 +34,50 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — deps: latest-secure dependency wave (owner ruling 2026-11-11) — vite 8.3.8 taken (the deferral above cured: rolldown bundle re-attestation completed), vue 3.5.45, vue-router 5.5.0, @phlix/syncplay #v0.1.8, vitest/coverage 5.1.0, @vue/test-utils 2.5.1, vue-eslint-parser 10.4.2, vue-tsc 3.3.14, typescript-eslint 8.72.1 floors; eslint 10 / TS 7 / @types-node 26 / globals 17 / jsdom 31 cross-major cohort NOT taken (owner-gated audit triage); #v0.99.26 ui pin held (the batch's v0.99.24 downgrade refused); package/ regenerated (rolldown, 97 chunks, deterministic ×2), runtime-floor tripwires re-derived from disk — 2026-11-11
+
+- **Latest-secure wave per owner ruling** over the open dependabot batches
+  (#123 pinia-era, #120 vite, the #127-supersession lineage, #129 batch):
+  every targeted library re-resolved to its LATEST registry version and
+  checked against GHSA/npm audit before taking it.
+- **vite ^8.3.8** (latest; the 8.x advisories GHSA-vfpm-58rq-9qcg et al. are
+  patched at 8.3.3, and 8.3.8 is alert-free — `npm audit` unchanged). This
+  SUPERSEDES the same-day wave's `evaluated-and-deferred` verdict: the deferred
+  re-attestation IS this commit — rolldown+oxc codegen re-derived every
+  `distApiFloor` runtime-floor pin from disk (backticked compare folds,
+  `void 0` crypto guard, Menu/pinia/Icon lazy-chunk addresses, spaced
+  color-mix probe) with per-pin attribution; entry `index-D9xcKabx.js`,
+  css `index-DVCjqgJ1.css`, 97 JS chunks, `npm run package` deterministic
+  ×2. `build.target: chrome100` stays explicit, so vite-8 default-target
+  changes are inert for the Chromium ≥ 85 floor contract.
+- **@phlix/syncplay #v0.1.7 → #v0.1.8** (latest tag; wire vocabulary
+  unchanged — zero new codes/messages). The client-side discipline is new:
+  LW-041 non-string id refusals, LW-042 clamped group position, LW-044
+  grouped-delivery law (seek/play frames ride only after a group_state
+  fold). The M-TIZEN-27 poison fixture arms via a canonical
+  `syncplay_group_state` frame instead of poking store state — the honest
+  wire shape, mutation-visible exactly as before.
+- **vue 3.5.45, vue-router 5.5.0** (latest; zero advisories on either).
+- **vitest/@vitest/coverage-v8 5.1.0, @vue/test-utils 2.5.1,
+  vue-eslint-parser 10.4.2, vue-tsc 3.3.14, typescript-eslint 8.72.1 floors**
+  (#129 legs, latest-secure, all gates green on the pair). vitest 5.1.0
+  rides the vite-8 module-runner fix below.
+- **src/polyfills.ts install seam**: the `Array.prototype.at` guard is now
+  the exported `installArrayAt()` (auto-invoked at import). vite 8's module
+  runner captures the native `.at` internals before the entry-body install
+  runs; the seam lets the polyfills suite re-install after its
+  `at → undefined` global patch window instead of breaking vitest-internal
+  callstack reads. Behavior for shipped code is unchanged.
+- **NOT taken**: `eslint ^10` / `@eslint/js ^10` / `typescript ^7` /
+  `@types/node ^26` / `globals ^17` / `jsdom ^31` (cross-major dev cohort —
+  owner-gated audit-triage hold, windows precedent) and the batch's
+  `@phlix/ui` v0.99.26 → v0.99.24 downgrade (curated estate pins are
+  never downgraded — owner law). Dependabot alert #63 (minimatch, dev-
+  transitive) stays open pending that triage (re-verify duty 2027-02-04).
+- **Era stamps rotated**: README/DEVELOPER/AGENTS/CLAUDE syncplay pin lines,
+  store docblock wire-truth cites, `docs/runtime-floor.md` census (chunk
+  counts + per-chunk locations) in the same change, per the floor-doc law.
+
 ### Changed — deps wave 2 (owner latest-secure ruling, follow-on to the same-day wave): every IN-RANGE dev/runtime dep advanced to its ceiling — vue 3.5.45, vue-router 5.5.0, vitest/coverage-v8 5.1.0, vue-tsc 3.3.14, @vue/test-utils 2.5.1, eslint 9.39.5, plugin family minors; package/ regenerated (32/39 chunks rotate, entry now `index-Dh02D-Ij.js`); superseded #129 — 2026-11-11
 
 - **User-visible delta:** none shipped-visible; the bundle re-hashes only through the vue 3.5.39→3.5.45 /
@@ -50,6 +94,7 @@ ledger accepts deliberately:
 - **Venue:** `npm update --legacy-peer-deps` (package.json ranges untouched — pure lock + tree ceiling move;
   `npm ci`-reproducible; audit-gate PASS unchanged at the allow-list {GHSA-g3hv, GHSA-3g3m}). Coverage floor
   measured 89.66/83.34/86.63/91.03 (up from 89.6/83.34/86.48/90.96 — rise, not rotation).
+
 
 ### Changed — deps wave (owner latest-secure ruling): CI actions advance to v7 majors, vite to 7.3.8 with the 8.x line evaluated-and-deferred on runtime-floor evidence, plugin-vue to 6.0.10; no shipped-code delta, package/ regenerated — 2026-11-11
 

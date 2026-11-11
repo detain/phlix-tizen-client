@@ -52,28 +52,41 @@ if (typeof globalThis.structuredClone !== 'function') {
     JSON.parse(JSON.stringify(_value)) as T;
 }
 
-if (typeof Array.prototype.at !== 'function') {
-  // Array.prototype.at (Chromium 92) — spec-faithful for the integer-index
-  // read the bundle actually performs: ToIntegerOrInfinity-ish coercion
-  // (truncate toward zero, NaN -> +0, +/-Infinity preserved), negative
-  // indices count from the end, out-of-range reads yield undefined. Installed
-  // via defineProperty so the method is non-enumerable like the native one
-  // (descriptor defaults: enumerable false). writable/configurable true to
-  // match the native descriptor and let a newer engine's own install win.
-  Object.defineProperty(Array.prototype, 'at', {
-    value: function at(this: unknown[], index: number): unknown {
-      const length = this.length;
-      // Math.trunc: NaN -> NaN (then || 0 -> +0), -0 -> -0 (|| 0 -> +0, same
-      // slot), +/-Infinity pass through, fractional truncates toward zero.
-      let k = Math.trunc(index) || 0;
-      if (k < 0) k += length;
-      if (k < 0 || k >= length) return undefined;
-      return this[k];
-    },
-    writable: true,
-    configurable: true
-  });
+/**
+ * Installs the `Array.prototype.at` fallback. Exported so the M-TIZEN-03
+ * tests can drive the guard inside a SYNCHRONOUS absent-native window:
+ * vite 8's module runner (which executes every `await import()` under
+ * vitest) calls `Array.prototype.at` on its own import callstack, so the
+ * pre-2026-11-11 fixture pattern of deleting the global across a dynamic
+ * import poisons the runner, not the guard. The wave that bumped
+ * `vite ^8.3.8` moved the seam; the guard logic below is untouched.
+ */
+export function installArrayAt(): void {
+  if (typeof Array.prototype.at !== 'function') {
+    // Array.prototype.at (Chromium 92) — spec-faithful for the integer-index
+    // read the bundle actually performs: ToIntegerOrInfinity-ish coercion
+    // (truncate toward zero, NaN -> +0, +/-Infinity preserved), negative
+    // indices count from the end, out-of-range reads yield undefined. Installed
+    // via defineProperty so the method is non-enumerable like the native one
+    // (descriptor defaults: enumerable false). writable/configurable true to
+    // match the native descriptor and let a newer engine's own install win.
+    Object.defineProperty(Array.prototype, 'at', {
+      value: function at(this: unknown[], index: number): unknown {
+        const length = this.length;
+        // Math.trunc: NaN -> NaN (then || 0 -> +0), -0 -> -0 (|| 0 -> +0, same
+        // slot), +/-Infinity pass through, fractional truncates toward zero.
+        let k = Math.trunc(index) || 0;
+        if (k < 0) k += length;
+        if (k < 0 || k >= length) return undefined;
+        return this[k];
+      },
+      writable: true,
+      configurable: true
+    });
+  }
 }
+
+installArrayAt();
 
 if (
   typeof globalThis.crypto !== 'undefined' &&

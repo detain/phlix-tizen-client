@@ -1,0 +1,1 @@
+import{L as e,P as t,f as n,jt as r,n as i,y as a}from"./Icon-55iG1rR7-BDNBJLT4.js";var o=i(a({__name:`Card`,props:{padding:{type:Boolean,default:!0}},setup(i){return(a,o)=>(t(),n(`div`,{class:r([`phlix-card`,{"phlix-card--no-padding":!i.padding}])},[e(a.$slots,`default`,{},void 0,!0)],2))}}),[[`__scopeId`,`data-v-0e99c3b2`]]);export{o as t};

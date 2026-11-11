@@ -44,7 +44,9 @@
  * is the first DEP arrival this tripwire was built for: pinia 4 rewrote its
  * own-property checks from `Object.prototype.hasOwnProperty.call` to
  * `Object.hasOwn(...)` — a Chrome 93 API, above the 85 floor — landing THREE
- * live call sites inside the entry chunk's vendored pinia dist. The absent-
+ * live call sites inside pinia's dependency-minified dist (the `pinia-` lazy
+ * chunk since the 2026-11-11 vite 8 wave; entry-resident under esbuild). The
+ * absent-
  * by-accident pin (`Object.hasOwn` count 0, previously a one-liner inside the
  * Error-cause test) reddened exactly as header item 3 prescribes; the cure is
  * the sanctioned one (polyfill at src/polyfills.ts) and the pin rotates here,
@@ -52,7 +54,10 @@
  * 2026-11-10 at the rebuilt package/ (entry index-DgueOqPh.js); re-attested
  * 2026-11-11 across both deps waves — vite 7.3.8 / @vitejs/plugin-vue 6.0.10
  * (entry index-CiXKA_h7.js), then vue 3.5.45 / vue-router 5.5.0 (entry
- * index-Dh02D-Ij.js) — zero census movement at each leg, chunk names rotated only.
+ * index-Dh02D-Ij.js) — zero census movement at each leg, chunk names rotated
+ * only; and re-derived the same day at the vite 8.3.8 (rolldown) rebuild
+ * closing this wave (entry index-D9xcKabx.js) — the census moved exactly as
+ * the rotation comments below attribute.
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -102,7 +107,11 @@ function countMatchesAcrossAssets(pattern: RegExp): number {
 }
 
 /** The exact @supports probe esbuild/rollup emit for the ui floor-fallbacks. */
-const COLOR_MIX_PROBE = '@supports not (color:color-mix(in srgb,red,blue))';
+// 2026-11-11 vite 8 wave: the CSS minifier (oxc, replacing esbuild) keeps the
+// space after commas inside the probe condition — `in srgb, red, blue`. All 14
+// guard blocks carry the single spaced spelling (measured); the classifier's
+// `PROBE + '{'` block walk is unchanged.
+const COLOR_MIX_PROBE = '@supports not (color:color-mix(in srgb, red, blue))';
 
 interface ColorMixCensus {
   /** innermost rules carrying a color-mix declaration (token = one site). */
@@ -260,25 +269,36 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // `.at`/structuredClone guards: a `!=` string compare survives). The
       // guard must stay CALL-FREE (`typeof Object.hasOwn!=`, not `hasOwn(`)
       // so the dep call-census below stays a pure pinia measure.
-      expect(entry).toContain('typeof Object.hasOwn!="function"');
+      // 2026-11-11 vite 8 (rolldown/oxc) re-pin: the minifier now emits
+      // string-comparison operands as template literals — the compare form is
+      // `!=` followed by a BACKTICKED "function", not a double-quoted one.
+      // Double-quoted property keys (`defineProperty(Object,"hasOwn"`) are
+      // unchanged. Measured at the wave rebuild; fold-class law (header item 3).
+      expect(entry).toContain('typeof Object.hasOwn!=`function`');
       expect(entry).toContain('Object.defineProperty(Object,"hasOwn"');
-      // esbuild strips the inner function name (same as the `at`/randomUUID
-      // installs): the shim body reaches for the ES1 hasOwnProperty directly.
+      // oxc strips the inner function name too: the shim body reaches for the
+      // ES1 hasOwnProperty directly.
       expect(entry).not.toContain('function hasOwn');
       expect(entry).toContain('hasOwnProperty.call');
     });
 
-    it('keeps the Object.hasOwn census pinned: 3 dep call sites, all entry-local (RT-087)', () => {
-      // Measured 2026-11-10 at the RT-087 rebuild. ENTRY 4 bare `Object.hasOwn`
-      // tokens = 3 live calls + 1 typeof guard; zero `Object.hasOwn(` calls
-      // anywhere outside the entry (the guard is a call-free read). A count
+    it('keeps the Object.hasOwn census pinned: 3 dep call sites, pinia-chunk-local (RT-087)', () => {
+      // Measured 2026-11-10 at the RT-087 rebuild (esbuild era: all 4 entry
+      // tokens). ROTATED 2026-11-11 at the vite 8 wave rebuild: rolldown
+      // keeps pinia's dist in its own lazy chunk now, so the CALL census is
+      // 3 bare `Object.hasOwn` tokens in the `pinia-` chunk and the ENTRY
+      // carries only the 1 call-free typeof guard token. Call total across
+      // assets unchanged at 3 (the law pinia ships three call sites). A count
       // move = pinia's dist reshaped or a new above-floor arrival → re-
       // adjudicate (header item 3), never silently re-number.
       expect(countMatchesAcrossAssets(/Object\.hasOwn\(/g)).toBe(3);
       const entry = readAsset(entryChunkName());
-      expect(countOccurrences(entry, 'Object.hasOwn')).toBe(4);
+      expect(countOccurrences(entry, 'Object.hasOwn')).toBe(1);
+      const piniaChunks = assetFiles().filter((f) => f.startsWith('pinia-'));
+      expect(piniaChunks.length, 'pinia lazy chunk present').toBe(1);
+      expect(countOccurrences(readAsset(piniaChunks[0]), 'Object.hasOwn')).toBe(3);
       for (const f of assetFiles()) {
-        if (f === entryChunkName()) continue;
+        if (f === entryChunkName() || f.startsWith('pinia-')) continue;
         expect(countOccurrences(readAsset(f), 'Object.hasOwn')).toBe(0);
       }
     });
@@ -287,9 +307,11 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // Vendored @phlix/ui PosterPicker chunk calls `.at(-1)` — three sites,
       // measured 1d37585. Those live above the 85 floor, so the entry bundle
       // MUST carry the src/polyfills.ts install guard. The minified install
-      // shape is `typeof Array.prototype.at!="function"&&Object.defineProperty(Array.prototype,"at",{...`.
+      // shape is `typeof Array.prototype.at!=`function`&&Object.defineProperty(Array.prototype,"at",{...`
+      // (backticked compare since the 2026-11-11 vite 8 wave; property key
+      // stays double-quoted).
       const entry = readAsset(entryChunkName());
-      expect(entry).toContain('typeof Array.prototype.at!="function"');
+      expect(entry).toContain('typeof Array.prototype.at!=`function`');
       expect(entry).toContain('Object.defineProperty(Array.prototype,"at"');
     });
 
@@ -315,9 +337,10 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // install guard in the entry chunk — no bare `structuredClone(` call
       // survives in any chunk. The guard exists for the vendored ui's
       // SettingsForm reliance; a re-vendor that inlines a raw call must first
-      // pass the typeof guard — rotation law as for `.at(`.
+      // pass the typeof guard — rotation law as for `.at(`. (2026-11-11 vite 8
+      // wave: comparison operand rotates to the backticked form with oxc.)
       const entry = readAsset(entryChunkName());
-      expect(entry).toContain('typeof globalThis.structuredClone!="function"');
+      expect(entry).toContain('typeof globalThis.structuredClone!=`function`');
       const total = countMatchesAcrossAssets(/structuredClone/g);
       expect(total).toBe(2);
       expect(countMatchesAcrossAssets(/[^.]structuredClone\(/g)).toBe(0);
@@ -338,31 +361,35 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
      * shim installed yet) and the token census (5 ≠ 7 pre-cure).
      * ---------------------------------------------------------------- */
     it('polyfills crypto.randomUUID (Chrome 92) at the entry chunk (RT-106)', () => {
-      // Minified install shape esbuild emits from src/polyfills.ts. Two
-      // folds, both measured 2026-11-09 post-cure: `typeof X !== "function"`
-      // keeps the string form with `!=` (same fold the structuredClone/at
-      // guards above are pinned in), while `typeof X !== "undefined"` is
-      // folded further, to the `<"u"` short-compare. The getRandomValues
-      // precondition is the shim's honesty clause: it only claims what the
-      // floor engine actually provides (Chrome 1-era API).
+      // Minified install shape from src/polyfills.ts. The esbuild-era folds
+      // (measured 2026-11-09 post-cure) ROTATED 2026-11-11 at the vite 8
+      // wave: oxc folds `typeof X !== "undefined"` to a `void 0` compare
+      // (`globalThis.crypto!==void 0`) instead of the old `<"u"` short-form,
+      // and keeps the `!=`/`==` string compares BACKTICKED. The
+      // getRandomValues precondition is the shim's honesty clause: it only
+      // claims what the floor engine actually provides (Chrome 1-era API).
       const entry = readAsset(entryChunkName());
-      expect(entry).toContain('typeof globalThis.crypto<"u"');
-      expect(entry).toContain('typeof globalThis.crypto.randomUUID!="function"');
-      expect(entry).toContain('typeof globalThis.crypto.getRandomValues=="function"');
+      expect(entry).toContain('globalThis.crypto!==void 0');
+      expect(entry).toContain('typeof globalThis.crypto.randomUUID!=`function`');
+      expect(entry).toContain('typeof globalThis.crypto.getRandomValues==`function`');
       expect(entry).toContain('Object.defineProperty(globalThis.crypto,"randomUUID"');
     });
 
     it('keeps the crypto.randomUUID token census pinned per chunk (RT-106)', () => {
-      // Measured 2026-11-09 post-cure. ENTRY 7 tokens = 5 vendored (1
-      // UNGUARDED Menu call + the web-/tizen-deviceId guarded sites) + 2
-      // shim-install (`randomUUID` in the typeof guard + the defineProperty
-      // key; esbuild strips the inner function name — the `at` install shows
-      // the same, so `function randomUUID` does NOT count). HLS 1 token =
-      // its own try/catch-guarded site with the Blob-URL fallback (safe
+      // Measured 2026-11-09 post-cure (esbuild era), ROTATED 2026-11-11 at
+      // the vite 8 wave: the Menu component now codegens into its own lazy
+      // `Menu-` chunk, so the ENTRY is 6 tokens = 4 vendored (web-/tizen-
+      // deviceId guarded sites) + 2 shim-install (`randomUUID` in the typeof
+      // guard + the defineProperty key; the minifier strips the inner
+      // function name). MENU chunk 1 token = the UNGUARDED call. HLS 1 token
+      // = its own try/catch-guarded site with the Blob-URL fallback (safe
       // pre-shim, unchanged by it). A count move = the vendored surface
       // reshaped or a new above-floor arrival → re-adjudicate (header item 3).
       const entry = readAsset(entryChunkName());
-      expect(countOccurrences(entry, 'randomUUID')).toBe(7);
+      expect(countOccurrences(entry, 'randomUUID')).toBe(6);
+      const menuChunks = assetFiles().filter((f) => f.startsWith('Menu-'));
+      expect(menuChunks.length, 'Menu lazy chunk present').toBe(1);
+      expect(countOccurrences(readAsset(menuChunks[0]), 'randomUUID')).toBe(1);
       const hls = assetFiles().find((f) => f.startsWith('hls-'));
       expect(hls, 'hls chunk present').toBeTruthy();
       expect(countOccurrences(readAsset(hls!), 'randomUUID')).toBe(1);
@@ -378,34 +405,42 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
     });
 
     it('pins Vue 3.5 reactive-array patcher defs as INERT (toSorted/toReversed/toSpliced, Chrome 110)', () => {
-      // These defs live in the entry chunk and call the NATIVE method ONLY on
-      // `X(this)` — Vue's toRaw-clone receiver. They are reachable only if app
-      // code calls the method on a REACTIVE array; the bundle has zero such
-      // callers today (dotted occurrence is the def body itself, nothing else).
+      // These defs call the NATIVE method ONLY on `X(this)` — Vue's toRaw-
+      // clone receiver. They are reachable only if app code calls the method
+      // on a REACTIVE array; the bundle has zero such callers today (dotted
+      // occurrence is the def body itself, nothing else).
       // A future ui/vue version that adds a live `.toSorted()` call site adds a
       // dotted occurrence outside the def-body shape → red here → adjudicate.
-      const entry = readAsset(entryChunkName());
+      // LOCATION 2026-11-11 (vite 8 wave): rolldown moved the Vue runtime
+      // patcher block out of the entry into the shared lazy chunk that also
+      // carries the Icon component — the defs are still in EXACTLY ONE chunk
+      // (token census unchanged: 2/2/2 + findLastIndex 2 + findLast 4). The
+      // host is resolved by content, hash-agnostically, and the single-chunk
+      // law below keeps any split (two chunks defining these) red.
+      const hosts = assetFiles().filter((f) => countOccurrences(readAsset(f), 'toSorted') > 0);
+      expect(hosts.length, 'toSorted defs live in exactly one chunk').toBe(1);
+      const patchHost = readAsset(hosts[0]);
       for (const name of ['toSorted', 'toReversed', 'toSpliced'] as const) {
         // 2 token occurrences: 1 def key + 1 native call in the def body.
-        expect(countOccurrences(entry, name), `${name} total`).toBe(2);
+        expect(countOccurrences(patchHost, name), `${name} total`).toBe(2);
         // The only dotted call form must be the def-body clone receiver.
-        const dotted = entry.match(new RegExp(`\\w*\\(?this\\)?\\.${name}\\(`, 'g')) ?? [];
+        const dotted = patchHost.match(new RegExp(`\\w*\\(?this\\)?\\.${name}\\(`, 'g')) ?? [];
         expect(dotted.length, `${name} dotted-call census`).toBe(1);
         const foreign =
-          countOccurrences(entry, `.${name}(`) - countOccurrences(entry, `this).${name}(`);
+          countOccurrences(patchHost, `.${name}(`) - countOccurrences(patchHost, `this).${name}(`);
         expect(foreign, `${name} call sites outside the def body`).toBe(0);
       }
       // findLast/findLastIndex (Chrome 97): defs delegate through Vue's Wt
       // helper with a STRING method name — no dotted native call form at all.
       // Occurrences: findLast ×4 = key + "findLast" string + findLastIndex
       // prefix ×2 (key + string).
-      expect(countOccurrences(entry, 'findLastIndex')).toBe(2);
-      expect(countOccurrences(entry, 'findLast')).toBe(4);
-      expect(countOccurrences(entry, '.findLast(')).toBe(0);
-      expect(countOccurrences(entry, '.findLastIndex(')).toBe(0);
-      // These defs must not exist outside the entry chunk's patcher.
+      expect(countOccurrences(patchHost, 'findLastIndex')).toBe(2);
+      expect(countOccurrences(patchHost, 'findLast')).toBe(4);
+      expect(countOccurrences(patchHost, '.findLast(')).toBe(0);
+      expect(countOccurrences(patchHost, '.findLastIndex(')).toBe(0);
+      // These defs must not exist in any OTHER chunk (one-chunk law).
       for (const f of assetFiles()) {
-        if (f === entryChunkName()) continue;
+        if (f === hosts[0]) continue;
         for (const name of ['toSorted', 'toReversed', 'toSpliced', 'findLast']) {
           expect(countOccurrences(readAsset(f), name), `${name} in ${f}`).toBe(0);
         }

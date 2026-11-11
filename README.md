@@ -50,7 +50,7 @@ Phlix Tizen is a native Samsung Smart TV application that connects to a Phlix Me
 - **Vue 3** + **Pinia** + **vue-router** (peer dependencies)
 - **[`@phlix/ui`](https://github.com/detain/phlix-ui)** `v0.99.26` — the entire application UI via `createPhlixApp()`, incl. the player's `QualityMenu` stream-quality picker
 - **[`@phlix/contracts`](https://github.com/detain/phlix-contracts)** `v0.5.7` — `buildPhlixHeaders` (device headers)
-- **[`@phlix/syncplay`](https://github.com/detain/phlix-syncplay)** `v0.1.7` — SyncPlay frame client used by `src/stores/useSyncPlayStore.ts`
+- **[`@phlix/syncplay`](https://github.com/detain/phlix-syncplay)** `v0.1.8` — SyncPlay frame client used by `src/stores/useSyncPlayStore.ts`
 
 > Pin source of truth: `package.json` — the three libraries above are declared as
 > exact GitHub tag pins (`github:detain/phlix-*#v...`), and the tracked

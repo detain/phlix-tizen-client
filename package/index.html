@@ -51,104 +51,41 @@
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http:; media-src 'self' https: http: blob:; connect-src 'self' https: http: ws: wss:;"
     />
     <title>Phlix</title>
-    <style>
-      /*
-       * S515 AD-3 — CSS-only branded splash + dark preload background.
-       * Paints from the very first frame (no JS, no fetch, no webfont needed),
-       * covering module-parse + the S515 boot probe (≤6 s) so the TV never
-       * shows white. Nocturne-atmosphere: near-black night-blue field, one
-       * amber accent (#f5a524 — the shipped theme's accent), a slow breathing
-       * pulse as the honest "still trying" signal. Fixed 1920×1080 viewport is
-       * honoured via full-bleed insets — the `inset` shorthand PAIRED with the four
- * longhands (review tizen__crossfe C3): `inset` alone is Chrome 87 while the
- * declared floor is Chromium 85 (docs/runtime-floor.md), where the shorthand is
- * silently dropped and a fixed auto-inset element shrink-wraps at its static
- * position instead of covering the viewport. The removal is declarative: Vue's
-       * mount fills #phlix-app, and `:not(:empty) ~` retires the splash with
-       * zero JS — renderBootFailure() filling the same host retires it too,
-       * leaving the readable error, never a splash over a corpse.
-       * CSP: style-src 'unsafe-inline' is already declared above.
-       */
-      html,
-      body {
-        margin: 0;
-        height: 100%;
-        background: #07070d;
-        color: #efece4;
-      }
-      /*
-       * M-TIZEN-11 — TV root font-size (review tizen__gameux M3).
-       * The fixed-viewport meta above makes 1 CSS px a canvas pixel on the
-       * 1920x1080 TV frame, so the UA's 16px rem base was a DESKTOP base on a
-       * TV canvas: ui's token ladder rendered 11-17px text at couch distance.
-       * Declaring the root here (the fixed-viewport story already starts on
-       * line 5 of this file — same zero-JS first-frame contract as the splash
-       * itself) raises the WHOLE rem system ~1.5x proportionally: controls,
-       * spacing, rem grid tracks and the clamp() display rungs scale without
-       * touching the vendored tree. The sub-floor small rungs are re-tuned in
-       * src/styles/tv-typography.css (imported after the vendor stylesheet).
-       * Pinned by tests/unit/tvTypography.test.ts.
-       */
-      html {
-        font-size: 24px;
-      }
-      #phlix-splash {
-        position: fixed;
-        /* C3 floor pairing: `inset` is Chrome 87, the repo floor is 85 — the
-         * longhands below are the pre-87 equivalent; the shorthand stays for
-         * engines that read it (identical values, no cascade conflict). */
-        inset: 0;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 28px;
-        background:
-          radial-gradient(120% 90% at 50% 40%, #0d0e1a 0%, #07070d 62%, #040407 100%),
-          #07070d;
-        z-index: 2147483647;
-      }
-      #phlix-splash .phlix-splash__wordmark {
-        font: 700 96px/1 ui-sans-serif, system-ui, sans-serif;
-        letter-spacing: 0.06em;
-        color: #efece4;
-        text-shadow: 0 0 42px rgba(245, 165, 36, 0.28), 0 2px 0 rgba(0, 0, 0, 0.6);
-      }
-      #phlix-splash .phlix-splash__rule {
-        width: 180px;
-        height: 3px;
-        border-radius: 2px;
-        background: linear-gradient(90deg, transparent, #f5a524 30% 70%, transparent);
-      }
-      #phlix-splash .phlix-splash__hint {
-        /* 24px = the M-TIZEN-11 couch floor; splash text is absolute-canvas
-         * art painted before any stylesheet exists, so px is its honest unit
-         * (allow-listed in tests/unit/tvTypography.test.ts). */
-        font: 400 24px/1.4 ui-sans-serif, system-ui, sans-serif;
-        letter-spacing: 0.32em;
-        text-transform: uppercase;
-        color: #8f94a8;
-        animation: phlix-splash-breathe 2.4s ease-in-out infinite;
-      }
-      @keyframes phlix-splash-breathe {
-        0%,
-        100% {
-          opacity: 0.35;
-        }
-        50% {
-          opacity: 1;
-        }
-      }
-      #phlix-app:not(:empty) ~ #phlix-splash {
-        display: none;
-      }
-    </style>
-    <script type="module" crossorigin src="./assets/index-Dh02D-Ij.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-BVpuTFMB.css">
+    <style>html,body{color:#efece4;background:#07070d;height:100%;margin:0}html{font-size:24px}#phlix-splash{z-index:2147483647;background:radial-gradient(120% 90% at 50% 40%,#0d0e1a 0%,#07070d 62%,#040407 100%),#07070d;flex-direction:column;justify-content:center;align-items:center;gap:28px;display:flex;position:fixed;inset:0}#phlix-splash .phlix-splash__wordmark{letter-spacing:.06em;color:#efece4;text-shadow:0 0 42px #f5a52447,0 2px #0009;font:700 96px/1 ui-sans-serif,system-ui,sans-serif}#phlix-splash .phlix-splash__rule{background:linear-gradient(90deg,#0000,#f5a524 30% 70%,#0000);border-radius:2px;width:180px;height:3px}#phlix-splash .phlix-splash__hint{letter-spacing:.32em;text-transform:uppercase;color:#8f94a8;font:400 24px/1.4 ui-sans-serif,system-ui,sans-serif;animation:2.4s ease-in-out infinite phlix-splash-breathe}@keyframes phlix-splash-breathe{0%,to{opacity:.35}50%{opacity:1}}#phlix-app:not(:empty)~#phlix-splash{display:none}</style>
+    <script type="module" crossorigin src="./assets/index-D9xcKabx.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/Icon-55iG1rR7-BDNBJLT4.js">
+    <link rel="modulepreload" crossorigin href="./assets/runtime-dom.esm-bundler-CTjf6iA8.js">
+    <link rel="modulepreload" crossorigin href="./assets/plural-B3O2rVPV-DE1oEzl4.js">
+    <link rel="modulepreload" crossorigin href="./assets/useMessages-D54Bje5m-BJleNDyf.js">
+    <link rel="modulepreload" crossorigin href="./assets/IconButton-oCt4k5-3-lrx6w4Wi.js">
+    <link rel="modulepreload" crossorigin href="./assets/useFocusTrap-DStfPnC8-ysUXspBb.js">
+    <link rel="modulepreload" crossorigin href="./assets/pinia-BdwKmCeS.js">
+    <link rel="modulepreload" crossorigin href="./assets/usePreferencesStore-DrDMAwjz-DLpZdBWG.js">
+    <link rel="modulepreload" crossorigin href="./assets/client-CdNyEcUJ-oTjrrNDn.js">
+    <link rel="modulepreload" crossorigin href="./assets/useApiBase-DXTBY90j-CQI9akUF.js">
+    <link rel="modulepreload" crossorigin href="./assets/useAuthStore-BW5BEgYM-C-nYSr30.js">
+    <link rel="modulepreload" crossorigin href="./assets/users-DbSwDGCx-CnWM1QxN.js">
+    <link rel="modulepreload" crossorigin href="./assets/useProfileStore-CcEUf-YS-BqUfazEC.js">
+    <link rel="modulepreload" crossorigin href="./assets/useImageSrc-CSM61b-l-CMFaUmRR.js">
+    <link rel="modulepreload" crossorigin href="./assets/usePlayerStore-BpohCwDP-BPXhUhqb.js">
+    <link rel="modulepreload" crossorigin href="./assets/useToastStore-CxO_ppM8-tlsfdcl2.js">
+    <link rel="modulepreload" crossorigin href="./assets/Tooltip-CaS-pDMB-D-SsZpDi.js">
+    <link rel="modulepreload" crossorigin href="./assets/ThumbRating-CnHbMeyO-CNmAsYMj.js">
+    <link rel="modulepreload" crossorigin href="./assets/Spinner-B2VaMLVN-C5K_riVy.js">
+    <link rel="modulepreload" crossorigin href="./assets/EmptyState-DjfWh3kt-C_U4HqRF.js">
+    <link rel="modulepreload" crossorigin href="./assets/Button-Dfl4y6vO-p3Mrt1nJ.js">
+    <link rel="modulepreload" crossorigin href="./assets/Modal-DZDXQwbG-CIf4XmIH.js">
+    <link rel="modulepreload" crossorigin href="./assets/Menu-D1MRZDZu-Dyg17u8h.js">
+    <link rel="modulepreload" crossorigin href="./assets/mediaTypeIcon-CNNqtg-w-B35BOyYl.js">
+    <link rel="modulepreload" crossorigin href="./assets/listbox-Dr6NFVBJ-DmIiwt-t.js">
+    <link rel="modulepreload" crossorigin href="./assets/Combobox-xrtYHE8D-CGyL7nlq.js">
+    <link rel="modulepreload" crossorigin href="./assets/safeHref-Be5nFpx7-CKITVA7R.js">
+    <link rel="modulepreload" crossorigin href="./assets/useApi-il6ACzUc-DWw3vRsk.js">
+    <link rel="modulepreload" crossorigin href="./assets/devtools-C2sLSl4b-ifSkDazM.js">
+    <link rel="modulepreload" crossorigin href="./assets/vue-router-BN-8oDEz.js">
+    <link rel="modulepreload" crossorigin href="./assets/MediaCard-sbk9Din2-jkXMOFHc.js">
+    <link rel="modulepreload" crossorigin href="./assets/Skeleton-DDhrDRE7-1XG5etYk.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-DVCjqgJ1.css">
   </head>
   <body>
     <div id="phlix-app"></div>

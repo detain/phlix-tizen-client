@@ -11,7 +11,7 @@
  * `@phlix/contracts` v0.5.7 (S415 type truth: `SyncPlayGroup` IS the
  * `GroupState::getState()` emission with a DICT `members`, the list-row
  * vocabulary lives on `SyncPlayGroupListItem`, and the five REST envelopes
- * are declared) and framed by `@phlix/syncplay` v0.1.7.
+ * are declared) and framed by `@phlix/syncplay` v0.1.8.
  *
  * Pin-cite currency (review tizen Minor-1, 2026-11-04): both cites above
  * advanced from the #v0.5.4/#v0.1.6 stamps of the prior leg with the
@@ -40,6 +40,17 @@
  * tests/unit/TrackWireShape.test.ts). That wave's ground also shifted under
  * the M8 ladder seam via the ui CU-078 token-store contract — see the dated
  * note on liveAccessTokenForReconnect.
+ *
+ * The 2026-11-11 dependency wave advanced #v0.1.7 to #v0.1.8 — again NOT a
+ * wire move: the `messages.ts` delta across that leg is comment-only and the
+ * `syncplay_*` literals plus the `PlaybackCommand` shape were re-verified
+ * identical at the new pin, not copied. The leg's delta is client-side
+ * discipline inside the vendored library — the LW-044 grouped-delivery law
+ * refuses seek/playback commands before a `syncplay_group_state` was folded
+ * (LW-042 clamps the folded position to the duration ceiling, LW-041 refuses
+ * non-string ids) — none of it moves the five REST envelopes or the rails
+ * below, but it did force the socket-boundary fixtures to arm through the
+ * protocol seam (see M-TIZEN-27 in tests/unit/useSyncPlayStore.test.ts).
  *
  * Port ledger (M-TIZEN-08): this file is one of the sealed-ui local ports —
  * mirror-lag duties and the re-pin law live in `docs/ui-port-divergence.md`.
@@ -287,9 +298,10 @@ const RATE_ENVELOPE_MAX = 4;
  * rate is IGNORED (the previous rate survives) rather than rescaled, because
  * silently altering a clean value is the worse lie.
  *
- * Wire truth at this pin (@phlix/syncplay v0.1.7 — cite advanced from #v0.1.6
- * with the 2026-11-03 cascade; the shape below re-verified identical at this
- * leg): the socket rail cannot even deliver a rate — `PlaybackCommand` is
+ * Wire truth at this pin (@phlix/syncplay v0.1.8 — cite advanced from #v0.1.7
+ * with the 2026-11-11 dependency wave, itself advanced from the #v0.1.6 cite
+ * the 2026-11-03 cascade carried; the shape below re-verified identical at
+ * this leg): the socket rail cannot even deliver a rate — `PlaybackCommand` is
  * {type, position, serverTime}
  * and the sync handler surfaces only (memberId, position, isPlaying), so the
  * server's nudge `suggested_rate` never reaches this store. The guard
@@ -646,10 +658,12 @@ export const useSyncPlayStore = defineStore('phlix-syncplay', () => {
   // so the server sees the same member come back (mirrors @phlix/ui).
   let memberId: string | null = null;
 
-  // T-15: forward-compat observability. `@phlix/syncplay` v0.1.7 surfaces frames
+  // T-15: forward-compat observability. `@phlix/syncplay` v0.1.8 surfaces frames
   // outside its 19 canonical `syncplay_*` types via `onUnknownFrame` (channel and
-  // type set re-verified identical at this pin — the cite advanced from #v0.1.6
-  // with the 2026-11-03 cascade; the leg's new send-return/UnknownFrame typing is
+  // type set re-verified identical at this pin — the cite advanced from #v0.1.7
+  // with the 2026-11-11 dependency wave; before that leg's pin the set was last
+  // re-verified at #v0.1.6 with the 2026-11-03 cascade; the legs' new
+  // send-return/UnknownFrame typing and LW-041/042/044 client-side discipline is
   // not read here); before this wiring they were dropped silently. Count every
   // one (a cumulative "has the protocol outgrown us" signal, exposed for a
   // metrics sink) and warn on the FIRST so a hub shipping a new frame type is

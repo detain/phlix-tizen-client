@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { installArrayAt } from '@/polyfills';
 
 // The polyfills module must be imported first before any @phlix/ui code
 // Since structuredClone exists in Node.js 22+ / jsdom, the fallback branch
@@ -224,24 +225,30 @@ describe('polyfills', () => {
       vi.resetModules();
     });
 
-    async function importWithAbsentAt(): Promise<void> {
-      vi.resetModules();
+    function importWithAbsentAt(): void {
+      // 2026-11-11 dependency wave (vite ^8.3.8): vitest's module runner calls
+      // Array.prototype.at on its own import callstack, so a bare
+      // `await import('@/polyfills')` inside the deleted-global window poisoned
+      // the RUNNER (TypeError callstack.at) instead of exercising the guard.
+      // This seam calls the exported install function synchronously inside the
+      // absent window — same guard, strictly more hermetic (no async boundary
+      // where engine state can churn mid-window).
       Object.defineProperty(Array.prototype, 'at', {
         value: undefined,
         configurable: true,
         writable: true,
       });
-      await import('@/polyfills');
+      installArrayAt();
     }
 
-    it('installs a function when native Array.prototype.at is absent', async () => {
-      await importWithAbsentAt();
+    it('installs a function when native Array.prototype.at is absent', () => {
+      importWithAbsentAt();
       const at = (Array.prototype as unknown as { at?: unknown }).at;
       expect(typeof at).toBe('function');
     });
 
-    it('matches native semantics across the spec-relevant index shapes', async () => {
-      await importWithAbsentAt();
+    it('matches native semantics across the spec-relevant index shapes', () => {
+      importWithAbsentAt();
       const at = (Array.prototype as { at(index: number): unknown }).at;
       expect([1, 2, 3].at(-1)).toBe(3); // negative counts from the end
       expect([1, 2, 3].at(0)).toBe(1);
@@ -263,8 +270,8 @@ describe('polyfills', () => {
       }
     });
 
-    it('installs non-enumerable with a writable+configurable descriptor (native parity)', async () => {
-      await importWithAbsentAt();
+    it('installs non-enumerable with a writable+configurable descriptor (native parity)', () => {
+      importWithAbsentAt();
       const d = Object.getOwnPropertyDescriptor(Array.prototype, 'at');
       expect(d).toBeDefined();
       expect(d!.enumerable).toBe(false);

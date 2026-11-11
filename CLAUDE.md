@@ -2,7 +2,7 @@
 
 Samsung Tizen TV client for Phlix Media Server. A **thin Vue 3 consumer of `@phlix/ui`** — TypeScript → Vite (`@vitejs/plugin-vue`, target `chrome100`) → Tizen Chromium TV webview, packaged as a signed `.wgt`. The entire UI (browse/detail/player/settings/auth) is rendered by `@phlix/ui`'s `createPhlixApp()`; this repo is just the boot glue + the Tizen remote/spatial-nav bridge (mirrors the Windows/Electron client). HLS is provided by `@phlix/ui`'s player and tuned for TV RAM via `playerHlsConfig`.
 
-Pinned: `@phlix/ui` `github:detain/phlix-ui#v0.99.26`, `@phlix/contracts` `#v0.5.7`, `@phlix/syncplay` `#v0.1.7`. Peer deps Vue 3 + Pinia + vue-router.
+Pinned: `@phlix/ui` `github:detain/phlix-ui#v0.99.26`, `@phlix/contracts` `#v0.5.7`, `@phlix/syncplay` `#v0.1.8`. Peer deps Vue 3 + Pinia + vue-router.
 
 ## Commands
 

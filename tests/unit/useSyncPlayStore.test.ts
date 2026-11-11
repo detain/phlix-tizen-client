@@ -353,10 +353,11 @@ describe('useSyncPlayStore', () => {
     });
 
     it('M-TIZEN-40 source pin: the socket rails never forward a rate at this pin', () => {
-      // @phlix/syncplay v0.1.7 PlaybackCommand is {type, position, serverTime}
+      // @phlix/syncplay v0.1.8 PlaybackCommand is {type, position, serverTime}
       // — no rate exists to forward (shape re-verified against the installed
-      // #v0.1.7 types at this leg; identical at the prior #v0.1.6 cite, which
-      // the 2026-11-03 cascade advanced). These pins make that wire truth
+      // #v0.1.8 types at the 2026-11-11 dependency-wave leg; the cite advanced
+      // from #v0.1.7, and the command shape is byte-stable across the whole
+      // #v0.1.6 → #v0.1.8 line). These pins make that wire truth
       // load-bearing: a future library/re-pin that starts forwarding `rate`
       // reddens this test and forces a deliberate look at the envelope.
       const src = readFileSync(join(process.cwd(), 'src', 'stores', 'useSyncPlayStore.ts'), 'utf8');
@@ -838,14 +839,43 @@ describe('useSyncPlayStore', () => {
     // negatives pass the library's typeof-number check and arrive at the
     // store callback verbatim — the pre-cure seam applied them straight onto
     // playbackPosition. optFiniteMs is the boundary that drops them.
+    //
+    // At #v0.1.8 the commands must ride a LIVE session: the LW-044 grouped-
+    // delivery law (phlix-syncplay 9268b66) makes handleSeek REFUSE a seek
+    // frame that arrives before any `syncplay_group_state` was folded, so
+    // arming now folds one through the protocol seam — position 50, far below
+    // the fold duration ceiling — exactly as the S416/S418 live-wire fixture
+    // does, instead of poking the store singleton (the 2026-11-11 dependency
+    // wave advanced the pin and re-wrote this helper; the dropped-not-clamped
+    // assertions below are unchanged).
     const seekFrame = (position: string) =>
-      `{"type":"syncplay_playback_seek","to_position":${position}}`;
+      `{"type":"syncplay_playback_seek","member_id":"member_host","to_position":${position}}`;
 
     function armedStore() {
       const store = useSyncPlayStore();
-      // @ts-expect-error - setting directly for test
-      store.currentSession = { id: 'session-1', state: 'playing', playbackPosition: 50 };
       store.connectWs('https://api.example.com', 'room-1', 'token-abc');
+      lastSocket().onmessage?.({
+        data: JSON.stringify({
+          type: 'syncplay_group_state',
+          group: {
+            group_id: 'room-1',
+            group_name: 'Movie Night',
+            member_count: 1,
+            members: {
+              member_host: { id: 'member_host', name: 'Host One', is_host: true, joined_at: 1788300111 },
+            },
+            host_id: 'member_host',
+            current_media_id: null,
+            current_media_duration: 1000,
+            playback_position: 50,
+            playback_state: 'playing',
+            queue: [],
+            created_at: 1788300111,
+            last_activity_at: 1788300111,
+          },
+        }),
+      });
+      expect(store.currentSession?.playbackPosition).toBe(50);
       return store;
     }
 
