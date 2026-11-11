@@ -34,6 +34,23 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — deps wave 2 (owner latest-secure ruling, follow-on to the same-day wave): every IN-RANGE dev/runtime dep advanced to its ceiling — vue 3.5.45, vue-router 5.5.0, vitest/coverage-v8 5.1.0, vue-tsc 3.3.14, @vue/test-utils 2.5.1, eslint 9.39.5, plugin family minors; package/ regenerated (32/39 chunks rotate, entry now `index-Dh02D-Ij.js`); superseded #129 — 2026-11-11
+
+- **User-visible delta:** none shipped-visible; the bundle re-hashes only through the vue 3.5.39→3.5.45 /
+  vue-router 5.1.0→5.5.0 runtime advance. Runtime-floor census re-attested with ZERO movement (header note).
+- **Why:** the push of the wave-1 commit re-triggered the dependabot updater, which opened #129 — an 18-package
+  mega-batch under owner-derived inspection mixing FOUR categories: (a) in-range latest-secure (this entry —
+  landed); (b) a forbidden `@phlix/ui` DOWNGRADE v0.99.26→v0.99.24 and an `@phlix/syncplay` v0.1.8 pin move
+  (REFUSED: NEVER-downgrade law + `@phlix/*` pins are owner-run-wave territory); (c) out-of-range majors —
+  typescript ^7.0.2, eslint ^10, @types/node ^26, jsdom ^31, globals ^17 — deferred as a dedicated toolchain
+  migration program (TS7 is a compiler-generation jump); (d) `vite ^8.3.6` — REJECTED on the wave-1 floor
+  evidence (same rolldown-era bundle that reddened all three distApiFloor guards; 8.3.6 is also BELOW the
+  8.3.8 evaluated). Dependabot's batch figures were again non-authoritative: it proposed vue-router 5.4.0
+  while 5.5.0 was already the in-range latest, and rolled vite BACKWARD to 8.3.6.
+- **Venue:** `npm update --legacy-peer-deps` (package.json ranges untouched — pure lock + tree ceiling move;
+  `npm ci`-reproducible; audit-gate PASS unchanged at the allow-list {GHSA-g3hv, GHSA-3g3m}). Coverage floor
+  measured 89.66/83.34/86.63/91.03 (up from 89.6/83.34/86.48/90.96 — rise, not rotation).
+
 ### Changed — deps wave (owner latest-secure ruling): CI actions advance to v7 majors, vite to 7.3.8 with the 8.x line evaluated-and-deferred on runtime-floor evidence, plugin-vue to 6.0.10; no shipped-code delta, package/ regenerated — 2026-11-11
 
 - **User-visible delta:** none — every change is dev-dependency or CI-plumbing; the widget bundle
