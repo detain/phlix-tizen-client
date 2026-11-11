@@ -49,7 +49,9 @@
  * Error-cause test) reddened exactly as header item 3 prescribes; the cure is
  * the sanctioned one (polyfill at src/polyfills.ts) and the pin rotates here,
  * now living in its own named test with the install-shape asserts. Measured
- * 2026-11-10 at the rebuilt package/ (entry index-DgueOqPh.js).
+ * 2026-11-10 at the rebuilt package/ (entry index-DgueOqPh.js); re-attested
+ * 2026-11-11 at the vite 7.3.8 / @vitejs/plugin-vue 6.0.10 rebuild (entry
+ * index-CiXKA_h7.js) — zero census movement, chunk names rotated only.
  */
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';

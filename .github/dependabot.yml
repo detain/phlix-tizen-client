@@ -16,7 +16,7 @@ updates:
         patterns:
           - "*"
 
-  # The workflows float action MAJOR tags (actions/checkout@v6, setup-node@v6,
+  # The workflows float action MAJOR tags (actions/checkout@v7, setup-node@v7,
   # upload-artifact@v7, download-artifact@v8, softprops/action-gh-release@v3),
   # so a new action major can ship silently — the estate has taken breakage
   # exactly this way before. Declaring the github-actions ecosystem alongside

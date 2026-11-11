@@ -34,6 +34,39 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — deps wave (owner latest-secure ruling): CI actions advance to v7 majors, vite to 7.3.8 with the 8.x line evaluated-and-deferred on runtime-floor evidence, plugin-vue to 6.0.10; no shipped-code delta, package/ regenerated — 2026-11-11
+
+- **User-visible delta:** none — every change is dev-dependency or CI-plumbing; the widget bundle
+  differs only in chunk content-hashes (entry `index-DgueOqPh.js` → `index-CiXKA_h7.js`), which is
+  why `package/` rotates as a companion. The runtime-floor census (distApiFloor) re-attested with
+  ZERO movement.
+- **Why:** owner ruling 2026-11-11 — for each open dependabot PR, do not take the PR's version;
+  derive the latest secure release ourselves and implement what the upgrade needs. Replaces (and
+  closes as superseded) #124 (actions/checkout v6→v7: 5 uses across test/build/lint), #125
+  (actions/setup-node v6→v7: 4 uses), #120 (vite 7.3.6→7.3.7 — already stale: the tip lock had
+  silently reached 7.3.7; our replacement is the 7.x-line latest **7.3.8**).
+- **vite 8.3.8 evaluation (deferred, not refused):** the 8.x line swaps the bundler stack
+  (esbuild+rollup → rolldown+lightningcss) and, measured in a clone, re-drew the whole widget
+  bundle: the three runtime-floor guards (crypto.randomUUID per-chunk census RT-106, Vue 3.5
+  inert-patcher pin, color-mix() census RT-107) all red on the rolldown output. Re-attesting
+  those floors under a new bundler is a dedicated program, not a deps wave — smallest lawful
+  landing is the latest 7.x patch. Dependabot flags no vite advisory on this lock; `npm audit`
+  exit 0 both sides.
+- **@vitejs/plugin-vue 6.0.7 → 6.0.10** (in declared ^6.0.0, latest secure; advanced with vite
+  as its related lib). pinia stays ^4.1.0 (RT-087 already landed it — no open PR to supersede);
+  estate pins `@phlix/*` untouched (owner-run pin waves). The one open dependabot ALERT (#63
+  minimatch, GHSA-g3hv class) remains the unreachable-patch allowlist case scripts/audit-gate.mjs
+  documents — re-verify duty 2027-04-30.
+- **Venue:** `npm update vite @vitejs/plugin-vue --legacy-peer-deps` — the bare resolver refuses
+  to re-derive the tree over the PRE-EXISTING vue-router@5.1.0 `peerOptional pinia@^3.0.4` vs
+  pinia@4.1.0 tension the lock already carries (ea6c2be era, CI-green; `npm ci` never re-checks
+  optional peers). dependabot.yml comment + distApiFloor header advanced for doc truth.
+- **Gates (all measured parent-then-tip at bd0e7dda / this commit):** typecheck +
+  typecheck:tests clean; vitest 65 files / 1210 tests / 0 skip on both sides (the i18n locale
+  guard passes against the real ui sibling); coverage 89.6/83.34/86.48/90.96 vs floors
+  72/61/68/73 — unchanged; eslint 0 errors / 29 warnings baseline-held; `npm run package`
+  deterministic ×2; audit-gate PASS (allow-list {GHSA-g3hv, GHSA-3g3m} exact, zero new).
+
 ### Changed — docs (CP-023 [w35/L2]): device-class token-custody truth line added — the localStorage bearer is declared by design, not a migration target, per the estate cookie-auth design — 2026-11-10
 
 - **Why:** the estate cookie-auth design (`COOKIE-DESIGN.md`) settled the permanent split —
