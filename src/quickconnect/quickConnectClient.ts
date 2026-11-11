@@ -14,8 +14,9 @@
  * contract-true; a pairing that actually COMPLETES still awaits the phone half.
  *
  * Every path literal lives INLINE in a `client.<verb>('…')` call and on an
- * EXISTING served route (the vendored route manifest — 415 tuples, re-vendored
- * byte-identical to contracts #v0.5.6 @ server `58530ec2`, LW-033), so
+ * EXISTING served route (the vendored route manifest — 418 tuples, re-vendored
+ * byte-identical to contracts master `6335d818` @ server `413765b6`, the
+ * 5-client lag cure 2026-11-11), so
  * `routeManifest.gate` sees 3 sites / 3 files-1:1 and the fixture stays
  * byte-identical. The `{code}` is a path SEGMENT (`…/quick-connect/{code}/status`),
  * not a query, matching the served template exactly.

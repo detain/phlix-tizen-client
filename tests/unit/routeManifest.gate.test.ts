@@ -102,6 +102,16 @@
  * manifest pins re-verified against the new bytes (zero removals ⇒ still
  * unserved). Provenance/total/length/md5/unique pins rotated from the
  * measured red at this commit; 0 behavior.)
+ * 5-client lag cure (2026-11-11, off-kit): the fixture re-vendors byte-for-byte
+ * to contracts master `6335d818…` (UNTAGGED regen era — the latest tag #v0.5.7
+ * still carries the 415 bytes) — regen @ phlix-server `413765b6…`: 415→416
+ * (`+POST /api/v1/auth/logout`, commit 48ddd40) →418 (`+GET/DELETE
+ * /api/v1/auth/sessions`, commit 6335d81). Provenance/total/length/md5/unique
+ * rotated from the measured red (the two integrity tests named the stale sha
+ * and md5; the other 9 stayed green — the added tuples are never issued from
+ * this tree). Currency follows master until the next contracts tag; trio
+ * (error-codes `5d1783a7…` 205 codes / mcp-scopes `8c92c070…`) untouched.
+ * 0 behavior.)
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
@@ -456,24 +466,25 @@ export const S535_DIGIT_BUFFER_TOKEN = 'S535DIGITBUFX9P1';
 
 describe(`${GATE_ID} — vendored manifest integrity`, () => {
   it('is the contracts artifact derived from phlix-server @ the pinned sha', () => {
-    expect(manifest.provenance.serverSha).toBe('58530ec207b0d40c3386ed10215d5bda3eaf54af');
-    expect(manifest.provenance.total).toBe(415);
-    expect(manifest.routes).toHaveLength(415);
+    expect(manifest.provenance.serverSha).toBe('413765b6d4385a3445ac1dddbc4ced16e0e281f6');
+    expect(manifest.provenance.total).toBe(418);
+    expect(manifest.routes).toHaveLength(418);
     expect(manifest.provenance.generator).toBe('scripts/generate-server-route-manifest.mjs');
   });
 
   it('is byte-identical to the sibling contracts artifact it vendors', () => {
     // md5 of `@phlix/contracts` `dist/server-route-manifest.json` — bytes
-    // vendored from the #v0.5.6 tag (peels to contracts c89c8420) at the
-    // LW-033 re-vendor (2026-11-06); the fixture was byte-copied from the
-    // installed copy, and this md5 is that equality's proof — one source
-    // across the estate; any drift here means this copy was edited (the
+    // vendored from contracts master `6335d818…` (UNTAGGED regen era, regen @
+    // server `413765b6…`; latest tag #v0.5.7 still carries the superseded 415
+    // bytes) at the 5-client lag cure (2026-11-11); the fixture was byte-copied
+    // from the canonical payload, and this md5 is that equality's proof — one
+    // source across the estate; any drift here means this copy was edited (the
     // artifact says "do not").
     const raw = readFileSync(MANIFEST_PATH);
     const md5 = createHash('md5').update(raw).digest('hex');
-    expect(md5).toBe('90b79e355055307d5ba2cc0ef98e2300');
+    expect(md5).toBe('c2111cd37f2d1f3148c7ff741e214570');
     const unique = new Set(manifest.routes.map(([m, r]) => `${m} ${r}`));
-    expect(unique.size).toBe(415);
+    expect(unique.size).toBe(418);
   });
 });
 
@@ -496,7 +507,7 @@ describe(`${GATE_ID} — every URL tizen issues is tuple-exact served`, () => {
     console.log(
       `[${GATE_ID}] tizen: ${sites.length} request sites / ${uniqueTuples.size} distinct ` +
         `[method, pathTemplate] tuples across ${perFile.size} modules — all tuple-exact against ` +
-        `the vendored 415-route manifest @ ${manifest.provenance.serverSha}`,
+        `the vendored ${manifest.provenance.total}-route manifest @ ${manifest.provenance.serverSha}`,
     );
     for (const [file, count] of [...perFile.entries()].sort()) {
       console.log(`  ${file}: ${count}`);
