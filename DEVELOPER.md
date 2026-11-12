@@ -13,6 +13,11 @@ It mirrors the Windows/Electron client's thin-consumer shape (`electronBridge` â
 
 Pinned dependencies (source of truth: `package.json`; drift-gated by `tests/unit/docsPinConsistency.test.ts`): `@phlix/ui` `github:detain/phlix-ui#v0.99.27`, `@phlix/contracts` `github:detain/phlix-contracts#v0.5.7`, `@phlix/syncplay` `github:detain/phlix-syncplay#v0.1.8`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
 
+Historical record: [`VERIFICATION.md`](VERIFICATION.md) is the **archived** implementation
+ledger from the gap-category passes â€” dated, kept verbatim, and not maintained against the
+current tree. Treat its line-cites and counts as history; this guide, `README.md` and
+`CHANGELOG.md` are the live references.
+
 ## Architecture Overview
 
 ```

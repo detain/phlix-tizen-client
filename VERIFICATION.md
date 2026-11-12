@@ -1,4 +1,11 @@
-# VERIFICATION — Tizen client implementation ledger
+# VERIFICATION (archive) — Tizen client implementation ledger
+
+> **Archive — not a live reference.** This file is the dated historical ledger of
+> the gap-category implementation passes; it is kept verbatim (history-verbatim law)
+> and its line-cites, counts and file names describe the tip each stamp names, not
+> the current tree. For the current architecture and workflows read
+> [`DEVELOPER.md`](DEVELOPER.md) and [`README.md`](README.md); for what changed and
+> when, read [`CHANGELOG.md`](CHANGELOG.md).
 
 Reading guide: each `# Category N` section records what was verified, adapted,
 or deliberately not built for one original gap category; sections run in the
