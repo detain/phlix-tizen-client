@@ -15,7 +15,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { reactive, nextTick } from 'vue';
-import { wirePendingPlayMediaDispatcher, type PendingPlayMediaStore, type PendingPlayMediaPlayer } from '@/syncplayDispatch';
+import {
+  wirePendingPlayMediaDispatcher,
+  isPendingCommandStale,
+  PENDING_COMMAND_MAX_SKEW_S,
+  type PendingPlayMediaStore,
+  type PendingPlayMediaPlayer,
+} from '@/syncplayDispatch';
 import type { PendingPlayMediaCommand } from '@/api/hubRelay';
 import type { MediaItem } from '@phlix/ui';
 
@@ -65,11 +71,19 @@ function fakePlayer(): PendingPlayMediaPlayer & {
   };
 }
 
+/** The fixture's `issuedAt` (Unix s) — the pinned "now" of every test below,
+ *  so the TIZ-17 staleness guard sees a fresh command unless a test moves it. */
+const ISSUED_AT_S = 1_700_000_000;
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // Only Date is faked: vue's nextTick (promise microtasks) must stay real.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(ISSUED_AT_S * 1000);
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -176,6 +190,123 @@ describe('wirePendingPlayMediaDispatcher — the load-a-new-title path', () => {
       await nextTick();
       expect(resolveMedia).not.toHaveBeenCalled();
       expect(player.setCurrent).not.toHaveBeenCalled();
+    } finally {
+      unwatch();
+    }
+  });
+});
+
+// ── TIZ-17 — issuedAt staleness guard (generous, symmetric: TV clocks drift) ──
+
+describe('isPendingCommandStale — the bounded skew window', () => {
+  const nowMs = ISSUED_AT_S * 1000;
+
+  it('is generous: the bound is ten minutes either way', () => {
+    expect(PENDING_COMMAND_MAX_SKEW_S).toBe(600);
+  });
+
+  it('accepts a command anywhere inside the window, edges included', () => {
+    expect(isPendingCommandStale(ISSUED_AT_S, nowMs)).toBe(false);
+    expect(isPendingCommandStale(ISSUED_AT_S - 600, nowMs)).toBe(false);
+    expect(isPendingCommandStale(ISSUED_AT_S + 600, nowMs)).toBe(false);
+  });
+
+  it('rejects a command older than the window', () => {
+    expect(isPendingCommandStale(ISSUED_AT_S - 601, nowMs)).toBe(true);
+  });
+
+  it('rejects a command dated further in the future than the window (unit error / broken clock)', () => {
+    expect(isPendingCommandStale(ISSUED_AT_S + 601, nowMs)).toBe(true);
+    // A milliseconds-for-seconds unit slip lands far in the future.
+    expect(isPendingCommandStale(ISSUED_AT_S * 1000, nowMs)).toBe(true);
+  });
+
+  it('honors an explicit bound', () => {
+    expect(isPendingCommandStale(ISSUED_AT_S - 31, nowMs, 30)).toBe(true);
+    expect(isPendingCommandStale(ISSUED_AT_S - 30, nowMs, 30)).toBe(false);
+  });
+});
+
+describe('wirePendingPlayMediaDispatcher — stale-frame rejection (TIZ-17)', () => {
+  it('drops a stale command: no resolve, no playback, slot consumed, onStale notified', async () => {
+    const store = fakeStore();
+    const player = fakePlayer();
+    const onStale = vi.fn();
+    const onUnresolved = vi.fn();
+    const resolveMedia = vi.fn(async () => ({ id: 'media-9' }) as MediaItem);
+    const unwatch = wirePendingPlayMediaDispatcher(store, { resolveMedia, player, onStale, onUnresolved });
+    try {
+      const stale = command({ issuedAt: ISSUED_AT_S - PENDING_COMMAND_MAX_SKEW_S - 1 });
+      store.pendingPlayMedia = stale;
+      await nextTick();
+      await nextTick();
+
+      expect(resolveMedia).not.toHaveBeenCalled();
+      expect(player.setCurrent).not.toHaveBeenCalled();
+      expect(player.play).not.toHaveBeenCalled();
+      expect(store.consumePendingPlayMedia).toHaveBeenCalledTimes(1);
+      expect(store.pendingPlayMedia).toBeNull(); // can never start later
+      expect(onStale).toHaveBeenCalledWith(stale);
+      expect(onUnresolved).not.toHaveBeenCalled();
+    } finally {
+      unwatch();
+    }
+  });
+
+  it('drops a command dated beyond the window in the future', async () => {
+    const store = fakeStore();
+    const player = fakePlayer();
+    const resolveMedia = vi.fn(async () => ({ id: 'media-9' }) as MediaItem);
+    const unwatch = wirePendingPlayMediaDispatcher(store, { resolveMedia, player });
+    try {
+      store.pendingPlayMedia = command({ issuedAt: ISSUED_AT_S + PENDING_COMMAND_MAX_SKEW_S + 1 });
+      await nextTick();
+      await nextTick();
+
+      expect(resolveMedia).not.toHaveBeenCalled();
+      expect(player.play).not.toHaveBeenCalled();
+      expect(store.pendingPlayMedia).toBeNull();
+    } finally {
+      unwatch();
+    }
+  });
+
+  it('still plays a command from a drifted-but-sane clock (inside the window)', async () => {
+    const store = fakeStore();
+    const player = fakePlayer();
+    const item = { id: 'media-9', name: 'Inception', type: 'movie' } as MediaItem;
+    const resolveMedia = vi.fn(async () => item);
+    const onStale = vi.fn();
+    const unwatch = wirePendingPlayMediaDispatcher(store, { resolveMedia, player, onStale });
+    try {
+      store.pendingPlayMedia = command({ issuedAt: ISSUED_AT_S - 9 * 60 }); // 9 min behind
+      await nextTick();
+      await nextTick();
+
+      expect(onStale).not.toHaveBeenCalled();
+      expect(player.setCurrent).toHaveBeenCalledWith(item, { resetPosition: true });
+      expect(player.play).toHaveBeenCalledTimes(1);
+    } finally {
+      unwatch();
+    }
+  });
+
+  it('reads the injected clock seam instead of Date.now', async () => {
+    const store = fakeStore();
+    const player = fakePlayer();
+    const resolveMedia = vi.fn(async () => ({ id: 'media-9' }) as MediaItem);
+    const onStale = vi.fn();
+    // System time says fresh; the seam says an hour later — the seam wins.
+    const now = vi.fn(() => (ISSUED_AT_S + 3600) * 1000);
+    const unwatch = wirePendingPlayMediaDispatcher(store, { resolveMedia, player, onStale, now });
+    try {
+      store.pendingPlayMedia = command();
+      await nextTick();
+      await nextTick();
+
+      expect(now).toHaveBeenCalled();
+      expect(onStale).toHaveBeenCalledWith(command());
+      expect(resolveMedia).not.toHaveBeenCalled();
     } finally {
       unwatch();
     }

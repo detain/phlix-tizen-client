@@ -667,6 +667,64 @@ describe('openHubRelayConnection — the open-whenever lifecycle', () => {
     expect(onPendingCommand).not.toHaveBeenCalled();
   });
 
+  it('drops a pending_command naming a DIFFERENT server than the socket is bound to (TIZ-17)', () => {
+    const onPendingCommand = vi.fn();
+    openHubRelayConnection(config({ onPendingCommand }));
+    socket().connect();
+    // Cross-server frame: its media id belongs to another library — never deliver.
+    socket().deliver({
+      type: 'pending_command',
+      command: 'play_media',
+      server_id: 'srv-other999',
+      media_id: 'media-9',
+      title: 'Inception',
+      issued_at: 1_700_000_000,
+      source: 'alexa',
+    });
+    expect(onPendingCommand).not.toHaveBeenCalled();
+
+    // The handler survives the drop: a matching frame still delivers.
+    socket().deliver({
+      type: 'pending_command',
+      command: 'play_media',
+      server_id: SERVER_ID,
+      media_id: 'media-9',
+      title: 'Inception',
+      issued_at: 1_700_000_000,
+      source: 'alexa',
+    });
+    expect(onPendingCommand).toHaveBeenCalledTimes(1);
+    expect(onPendingCommand).toHaveBeenCalledWith(pendingCommand());
+  });
+
+  it('after a re-point, frames for the OLD server are dropped (TIZ-17)', () => {
+    const onPendingCommand = vi.fn();
+    openHubRelayConnection(config({ onPendingCommand }));
+    socket().connect();
+    openHubRelayConnection(config({ serverId: 'srv-new456', onPendingCommand }));
+    socket().connect();
+    socket().deliver({
+      type: 'pending_command',
+      command: 'play_media',
+      server_id: SERVER_ID, // the server this app USED to point at
+      media_id: 'media-9',
+      title: 'Inception',
+      issued_at: 1_700_000_000,
+      source: 'alexa',
+    });
+    expect(onPendingCommand).not.toHaveBeenCalled();
+    socket().deliver({
+      type: 'pending_command',
+      command: 'play_media',
+      server_id: 'srv-new456',
+      media_id: 'media-9',
+      title: 'Inception',
+      issued_at: 1_700_000_000,
+      source: 'alexa',
+    });
+    expect(onPendingCommand).toHaveBeenCalledWith(pendingCommand({ serverId: 'srv-new456' }));
+  });
+
   it('a throwing consumer does not kill the message handler', () => {
     const onPendingCommand = vi.fn(() => {
       throw new Error('consumer boom');

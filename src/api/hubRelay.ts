@@ -653,6 +653,11 @@ function connectHubRelaySocket(): void {
     }
     const command = parsePendingCommandFrame(raw);
     if (!command) return;
+    // TIZ-17 — the media id is only meaningful against the server this socket
+    // is bound to. A frame naming a DIFFERENT server (a mis-routed relay frame,
+    // or one still in flight across a server re-point) would resolve its id
+    // against the wrong library — drop it instead of loading the wrong title.
+    if (command.serverId !== hubConfig.serverId) return;
     try {
       hubConfig.onPendingCommand(command);
     } catch {

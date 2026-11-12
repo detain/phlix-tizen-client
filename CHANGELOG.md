@@ -34,6 +34,28 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — "Alexa, play X": the TV no longer plays a command meant for another server, or one that is long out of date — 2026-11-12
+
+- **User-visible delta:** a hub-relay play command now starts playback only
+  when it names the server the TV is connected to and was issued within ten
+  minutes of the TV's clock (review round 2026-11-11 TIZ-17). Before, a
+  frame for a different server had its media id looked up in the wrong
+  library, and an old command could still start a title.
+- **Mechanism:** the relay socket's `onmessage` in `src/api/hubRelay.ts`
+  drops a parsed `pending_command` whose `server_id` differs from the
+  socket's bound `serverId` (also covers frames for the old server after a
+  re-point). `wirePendingPlayMediaDispatcher` in `src/syncplayDispatch.ts`
+  checks `issuedAt` before resolving: outside `PENDING_COMMAND_MAX_SKEW_S`
+  (600 s, both directions, generous because TV clocks drift) the command is
+  consumed unplayed and the new optional `onStale` callback is told. A frame
+  without `issued_at` is still stamped "now" at the parse boundary, so it is
+  never stale. The wire schema is unchanged; both checks only read fields
+  the parser already had. The tests are in `tests/unit/hubRelay.test.ts`
+  (cross-server and post-re-point drops) and
+  `tests/unit/syncplayDispatch.test.ts` (window edges, past and future
+  rejection, drifted-but-sane acceptance, clock seam). `package/` is
+  regenerated in the same commit.
+
 ### Fixed — parental controls: a double-pressed Save no longer creates a duplicate schedule row or sends a doubled limit update, and the shipped widget now carries the fix (package/ regenerated) — 2026-11-12
 
 - **User-visible delta:** pressing Save twice quickly on a parental schedule
