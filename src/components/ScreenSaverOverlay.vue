@@ -31,7 +31,7 @@
  * dismissal before it.
  *
  * BURN-IN POSTURE (jellyfin convention, adopted honestly): the idle const is
- * 180 s (localStorage-overridable via `phlix.screensaver.idleMs`), the artwork
+ * 180 s (set from the TV Settings page, persisted in `phlix.screensaver.idleMs`), the artwork
  * is a slow 42 s drift + 7 s breathing halo — nothing static sits long enough
  * to etch an OSD, and playback itself vetoes the whole surface.
  *
@@ -95,6 +95,9 @@ function onRoutedKey(): void {
 
 function tick(): void {
   const now = Date.now();
+  // The Settings row can change the window while the app runs; re-parse the
+  // (cheap, 1 s) persisted value so a new choice applies without a reload.
+  timeoutMs = resolveIdleTimeoutMs(storage);
   // Active playback IS continuous activity — refresh the stamp so the idle
   // window after a pause starts from the pause. The pure policy still holds
   // the absolute veto, so a stale/odd `playing` signal cannot mis-dim.

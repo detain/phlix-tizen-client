@@ -53,6 +53,7 @@ const menu = {
   browse: 'Parcourir',
   forYou: 'Pour vous',
   settings: 'Paramètres',
+  tvSettings: 'Réglages TV',
   parentalControls: 'Contrôle parental',
   admin: 'Administration',
 };
@@ -85,6 +86,13 @@ const chapters = {
 
 const screensaver = {
   wakeHint: 'Appuyez sur une touche pour réveiller',
+};
+
+const tvSettings = {
+  title: 'Réglages TV',
+  idleLabel: 'Économiseur d’écran',
+  idleHint: 'Délai d’inactivité avant l’économiseur d’écran. Appuyez à gauche ou à droite pour modifier.',
+  minutes: '{minutes} minutes',
 };
 
 const telemetry = {
@@ -274,6 +282,7 @@ export const FR_TIZEN_MESSAGES = {
   hub,
   chapters,
   screensaver,
+  tvSettings,
   telemetry,
   audioTracks,
   subtitleTracks,

@@ -553,7 +553,7 @@ describe('buildMenu', () => {
     vi.stubEnv('VITE_PHLIX_TV_ADMIN', '1');
     const { buildMenu } = await import('@/main');
     const menu = buildMenu();
-    expect(menu.map((m) => m.id)).toEqual(['browse', 'for-you', 'settings', 'parental-controls', 'admin']);
+    expect(menu.map((m) => m.id)).toEqual(['browse', 'for-you', 'settings', 'tv-settings', 'parental-controls', 'admin']);
     expect(menu.find((m) => m.id === 'browse')?.libraryLinks).toBe(true);
     expect(menu.find((m) => m.id === 'for-you')).toMatchObject({
       to: '/app/recommendations',
@@ -570,7 +570,7 @@ describe('buildMenu', () => {
     vi.stubEnv('VITE_PHLIX_TV_ADMIN', '');
     const { buildMenu } = await import('@/main');
     const menu = buildMenu();
-    expect(menu.map((m) => m.id)).toEqual(['browse', 'for-you', 'settings', 'parental-controls']);
+    expect(menu.map((m) => m.id)).toEqual(['browse', 'for-you', 'settings', 'tv-settings', 'parental-controls']);
     expect(menu.some((m) => m.requiresAdmin)).toBe(false);
     // Non-destructive: everything else is byte-identical.
     expect(menu.find((m) => m.id === 'browse')?.libraryLinks).toBe(true);

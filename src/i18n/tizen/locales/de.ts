@@ -52,6 +52,7 @@ const menu = {
   browse: 'Stöbern',
   forYou: 'Für dich',
   settings: 'Einstellungen',
+  tvSettings: 'TV-Einstellungen',
   parentalControls: 'Jugendschutz',
   admin: 'Verwaltung',
 };
@@ -84,6 +85,13 @@ const chapters = {
 
 const screensaver = {
   wakeHint: 'Taste drücken zum Aktivieren',
+};
+
+const tvSettings = {
+  title: 'TV-Einstellungen',
+  idleLabel: 'Bildschirmschoner',
+  idleHint: 'Leerlaufzeit bis zum Start des Bildschirmschoners. Links oder rechts drücken zum Ändern.',
+  minutes: '{minutes} Min.',
 };
 
 const telemetry = {
@@ -273,6 +281,7 @@ export const DE_TIZEN_MESSAGES = {
   hub,
   chapters,
   screensaver,
+  tvSettings,
   telemetry,
   audioTracks,
   subtitleTracks,

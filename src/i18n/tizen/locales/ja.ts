@@ -54,6 +54,7 @@ const menu = {
   browse: 'ブラウズ',
   forYou: 'おすすめ',
   settings: '設定',
+  tvSettings: 'テレビ設定',
   parentalControls: 'ペアレンタルコントロール',
   admin: '管理',
 };
@@ -86,6 +87,13 @@ const chapters = {
 
 const screensaver = {
   wakeHint: 'いずれかのキーを押すと復帰します',
+};
+
+const tvSettings = {
+  title: 'テレビ設定',
+  idleLabel: 'スクリーンセーバー',
+  idleHint: 'スクリーンセーバーが始まるまでの待機時間。左右キーで変更します。',
+  minutes: '{minutes}分',
 };
 
 const telemetry = {
@@ -276,6 +284,7 @@ export const JA_TIZEN_MESSAGES = {
   hub,
   chapters,
   screensaver,
+  tvSettings,
   telemetry,
   audioTracks,
   subtitleTracks,

@@ -58,6 +58,7 @@ const menu = {
   browse: 'Browse',
   forYou: 'For You',
   settings: 'Settings',
+  tvSettings: 'TV Settings',
   parentalControls: 'Parental Controls',
   admin: 'Admin',
 } satisfies Record<string, string>;
@@ -104,6 +105,13 @@ const chapters = {
 
 const screensaver = {
   wakeHint: 'Press any key to wake',
+} satisfies Record<string, string>;
+
+const tvSettings = {
+  title: 'TV Settings',
+  idleLabel: 'Screensaver',
+  idleHint: 'Idle time before the screensaver starts. Press left or right to change.',
+  minutes: '{minutes} min',
 } satisfies Record<string, string>;
 
 const telemetry = {
@@ -322,6 +330,7 @@ export const TIZEN_EN = {
   hub,
   chapters,
   screensaver,
+  tvSettings,
   telemetry,
   audioTracks,
   subtitleTracks,

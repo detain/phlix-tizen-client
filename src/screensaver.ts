@@ -41,6 +41,55 @@ export const IDLE_TIMEOUT_MS = 180_000;
  */
 export const IDLE_TIMEOUT_KEY = 'phlix.screensaver.idleMs';
 
+/** Remote-pickable idle windows (ms) offered by the Settings row, shortest first. */
+export const IDLE_TIMEOUT_PRESETS_MS: readonly number[] = [
+  60_000,
+  120_000,
+  180_000,
+  300_000,
+  600_000,
+  1_800_000,
+];
+
+/** The minimal write surface {@link persistIdleTimeoutMs} needs from storage. */
+export interface IdleStorageWrite {
+  setItem(key: string, value: string): void;
+}
+
+/**
+ * Persist a chosen idle window. Only a positive integer is written (the same
+ * floor {@link resolveIdleTimeoutMs} enforces on read); anything else is
+ * refused. Returns whether the value was stored — a throwing storage (privacy
+ * mode) reports false instead of crashing the Settings row.
+ */
+export function persistIdleTimeoutMs(storage: IdleStorageWrite, ms: number): boolean {
+  if (!Number.isInteger(ms) || ms <= 0) return false;
+  try {
+    storage.setItem(IDLE_TIMEOUT_KEY, String(ms));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Step the idle window through {@link IDLE_TIMEOUT_PRESETS_MS} (wrapping). A
+ * current value that is not a preset (dev/QA override) snaps to the nearest
+ * preset in the step direction.
+ */
+export function stepIdleTimeoutMs(current: number, direction: 1 | -1): number {
+  const presets = IDLE_TIMEOUT_PRESETS_MS;
+  const exact = presets.indexOf(current);
+  if (exact >= 0) {
+    return presets[(exact + direction + presets.length) % presets.length] as number;
+  }
+  if (direction === 1) {
+    return presets.find((p) => p > current) ?? (presets[0] as number);
+  }
+  const lower = presets.filter((p) => p < current);
+  return lower.length > 0 ? (lower[lower.length - 1] as number) : (presets[presets.length - 1] as number);
+}
+
 /** Body class present ONLY while the overlay is engaged (S523, jellyfin convention). */
 export const IDLE_BODY_CLASS = 'screensaver-active';
 

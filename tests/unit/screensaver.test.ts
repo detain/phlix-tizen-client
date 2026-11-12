@@ -86,3 +86,38 @@ describe('policy constants (ritual pins)', () => {
     expect(IDLE_BODY_CLASS).toBe('screensaver-active');
   });
 });
+
+import {
+  IDLE_TIMEOUT_KEY as KEY_S16,
+  IDLE_TIMEOUT_PRESETS_MS,
+  persistIdleTimeoutMs,
+  resolveIdleTimeoutMs as resolveS16,
+  stepIdleTimeoutMs,
+} from '../../src/screensaver';
+
+describe('TIZ-S16 idle duration settings helpers', () => {
+  it('persist round-trips through the parse floor', () => {
+    const m = new Map<string, string>();
+    const st = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v) };
+    expect(persistIdleTimeoutMs(st, 300_000)).toBe(true);
+    expect(m.get(KEY_S16)).toBe('300000');
+    expect(resolveS16(st)).toBe(300_000);
+  });
+  it('refuses non-positive-integer values and survives throwing storage', () => {
+    const st = { setItem: () => { throw new Error('denied'); } };
+    expect(persistIdleTimeoutMs(st, 0)).toBe(false);
+    expect(persistIdleTimeoutMs(st, 1.5)).toBe(false);
+    expect(persistIdleTimeoutMs(st, 60_000)).toBe(false);
+  });
+  it('steps through presets with wrap and snaps off-preset values', () => {
+    const first = IDLE_TIMEOUT_PRESETS_MS[0] as number;
+    const last = IDLE_TIMEOUT_PRESETS_MS[IDLE_TIMEOUT_PRESETS_MS.length - 1] as number;
+    expect(stepIdleTimeoutMs(180_000, 1)).toBe(300_000);
+    expect(stepIdleTimeoutMs(180_000, -1)).toBe(120_000);
+    expect(stepIdleTimeoutMs(last, 1)).toBe(first);
+    expect(stepIdleTimeoutMs(first, -1)).toBe(last);
+    expect(stepIdleTimeoutMs(200_000, 1)).toBe(300_000);
+    expect(stepIdleTimeoutMs(200_000, -1)).toBe(180_000);
+    expect(stepIdleTimeoutMs(5, -1)).toBe(last);
+  });
+});

@@ -47,6 +47,7 @@ import ChaptersPage from './pages/ChaptersPage.vue';
 import AudioTracksPage from './pages/AudioTracksPage.vue';
 import SubtitleTracksPage from './pages/SubtitleTracksPage.vue';
 import ParentalControlsPage from './pages/ParentalControlsPage.vue';
+import TvSettingsPage from './pages/TvSettingsPage.vue';
 import RecommendationsScreen from './screens/RecommendationsScreen.vue';
 import QuickConnectPanel from './quickconnect/QuickConnectPanel.vue';
 import TelemetryConsent from './components/TelemetryConsent.vue';
@@ -100,6 +101,7 @@ export function buildMenu(): MenuItem[] {
     { id: 'browse', label: tTizen('menu.browse'), to: '/app', libraryLinks: true },
     { id: 'for-you', label: tTizen('menu.forYou'), to: '/app/recommendations' },
     { id: 'settings', label: tTizen('menu.settings'), to: '/app/settings' },
+    { id: 'tv-settings', label: tTizen('menu.tvSettings'), to: '/app/tv-settings' },
     { id: 'parental-controls', label: tTizen('menu.parentalControls'), to: '/app/parental-controls' }
   ];
   if (tvAdminEnabled()) {
@@ -136,6 +138,8 @@ export function buildExtraRoutes(): RouteRecordRaw[] {
     // S407: the subtitle picker's consumer page (mirror of audio-tracks).
     { path: '/app/subtitle-tracks/:id', name: 'subtitle-tracks', component: SubtitleTracksPage },
     { path: '/app/recommendations', name: 'recommendations', component: RecommendationsScreen },
+    // TIZ-S16: TV-own settings surface (the shared /app/settings page is ui-owned).
+    { path: '/app/tv-settings', name: 'tv-settings', component: TvSettingsPage },
     { path: '/app/parental-controls', name: 'parental-controls', component: ParentalControlsPage },
   ];
 }
