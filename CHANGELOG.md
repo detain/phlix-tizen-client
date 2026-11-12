@@ -34,6 +34,39 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — ledger erratum: one post-law `### Documentation —` heading re-categorized, and the shape-law preamble's phantom `docs/signing.md` cite re-sourced to the CI release job — 2026-11-12
+
+- **User-visible delta:** readers of this ledger get two corrections to how
+  existing text should be read. Nothing above or below this entry is
+  rewritten (estate history-verbatim law: corrections append, never rewrite);
+  no source, test, widget or `package/` byte moved (review round 2026-11-11
+  TIZ-23 / TIZ-33).
+- **Heading erratum.** `### Documentation — entry maps and audit trails carry
+  the w13/w15 landing — 2026-11-09` (landed `452ae44`, 2026-11-09) postdates
+  the forward-vocabulary law (`776e582`, 2026-11-03) and coins exactly the
+  non-Keep-a-Changelog category that law exists to stop. Read it as
+  `### Changed — …`: it records doc-only edits to existing entry maps, which
+  is a change, not an addition or a fix. It is an erratum'd violation, NOT a
+  grandfathered precedent — no later entry may cite it to justify a fresh
+  `Documentation` coin. Census, measured at this entry: the ledger holds
+  exactly two `### Documentation —` headings. The other one, `### Documentation
+  — the widget update path is written down (M-TIZEN-16 / review tizen__devops
+  MINOR-7) — 2026-10-30` (`b0abe86`, 2026-10-30 23:05 -0400), landed after
+  the shape-law preamble (`e046a2f`, 21:34 the same day) but before the
+  forward-vocabulary clause existed, so the 2026-11-03 m19/m20 grandfather
+  adjudication covers it and it stays read as written.
+- **Phantom cite.** The shape-law preamble sources the rolling-`latest`
+  mechanics to `docs/signing.md — "rolling prerelease era"`. That phrase does
+  not exist in docs/signing.md and never has:
+  `git log -S'rolling prerelease' -- docs/ README.md` returns no commits. The
+  true source is `.github/workflows/build.yml`, job `release-latest`
+  (`name: Update "latest" prerelease`, :70–71). On every master/main push it
+  deletes the `latest` release and tag (step `Reset "latest" release + tag`),
+  then re-creates them (step `Publish "latest" prerelease`, `tag_name:
+  latest`). Read the preamble's parenthetical as citing that job.
+  docs/signing.md does describe the published artifact ("the "latest" GitHub
+  release publishes this RAW, UNSIGNED .wgt") but does not name an era.
+
 ### Changed — deps: @phlix/ui #v0.99.26 → #v0.99.27 (session-rows wave cascade) — Settings gains the device-sessions tab, the locale vendor re-synced (+24 leaves, 542→566), package/ regenerated (63 chunk renames, deterministic ×2) — 2026-11-11
 
 - **User-visible delta:** the installed ui bundle now carries
