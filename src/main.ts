@@ -652,13 +652,13 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   // The routeManifest scan now covers ZERO overlay request sites: chapters +
   // markers GETs live in the vendored bundle.
 
-  // S516 AD-13 — mount the transient action-toast overlay as the FOURTH app sharing
+  // S516 AD-13 — mount the transient action-toast overlay as the THIRD root app sharing
   // the main app's pinia (one caption store, one slot), so every remote key and
   // D-pad landing gets its ~1 s glanceable echo. Presentational only: it never
   // takes focus (no tabindex, aria-hidden) and dismisses on the next key press.
   createApp(ActionToastOverlay).use(pinia).mount('#phlix-action-toast-overlay');
 
-  // S520 AD-25 — mount the quick-connect pairing surface as a FIFTH root app
+  // S520 AD-25 — mount the quick-connect pairing surface as a FOURTH root app
   // sharing the main app's pinia (one auth store), so it observes the SAME
   // logged-in/server state the shell does. It self-gates: it renders and polls
   // ONLY when a server base exists but no session does, retires itself the
@@ -667,7 +667,7 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
   // second token store is introduced anywhere in the flow.
   createApp(QuickConnectPanel).use(pinia).mount('#phlix-quick-connect');
 
-  // S521 AD-27 — mount the one-time telemetry consent card as a SIXTH root app
+  // S521 AD-27 — mount the one-time telemetry consent card as a FIFTH root app
   // sharing the main app's pinia. It self-gates on "never decided && a server is
   // set", so a decided install renders nothing. Telemetry is OFF by default: the
   // heartbeat sender is only armed here when consent was ALREADY granted on a
@@ -678,7 +678,7 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
     startTelemetry(buildTelemetryDeps({ storage, baseUrl: apiBase }));
   }
 
-  // S523 AD-21 — mount the idle screensaver overlay as a SEVENTH root app sharing
+  // S523 AD-21 — mount the idle screensaver overlay as a SIXTH root app sharing
   // the main app's pinia, so its 1 s tick reads the SAME usePlayerStore().playing
   // signal the shell does and the overlay can never engage during active
   // playback. Any key routed through the RemoteManager seam wakes it. Zero

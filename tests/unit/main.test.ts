@@ -938,7 +938,7 @@ describe('S523 idle screensaver overlay (AD-21)', () => {
     globalThis.localStorage.clear();
   });
 
-  it('boots the screensaver overlay as a ninth root app sharing pinia', async () => {
+  it('boots the screensaver overlay as a sixth root app sharing pinia', async () => {
     const mod = await import('@/main');
     await mod.boot();
     expect(secondMount).toHaveBeenCalledWith('#phlix-screensaver');

@@ -13,11 +13,8 @@
  * While a typing target holds focus, digits stay byte-identical to the old
  * passthrough — no buffer, no preventDefault. Recognised numeric voice
  * phrases (S531) enter through the SAME `pressDigit` seam — never a forked
- * digit path. Every ACCEPTED press additionally echoes the joined buffer on
- * a live `digit` observation channel: a press must never dead-air while its
- * burst is pending. The commit law is unchanged — `action` still carries
- * exactly ONE silent DIGIT_COMMIT per burst, and a refused or flood-abandoned
- * digit emits on neither channel.
+ * digit path. The commit law: `action` carries exactly ONE silent
+ * DIGIT_COMMIT per burst; a refused or flood-abandoned digit emits nothing.
  *
  * M-TIZEN-09 (review tizen__gameux M1): transport taps go LIVE and the hold
  * cadence is throttled. FAST_FORWARD/REWIND are now immediate AND repeatable
