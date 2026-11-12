@@ -345,8 +345,24 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
-    // Vendored @ 6e1ce2d8 == @phlix/ui v0.99.25 — RE-SYNCED at this pin (the
-    // 01acaa12-era held run ended here): the .23→.25 review-cure payload
+    // Vendored @ 1f906979 == @phlix/ui v0.99.27 — RE-SYNCED at this pin (the
+    // .25→.26 held run ended here): the device-sessions payload moved ui
+    // locale SOURCE — `git diff dc2e70fe..1f906979 -- src/i18n` NON-empty:
+    // the six bundle files + the messages.ts catalog each gained the sessions
+    // block (`settings.tabSessions` plus the new 23-leaf `sessions` group —
+    // 24 flat leaves, 542→566; +26 lines per bundle, +29 on the catalog incl.
+    // two comment lines; the errors.ts/errors.test.ts deltas in that range
+    // are ui-internal prose and test growth — never vendored). Both equality
+    // legs measured RED on the v0.99.27 install BEFORE the sync — `es missing
+    // installed keys: [ 'settings.tabSessions', …(23) ]` + `expected 566 to be
+    // 542`; ref re-anchored 6e1ce2d8→1f906979 and 12 of the fourteen PIN
+    // hashes rotated with it, the index.ts pair HOLDING for the sixth
+    // consecutive real re-vendor wave because ui's locales/index.ts is
+    // byte-stable across those pins (re-verified at the tag payload); bundles
+    // and the installed copy re-synced TOGETHER here, so both equality
+    // directions hold by construction again. Prior era: vendored @ 6e1ce2d8 ==
+    // @phlix/ui v0.99.25 — RE-SYNCED at that pin (the 01acaa12-era held run
+    // ended there): the .23→.25 review-cure payload
     // moved ui locale SOURCE — `git diff 01acaa12..6e1ce2d8 -- src/i18n`
     // NON-empty: the six bundle files + the messages.ts catalog each gained
     // sixteen leaves (526→542 keys: a new `browse` group — continueWatching,

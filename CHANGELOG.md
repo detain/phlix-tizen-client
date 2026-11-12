@@ -34,6 +34,47 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — deps: @phlix/ui #v0.99.26 → #v0.99.27 (session-rows wave cascade) — Settings gains the device-sessions tab, the locale vendor re-synced (+24 leaves, 542→566), package/ regenerated (63 chunk renames, deterministic ×2) — 2026-11-11
+
+- **User-visible delta:** the installed ui bundle now carries
+  `DeviceSessionsPage` — Settings > Sessions lists the devices signed in to
+  the account and signs out the others (ui `feat(sessions)` @ `1f906979`).
+  Zero new tizen-side code: the surface rides in through `createPhlixApp()`.
+- **Pin leg:** `github:detain/phlix-ui#v0.99.26` → `#v0.99.27`, lock
+  surgical — EXACTLY 3+/3− (package.json, lock root echo, entry
+  `version`/`resolved`). `resolved` peel `1f9069793f7195eb8b5c101d435725daad18a403`
+  re-verified by own `git ls-remote` (tag object `c262b68132954ecf6950760970607a5b2b3b52b1`
+  == ui master at the wave). No other dep moved — the 2026-11-11 latest-secure
+  floors above stay exactly as landed.
+- **Locale re-vendor:** `git diff dc2e70fe..1f906979 -- src/i18n` is
+  NON-empty (the sessions block), so the key-set equality law demanded a
+  conscious re-sync: BOTH equality legs measured RED on the fresh .27 install
+  first (`es missing installed keys: ['settings.tabSessions', …(23)]` +
+  `expected 566 to be 542`), then `scripts/sync-ui-locale-bundles.mjs --ref
+  1f906979` re-vendored the seven-file tree. 12 of the fourteen PIN hashes
+  rotated (six bundles × source+vendored); the `index.ts` pair HELD for the
+  sixth consecutive real re-vendor wave. The script's bootstrap `SOURCE_REF`
+  advanced with the ref (constants==PIN drift pin green), the
+  `i18nLocales.test.ts` era comment and `docs/i18n.md` lineage carry the new
+  head entry.
+- **package/ re-vendor:** widget bundle rebuilt at .27 — 63 chunk renames
+  (entry `index-D9xcKabx.js` → `index-DM7Rs6-m.js`, css `index-DVCjqgJ1.css`
+  → `index-ZhzVHCBR.css`, PlayerPage carrier `5onGq7ES-CYJm1rhs` →
+  `CHLjXsKa-Bhwg2fOC`), file set unchanged at 104, deterministic ×2 (clean
+  rebuild per-file md5 identity), committed bytes == a fresh build for the
+  Build-workflow freshness gate. The sessions view chunk-merges into the
+  existing lazy pages — no new chunk name arrives.
+- **Runtime floor:** `distApiFloor` census moved ZERO — the .27 payload added
+  no above-floor live call site; the polyfill roster (`.at`,
+  structuredClone, randomUUID, Object.hasOwn) is untouched and every pin held
+  un-rotated.
+- **Gates:** vue-tsc 0; vitest 65 files / 1210 tests — EXACT parent figures
+  (no test added, none removed; the six `docsPinConsistency` legs measured RED
+  at tip on the stale stamps, cured by the .26→.27 rotations in README/
+  DEVELOPER/AGENTS/CLAUDE/docs-i18n); lint 0 errors / 29 warnings (parent
+  parity); audit-gate PASS — same two-entry allow-list (glob/minimatch dev
+  chains), zero new advisories, unchanged posture.
+
 ### Changed — deps: latest-secure dependency wave (owner ruling 2026-11-11) — vite 8.3.8 taken (the deferral above cured: rolldown bundle re-attestation completed), vue 3.5.45, vue-router 5.5.0, @phlix/syncplay #v0.1.8, vitest/coverage 5.1.0, @vue/test-utils 2.5.1, vue-eslint-parser 10.4.2, vue-tsc 3.3.14, typescript-eslint 8.72.1 floors; eslint 10 / TS 7 / @types-node 26 / globals 17 / jsdom 31 cross-major cohort NOT taken (owner-gated audit triage); #v0.99.26 ui pin held (the batch's v0.99.24 downgrade refused); package/ regenerated (rolldown, 97 chunks, deterministic ×2), runtime-floor tripwires re-derived from disk — 2026-11-11
 
 - **Latest-secure wave per owner ruling** over the open dependabot batches
