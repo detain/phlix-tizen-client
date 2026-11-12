@@ -32,10 +32,14 @@
 // what made the D-pad inert — the ui bundle never invokes `v-focusable`, so
 // nothing ever entered `focusableRegistry`. This host now owns populating it:
 // `spatial/focusCandidates.ts` keeps every currently-interactive element under
-// document.body registered while the host lives, and the engine's `enabled`
-// gate alone decides whether moves are allowed (surface-off = pool idle, never
-// contesting the player or the quality flyout).
-import { onBeforeUnmount, onMounted } from 'vue';
+// document.body registered while spatial-nav is enabled.
+//
+// TIZ-2: the watcher follows the SAME `enabled` predicate the engine reads, so
+// surface-off really is pool-idle — on the player route (style churn every
+// progress tick), under the quality flyout and with tv mode off the full
+// candidate scan is not observing at all; only the takeover mirror the consent
+// card reads stays tracked. The resume edge re-scans synchronously.
+import { onBeforeUnmount, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useSpatialNav, usePreferencesStore, focusableRegistry } from '@phlix/ui';
 import { qualityMenuActive } from './tizenBridge';
@@ -44,14 +48,25 @@ import { createFocusCandidateWatcher } from './spatial/focusCandidates';
 const route = useRoute();
 const prefs = usePreferencesStore();
 
-useSpatialNav({
-  enabled: () => Boolean(prefs.tv) && route.name !== 'player' && !qualityMenuActive.value
-});
+/** Single predicate shared by the engine and the candidate watcher (TIZ-2). */
+const spatialEnabled = (): boolean =>
+  Boolean(prefs.tv) && route.name !== 'player' && !qualityMenuActive.value;
+
+useSpatialNav({ enabled: spatialEnabled });
 
 let candidateWatcher: ReturnType<typeof createFocusCandidateWatcher> | null = null;
 
 onMounted(() => {
-  candidateWatcher = createFocusCandidateWatcher({ root: document.body, registry: focusableRegistry });
+  candidateWatcher = createFocusCandidateWatcher({
+    root: document.body,
+    registry: focusableRegistry,
+    active: spatialEnabled()
+  });
+});
+
+// Setup-scope watch: stopped automatically with the host's effect scope.
+watch(spatialEnabled, (enabled) => {
+  candidateWatcher?.setActive(enabled);
 });
 
 onBeforeUnmount(() => {

@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount } from '@vue/test-utils';
+import { nextTick, reactive } from 'vue';
 
 // Capture the opts passed to useSpatialNav so we can exercise the `enabled`
 // getter against controllable route + prefs state.
 const useSpatialNav = vi.fn();
-const routeRef = { name: 'home' as string | symbol | null };
-const prefsRef = { tv: true as boolean };
+// Reactive like the real router route + pinia store: the host's candidate
+// watcher follows the enabled predicate through a Vue watch (TIZ-2).
+const routeRef = reactive({ name: 'home' as string | symbol | null });
+const prefsRef = reactive({ tv: true as boolean });
 // The real ui module exports one shared Set; the host registers its candidate
 // watcher against it (C27 / review tizen__gameux). Tests observe that same Set.
 const focusableRegistry = new Set<HTMLElement>();
@@ -127,5 +130,70 @@ describe('SpatialNavHost', () => {
     wrapper.unmount();
     expect(focusableRegistry.has(link)).toBe(false);
     expect(link.hasAttribute('data-focusable')).toBe(false);
+  });
+
+  // TIZ-2: the candidate watcher follows the engine's own enabled predicate.
+  // On the player route the engine is off and the chrome churns `style`
+  // continuously — the full scan must stay idle there, not re-walk computed
+  // style on every progress tick.
+  it('keeps the candidate observer idle on the player route', async () => {
+    routeRef.name = 'player';
+    const button = document.createElement('button');
+    const bar = document.createElement('div');
+    document.body.append(button, bar);
+    const computed = vi.spyOn(window, 'getComputedStyle');
+
+    mountHost();
+    for (let pct = 1; pct <= 5; pct++) {
+      bar.style.width = `${pct}%`;
+      await flushMutations();
+    }
+    document.body.appendChild(document.createElement('button'));
+    await flushMutations();
+
+    expect(focusableRegistry.size).toBe(0);
+    expect(button.hasAttribute('data-focusable')).toBe(false);
+    expect(computed).not.toHaveBeenCalled();
+    computed.mockRestore();
+  });
+
+  it('releases the pool entering the player and repopulates on the way out', async () => {
+    const button = document.createElement('button');
+    document.body.appendChild(button);
+    mountHost();
+    expect(focusableRegistry.has(button)).toBe(true);
+
+    routeRef.name = 'player';
+    await nextTick();
+    expect(focusableRegistry.has(button)).toBe(false);
+    expect(button.hasAttribute('data-focusable')).toBe(false);
+
+    const added = document.createElement('button');
+    document.body.appendChild(added);
+    await flushMutations();
+    expect(focusableRegistry.has(added)).toBe(false);
+
+    routeRef.name = 'home';
+    await nextTick();
+    expect(focusableRegistry.has(button)).toBe(true);
+    expect(focusableRegistry.has(added)).toBe(true);
+  });
+
+  it('idles the pool while quality-selection mode is active and when tv mode is off', async () => {
+    const button = document.createElement('button');
+    document.body.appendChild(button);
+    mountHost();
+    expect(focusableRegistry.has(button)).toBe(true);
+
+    qualityMenuActive.value = true;
+    await nextTick();
+    expect(focusableRegistry.has(button)).toBe(false);
+    qualityMenuActive.value = false;
+    await nextTick();
+    expect(focusableRegistry.has(button)).toBe(true);
+
+    prefsRef.tv = false;
+    await nextTick();
+    expect(focusableRegistry.has(button)).toBe(false);
   });
 });

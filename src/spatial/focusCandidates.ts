@@ -74,8 +74,14 @@ export const AUTO_FOCUS_MARKER = 'auto';
 const FOCUSABLE_ATTR = 'data-focusable';
 
 export interface FocusCandidateWatcher {
-  /** Synchronous full re-scan of `root` against the registry. */
+  /** Synchronous re-sync of `root`: the full candidate re-scan while live,
+   * the takeover mirror only while idle. */
   refresh(): void;
+  /** TIZ-2: follow the spatial engine's enabled predicate. Idle releases every
+   * shell-owned entry and narrows observation to takeover tracking (no
+   * `style` churn, no computed-style walks); live re-scans synchronously and
+   * resumes full observation. No-op for an unchanged state or after destroy. */
+  setActive(active: boolean): void;
   /** Disconnect the observer and deregister every shell-owned entry. */
   destroy(): void;
 }
@@ -96,15 +102,25 @@ function releaseShellEntry(element: HTMLElement, registry: Set<HTMLElement>): vo
  * elements beneath it. Pure over injected seams: the production host injects
  * `document.body` + ui's `focusableRegistry`; tests inject a scratch subtree
  * and a fresh Set. No focus is ever moved, no request is ever made — the
- * registry is passive data the engine reads on keypress (the engine itself
- * gates on tv mode / route / quality-menu, so populating it app-wide is safe
- * even on surfaces where navigation is off, like the player).
+ * registry is passive data the engine reads on keypress.
+ *
+ * TIZ-2: the full scan (querySelectorAll + a computed-style ancestor walk per
+ * candidate, re-run on every coalesced mutation burst incl. `style` flips) is
+ * gated on `active` — the host feeds it the engine's own enabled predicate
+ * (tv mode / non-player route / no quality flyout). Idle, the pool is empty
+ * and only takeover markers are observed, so the `spatialTakeover` mirror the
+ * consent card reads app-wide (M6) stays honest without the scan's cost on
+ * the player route, where the chrome churns `style` continuously.
  */
 export function createFocusCandidateWatcher(options: {
   root: Element;
   registry: Set<HTMLElement>;
+  /** Start live (default) or idle; flip later with `setActive`. */
+  active?: boolean;
 }): FocusCandidateWatcher {
   const { root, registry } = options;
+  let active = options.active ?? true;
+  let destroyed = false;
 
   /** C2(a): the topmost active takeover, or null. Document order is the
    * stacking order for the fixed overlays here, so the LAST marked element
@@ -174,11 +190,28 @@ export function createFocusCandidateWatcher(options: {
     }
   }
 
-  function refresh(): void {
+  /** Track the topmost takeover: rise-edge blur + the reactive mirror. Runs
+   * in BOTH modes — the mirror is read app-wide, not only by the engine. */
+  function trackTakeover(): HTMLElement | null {
     const takeover = activeTakeover();
     releaseForeignFocus(takeover, lastTakeover);
     lastTakeover = takeover;
     spatialTakeover.value = takeover;
+    return takeover;
+  }
+
+  /** Deregister every shell-owned entry (directive entries are untouched). */
+  function releaseAll(): void {
+    for (const element of Array.from(registry)) {
+      if (!isShellOwnedEntry(element)) continue;
+      releaseShellEntry(element, registry);
+    }
+  }
+
+  function refresh(): void {
+    if (destroyed) return;
+    const takeover = trackTakeover();
+    if (!active) return;
     for (const element of Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))) {
       admit(element, takeover);
     }
@@ -191,7 +224,21 @@ export function createFocusCandidateWatcher(options: {
   // attribute), `hidden` / `style` (v-show flips display in place, C2(b)) and
   // `data-spatial-takeover` (a takeover appearing by attribute on a live
   // node, not only by mount, C2(a)). Attribute churn coalesces with node
-  // churn on the same burst.
+  // churn on the same burst. TIZ-2: while idle only takeover markers are
+  // observed (childList for a mounting panel, the marker attribute for an
+  // in-place flip) — `style`/`disabled`/`hidden` churn never wakes it.
+  const LIVE_OPTIONS: MutationObserverInit = {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['disabled', 'hidden', 'style', TAKEOVER_ATTRIBUTE],
+  };
+  const IDLE_OPTIONS: MutationObserverInit = {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: [TAKEOVER_ATTRIBUTE],
+  };
   let queued = false;
   const observer = new MutationObserver(() => {
     if (queued) return;
@@ -201,26 +248,29 @@ export function createFocusCandidateWatcher(options: {
       refresh();
     });
   });
-  observer.observe(root, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['disabled', 'hidden', 'style', TAKEOVER_ATTRIBUTE],
-  });
+  observer.observe(root, active ? LIVE_OPTIONS : IDLE_OPTIONS);
   refresh();
 
   return {
     refresh,
+    setActive(next: boolean): void {
+      if (destroyed || next === active) return;
+      active = next;
+      // Re-observing replaces the option set on the same target; records
+      // pending from the old mode are dropped — the sync refresh covers them.
+      observer.disconnect();
+      observer.observe(root, active ? LIVE_OPTIONS : IDLE_OPTIONS);
+      if (!active) releaseAll();
+      refresh();
+    },
     destroy(): void {
+      destroyed = true;
       observer.disconnect();
       // The production boot has exactly one watcher; releasing the mirror on
       // its teardown keeps "no takeover" the honest default for late readers.
       spatialTakeover.value = null;
       lastTakeover = null;
-      for (const element of Array.from(registry)) {
-        if (!isShellOwnedEntry(element)) continue;
-        releaseShellEntry(element, registry);
-      }
+      releaseAll();
     }
   };
 }

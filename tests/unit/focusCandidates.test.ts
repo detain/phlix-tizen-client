@@ -7,7 +7,7 @@
  * @copyright 2026 Joe Huss <detain@interserver.net>
  * @license   MIT
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import {
   AUTO_FOCUS_MARKER,
   FOCUSABLE_SELECTOR,
@@ -37,12 +37,13 @@ describe('focusCandidates', () => {
   let registry: Set<HTMLElement>;
   let watcher: FocusCandidateWatcher | null;
 
-  function startWatcher(): FocusCandidateWatcher {
-    watcher = createFocusCandidateWatcher({ root, registry });
+  function startWatcher(active?: boolean): FocusCandidateWatcher {
+    watcher = createFocusCandidateWatcher({ root, registry, active });
     return watcher;
   }
 
   afterEach(() => {
+    vi.restoreAllMocks();
     watcher?.destroy();
     watcher = null;
     root?.remove();
@@ -292,5 +293,94 @@ describe('focusCandidates', () => {
     active.destroy();
     expect(spatialTakeover.value).toBeNull();
     watcher = null;
+  });
+
+  // TIZ-2: the full candidate scan (querySelectorAll + a computed-style
+  // ancestor walk per candidate) used to run on EVERY coalesced mutation
+  // burst app-wide — including the player route, where the engine is off and
+  // the chrome churns `style` continuously. The pool is now gated on the
+  // engine's own enabled predicate: idle = no scan, no style observation.
+  describe('enabled gate (TIZ-2)', () => {
+    it('an idle watcher registers nothing and never walks computed style on style churn', async () => {
+      scaffold('<button id="a">A</button><div id="bar" style="width: 0%"></div>');
+      const computed = vi.spyOn(window, 'getComputedStyle');
+      startWatcher(false);
+      expect(registry.size).toBe(0);
+
+      const bar = root.querySelector<HTMLElement>('#bar')!;
+      for (let pct = 1; pct <= 5; pct++) {
+        bar.style.width = `${pct}%`;
+        await flushMutations();
+      }
+      root.append(makeElement('button'));
+      await flushMutations();
+
+      expect(registry.size).toBe(0);
+      expect(computed).not.toHaveBeenCalled();
+    });
+
+    it('going idle releases every shell-owned entry; going live re-admits the surface', async () => {
+      scaffold('<button id="a">A</button>');
+      const live = startWatcher();
+      const button = root.querySelector<HTMLElement>('#a')!;
+      expect(registry.has(button)).toBe(true);
+
+      live.setActive(false);
+      expect(registry.has(button)).toBe(false);
+      expect(button.hasAttribute('data-focusable')).toBe(false);
+
+      // Churn while idle is not tracked…
+      const late = makeElement('button');
+      root.append(late);
+      await flushMutations();
+      expect(registry.has(late)).toBe(false);
+
+      // …and the resume edge re-scans synchronously, then observes again.
+      live.setActive(true);
+      expect(registry.has(button)).toBe(true);
+      expect(registry.has(late)).toBe(true);
+      const later = makeElement('button');
+      root.append(later);
+      await flushMutations();
+      expect(registry.has(later)).toBe(true);
+    });
+
+    it('idle keeps directive-owned entries untouched', () => {
+      scaffold('<button id="d" data-focusable="">D</button>');
+      const directive = root.querySelector<HTMLElement>('#d')!;
+      registry.add(directive);
+      const live = startWatcher();
+      live.setActive(false);
+      expect(registry.has(directive)).toBe(true);
+      expect(directive.getAttribute('data-focusable')).toBe('');
+    });
+
+    it('the takeover mirror stays honest while idle (M6 consent card reads it app-wide)', async () => {
+      scaffold('<button id="under">U</button>');
+      startWatcher(false);
+      expect(spatialTakeover.value).toBeNull();
+
+      const panel = makeElement('div', { [TAKEOVER_ATTRIBUTE]: '' });
+      panel.append(makeElement('button'));
+      root.append(panel);
+      await flushMutations();
+      expect(spatialTakeover.value).toBe(panel);
+      expect(registry.size).toBe(0);
+
+      panel.removeAttribute(TAKEOVER_ATTRIBUTE);
+      await flushMutations();
+      expect(spatialTakeover.value).toBeNull();
+    });
+
+    it('setActive after destroy is inert', async () => {
+      scaffold('<button id="a">A</button>');
+      const live = startWatcher();
+      live.destroy();
+      watcher = null;
+      live.setActive(true);
+      root.append(makeElement('button'));
+      await flushMutations();
+      expect(registry.size).toBe(0);
+    });
   });
 });
