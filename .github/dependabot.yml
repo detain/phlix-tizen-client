@@ -16,11 +16,10 @@ updates:
         patterns:
           - "*"
 
-  # The workflows float action MAJOR tags (actions/checkout@v7, setup-node@v7,
-  # upload-artifact@v7, download-artifact@v8, softprops/action-gh-release@v3),
-  # so a new action major can ship silently — the estate has taken breakage
-  # exactly this way before. Declaring the github-actions ecosystem alongside
-  # npm gives a weekly PR signal when a pinned major advances.
+  # The workflows pin every action to a full commit SHA with a version comment
+  # (TIZ-12, supply-chain law); a floating tag can no longer move under us.
+  # Declaring the github-actions ecosystem gives a weekly PR that bumps the SHA
+  # and its version comment together when a new release ships.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
