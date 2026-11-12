@@ -538,7 +538,11 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // the other 42 rules as hash twins with this single net addition
       // (measured red at this re-vendor, cured here; docs/runtime-floor.md
       // table re-measured in the same change).
-      expect(countAcrossCss(':focus-visible')).toBe(152);
+      // 152→154: stale committed package/ rebuilt vs src (TIZ-S8) — host
+      // `.tv-settings__back` / `.tv-settings__row` `:focus-visible` ring arms (+2),
+      // attributed by scoped-hash-stripped selector-set diff of old vs new chunk;
+      // docs/runtime-floor.md table re-measured in the same change.
+      expect(countAcrossCss(':focus-visible')).toBe(154);
       expect(countAcrossCss('inset:')).toBe(43);
       expect(countAcrossCss('aspect-ratio')).toBe(36);
       // 8→7: RT-103 (w15-L10) replaced the native schedule checkbox (whose

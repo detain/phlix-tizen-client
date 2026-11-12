@@ -81,7 +81,7 @@ below the table:
 
 | Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
 |---|---|---|---|
-| `:focus-visible` | Chrome **86** | 152 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (4 dropped from 157 by collapsing two host `:focus-visible:focus-visible` double arms.) |
+| `:focus-visible` | Chrome **86** | 154 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (4 dropped from 157 by collapsing two host `:focus-visible:focus-visible` double arms.) |
 | `inset:` | Chrome **87** | 43 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
 | `aspect-ratio` | Chrome **88** | 36 | Boxes size from content/height instead of the ratio — cards may stretch. |
 | `accent-color` | Chrome **93** | 7 | Form controls keep UA default colors — cosmetic only. |
@@ -117,7 +117,7 @@ stylesheet:
 surface `src/styles/tv-typography.css` documents), so on ≤ 85 engines the D-pad
 focus ring still renders — through plain `:focus`, universally supported. The
 tripwire test **hard-asserts** that selector pair verbatim: if a re-vendor ever
-drops it, the 152 `:focus-visible` census sites become unsupported-with-no-
+drops it, the 154 `:focus-visible` census sites become unsupported-with-no-
 fallback and the suite reddens on the same law that admits them today.
 
 ## Governance law (tripwire rotation rules)
