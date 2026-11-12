@@ -245,7 +245,8 @@ The remaining knobs `src/vite-env.d.ts` declares:
 
 The `VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY` / `VITE_PHLIX_DEV_ALLOW_INSECURE_SYNCPLAY`
 hatches belong to the TLS-mandatory sections above — never set them when
-building a release `.wgt`.
+building a release `.wgt`. `npm run package` enforces this: it exits 1 if
+either hatch is set in the build environment or compiled into the bundle.
 
 ### Tizen Configuration
 

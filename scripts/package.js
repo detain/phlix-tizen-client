@@ -20,11 +20,50 @@ import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadEnv } from 'vite';
+import {
+  INSECURE_HATCH_PREFIX,
+  describeViolations,
+  findEnvHatches,
+  scanBuildDir
+} from './insecure-hatch-gate.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const distDir = path.join(root, 'dist');
 const pkgDir = path.join(root, 'package');
+
+/**
+ * TIZ-S9 release gate: the insecure-dial dev hatches
+ * (VITE_PHLIX_DEV_ALLOW_INSECURE_RELAY / _SYNCPLAY) must be compiled OFF in
+ * every packaged widget. Exits 1 with one line per violation; see
+ * scripts/insecure-hatch-gate.mjs for the two legs.
+ *
+ * @param {string} dir build directory to scan (dist/ or package/)
+ * @param {string} label directory label used in the failure lines
+ * @param {{ checkEnv?: boolean }} [options] checkEnv also runs the env leg
+ */
+function assertInsecureHatchesOff(dir, label, { checkEnv = false } = {}) {
+  const envHatches = checkEnv
+    ? findEnvHatches(loadEnv('production', root, INSECURE_HATCH_PREFIX))
+    : [];
+  const problems = describeViolations({
+    envHatches,
+    bundleHits: scanBuildDir(dir),
+    label
+  });
+  if (problems.length > 0) {
+    for (const line of problems) {
+      console.error(`Release gate: ${line}`);
+    }
+    console.error(
+      'The VITE_PHLIX_DEV_ALLOW_INSECURE_* hatches send bearer credentials over ' +
+        'plaintext ws:// and are for local dev builds only; a packaged widget must ' +
+        'never carry one (README, Configuration).'
+    );
+    process.exit(1);
+  }
+}
 
 function packageApp() {
   console.log('Packaging Tizen app...');
@@ -33,6 +72,10 @@ function packageApp() {
     console.error('Run build first: npm run build');
     process.exit(1);
   }
+
+  // Release gate, first pass: refuse a hatched build BEFORE the tracked
+  // package/ mirror is clobbered, so a failed run leaves package/ untouched.
+  assertInsecureHatchesOff(distDir, 'dist', { checkEnv: true });
 
   // Fresh package directory.
   if (fs.existsSync(pkgDir)) {
@@ -59,6 +102,10 @@ function packageApp() {
     );
     process.exit(1);
   }
+
+  // Release gate, second pass: the assembled widget itself (what ships) must
+  // carry no compiled-in insecure-dial hatch.
+  assertInsecureHatchesOff(pkgDir, 'package');
 
   console.log('Package created in:', pkgDir);
   console.log('Note: Use Tizen Studio (or the tizen CLI) to sign and deploy the .wgt file');

@@ -453,6 +453,16 @@ sanity-checks that both `index.html` and `config.xml` land there. Tizen Studio
 (or the `tizen` CLI) then signs the `package/` contents into a signed `.wgt`.
 See `docs/signing.md` for the full certificate + signing flow.
 
+**Release gate (TIZ-S9):** `scripts/package.js` refuses (exit 1) to package a
+build that carries an insecure-dial dev hatch (`VITE_PHLIX_DEV_ALLOW_INSECURE_*`,
+any value). It checks twice through `scripts/insecure-hatch-gate.mjs`: before
+`package/` is touched, the production build env (process env + `.env` files,
+via Vite's `loadEnv`) and the compiled `dist/` bundle; after assembly, the
+`package/` widget itself. The bundle leg looks for the hatch name as a key in
+the env object Vite inlines for `import.meta.env[CONST]`. Hatched builds remain
+possible with `npm run build` for local dev; they just cannot be packaged.
+Pinned by `tests/unit/insecureHatchGate.test.ts`.
+
 ### Reproducible asset + header scripts
 
 Two maintenance scripts were long un-referenced from any npm/doc surface even
