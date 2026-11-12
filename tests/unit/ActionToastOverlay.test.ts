@@ -183,23 +183,13 @@ describe('ActionToastOverlay (S516 AD-13)', () => {
     wrapper.unmount();
   });
 
-  it('digit presses caption the joined buffered value — the remote never dead-airs', async () => {
-    // The drain above stays silent (no consumer yet) — but an ACCEPTED press
-    // is real input, and RemoteManager's 'digit' echo now carries it live:
-    // the caption grows with the joined buffer, then clears on the normal
-    // glance window. The echo is per-press feedback, NOT the silent commit.
+  it('digit presses never caption (TIZ-S17: no consumer, no toast)', async () => {
     const wrapper = mountOverlay(pinia);
-    legacyKeyDown(49); // '1' enters the shared buffer
+    legacyKeyDown(49);
+    legacyKeyDown(50);
     await wrapper.vm.$nextTick();
-    expect(wrapper.text()).toBe('1');
-    legacyKeyDown(50); // '2' joins — the caption shows the joined value
-    await wrapper.vm.$nextTick();
-    expect(wrapper.text()).toBe('12');
-    vi.advanceTimersByTime(ACTION_TOAST_AUTO_CLEAR_MS); // the echo clears like any caption
     expect(useActionToastStore().caption).toBeNull();
-    // …and the drain, landing on the silent 'action' channel at 2 s, adds
-    // NOTHING — M-TIZEN-32's law holds both during and after an echoed burst.
-    vi.advanceTimersByTime(2000 - ACTION_TOAST_AUTO_CLEAR_MS);
+    vi.advanceTimersByTime(2000);
     await wrapper.vm.$nextTick();
     expect(useActionToastStore().caption).toBeNull();
     wrapper.unmount();

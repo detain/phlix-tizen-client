@@ -10,9 +10,8 @@
  *
  *   - `RemoteManager 'action'` → caption via the repo's own `KeyMapping.getDisplayName`
  *     (PLAY_PAUSE → "Play/Pause", held-key repeats simply refresh the window);
- *   - `RemoteManager 'digit'` → caption the joined buffered digits of a live
- *     burst — an accepted press echoes immediately, so the remote never
- *     dead-airs (the silent DIGIT_COMMIT drain below stays uncaptioned);
+ *   - digits are NOT captioned (TIZ-S17): no go-to-time consumer exists, so
+ *     neither the per-press value nor the silent DIGIT_COMMIT drain toasts;
  *   - document `focusin` → caption the newly focused control (aria-label →
  *     placeholder → trimmed text, length-capped) — the "focus-landed" echo;
  *   - document `keydown` → dismiss immediately (key-activatable dismissal: the
@@ -66,9 +65,7 @@ const toast = useActionToastStore();
  * zap-guard swallow (the preventDefault IS the feature; nothing functional
  * happens). Captioning any of them would echo an action the app deliberately
  * dropped; the caption layer stays silent — never a clobber, and real actions
- * still caption right after. The per-press `digit` echo (below) is NOT an
- * exception to this law: it captions the ACCEPTED keypress itself, while the
- * drain event here stays exactly as silent as ever.
+ * still caption right after.
  */
 function captionAction(event: ActionEvent | KeyEvent): void {
   if (!('key' in event) || KeyMapping.isSilentAction(event.key)) return;
@@ -101,25 +98,13 @@ function onKeyPressed(): void {
   toast.dismiss();
 }
 
-// The digit lane used to dead-air: the drain is silent (no consumer yet), so
-// an accepted press echoed NOTHING for the whole 2 s window. The 'digit'
-// channel carries every accepted press with the joined buffer — caption it
-// verbatim. This is honest per-press feedback, not the silent commit event.
-function onDigitQueued(event: ActionEvent | KeyEvent): void {
-  if (!('key' in event)) return;
-  const { value } = event;
-  if (typeof value === 'string' && value !== '') toast.show(value);
-}
-
 onMounted(() => {
   const unsubAction = remoteManager.on('action', captionAction);
-  const unsubDigit = remoteManager.on('digit', onDigitQueued);
   const unsubKeydown = remoteManager.on('keydown', onKeyPressed);
   document.addEventListener('focusin', onFocusLanded);
   onBeforeUnmount(() => {
     // T-05 doctrine: long-lived root apps unsubscribe on the hook that FIRES.
     unsubAction();
-    unsubDigit();
     unsubKeydown();
     document.removeEventListener('focusin', onFocusLanded);
     toast.dismiss(); // never leave a caption (or its timer) past unmount

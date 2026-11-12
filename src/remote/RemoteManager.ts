@@ -71,7 +71,7 @@ export interface KeyEvent {
   mappedKey: ActionName;
 }
 
-type RemoteEventName = 'action' | 'digit' | 'keydown' | 'keyup';
+type RemoteEventName = 'action' | 'keydown' | 'keyup';
 type Handler = (_data: ActionEvent | KeyEvent) => void;
 
 export class RemoteManager {
@@ -278,20 +278,14 @@ export class RemoteManager {
    * both arrive here — the ONE-buffer law's choke point. Non-digit names are
    * refused without touching the queue.
    *
-   * An ACCEPTED push echoes the joined buffer on the live `digit` channel —
-   * the remote must never dead-air mid-burst (the drain itself stays silent
-   * on `action`). A refused name queues nothing, so nothing echoes; the
-   * flood-cap overflow abandons the burst (pending() === ''), and there is
-   * no honest value to echo — the guard stays quiet.
+   * TIZ-S17: there is NO per-press echo. The go-to-time consumer for the
+   * DIGIT_COMMIT drain does not exist, so toasting each digit captioned input
+   * that triggers nothing; the drain stays the single (silent) observable.
    */
   pressDigit(action: ActionName): void {
     const digit = KeyMapping.digitValue(action);
     if (digit === null) return;
     this.digitBuffer.push(digit);
-    const pending = this.digitBuffer.pending();
-    if (pending !== '') {
-      this.emit('digit', { key: action, value: pending });
-    }
   }
 
   /** Register an action handler (convenience wrapper). */
