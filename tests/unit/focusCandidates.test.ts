@@ -377,7 +377,7 @@ describe('focusCandidates', () => {
       const live = startWatcher();
       live.destroy();
       watcher = null;
-      live.setActive(true);
+      live.setActive(false); live.setActive(true);
       root.append(makeElement('button'));
       await flushMutations();
       expect(registry.size).toBe(0);

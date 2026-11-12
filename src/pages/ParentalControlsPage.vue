@@ -176,6 +176,12 @@ async function saveSchedule(): Promise<void> {
   const pid = profileId.value;
   if (!pid) return;
 
+  // TIZ-S12 (TIZ-18): RT-099 handler-entry guard. The Save button's
+  // :disabled(savingSchedule) lands on the NEXT render, so two activations
+  // inside one tick both reached this handler — a duplicate create POST (a
+  // second server row) or a doubled PUT. The guard lives here, where every
+  // entry path obeys it, mirroring deleteSchedule/addTag/removeTag.
+  if (savingSchedule.value) return;
   savingSchedule.value = true;
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
@@ -331,6 +337,8 @@ async function saveLimit(): Promise<void> {
   const pid = profileId.value;
   if (!pid) return;
 
+  // TIZ-S12 (TIZ-18): RT-099 handler-entry guard, same law as saveSchedule.
+  if (savingLimit.value) return;
   savingLimit.value = true;
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });

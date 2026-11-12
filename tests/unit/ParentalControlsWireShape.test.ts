@@ -416,5 +416,58 @@ describe('ParentalControlsPage wire shape (S325b)', () => {
       await flushPromises();
       expect(wrapper.find('.mutation-notice').exists()).toBe(false);
     });
+
+    // ---- TIZ-S12 (TIZ-18): the two save handlers obey the same entry law ----
+    // saveSchedule/saveLimit set their in-flight flag with NO entry check, so
+    // the only thing between a double activation and a duplicate write was
+    // the button's :disabled — which lands on the NEXT render, not on the next
+    // event. Two activations inside one tick (both clicks dispatched before
+    // Vue patches `disabled` onto the DOM) reach the handler twice. The guard
+    // must live in the handler itself, like deleteSchedule/addTag/removeTag.
+
+    it('a double-activated schedule Save fires exactly ONE POST (create path)', async () => {
+      const wrapper = mount(ParentalControlsPage);
+      await flushPromises();
+      await wrapper.find('.section__action').trigger('click'); // + Add Schedule
+      await wrapper.find('#schedule-name').setValue('Double window');
+      const save = wrapper.find('.save-btn');
+      // Both dispatched before the re-render that disables the button.
+      const first = save.trigger('click');
+      const second = save.trigger('click');
+      await Promise.all([first, second]);
+      await flushPromises();
+      expect(apiCalls.filter((c) => c.method === 'POST' && c.url.endsWith('/schedules'))).toHaveLength(1);
+    });
+
+    it('a double-activated schedule Save fires exactly ONE PUT (edit path) and re-arms after settling', async () => {
+      const wrapper = mount(ParentalControlsPage);
+      await flushPromises();
+      await wrapper.find('.action-btn').trigger('click'); // Edit the seeded row
+      const save = wrapper.find('.save-btn');
+      await Promise.all([save.trigger('click'), save.trigger('click')]);
+      await flushPromises();
+      const puts = () => apiCalls.filter((c) => c.method === 'PUT' && c.url === '/api/v1/profiles/prof-1/schedules/7');
+      expect(puts()).toHaveLength(1);
+      // The guard is per-flight, not per-session: a fresh intent writes again.
+      await wrapper.find('.action-btn').trigger('click');
+      await wrapper.find('.save-btn').trigger('click');
+      await flushPromises();
+      expect(puts()).toHaveLength(2);
+    });
+
+    it('a double-activated stream-limit Save fires exactly ONE PUT and re-arms after settling', async () => {
+      const wrapper = mount(ParentalControlsPage);
+      await flushPromises();
+      await wrapper.find('.limit-display .section__action').trigger('click'); // startEditLimit
+      const save = wrapper.find('.save-btn');
+      await Promise.all([save.trigger('click'), save.trigger('click')]);
+      await flushPromises();
+      const puts = () => apiCalls.filter((c) => c.method === 'PUT' && c.url.endsWith('/stream-limits'));
+      expect(puts()).toHaveLength(1);
+      await wrapper.find('.limit-display .section__action').trigger('click');
+      await wrapper.find('.save-btn').trigger('click');
+      await flushPromises();
+      expect(puts()).toHaveLength(2);
+    });
   });
 });
