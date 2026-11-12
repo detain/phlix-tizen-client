@@ -34,6 +34,31 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Fixed — parental controls: a double-pressed Save no longer creates a duplicate schedule row or sends a doubled limit update, and the shipped widget now carries the fix (package/ regenerated) — 2026-11-12
+
+- **User-visible delta:** pressing Save twice quickly on a parental schedule
+  (new or edited) or on the stream limit now sends one request, not two. A
+  double-pressed create no longer leaves a second schedule row on the server
+  (review round 2026-11-11 TIZ-18).
+- **Mechanism:** `saveSchedule` and `saveLimit` in
+  `src/pages/ParentalControlsPage.vue` now return early while their
+  `savingSchedule` / `savingLimit` flight is open. Before, the Save button's
+  `:disabled`, applied on the next render, was the only barrier. This is the
+  same handler-entry rule `deleteSchedule`, `addTag` and `removeTag` already
+  follow (RT-099, 2026-11-09 entry below, left unedited). The existing
+  `finally` resets re-arm each guard for the next press. The tests are in
+  `tests/unit/ParentalControlsWireShape.test.ts`, in the RT-099
+  mutation-guards suite: a double-activated Save fires exactly one create
+  POST, one edit PUT and one stream-limits PUT, and each guard re-arms. The
+  source change landed in `dabbc23`.
+- **package/ regenerated.** `dabbc23` and the TIZ-S11 commit before it
+  (`f81ee87`) both changed shipped source without rebuilding `package/`, so
+  the committed widget bundle still had the unguarded handlers and the Build
+  workflow's freshness assertion (audit W105 T-02, shipped == audited)
+  failed on both pushes. `npm run package` at HEAD regenerates it: 52 hashed
+  chunk renames plus `package/index.html`. Two runs back to back gave
+  identical bytes. No wire, request shape or theme value changed.
+
 ### Fixed — ledger erratum: one post-law `### Documentation —` heading re-categorized, and the shape-law preamble's phantom `docs/signing.md` cite re-sourced to the CI release job — 2026-11-12
 
 - **User-visible delta:** readers of this ledger get two corrections to how
