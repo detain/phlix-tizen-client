@@ -104,9 +104,11 @@ cd phlix-tizen-client
 ### 2. Install Dependencies
 
 ```bash
-npm install
+npm ci --allow-git=all
 ```
 
+> (`.npmrc` already sets `allow-git=all`, so a bare `npm ci` behaves the same.)
+>
 > CI installs with `npm ci --allow-git=all` from the TRACKED `package-lock.json`
 > (audit W105 T-01 — every git-dep resolution is pinned to an exact commit SHA).
 > Whenever a `package.json` pin changes, regenerate the lock with `npm install`
@@ -124,7 +126,7 @@ app's `localStorage` at runtime.
 
 ## Configuration
 
-**TV-era motion posture (M-TIZEN-35).** The sealed `@phlix/ui` stylesheet ships
+**TV-era motion posture.** The sealed `@phlix/ui` stylesheet ships
 52 backdrop-blur layers tuned for desktop compositors; on a TV webview they cost
 dropped frames during D-pad shelf scrolls. The client therefore boots in a
 **lite** posture — a host stylesheet (`src/styles/tv-motion.css`) neutralizes
@@ -158,7 +160,7 @@ shape, and `phlix.hubAccessToken` above follows the same law. These rows never
 migrate to cookie custody; the estate's browser-session cookie path is for
 same-origin browser clients, a different device class.
 
-**Operator endpoint overrides (M-TIZEN-07, W-min171).** A deployment whose
+**Operator endpoint overrides.** A deployment whose
 SyncPlay endpoints do not answer the baked defaults can set three runtime rows
 in `localStorage` (read live at each dial — no rebuild, mirrors the hub's
 `HUB_WS_URL`/`HUB_WS_PATH` seam and the server's ListenEndpoints config):
@@ -174,7 +176,7 @@ plain-decimal 1–65535; absolute single-slash path with no query/fragment/
 whitespace) — a poison value falls back to the default rather than dialing
 somewhere surprising, and none of the three can move the HOST.
 
-**Relay transport is TLS-mandatory (M-TIZEN-06).** The relay socket presents a
+**Relay transport is TLS-mandatory.** The relay socket presents a
 bearer credential in its opening handshake (`Sec-WebSocket-Protocol: bearer, …`),
 so the dial requires an **`https://` hub base** (`wss://`). A plaintext hub base
 is refused at connect — loudly, with an actionable console error — before any
@@ -190,15 +192,15 @@ permits the plaintext `ws://` dial and warns on the console with every attempt.
 It ships the relay bearer token **unencrypted to anyone on your network** and is
 **never release-safe** — do not build a `.wgt` for distribution with it set.
 
-**SyncPlay transport is TLS-mandatory (M-TIZEN-12).** The direct watch-party
+**SyncPlay transport is TLS-mandatory.** The direct watch-party
 socket (`:8097`) presents the bearer JWT in its opening handshake — and the
 group-join frame that follows carries the replayable SHA-256 group password
 hash — so that dial requires an **`https://` server base** (`wss://`): the
-M-TIZEN-06 relay law transposed to the surviving lane. A plaintext base is
+The relay law transposed to the surviving lane. A plaintext base is
 refused at connect with a loud, actionable console error and a short
 "needs an https:// server URL" notice on the SyncPlay error channel; the
 socket is never constructed, while browsing and REST on the persisted LAN
-address stay untouched (the M-TIZEN-07 boundary law keeps `http:` persistable).
+address stay untouched (the boundary law keeps `http:` persistable).
 For **LOCAL TESTING ONLY** (a dev server on plain http), the build-time escape
 hatch
 
@@ -212,7 +214,7 @@ It ships the session credential **unencrypted to anyone on your network** and is
 two hatches are deliberately SEPARATE env vars: enabling one never unlocks the
 other bearer transport.
 
-**The plaintext refusal also lives at the resolve boundary (M-TIZEN-12 r2).**
+**The plaintext refusal also lives at the resolve boundary.**
 `resolveConfig.resolveCredentialBase` is the scheme gate HUB/CREDENTIAL traffic
 resolves through: a persisted (or build-env) `http://`-literal server URL is
 REFUSED there with a named, honest error — the e4d8516 idiom refuses, it never
@@ -221,7 +223,7 @@ plaintext base (a refused fallback is disclosed once at boot; the consumer stays
 closed exactly as the dial-side law already decided). Legacy-poisoned entries
 (`javascript:`/`data:`/raw-scheme storage) are sanitized on read at the same
 edge. This is defense-in-depth, not a replacement: `http:` remains persistable
-for LAN browsing (M-TIZEN-07 law, unchanged), and both dial builders keep their
+for LAN browsing (unchanged law), and both dial builders keep their
 own named refusals. Each consumer's documented `VITE_PHLIX_DEV_ALLOW_INSECURE_*`
 hatch threads through the boundary too — still exactly one flag per transport.
 
@@ -232,7 +234,7 @@ client does not post a device profile.
 
 ### Locale & admin-console build flags
 
-The remaining knobs `src/vite-env.d.ts` declares:
+The remaining knobs `vite-env.d.ts` (repo root) declares:
 
 - `VITE_PHLIX_LOCALE` — build-time locale override for the client i18n seam.
   Wins over `navigator.language`, loses to an explicit runtime value;
@@ -349,7 +351,7 @@ no such directory exists (the clone directory is `phlix-tizen-client`, and
 2. **Prepare an importable project directory** (from the repo root):
 
    ```bash
-   npm ci
+   npm ci --allow-git=all
    npm run package                    # dist/ + app/config.xml + icon → package/
    cp -r package ../phlix-tv-import   # import a COPY, never the tracked dir
    ```
@@ -396,7 +398,7 @@ no such directory exists (the clone directory is `phlix-tizen-client`, and
 
 ```bash
 # Build and package (assembles the widget root: package/ with config.xml on top)
-npm ci
+npm ci --allow-git=all
 npm run package
 
 # Sign a COPY into a .wgt with the tizen CLI (needs a Certificate Manager
@@ -465,6 +467,8 @@ element under `document.body` (links, buttons, inputs, selects, textareas,
 | Stop | Close the player; when the player route is what's on screen, also returns to where you came from (off the player route it is a plain player teardown, no navigation) |
 | Fast Forward | Seek forward 10s (30s when held) |
 | Rewind | Seek backward 10s (30s when held) |
+| Volume Up / Down | Step the player volume by 5% |
+| Mute | Toggle mute |
 | Yellow | On the player route, open/close the on-screen stream-quality picker (only when the active stream has ≥2 ABR rungs to choose from); while open, Left/Right/Up/Down/Enter drive the picker instead of seek/volume |
 
 On the player route, spatial navigation is disabled so the player's own Arrow
@@ -525,7 +529,7 @@ phlix-tizen-client/
 │   └── config.xml           # Tizen .wgt manifest (privileges, app id, version)
 ├── scripts/
 │   ├── package.js           # assembles package/ from dist/ + config.xml (ESM)
-│   ├── audit-gate.mjs       # npm-audit allow-list gate (CI Test final step; M-TIZEN-13)
+│   ├── audit-gate.mjs       # npm-audit allow-list gate (CI Test final step)
 │   ├── audit-gate.d.mts     # type declarations for the gate's pure core (tests import it)
 │   ├── version-sync.mjs     # stamps package.json version into app/config.xml + telemetry carrier BEFORE build (chain pinned by versionStamping.test.ts)
 │   ├── version-sync.d.mts   # type declarations for the sync CLI's pure core
@@ -551,9 +555,9 @@ phlix-tizen-client/
 │   ├── signing.md           # certificate + .wgt signing guide
 │   ├── runtime-floor.md     # engine-floor contract (syntax target vs runtime)
 │   ├── i18n.md              # locale catalogs + vendored ui-locale story
-│   └── ui-port-divergence.md # local ports of sealed @phlix/ui surfaces (M-TIZEN-08)
+│   └── ui-port-divergence.md # local ports of sealed @phlix/ui surfaces
 ├── .github/workflows/
-│   ├── test.yml             # three legs: vitest + S501 coverage floor, tests/scripts typecheck (M-TIZEN-12), npm-audit gate last (M-TIZEN-13)
+│   ├── test.yml             # three legs: vitest + S501 coverage floor, tests/scripts typecheck, npm-audit gate last
 │   ├── lint.yml             # npm run lint + npm run build
 │   └── build.yml            # npm run package + package/ freshness gate + rolling 'latest' .wgt release
 ├── vite.config.ts           # base: './', target chrome100

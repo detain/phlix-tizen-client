@@ -379,7 +379,7 @@ AES).
 ```bash
 git clone https://github.com/detain/phlix-tizen-client.git
 cd phlix-tizen-client
-npm install
+npm ci --allow-git=all
 ```
 
 ### Development workflow

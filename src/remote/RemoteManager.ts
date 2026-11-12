@@ -60,8 +60,7 @@ export interface ActionEvent {
   repeat?: boolean;
   /**
    * Joined digit string: carried by the S535 DIGIT_COMMIT drain on the
-   * `action` channel AND by every per-press echo on the live `digit`
-   * observation channel (the buffer value at the moment of the press).
+   * `action` channel.
    */
   value?: string;
 }
