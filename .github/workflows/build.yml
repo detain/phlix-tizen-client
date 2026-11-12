@@ -74,7 +74,7 @@ jobs:
     # On every master push, overwrite a rolling "latest" GitHub Release carrying
     # the RAW (unsigned) .wgt as a directly-downloadable asset (GitHub Actions
     # artifacts are always served zipped — a Release is the only way to offer the
-    # bare widget). Skipped on PRs and tag pushes.
+    # bare widget). Skipped on PRs.
     if: github.event_name == 'push' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main')
     runs-on: ubuntu-26.04
     permissions:
