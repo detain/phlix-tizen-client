@@ -556,6 +556,7 @@ class SyncPlayApiClient {
         // A caller-owned abort surfaces untouched.
         throw new Error(
           `SyncPlay API request timed out after ${SYNC_PLAY_REST_TIMEOUT_MS} ms: ${path}`,
+          { cause: error },
         );
       }
       throw error;

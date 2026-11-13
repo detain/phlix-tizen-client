@@ -162,7 +162,7 @@ function toFailure(raw: unknown): RuntimeFailure | null {
  * worse than the silence it cures, so storage itself is read in a guard.
  */
 export function readRuntimeFailures(storage: DiagnosticStorage): RuntimeFailure[] {
-  let raw: string | null = null;
+  let raw: string | null;
   try {
     raw = storage.getItem(DIAGNOSTICS_KEY);
   } catch {

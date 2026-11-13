@@ -116,7 +116,7 @@ export function wirePendingPlayMediaDispatcher(
         deps.onStale?.(command);
         return;
       }
-      let item: MediaItem | null = null;
+      let item: MediaItem | null;
       try {
         item = await deps.resolveMedia({ mediaId: command.mediaId, title: command.title });
       } catch {

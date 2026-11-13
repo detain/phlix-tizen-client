@@ -34,6 +34,13 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — build toolchain upgraded to the newest mutually compatible set (ESLint 10, TypeScript 6.0, jsdom 31, @types/node 24, globals 17) — 2026-11-13
+
+- ESLint 10 + `@eslint/js` 10; the new recommended rules were satisfied in source (`no-useless-assignment`, `preserve-caught-error` — the SyncPlay REST timeout error now carries `{ cause }`), no rule weakened.
+- TypeScript stays on 6.0.x, NOT 7.x: `typescript-eslint` 8.72 peers `typescript <6.1.0`. TS 6 removed `baseUrl` (`tsconfig.tests.json` paths are now `./`-relative) and `tsconfig.json` adds the `ES2022.Error` lib for `Error.cause`.
+- `overrides` pin `minimatch ^11.0.8` / `glob ^14.0.6`, clearing the open minimatch advisories (`npm audit`: 0 vulnerabilities, was 11).
+- GitHub Actions were already at the latest majors; Node 24 CI unchanged.
+
 ### Fixed — boot no longer aborts when a non-English locale chunk fails to load (falls back to English); TV settings and the screensaver share one guarded storage helper — 2026-11-13
 
 - `messagesForLocale` now catches a dynamic locale-chunk load failure and returns the English catalog (TIZ-S21).

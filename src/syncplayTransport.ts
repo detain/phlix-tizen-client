@@ -118,8 +118,8 @@ export function syncplaySocketOrigin(
   allowInsecure: boolean = insecureSyncPlayHatchEnabled(),
   portOverride: number | null = null,
 ): string {
-  let hostname = '';
-  let origin = '';
+  let hostname: string;
+  let origin: string;
   let secure: boolean;
   try {
     const url = new URL(apiBase);
