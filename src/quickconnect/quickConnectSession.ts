@@ -100,6 +100,9 @@ function clampPollMs(rawSeconds: number): number {
 /** Consecutive network faults tolerated before the attempt is called dead. */
 const MAX_CONSECUTIVE_NETWORK_ERRORS = 6;
 
+/** Total redeem attempts on no-answer failures (TIZ-37). */
+const MAX_REDEEM_ATTEMPTS = 3;
+
 export interface PairingSessionDeps {
   /** HTTP transport (the real `@phlix/ui` ApiClient in prod; a fake in tests). */
   client: PairingTransport;
@@ -285,14 +288,31 @@ export function createPairingSession(deps: PairingSessionDeps): PairingSession {
 
         if (status === 'approved') {
           let tokens;
-          try {
-            // RT-058: the OFFER is the handle — the secret the initiate answer
-            // carried goes straight into the body the server's token() demands,
-            // with no re-derivation and no second source for it.
-            tokens = await redeemPairingToken(deps.client, offer);
-          } catch {
-            return finish('error');
+          // TIZ-37: a no-answer throw (offline/DNS/timeout — no HTTP status)
+          // on the redeem is retried with the same exponential backoff the
+          // status poll uses; an ANSWERED refusal (any status) is final since
+          // the pairing is one-shot server-side. Bounded by the same cap.
+          let redeemFailures = 0;
+          for (;;) {
+            try {
+              // RT-058: the OFFER is the handle — the secret the initiate answer
+              // carried goes straight into the body the server's token() demands,
+              // with no re-derivation and no second source for it.
+              tokens = await redeemPairingToken(deps.client, offer);
+              break;
+            } catch (error) {
+              redeemFailures += 1;
+              if (httpStatusOf(error) !== null || redeemFailures >= MAX_REDEEM_ATTEMPTS) {
+                return finish('error');
+              }
+              await sleep(backoffMs(baseMs, redeemFailures));
+              if (stopped) return finish('abandoned');
+            }
           }
+          // TIZ-36: the redeem await opened a window in which the surface could
+          // dismiss / re-base / unmount (all call stop()). A stopped session
+          // must never land tokens — the viewer chose to stay logged out.
+          if (stopped) return finish('abandoned');
           deps.applyTokens(tokens);
           return finish('approved');
         }

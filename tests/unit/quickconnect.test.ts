@@ -457,6 +457,79 @@ describe('quickConnectSession — orchestrator', () => {
     expect(phases).not.toContain('pairing');
   });
 
+  // ── TIZ-36 — dismiss mid-redeem stays logged out ──
+  it('TIZ-36: stop() while the redeem is in flight never applies tokens', async () => {
+    let settle!: (value: unknown) => void;
+    const transport = {
+      get(): Promise<unknown> {
+        return Promise.resolve({ status: 'approved' });
+      },
+      post(endpoint: string): Promise<unknown> {
+        if (endpoint.endsWith('/initiate')) {
+          return Promise.resolve({ code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 1 });
+        }
+        return new Promise((resolve) => {
+          settle = resolve;
+        });
+      },
+    };
+    const applied: unknown[] = [];
+    const session = createPairingSession({
+      client: transport as unknown as Parameters<typeof createPairingSession>[0]['client'],
+      identity: { deviceName: 'tv', deviceType: 'samsung-tizen' },
+      isVisible: () => true,
+      applyTokens: (t) => applied.push(t),
+      onCode: () => {},
+      onStatusChange: () => {},
+      sleep: () => Promise.resolve(),
+    });
+    const running = session.run();
+    for (let i = 0; i < 20 && !settle; i += 1) await Promise.resolve();
+    session.stop(); // viewer dismissed while the redeem was open
+    settle({ access_token: 'acc', refresh_token: 'ref' });
+    await expect(running).resolves.toBe('abandoned');
+    expect(applied).toHaveLength(0);
+  });
+
+  // ── TIZ-37 — redeem retries no-answer failures with backoff ──
+  it('TIZ-37: a transient no-answer redeem failure retries with backoff then lands', async () => {
+    const client = new FakeTransport();
+    client.respond(
+      { code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 2 },
+      { status: 'approved' },
+      new Error('network'),
+      { access_token: 'acc', refresh_token: 'ref' },
+    );
+    const h = harness(client);
+    await expect(h.session.run()).resolves.toBe('approved');
+    expect(h.applied).toEqual([{ accessToken: 'acc', refreshToken: 'ref' }]);
+    expect(h.sleeper.delays).toContain(2_000);
+  });
+
+  it('TIZ-37: an ANSWERED redeem refusal is final (no retry)', async () => {
+    const client = new FakeTransport();
+    client.respond(
+      { code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 2 },
+      { status: 'approved' },
+      Object.assign(new Error('gone'), { status: 410 }),
+    );
+    const h = harness(client);
+    await expect(h.session.run()).resolves.toBe('error');
+    expect(client.calls.filter((c) => c.endpoint.endsWith('/token'))).toHaveLength(1);
+  });
+
+  it('TIZ-37: redeem gives up after the attempt cap', async () => {
+    const client = new FakeTransport();
+    client.respond(
+      { code: 'ABCD-1234', secret: PAIRING_SECRET, interval: 2 },
+      { status: 'approved' },
+      new Error('n'), new Error('n'), new Error('n'),
+    );
+    const h = harness(client);
+    await expect(h.session.run()).resolves.toBe('error');
+    expect(client.calls.filter((c) => c.endpoint.endsWith('/token'))).toHaveLength(3);
+  });
+
   it('RT-055: onCode stamps the owning session so the surface can drop stale writes', async () => {
     // The identity half: publishing the code is not enough — the receiver must
     // be able to prove WHICH session authored it. The handle itself rides the
