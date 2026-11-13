@@ -270,6 +270,20 @@ describe('messagesForLocale', () => {
     expect(await messagesForLocale('')).toEqual(await messagesForLocale(FALLBACK_LOCALE));
   });
 
+  it('a failed non-EN chunk load falls back to the EN catalog instead of throwing (TIZ-S21)', async () => {
+    vi.resetModules();
+    vi.doMock('../../src/i18n/ui-locale-bundles/es', () => {
+      throw new Error('ChunkLoadError');
+    });
+    try {
+      const fresh = await import('../../src/i18n');
+      expect(await fresh.messagesForLocale('es')).toEqual({});
+    } finally {
+      vi.doUnmock('../../src/i18n/ui-locale-bundles/es');
+      vi.resetModules();
+    }
+  });
+
   it('returns a fresh top-level object per call (registry constants are unshared)', async () => {
     const a = await messagesForLocale('en');
     const b = await messagesForLocale('en');

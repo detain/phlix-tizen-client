@@ -54,22 +54,9 @@ import {
   resolveIdleTimeoutMs,
   shouldEngageScreenSaver,
 } from '../screensaver';
+import { createGuardedStorage } from '../guardedStorage';
 
-// Local, guarded storage accessor — mirrors TelemetryConsent (S521): the real
-// localStorage when the webview allows it, a session-scoped shim when the
-// privacy-mode getter throws. Kept local to avoid a main ↔ overlay import cycle.
-const memory = new Map<string, string>();
-const storage: Pick<Storage, 'getItem'> = (() => {
-  try {
-    const real = globalThis.localStorage;
-    if (real) return real;
-  } catch {
-    // Getter threw — fall through to the shim below.
-  }
-  return {
-    getItem: (k) => memory.get(k) ?? null,
-  };
-})();
+const storage = createGuardedStorage();
 
 const player = usePlayerStore();
 const engaged = ref(false);

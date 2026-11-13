@@ -28,30 +28,13 @@ import {
   persistIdleTimeoutMs,
   resolveIdleTimeoutMs,
   stepIdleTimeoutMs,
-  type IdleStorageRead,
-  type IdleStorageWrite,
 } from '../screensaver';
+
+import { createGuardedStorage } from '../guardedStorage';
 
 const router = useRouter();
 
-const memory = new Map<string, string>();
-const storage: IdleStorageRead & IdleStorageWrite & Pick<Storage, 'removeItem'> = (() => {
-  try {
-    const real = globalThis.localStorage;
-    if (real) return real;
-  } catch {
-    // privacy-mode getter threw — session shim below
-  }
-  return {
-    getItem: (k: string) => memory.get(k) ?? null,
-    setItem: (k: string, v: string) => {
-      memory.set(k, v);
-    },
-    removeItem: (k: string) => {
-      memory.delete(k);
-    },
-  };
-})();
+const storage = createGuardedStorage();
 
 const apiBase = useApiBase();
 const telemetryOn = ref(getConsent(storage));

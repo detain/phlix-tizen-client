@@ -18,7 +18,12 @@ ledger accepts deliberately:
   first tagged release (a store/OTA event, owner-gated) converts the ledger:
   entries above it move under a version heading at that moment, not before.
 - Historical section titles written before this law was declared stand
-  verbatim (including the non-KaC `### Prior era snapshot — …` grouping deep
+  verbatim (including the non-KaC `### Fixed — boot no longer aborts when a non-English locale chunk fails to load (falls back to English); TV settings and the screensaver share one guarded storage helper — 2026-11-13
+
+- `messagesForLocale` now catches a dynamic locale-chunk load failure and returns the English catalog (TIZ-S21).
+- New `src/guardedStorage.ts` replaces the duplicated localStorage-or-session-shim code in `TvSettingsPage.vue` and `ScreenSaverOverlay.vue` (TIZ-S16).
+
+### Prior era snapshot — …` grouping deep
   in the file) — estate history-verbatim law; corrections append, never
   rewrite. (Deferred m19/m20 adjudication, 2026-11-03: the non-KaC headings
   the reviews enumerated are historical record; they grandfather, they do not

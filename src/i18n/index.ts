@@ -185,14 +185,22 @@ export function resolveLocale(signals: LocaleSignals = {}): SupportedLocale {
 /**
  * The ui `PhlixAppConfig.messages` override map for a locale. The input is
  * parsed (Law 2): anything unsupported — including a mistyped locale — selects
- * the fallback catalog rather than throwing at boot. The returned object is a
+ * the fallback catalog rather than throwing at boot; a failed catalog chunk
+ * load for a non-fallback locale also falls back to the fallback catalog. The returned object is a
  * FRESH copy of the group table each call (group keys re-copied), matching the
  * "always fresh object, never mutates" contract ui's own `mergeMessages` upholds.
  */
 export async function messagesForLocale(locale: string): Promise<PhlixMessagesConfig> {
   const parsed = normalizeLocaleTag(locale);
   const effective: SupportedLocale = isSupportedLocale(parsed) ? parsed : FALLBACK_LOCALE;
-  const catalog = await MESSAGE_CATALOGS[effective]();
+  let catalog: PhlixMessagesConfig;
+  try {
+    catalog = await MESSAGE_CATALOGS[effective]();
+  } catch {
+    // Chunk-load failure (flaky network / stale deploy): boot with the English
+    // catalog rather than aborting. If even the fallback chunk fails, let it throw.
+    catalog = await MESSAGE_CATALOGS[FALLBACK_LOCALE]();
+  }
   // Two-level catalog by contract (ui types): fresh top level + shallow-copied
   // group maps, so callers can never mutate the registry's constants.
   // Object.fromEntries is ES2019 — safe on the chrome100 Tizen build target.
