@@ -143,7 +143,7 @@ describe('locale resolution matrix (device tag → bundle, both catalogs)', () =
     ['zz', 'en'], ['xx_YY', 'en'], ['kl-GL', 'en'],
   ];
   for (const [tag, expected] of MATRIX) {
-    it(`'${tag}' selects '${expected}' for BOTH the ui seam and tizen-own`, () => {
+    it(`'${tag}' selects '${expected}' for BOTH the ui seam and tizen-own`, async () => {
       // The parser returns the PRIMARY SUBTAG; only supported ones (plus the
       // pt→pt_BR region rule) key a catalog. Unsupported parses ('zz') are
       // carried to the registry lookup, where the walk ends at FALLBACK —
@@ -156,7 +156,7 @@ describe('locale resolution matrix (device tag → bundle, both catalogs)', () =
       }
       expect(resolveLocale({ explicit: tag })).toBe(expected);
       // ui seam: the override actually handed to createPhlixApp.
-      const override = messagesForLocale(tag);
+      const override = await messagesForLocale(tag);
       if (expected === 'en') {
         expect(Object.keys(override)).toEqual([]); // en passes English defaults through
       } else {
@@ -173,29 +173,29 @@ describe('locale resolution matrix (device tag → bundle, both catalogs)', () =
     });
   }
 
-  it('unsupported tags never leak past the registry (FALLBACK is in SUPPORTED_LOCALES)', () => {
+  it('unsupported tags never leak past the registry (FALLBACK is in SUPPORTED_LOCALES)', async () => {
     expect(SUPPORTED_LOCALES).toContain(FALLBACK_LOCALE);
     expect(SUPPORTED_LOCALES).toEqual(['en', 'es', 'fr', 'de', 'it', 'pt_BR', 'ja']);
   });
 });
 
 describe('real-bundle E2E — Spanish actually renders (and English survives gaps)', () => {
-  it('t() through mergeMessages renders the vendored es bundle, not English', () => {
+  it('t() through mergeMessages renders the vendored es bundle, not English', async () => {
     const locale = resolveLocale({ explicit: 'es' });
-    const merged = mergeMessages(messagesForLocale(locale));
+    const merged = mergeMessages(await messagesForLocale(locale));
     const esUi = flat(UI_TABLES.es);
     expect(merged.common.retry).toBe(esUi.get('common.retry'));
     expect(merged.common.retry).not.toBe('Retry');
   });
 
-  it('a hypothetical PARTIAL override still falls back to English for untouched keys', () => {
+  it('a hypothetical PARTIAL override still falls back to English for untouched keys', async () => {
     // Same law, partial slice: the merge — not the bundle — owns fallback.
     const merged = mergeMessages({ common: { retry: 'ZZZ-SOLO-ES' } });
     expect(merged.common.retry).toBe('ZZZ-SOLO-ES');
     expect(merged.common.close).toBe('Close');
   });
 
-  it('tTizen renders Spanish (menu.browse) and Japanese (days.mon) for real keys', () => {
+  it('tTizen renders Spanish (menu.browse) and Japanese (days.mon) for real keys', async () => {
     setTizenLocale('es');
     expect(tTizen('menu.browse')).toBe('Explorar');
     expect(tTizen('common.loading')).toBe('Cargando…');
@@ -205,8 +205,8 @@ describe('real-bundle E2E — Spanish actually renders (and English survives gap
     expect(tTizen('menu.browse')).toBe(TIZEN_EN.menu.browse);
   });
 
-  it('en path stays byte-identical: full en override renders DEFAULT, tTizen renders TIZEN_EN', () => {
-    const mergedEn = mergeMessages(messagesForLocale('en'));
+  it('en path stays byte-identical: full en override renders DEFAULT, tTizen renders TIZEN_EN', async () => {
+    const mergedEn = mergeMessages(await messagesForLocale('en'));
     expect(mergedEn.common.retry).toBe(DEFAULT_MESSAGES.common.retry);
     setTizenLocale('en');
     for (const [key, value] of EN_TIZEN) {
@@ -237,20 +237,20 @@ function sha256(text: string): string {
 }
 
 describe('vendored bundles — PIN integrity (runs in CI: needs no sibling)', () => {
-  it('PIN covers exactly the seven vendored files', () => {
+  it('PIN covers exactly the seven vendored files', async () => {
     expect(Object.keys(pin.files).sort()).toEqual(
       ['de.ts', 'es.ts', 'fr.ts', 'index.ts', 'it.ts', 'ja.ts', 'pt_BR.ts'],
     );
   });
 
-  it('every vendored file on disk hashes to its PIN entry', () => {
+  it('every vendored file on disk hashes to its PIN entry', async () => {
     for (const [file, entry] of Object.entries(pin.files)) {
       const disk = readFileSync(join(VENDOR_DIR, file), 'utf8');
       expect(sha256(disk), `${file} drifted from PIN without a re-sync`).toBe(entry.vendored_sha256);
     }
   });
 
-  it('the sync script cannot silently roll the vendor back to a stale constant', () => {
+  it('the sync script cannot silently roll the vendor back to a stale constant', async () => {
     // The pre-fix hazard: a hardcoded SOURCE_REF constant that drifted from
     // PIN.ref (2f2df8a2 vs dc1df7d5 once shipped) made a BARE script run
     // re-vendor the OLD commit and self-rewrite the PIN — silent rollback,
@@ -269,11 +269,11 @@ describe('vendored bundles — PIN integrity (runs in CI: needs no sibling)', ()
     expect(script).not.toMatch(/arg\('--ref', SOURCE_REF\)/);
   });
 
-  it('the registry exposes precisely the six estate locales', () => {
+  it('the registry exposes precisely the six estate locales', async () => {
     expect(Object.keys(LOCALE_MESSAGES).sort()).toEqual([...LOCALES].sort());
   });
 
-  it('vendored files keep strict typing against the installed package (CI-runnable)', () => {
+  it('vendored files keep strict typing against the installed package (CI-runnable)', async () => {
     // The v0.99.5 re-pin deleted the v0.99.4-era key-skew relaxation: every
     // file must import PhlixMessages from '@phlix/ui' (a declared barrel
     // export at that tag), the bundles must still `satisfies PhlixMessages`
@@ -301,7 +301,7 @@ describe('vendored bundles — PIN integrity (runs in CI: needs no sibling)', ()
 describe.skipIf(!SIBLING_PRESENT)(
   'vendored bundles — SOURCE parity vs pinned phlix-ui commit [HARD-FAILS locally; SKIPS in CI: no phlix-ui sibling checked out — drift protection rides the local gate + re-pin cascade, see docs/i18n.md]',
   () => {
-    it('disk equals script-transformed pristine source AND PIN source hashes match', () => {
+    it('disk equals script-transformed pristine source AND PIN source hashes match', async () => {
       // Re-derive the vendored bytes from `git show <ref>:<file>` with the ONE
       // documented transform (import-path rewrite); any mismatch means someone
       // hand-edited the vendor or the SSOT moved without a re-pin.
@@ -329,14 +329,14 @@ describe.skipIf(!SIBLING_PRESENT)(
 // ---------------------------------------------------------------------------
 
 describe('ui bundles — key-set identity and installed coverage', () => {
-  it('all six vendored bundles carry an identical key set', () => {
+  it('all six vendored bundles carry an identical key set', async () => {
     const reference = keySet(UI_TABLES.es);
     for (const locale of LOCALES) {
       expect(keySet(UI_TABLES[locale]), `${locale} key set differs from es`).toBe(reference);
     }
   });
 
-  it('installed DEFAULT_MESSAGES keys are all present in every bundle (installed ⊆ bundle)', () => {
+  it('installed DEFAULT_MESSAGES keys are all present in every bundle (installed ⊆ bundle)', async () => {
     for (const locale of LOCALES) {
       const bundleKeys = new Set(flat(UI_TABLES[locale]).keys());
       const missing = [...EN_UI.keys()].filter((key) => !bundleKeys.has(key));
@@ -344,7 +344,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
     }
   });
 
-  it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', () => {
+  it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', async () => {
     // Vendored @ 1f906979 == @phlix/ui v0.99.27 — RE-SYNCED at this pin (the
     // .25→.26 held run ended here): the device-sessions payload moved ui
     // locale SOURCE — `git diff dc2e70fe..1f906979 -- src/i18n` NON-empty:
@@ -439,7 +439,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
     expect(EN_UI.size).toBe(bundleKeys.length);
   });
 
-  it('every bundle value keeps its key\'s {placeholder} set (vs English)', () => {
+  it('every bundle value keeps its key\'s {placeholder} set (vs English)', async () => {
     for (const locale of LOCALES) {
       const table = flat(UI_TABLES[locale]);
       for (const [key, value] of table) {
@@ -455,7 +455,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
     }
   });
 
-  it('CLDR segment law: latin mirrors English (additive exception 2), ja collapses to 1 everywhere', () => {
+  it('CLDR segment law: latin mirrors English (additive exception 2), ja collapses to 1 everywhere', async () => {
     for (const locale of LOCALES) {
       const table = flat(UI_TABLES[locale]);
       for (const [key, value] of table) {
@@ -480,7 +480,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
     }
   });
 
-  it('no bundle is a copy-paste of English (each differs from the default on ≥90% of shared keys)', () => {
+  it('no bundle is a copy-paste of English (each differs from the default on ≥90% of shared keys)', async () => {
     for (const locale of LOCALES) {
       const table = flat(UI_TABLES[locale]);
       const shared = [...EN_UI.entries()];
@@ -489,7 +489,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
     }
   });
 
-  it('ja ui bundle is overwhelmingly CJK (≥90% of values; formats/loanwords may stay Latin)', () => {
+  it('ja ui bundle is overwhelmingly CJK (≥90% of values; formats/loanwords may stay Latin)', async () => {
     // The exhaustive non-CJK allow-list lives in the ui SSOT suite; here we
     // only cap bulk-English regressions (an email placeholder or a 'PiP'
     // badge staying ASCII is legitimate — 10% budget absorbs them all).
@@ -504,7 +504,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
 // ---------------------------------------------------------------------------
 
 describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
-  it('every locale table has EXACTLY the 195 English keys (both directions)', () => {
+  it('every locale table has EXACTLY the 195 English keys (both directions)', async () => {
     const reference = keySet(TIZEN_EN as unknown as Table);
     for (const locale of LOCALES) {
       expect(keySet(TIZEN_TABLES[locale]), `${locale} key set differs from en`).toBe(reference);
@@ -512,7 +512,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     expect(EN_TIZEN.size).toBe(195);
   });
 
-  it('every value keeps its key\'s {placeholder} set verbatim', () => {
+  it('every value keeps its key\'s {placeholder} set verbatim', async () => {
     for (const locale of LOCALES) {
       const table = flat(TIZEN_TABLES[locale]);
       for (const [key, value] of table) {
@@ -521,13 +521,13 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     }
   });
 
-  it('English own-catalog baseline keeps ZERO pipes (One/Other keys, not templates)', () => {
+  it('English own-catalog baseline keeps ZERO pipes (One/Other keys, not templates)', async () => {
     for (const [key, value] of EN_TIZEN) {
       expect(value.includes('|'), `en ${key} unexpectedly pipes`).toBe(false);
     }
   });
 
-  it('latin locales: 2-segment pipes on EXACTLY the 12 additive keys, 1 segment elsewhere', () => {
+  it('latin locales: 2-segment pipes on EXACTLY the 12 additive keys, 1 segment elsewhere', async () => {
     for (const locale of LATIN) {
       const table = flat(TIZEN_TABLES[locale]);
       for (const [key, value] of table) {
@@ -542,14 +542,14 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     }
   });
 
-  it('ja carries ZERO pipe templates anywhere (CLDR "other" only)', () => {
+  it('ja carries ZERO pipe templates anywhere (CLDR "other" only)', async () => {
     const table = flat(TIZEN_TABLES.ja);
     for (const [key, value] of table) {
       expect(value.includes('|'), `ja ${key} must not pipe`).toBe(false);
     }
   });
 
-  it('ja count strings use native counters (章/曲/枚/人/本/件), never a bare number', () => {
+  it('ja count strings use native counters (章/曲/枚/人/本/件), never a bare number', async () => {
     const table = flat(TIZEN_TABLES.ja);
     const counters: Record<string, string> = {
       'chapters.countAria': '章',
@@ -569,7 +569,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     }
   });
 
-  it('ja One/Other PAIRS carry identical values (no singular form exists)', () => {
+  it('ja One/Other PAIRS carry identical values (no singular form exists)', async () => {
     const table = flat(TIZEN_TABLES.ja);
     const pairs: [string, string][] = [
       ['music.trackCountOne', 'music.trackCountOther'],
@@ -583,7 +583,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     }
   });
 
-  it('English-LEAK allow-list is exact in BOTH directions, per locale', () => {
+  it('English-LEAK allow-list is exact in BOTH directions, per locale', async () => {
     for (const locale of LOCALES) {
       const table = flat(TIZEN_TABLES[locale]);
       const actualLeaks = [...table.entries()]
@@ -596,7 +596,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     }
   });
 
-  it('values are trimmed (W-min173: the former pressBack edge-space pair left with the rating trio)', () => {
+  it('values are trimmed (W-min173: the former pressBack edge-space pair left with the rating trio)', async () => {
     for (const locale of LOCALES) {
       for (const [key, value] of flat(TIZEN_TABLES[locale])) {
         expect(value, `${locale} ${key} edge whitespace`).toBe(value.trim());
@@ -604,7 +604,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     }
   });
 
-  it('no value carries double-spaces or tabs (mirrors the en integrity law)', () => {
+  it('no value carries double-spaces or tabs (mirrors the en integrity law)', async () => {
     for (const locale of LOCALES) {
       for (const [key, value] of flat(TIZEN_TABLES[locale])) {
         expect(value.includes('  '), `${locale} ${key} double space`).toBe(false);
@@ -613,7 +613,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     }
   });
 
-  it('latin diacriticals aggregate above floor per language', () => {
+  it('latin diacriticals aggregate above floor per language', async () => {
     for (const [locale, spec] of Object.entries(LATIN_SPECS)) {
       let hits = 0;
       for (const value of flat(TIZEN_TABLES[locale as Locale]).values()) {
@@ -623,7 +623,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     }
   });
 
-  it('ja is overwhelmingly CJK; non-CJK values are exactly the allow-listed formats', () => {
+  it('ja is overwhelmingly CJK; non-CJK values are exactly the allow-listed formats', async () => {
     const nonCjk = [...flat(TIZEN_TABLES.ja).entries()]
       .filter(([, value]) => !CJK.test(value))
       .map(([key]) => key)
@@ -631,7 +631,7 @@ describe('tizen-own catalogs — key-set, placeholders, plurals', () => {
     expect(nonCjk).toEqual([...EN_LEAK_OK.ja].sort());
   });
 
-  it('the 195-key type law: every locale compiles against TizenCatalog (satisfies)', () => {
+  it('the 195-key type law: every locale compiles against TizenCatalog (satisfies)', async () => {
     // Compile-time guarantee, re-asserted at runtime via key-set identity;
     // this it() documents that the `satisfies TizenCatalog` annotations in
     // src/i18n/tizen/locales/*.ts are the FIRST line of that defense.

@@ -61,7 +61,7 @@
  */
 import type { PhlixMessages, PhlixMessagesConfig } from '@phlix/ui';
 import { EN_MESSAGES } from './locales/en';
-import { LOCALE_MESSAGES, type PhlixLocaleCode } from './ui-locale-bundles';
+import type { PhlixLocaleCode } from './ui-locale-bundles';
 
 /** Locales this client ships catalogs for. Union = the registry's key set;
  *  the six vendored tags come from the ui barrel, so the SSOT is one import. */
@@ -97,19 +97,23 @@ function configOf(bundle: PhlixMessages): PhlixMessagesConfig {
 }
 
 /**
- * Locale → catalog factory. Factories (not constants) keep module-load lazy and
+ * Locale → async catalog loader. Loaders (not constants) keep module-load lazy and
  * hand each caller a fresh object, so a consumer mutating its override can
  * never poison another boot's table. Registry order is irrelevant; lookup is a
  * property access.
  */
-const MESSAGE_CATALOGS: Record<SupportedLocale, () => PhlixMessagesConfig> = {
-  en: () => EN_MESSAGES,
-  es: () => configOf(LOCALE_MESSAGES.es),
-  fr: () => configOf(LOCALE_MESSAGES.fr),
-  de: () => configOf(LOCALE_MESSAGES.de),
-  it: () => configOf(LOCALE_MESSAGES.it),
-  pt_BR: () => configOf(LOCALE_MESSAGES.pt_BR),
-  ja: () => configOf(LOCALE_MESSAGES.ja),
+const MESSAGE_CATALOGS: Record<SupportedLocale, () => Promise<PhlixMessagesConfig>> = {
+  // EN is the static fallback floor: always in the boot chunk, never dynamic.
+  en: () => Promise.resolve(EN_MESSAGES),
+  // TIZ-S21: non-EN bundles load on demand (one chunk per locale) instead of
+  // all six riding the boot chunk. Imported per-file, NOT via the vendored
+  // ui-locale-bundles/index.ts barrel, which statically pulls every bundle.
+  es: () => import('./ui-locale-bundles/es').then((m) => configOf(m.ES_MESSAGES)),
+  fr: () => import('./ui-locale-bundles/fr').then((m) => configOf(m.FR_MESSAGES)),
+  de: () => import('./ui-locale-bundles/de').then((m) => configOf(m.DE_MESSAGES)),
+  it: () => import('./ui-locale-bundles/it').then((m) => configOf(m.IT_MESSAGES)),
+  pt_BR: () => import('./ui-locale-bundles/pt_BR').then((m) => configOf(m.PT_BR_MESSAGES)),
+  ja: () => import('./ui-locale-bundles/ja').then((m) => configOf(m.JA_MESSAGES)),
 };
 
 /** Inputs `resolveLocale` considers, highest priority first. */
@@ -185,10 +189,10 @@ export function resolveLocale(signals: LocaleSignals = {}): SupportedLocale {
  * FRESH copy of the group table each call (group keys re-copied), matching the
  * "always fresh object, never mutates" contract ui's own `mergeMessages` upholds.
  */
-export function messagesForLocale(locale: string): PhlixMessagesConfig {
+export async function messagesForLocale(locale: string): Promise<PhlixMessagesConfig> {
   const parsed = normalizeLocaleTag(locale);
   const effective: SupportedLocale = isSupportedLocale(parsed) ? parsed : FALLBACK_LOCALE;
-  const catalog = MESSAGE_CATALOGS[effective]();
+  const catalog = await MESSAGE_CATALOGS[effective]();
   // Two-level catalog by contract (ui types): fresh top level + shallow-copied
   // group maps, so callers can never mutate the registry's constants.
   // Object.fromEntries is ES2019 — safe on the chrome100 Tizen build target.

@@ -82,7 +82,7 @@ describe('end-to-end: client messages override reaches ui-rendered strings (real
     messages: OVERRIDE,
   });
 
-  it('createPhlixApp carries the client override into the provided phlixConfig', () => {
+  it('createPhlixApp carries the client override into the provided phlixConfig', async () => {
     const provided = providedPhlixConfig(app);
     // Same reference: the factory spreads the consumer config verbatim, and
     // useMessages() injects THIS object.
@@ -90,7 +90,7 @@ describe('end-to-end: client messages override reaches ui-rendered strings (real
     expect(provided.messages?.common?.retry).toBe('ZZZ-TEST');
   });
 
-  it('useMessages().t renders the override through the real inject→merge→resolve chain', () => {
+  it('useMessages().t renders the override through the real inject→merge→resolve chain', async () => {
     const wrapper = mount(probeComponent(['common.retry', 'common.close']), {
       global: { provide: realProvides(app) },
     });
@@ -102,7 +102,7 @@ describe('end-to-end: client messages override reaches ui-rendered strings (real
     wrapper.unmount();
   });
 
-  it('omitting messages renders the untouched English default (behavior-preservation pin)', () => {
+  it('omitting messages renders the untouched English default (behavior-preservation pin)', async () => {
     const baseline = createPhlixApp({ app: 'server', apiBase: 'http://phlix.invalid' });
     const wrapper = mount(probeComponent(['common.retry']), {
       global: { provide: realProvides(baseline) },
@@ -111,11 +111,11 @@ describe('end-to-end: client messages override reaches ui-rendered strings (real
     wrapper.unmount();
   });
 
-  it('the shipped en catalog (empty override) renders byte-identical English', () => {
+  it('the shipped en catalog (empty override) renders byte-identical English', async () => {
     const enApp = createPhlixApp({
       app: 'server',
       apiBase: 'http://phlix.invalid',
-      messages: messagesForLocale(resolveLocale({ navigatorLanguage: 'en-US' })),
+      messages: await messagesForLocale(resolveLocale({ navigatorLanguage: 'en-US' })),
     });
     const wrapper = mount(probeComponent(['common.retry', 'common.close', 'player.play', 'shell.browse']), {
       global: { provide: realProvides(enApp) },
@@ -135,25 +135,25 @@ describe('end-to-end: client messages override reaches ui-rendered strings (real
 // ---------------------------------------------------------------------------
 
 describe('ui mergeMessages semantics the client catalog relies on', () => {
-  it('overrides merge per group; keys not overridden fall back to DEFAULT_MESSAGES', () => {
+  it('overrides merge per group; keys not overridden fall back to DEFAULT_MESSAGES', async () => {
     const merged = mergeMessages({ common: { retry: 'ZZZ-TEST' } });
     expect(merged.common.retry).toBe('ZZZ-TEST');
     expect(merged.common.close).toBe('Close');
   });
 
-  it('an unknown top-level group is DROPPED (merge iterates only default groups)', () => {
+  it('an unknown top-level group is DROPPED (merge iterates only default groups)', async () => {
     const bogus = { not_a_group: { anything: 'X' }, common: { retry: 'ZZZ-TEST' } } as unknown as PhlixMessagesConfig;
     const merged = mergeMessages(bogus);
     expect(merged).not.toHaveProperty('not_a_group');
     expect(merged.common.retry).toBe('ZZZ-TEST');
   });
 
-  it('a null group override degrades to the English default instead of throwing', () => {
+  it('a null group override degrades to the English default instead of throwing', async () => {
     const merged = mergeMessages({ common: null } as unknown as PhlixMessagesConfig);
     expect(merged.common.retry).toBe('Retry');
   });
 
-  it('always returns a fresh object — never the DEFAULT_MESSAGES reference', () => {
+  it('always returns a fresh object — never the DEFAULT_MESSAGES reference', async () => {
     expect(mergeMessages()).not.toBe(mergeMessages());
   });
 });
@@ -163,13 +163,13 @@ describe('ui mergeMessages semantics the client catalog relies on', () => {
 // ---------------------------------------------------------------------------
 
 describe('normalizeLocaleTag', () => {
-  it('parses BCP-47 tags to a lowercase primary subtag', () => {
+  it('parses BCP-47 tags to a lowercase primary subtag', async () => {
     expect(normalizeLocaleTag('en-US')).toBe('en');
     expect(normalizeLocaleTag('ES_es')).toBe('es');
     expect(normalizeLocaleTag('  zh-Hans-CN ')).toBe('zh');
   });
 
-  it('maps EVERY Portuguese signal to the one shipped pt catalog (pt_BR)', () => {
+  it('maps EVERY Portuguese signal to the one shipped pt catalog (pt_BR)', async () => {
     // Region-aware exception to the primary-subtag rule (docblock in
     // src/i18n/index.ts): collapsing pt to bare 'pt' would drop the only key
     // the registry has, degrading every pt device to English.
@@ -180,7 +180,7 @@ describe('normalizeLocaleTag', () => {
     expect(normalizeLocaleTag('pt-419')).toBe('pt_BR');
   });
 
-  it('yields null for empty/whitespace/absent signals', () => {
+  it('yields null for empty/whitespace/absent signals', async () => {
     expect(normalizeLocaleTag('')).toBeNull();
     expect(normalizeLocaleTag('   ')).toBeNull();
     expect(normalizeLocaleTag(null)).toBeNull();
@@ -189,7 +189,7 @@ describe('normalizeLocaleTag', () => {
 });
 
 describe('isSupportedLocale', () => {
-  it('accepts every registered locale and rejects the rest', () => {
+  it('accepts every registered locale and rejects the rest', async () => {
     for (const locale of SUPPORTED_LOCALES) {
       expect(isSupportedLocale(locale)).toBe(true);
     }
@@ -205,48 +205,48 @@ describe('isSupportedLocale', () => {
 });
 
 describe('resolveLocale priority (explicit → env → navigator → fallback)', () => {
-  it('explicit beats env and navigator', () => {
+  it('explicit beats env and navigator', async () => {
     expect(resolveLocale({ explicit: 'en', env: 'zz', navigatorLanguage: 'zz' })).toBe('en');
   });
 
-  it('env beats navigator', () => {
+  it('env beats navigator', async () => {
     expect(resolveLocale({ env: 'en', navigatorLanguage: 'zz-ZZ' })).toBe('en');
   });
 
-  it('navigator is used when no higher signal exists', () => {
+  it('navigator is used when no higher signal exists', async () => {
     expect(resolveLocale({ env: null, navigatorLanguage: 'en-GB' })).toBe('en');
   });
 
-  it('unsupported signals fall through to the fallback locale', () => {
+  it('unsupported signals fall through to the fallback locale', async () => {
     // Post 6-locale build-out the genuinely-unsupported probes carry the
     // original intent: es/fr/de ARE supported now (pinned by the matrix in
     // tests/unit/i18nLocales.test.ts), so zz/xx/kl prove the same walk.
     expect(resolveLocale({ explicit: 'zz', env: 'xx_YY', navigatorLanguage: 'kl-GL' })).toBe(FALLBACK_LOCALE);
   });
 
-  it('a higher-priority UNSUPPORTED signal does not veto a lower supported one', () => {
+  it('a higher-priority UNSUPPORTED signal does not veto a lower supported one', async () => {
     // 'zz' parses but has no catalog → the walk continues to the next signal.
     expect(resolveLocale({ explicit: 'zz-ZZ', env: null, navigatorLanguage: 'en_US' })).toBe('en');
   });
 
-  it('a higher-priority SUPPORTED regional signal wins outright', () => {
+  it('a higher-priority SUPPORTED regional signal wins outright', async () => {
     // Mirror pin of the law above, post build-out: 'es-ES' parses AND has a
     // catalog, so it resolves to 'es' without consulting lower signals.
     expect(resolveLocale({ explicit: 'es-ES', env: 'ja', navigatorLanguage: 'de' })).toBe('es');
   });
 
-  it('reads VITE_PHLIX_LOCALE from the environment when no explicit slot is passed', () => {
+  it('reads VITE_PHLIX_LOCALE from the environment when no explicit slot is passed', async () => {
     vi.stubEnv('VITE_PHLIX_LOCALE', 'en');
     expect(resolveLocale({ navigatorLanguage: 'de-DE' })).toBe('en');
   });
 
-  it('an unsupported explicit signal falls through to a supported env value', () => {
+  it('an unsupported explicit signal falls through to a supported env value', async () => {
     vi.stubEnv('VITE_PHLIX_LOCALE', 'en');
     // explicit 'zz' is junk; env 'en' is the next supported signal.
     expect(resolveLocale({ explicit: 'zz', navigatorLanguage: 'zz' })).toBe('en');
   });
 
-  it('never returns anything outside SUPPORTED_LOCALES', () => {
+  it('never returns anything outside SUPPORTED_LOCALES', async () => {
     const probes = ['', '   ', 'x', 'en-Latn-US', 'EN', 'en_US', null, undefined] as const;
     for (const explicit of probes) {
       for (const env of probes) {
@@ -260,25 +260,25 @@ describe('resolveLocale priority (explicit → env → navigator → fallback)',
 });
 
 describe('messagesForLocale', () => {
-  it('en resolves to an empty override (ui English defaults pass through untouched)', () => {
-    expect(messagesForLocale('en')).toEqual({});
-    expect(messagesForLocale('EN-US')).toEqual({});
+  it('en resolves to an empty override (ui English defaults pass through untouched)', async () => {
+    expect(await messagesForLocale('en')).toEqual({});
+    expect(await messagesForLocale('EN-US')).toEqual({});
   });
 
-  it('unsupported/mistyped locales select the fallback catalog without throwing', () => {
-    expect(messagesForLocale('klingon')).toEqual(messagesForLocale(FALLBACK_LOCALE));
-    expect(messagesForLocale('')).toEqual(messagesForLocale(FALLBACK_LOCALE));
+  it('unsupported/mistyped locales select the fallback catalog without throwing', async () => {
+    expect(await messagesForLocale('klingon')).toEqual(await messagesForLocale(FALLBACK_LOCALE));
+    expect(await messagesForLocale('')).toEqual(await messagesForLocale(FALLBACK_LOCALE));
   });
 
-  it('returns a fresh top-level object per call (registry constants are unshared)', () => {
-    const a = messagesForLocale('en');
-    const b = messagesForLocale('en');
+  it('returns a fresh top-level object per call (registry constants are unshared)', async () => {
+    const a = await messagesForLocale('en');
+    const b = await messagesForLocale('en');
     expect(a).not.toBe(b);
     expect(a).toEqual(b);
   });
 
-  it('the result is a legal PhlixMessagesConfig for the ui seam (type-level pin)', () => {
-    const cfg: PhlixMessagesConfig = messagesForLocale(resolveLocale({ navigatorLanguage: 'en-US' }));
+  it('the result is a legal PhlixMessagesConfig for the ui seam (type-level pin)', async () => {
+    const cfg: PhlixMessagesConfig = await messagesForLocale(resolveLocale({ navigatorLanguage: 'en-US' }));
     expect(cfg).toBeDefined();
   });
 });

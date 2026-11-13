@@ -43,12 +43,6 @@ import { wirePendingPlayMediaDispatcher } from './syncplayDispatch';
 import { buildTelemetryDeps, getConsent, startTelemetry } from './telemetry';
 import SpatialNavHost from './SpatialNavHost.vue';
 import ActionToastOverlay from './components/ActionToastOverlay.vue';
-import ChaptersPage from './pages/ChaptersPage.vue';
-import AudioTracksPage from './pages/AudioTracksPage.vue';
-import SubtitleTracksPage from './pages/SubtitleTracksPage.vue';
-import ParentalControlsPage from './pages/ParentalControlsPage.vue';
-import TvSettingsPage from './pages/TvSettingsPage.vue';
-import RecommendationsScreen from './screens/RecommendationsScreen.vue';
 import QuickConnectPanel from './quickconnect/QuickConnectPanel.vue';
 import TelemetryConsent from './components/TelemetryConsent.vue';
 import ScreenSaverOverlay from './components/ScreenSaverOverlay.vue';
@@ -138,14 +132,16 @@ export function buildExtraRoutes(): RouteRecordRaw[] {
     // navigate here expose no seam. They are deep-link/consumer-ready pages
     // (pinned by RouteWireShape + main.test.ts route-table test); wiring an entry
     // is deferred until a ui seam exists. MusicPage is an unrouted orphan.
-    { path: '/app/chapters/:id', name: 'chapters', component: ChaptersPage },
-    { path: '/app/audio-tracks/:id', name: 'audio-tracks', component: AudioTracksPage },
+    // TIZ-S21: picker/settings route components are lazy (dynamic import) so
+    // the boot chunk no longer carries pages the first paint never renders.
+    { path: '/app/chapters/:id', name: 'chapters', component: () => import('./pages/ChaptersPage.vue') },
+    { path: '/app/audio-tracks/:id', name: 'audio-tracks', component: () => import('./pages/AudioTracksPage.vue') },
     // S407: the subtitle picker's consumer page (mirror of audio-tracks).
-    { path: '/app/subtitle-tracks/:id', name: 'subtitle-tracks', component: SubtitleTracksPage },
-    { path: '/app/recommendations', name: 'recommendations', component: RecommendationsScreen },
+    { path: '/app/subtitle-tracks/:id', name: 'subtitle-tracks', component: () => import('./pages/SubtitleTracksPage.vue') },
+    { path: '/app/recommendations', name: 'recommendations', component: () => import('./screens/RecommendationsScreen.vue') },
     // TIZ-S16: TV-own settings surface (the shared /app/settings page is ui-owned).
-    { path: '/app/tv-settings', name: 'tv-settings', component: TvSettingsPage },
-    { path: '/app/parental-controls', name: 'parental-controls', component: ParentalControlsPage },
+    { path: '/app/tv-settings', name: 'tv-settings', component: () => import('./pages/TvSettingsPage.vue') },
+    { path: '/app/parental-controls', name: 'parental-controls', component: () => import('./pages/ParentalControlsPage.vue') },
   ];
 }
 
@@ -587,7 +583,7 @@ export async function boot(fetchImpl?: typeof fetch): Promise<void> {
     // behavior-identical to omitting the field — the wiring is the deliverable.
     // Locale priority: explicit → VITE_PHLIX_LOCALE → navigator.language → 'en'
     // (no privileged tizen.systeminfo call — see src/i18n/index.ts doctrine).
-    messages: messagesForLocale(locale)
+    messages: await messagesForLocale(locale)
   });
 
   // Error-visibility brief — the Vue bridge. Production Vue routes component
