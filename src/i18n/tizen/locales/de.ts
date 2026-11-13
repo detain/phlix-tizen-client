@@ -92,12 +92,16 @@ const tvSettings = {
   idleLabel: 'Bildschirmschoner',
   idleHint: 'Leerlaufzeit bis zum Start des Bildschirmschoners. Links oder rechts drücken zum Ändern.',
   minutes: '{minutes} Min.',
+  telemetryLabel: 'Anonyme Nutzungsstatistik',
+  telemetryOn: 'An',
+  telemetryOff: 'Aus',
+  telemetryHint: 'Mit OK die anonyme Nutzungsstatistik ein- oder ausschalten. Ein einzelnes periodisches Signal (Geräte-ID, App-Version), keine Titel, kein Konto.',
 };
 
 const telemetry = {
   aria: 'Hilf mit, Phlix zu verbessern',
   title: 'Anonyme Nutzungsstatistiken teilen?',
-  body: 'Ein einzelnes periodisches Signal (Geräte-ID, App-Version) — keine Titel, kein Konto. Diese Karte ist die einzige Entscheidung — nichts wird gesendet, bis du wählst.',
+  body: 'Ein einzelnes periodisches Signal (Geräte-ID, App-Version) — keine Titel, kein Konto. Nichts wird gesendet, bis du wählst; du kannst es später in den TV-Einstellungen ändern.',
   enable: 'Aktivieren',
   notNow: 'Jetzt nicht',
 };

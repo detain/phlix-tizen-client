@@ -96,12 +96,16 @@ const tvSettings = {
   idleLabel: 'Salvapantallas',
   idleHint: 'Tiempo de inactividad antes del salvapantallas. Pulsa izquierda o derecha para cambiar.',
   minutes: '{minutes} minutos',
+  telemetryLabel: 'Estadísticas de uso anónimas',
+  telemetryOn: 'Activado',
+  telemetryOff: 'Desactivado',
+  telemetryHint: 'Pulsa OK para activar o desactivar las estadísticas de uso anónimas. Una única señal periódica (ID del dispositivo, versión de la app), sin títulos ni cuenta.',
 };
 
 const telemetry = {
   aria: 'Ayuda a mejorar Phlix',
   title: '¿Compartir estadísticas de uso anónimas?',
-  body: 'Una única señal periódica (ID del dispositivo, versión de la app) — sin títulos, sin cuenta. Esta tarjeta es el único lugar para decidir: no se envía nada hasta que elijas.',
+  body: 'Una única señal periódica (ID del dispositivo, versión de la app) — sin títulos, sin cuenta. No se envía nada hasta que elijas; puedes cambiarlo después en Ajustes de TV.',
   enable: 'Activar',
   notNow: 'Ahora no',
 };

@@ -93,12 +93,16 @@ const tvSettings = {
   idleLabel: 'Économiseur d’écran',
   idleHint: 'Délai d’inactivité avant l’économiseur d’écran. Appuyez à gauche ou à droite pour modifier.',
   minutes: '{minutes} minutes',
+  telemetryLabel: 'Statistiques d’utilisation anonymes',
+  telemetryOn: 'Activées',
+  telemetryOff: 'Désactivées',
+  telemetryHint: 'Appuyez sur OK pour activer ou désactiver les statistiques d’utilisation anonymes. Un seul signal périodique (ID de l’appareil, version de l’application), aucun titre, aucun compte.',
 };
 
 const telemetry = {
   aria: 'Aidez à améliorer Phlix',
   title: 'Partager des statistiques d’utilisation anonymes ?',
-  body: 'Un seul signal périodique (ID de l’appareil, version de l’application) — aucun titre, aucun compte. Cette carte est le seul lieu de décision — rien n’est envoyé avant votre choix.',
+  body: 'Un seul signal périodique (ID de l’appareil, version de l’application) — aucun titre, aucun compte. Rien n’est envoyé avant votre choix ; vous pourrez le modifier dans Réglages TV.',
   enable: 'Activer',
   notNow: 'Plus tard',
 };

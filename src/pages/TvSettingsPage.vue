@@ -15,7 +15,15 @@
  */
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { useApiBase } from '@phlix/ui';
 import { tTizen } from '../i18n/tizen';
+import {
+  buildTelemetryDeps,
+  getConsent,
+  setConsent,
+  startTelemetry,
+  stopTelemetry,
+} from '../telemetry';
 import {
   persistIdleTimeoutMs,
   resolveIdleTimeoutMs,
@@ -27,7 +35,7 @@ import {
 const router = useRouter();
 
 const memory = new Map<string, string>();
-const storage: IdleStorageRead & IdleStorageWrite = (() => {
+const storage: IdleStorageRead & IdleStorageWrite & Pick<Storage, 'removeItem'> = (() => {
   try {
     const real = globalThis.localStorage;
     if (real) return real;
@@ -39,8 +47,28 @@ const storage: IdleStorageRead & IdleStorageWrite = (() => {
     setItem: (k: string, v: string) => {
       memory.set(k, v);
     },
+    removeItem: (k: string) => {
+      memory.delete(k);
+    },
   };
 })();
+
+const apiBase = useApiBase();
+const telemetryOn = ref(getConsent(storage));
+
+/** Reverse (or grant) the one-time telemetry choice. setConsent persists the
+ * boolean (a decline clears the throttle stamp); start/stop only manage the
+ * existing guarded heartbeat — no new request site. */
+function toggleTelemetry(): void {
+  const next = !telemetryOn.value;
+  setConsent(storage, next);
+  telemetryOn.value = next;
+  if (next) {
+    if (apiBase.value) startTelemetry(buildTelemetryDeps({ storage, baseUrl: apiBase.value }));
+  } else {
+    stopTelemetry();
+  }
+}
 
 const idleMs = ref(resolveIdleTimeoutMs(storage));
 
@@ -103,6 +131,24 @@ function goBack(): void {
     <p class="tv-settings__hint">
       {{ tTizen('tvSettings.idleHint') }}
     </p>
+
+    <button
+      type="button"
+      class="tv-settings__row tv-settings__row--spaced"
+      data-testid="telemetry-row"
+      role="switch"
+      :aria-checked="telemetryOn"
+      @click="toggleTelemetry"
+    >
+      <span class="tv-settings__label">{{ tTizen('tvSettings.telemetryLabel') }}</span>
+      <span
+        class="tv-settings__value"
+        data-testid="telemetry-value"
+      >{{ telemetryOn ? tTizen('tvSettings.telemetryOn') : tTizen('tvSettings.telemetryOff') }}</span>
+    </button>
+    <p class="tv-settings__hint">
+      {{ tTizen('tvSettings.telemetryHint') }}
+    </p>
   </div>
 </template>
 
@@ -146,6 +192,9 @@ function goBack(): void {
   color: var(--text, #e4e4e7);
   font-size: var(--text-lg, 1.125rem);
   cursor: pointer;
+}
+.tv-settings__row--spaced {
+  margin-top: var(--space-6, 1.5rem);
 }
 .tv-settings__row:focus-visible {
   outline: none;

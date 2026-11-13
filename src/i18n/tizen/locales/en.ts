@@ -112,12 +112,16 @@ const tvSettings = {
   idleLabel: 'Screensaver',
   idleHint: 'Idle time before the screensaver starts. Press left or right to change.',
   minutes: '{minutes} min',
+  telemetryLabel: 'Anonymous usage stats',
+  telemetryOn: 'On',
+  telemetryOff: 'Off',
+  telemetryHint: 'Press OK to turn anonymous usage stats on or off. A single periodic signal (device id, app version) — no titles, no account.',
 } satisfies Record<string, string>;
 
 const telemetry = {
   aria: 'Help improve Phlix',
   title: 'Share anonymous usage stats?',
-  body: 'A single periodic signal (device id, app version) — no titles, no account. This card is the only place to decide — nothing is sent until you choose.',
+  body: 'A single periodic signal (device id, app version) — no titles, no account. Nothing is sent until you choose; you can change this later in TV Settings.',
   enable: 'Enable',
   notNow: 'Not now',
 } satisfies Record<string, string>;
