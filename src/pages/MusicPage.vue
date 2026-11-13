@@ -16,7 +16,13 @@
  * Both Tizen and phlix-ui use internal state machine patterns for view
  * switching (artists → albums → tracks), so architectural patterns are similar.
  *
- * Route: /app/music  (registered via buildExtraRoutes in main.ts)
+ * Route: NONE — ORPHAN at this pin (TIZ-S19 ruling). Not registered in
+ * buildExtraRoutes; the live music surface ships inside the sealed
+ * @phlix/ui bundle. Kept (not deleted) because its cards/store are pinned
+ * by tests and the :src guard (tvImageSrc.test.ts) — wiring it needs a
+ * vendored-ui entry seam, which is sealed. Delete it together with
+ * MusicArtistCard/MusicAlbumCard/TrackListItem/useMusicStore if the owner
+ * rules for the RatingModal-precedent deletion.
  *
  * @category TV-Specific Component
  * @duplicate phlix-ui/src/pages/MusicLibraryPage.vue - but TV navigation
