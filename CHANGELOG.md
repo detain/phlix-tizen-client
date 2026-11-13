@@ -42,6 +42,7 @@ ledger accepts deliberately:
 - TypeScript stays on 6.0.x, NOT 7.x: `typescript-eslint` 8.72 peers `typescript <6.1.0`. TS 6 removed `baseUrl` (`tsconfig.tests.json` paths are now `./`-relative) and `tsconfig.json` adds the `ES2022.Error` lib for `Error.cause`.
 - `overrides` pin `minimatch ^11.0.8` / `glob ^14.0.6`, clearing the open minimatch advisories (`npm audit`: 0 vulnerabilities, was 11).
 - GitHub Actions were already at the latest majors; Node 24 CI unchanged.
+- ESLint floor raised to 10.15.0; `@types/node` stays on 24 (matches the Node 24 CI/runtime; 26 would type APIs Node 24 lacks), TypeScript 7 still blocked by the `typescript-eslint` peer range (`<6.1.0`).
 
 ### Fixed — boot no longer aborts when a non-English locale chunk fails to load (falls back to English); TV settings and the screensaver share one guarded storage helper — 2026-11-13
 
