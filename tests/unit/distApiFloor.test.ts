@@ -233,16 +233,18 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
   });
 
   describe('runtime APIs above the floor: only polyfilled or inert-pinned may exist', () => {
-    it('pins the single Error-cause options bag (Chrome 93) as a graceful-degradation exception', () => {
+    it('pins the two Error-cause options-bag sites (Chrome 93) as a graceful-degradation exception', () => {
       // hls.js formats errors as `Error(msg,{cause:r})` — ONE site, measured
-      // 1d37585, inside the hls chunk. On engines below 93 the Error constructor
+      // 1d37585, inside the hls chunk. The second site (2026-11-13, deps
+      // upgrade / ESLint 10 `preserve-caught-error`) is the SyncPlay REST
+      // timeout error in useSyncPlayStore, which now carries `{ cause }`. On engines below 93 the Error constructor
       // ignores the options bag: the Error still constructs, only the cause
       // chain is lost (this is error-formatting glue, not control flow). Non-
       // crashing → documented exception (docs/runtime-floor.md). Any INCREASE
       // in the census means another above-floor cause site arrived; re-adjudicate.
       let total = 0;
       for (const f of assetFiles()) total += countOccurrences(readAsset(f), '{cause:');
-      expect(total).toBe(1);
+      expect(total).toBe(2);
       expect(countOccurrences(readAsset(assetFiles().find((f) => f.startsWith('hls-'))!), '{cause:')).toBe(1);
       // RT-087 (2026-11-10): the `Object.hasOwn` absent-pin that rode in this
       // test (Chrome-93 neighbour, both were "absent by accident") rotated to
