@@ -185,10 +185,11 @@ export function resolveLocale(signals: LocaleSignals = {}): SupportedLocale {
 /**
  * The ui `PhlixAppConfig.messages` override map for a locale. The input is
  * parsed (Law 2): anything unsupported — including a mistyped locale — selects
- * the fallback catalog rather than throwing at boot; a failed catalog chunk
- * load for a non-fallback locale also falls back to the fallback catalog. The returned object is a
- * FRESH copy of the group table each call (group keys re-copied), matching the
- * "always fresh object, never mutates" contract ui's own `mergeMessages` upholds.
+ * the fallback catalog rather than throwing at boot. A failed catalog chunk
+ * load also falls back to the fallback catalog. The returned object is a
+ * FRESH copy of the group table each call (group keys re-copied), matching
+ * the "always fresh object, never mutates" contract ui's own `mergeMessages`
+ * upholds.
  */
 export async function messagesForLocale(locale: string): Promise<PhlixMessagesConfig> {
   const parsed = normalizeLocaleTag(locale);

@@ -18,12 +18,7 @@ ledger accepts deliberately:
   first tagged release (a store/OTA event, owner-gated) converts the ledger:
   entries above it move under a version heading at that moment, not before.
 - Historical section titles written before this law was declared stand
-  verbatim (including the non-KaC `### Fixed — boot no longer aborts when a non-English locale chunk fails to load (falls back to English); TV settings and the screensaver share one guarded storage helper — 2026-11-13
-
-- `messagesForLocale` now catches a dynamic locale-chunk load failure and returns the English catalog (TIZ-S21).
-- New `src/guardedStorage.ts` replaces the duplicated localStorage-or-session-shim code in `TvSettingsPage.vue` and `ScreenSaverOverlay.vue` (TIZ-S16).
-
-### Prior era snapshot — …` grouping deep
+  verbatim (including the non-KaC `### Prior era snapshot — …` grouping deep
   in the file) — estate history-verbatim law; corrections append, never
   rewrite. (Deferred m19/m20 adjudication, 2026-11-03: the non-KaC headings
   the reviews enumerated are historical record; they grandfather, they do not
@@ -38,6 +33,17 @@ ledger accepts deliberately:
   coining a fresh category is the drift this clause exists to stop.
 
 ## [Unreleased]
+
+### Fixed — boot no longer aborts when a non-English locale chunk fails to load (falls back to English); TV settings and the screensaver share one guarded storage helper — 2026-11-13
+
+- `messagesForLocale` now catches a dynamic locale-chunk load failure and returns the English catalog (TIZ-S21).
+- New `src/guardedStorage.ts` replaces the duplicated localStorage-or-session-shim code in `TvSettingsPage.vue` and `ScreenSaverOverlay.vue` (TIZ-S16).
+- Deliberately unchanged, recorded here so the skip is not silent: the
+  `wakeHint` copy (an imperative sentence, which the fragment law excludes
+  from the punctuation rule); the TvSettingsPage ArrowLeft/Right pass-through
+  (needs a hardware focus check, nothing to change in code); and the
+  build.yml force-PATCH of the `latest` tag (assumes no tag-protection rules;
+  note only, no defect).
 
 ### Fixed — "Alexa, play X": the TV no longer plays a command meant for another server, or one that is long out of date — 2026-11-12
 
