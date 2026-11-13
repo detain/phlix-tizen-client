@@ -1,0 +1,1 @@
+var e={wsUrl:null,wsPath:null},t=/^wss?:\/\/[^/?#@]+$/i,n=/^\/[^?#]*$/;function r(r){if(typeof r!=`object`||!r)return e;let i=r;if(typeof i.wsUrl!=`string`||!t.test(i.wsUrl))return e;let a=typeof i.wsPath==`string`&&n.test(i.wsPath)?i.wsPath.replace(/\/+$/,``):null;return{wsUrl:i.wsUrl,wsPath:a}}function i(){return typeof window>`u`?e:r(window.__PHLIX__)}export{i as t};

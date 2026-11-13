@@ -61,14 +61,14 @@ The same floor applies to the shipped stylesheet — an unsupported selector or
 property in modern CSS drops **the whole rule**, silently. Census measured
 2026-11-03 (batch-3 rebuild, review-lane `e2995a7` successor) over the single
 committed stylesheet `package/assets/index-*.css` (hash-agnostic read — the
-whole bundle emits exactly one CSS file), all figures re-derived from disk;
+whole bundle emitted exactly one CSS file until the TIZ-S21 lazy-route split; it now emits one entry `index-*.css` plus per-lazy-page sidecar `.css` files, and the census sums across all of them), all figures re-derived from disk;
 re-measured 2026-11-06 after the `@phlix/ui` #v0.99.22 re-vendor — the ambient
 canvas cure (`.player__ambient`) emits one more `inset:` site (41→42, the two
 negative-inset declarations of the new keyframed layers minus one media-query
 rule hoisted at build time); re-measured again 2026-11-06 at tip 1c09f99 —
 dropping the two host `:focus-visible:focus-visible` redundant double arms
 (AudioTrackList / SubtitleTrackList, mirroring the ChapterList m14 cure)
-removed 4 `:focus-visible` tokens (157→153); the deletion of the dead
+removed 4 `:focus-visible` tokens (157→153; then 153→152 at RT-100/RT-101/RT-103, then 152→154 at the TIZ-S8 stale-package rebuild — the current table figure); the deletion of the dead
 `@media (max-width:640px)` density fallbacks, reviewed in the same round,
 removed no above-floor token, so every other figure held; the `100dvh` row
 is added this wave; re-measured again 2026-11-09 at the `@phlix/ui`
@@ -81,7 +81,7 @@ below the table:
 
 | Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
 |---|---|---|---|
-| `:focus-visible` | Chrome **86** | 154 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (4 dropped from 157 by collapsing two host `:focus-visible:focus-visible` double arms.) |
+| `:focus-visible` | Chrome **86** | 154 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (157→153 by collapsing two host `:focus-visible:focus-visible` double arms.) |
 | `inset:` | Chrome **87** | 43 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
 | `aspect-ratio` | Chrome **88** | 36 | Boxes size from content/height instead of the ratio — cards may stretch. |
 | `accent-color` | Chrome **93** | 7 | Form controls keep UA default colors — cosmetic only. |

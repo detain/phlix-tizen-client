@@ -2,7 +2,7 @@
 
 **What this document is.** The Tizen client renders its app UI from the vendored
 `@phlix/ui` bundle, but three behaviors could not ride that bundle because
-`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.26).
+`@phlix/ui` does not export them (as of the pin at time of writing, v0.99.27).
 They are therefore **re-implemented locally** in this repo. Local ports drift:
 every ui release can change the thing being ported while the port stands still.
 This ledger names every port, what it is sealed behind, and the known
@@ -15,7 +15,27 @@ leave a port behind.
 | `src/api/hubRelay.ts` | the ui's hub-relay pending-command consumer (ui S298 half) | boot glue differs (tizen config resolution, S2a token mint); documented as a faithful port in its header |
 | `src/syncplayDispatch.ts` | the ui's `Player.vue` pending-media load path (`resolvePendingMedia` prop era) | the player page lives inside the sealed bundle; this is the host-side watcher driving the shared player store |
 
-## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.26`)
+## Mirror-lag list (as of writing — ui `github:detain/phlix-ui#v0.99.27`)
+
+**Current-bytes re-anchor (TIZ-S22, 2026-11-12, v0.99.27 pin, final widget
+re-vendor).** `package/` was regenerated from the final `src/` (TIZ-S21 lazy
+route components + lazy locale bundles landed). Every chunk NAME cited in the
+historical prose below (the `.26`-era `index-BD26Z3-N.js`, `index-DgueOqPh.js`,
+`index-CEKJyz_J.js`, `index-D1c6SPMk.js`, `PlayerPage-5onGq7ES-*`,
+`MusicLibraryPage-DyAzEjsj-*`, `index-BVpuTFMB.css`, ...) is a SUPERSEDED
+anchor and no longer exists in `package/assets/` — read the facts, not the
+hashes. Current carriers, re-grepped on the committed bytes: widget entry
+`index-DLZJSzc2.js` (+ entry stylesheet `index-BlbRqpum.css`; lazy host pages
+now emit their own sidecar `.css`); `wsUrl` greps `socketHint-C0yqQROO-*`,
+`SyncPlayModal-ClJp4uF_-*` and the entry (1 widget-entry site); `invite-links`
+greps `hubHelpLinks-BNMhK6oW-*`; `redeem` rides the entry only; `playlist_url`
+rides the player carrier `PlayerPage-CHLjXsKa-*`; `mediaSession` rides
+`usePlayerStore-BpohCwDP-*`; the music carrier is `MusicLibraryPage-nFxBYf88-*`
+(album card in `MusicAlbumCard-D5Sictor-*`). Hash suffixes after the
+`<Name>-<uihash>-` pair rotate with every host rebuild; the leading
+`<Name>-<uihash>` stays stable per ui pin. Re-pin checklist: this file is part
+of the cascade — re-grep these carriers onto the committed `package/` at every
+`@phlix/ui` re-pin and every `package/` rebuild.
 
 Verified against the vendored bundle in `package/assets/` and the local sources
 at this commit, not from memory (rows re-grepped at the 2026-11-10 v0.99.26

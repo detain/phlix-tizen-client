@@ -1,0 +1,1 @@
+import{i as e,p as t,s as n,u as r}from"./client-CdNyEcUJ-oTjrrNDn.js";function i(e){if(e instanceof r){let t=e.body;if(typeof t==`object`&&t&&typeof t.code==`string`)return t.code}return null}function a(t,r,i){let a=n(t,i);return a===null?r:{title:a,description:e(t,i)}}function o(n,a,o){return n instanceof r?e(i(n),o,a):t(n,a)}export{i as n,o as r,a as t};

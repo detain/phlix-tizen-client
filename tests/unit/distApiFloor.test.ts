@@ -469,7 +469,7 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
    * where an unsupported selector/property silently DROPS THE WHOLE RULE. The
    * census below is measured 2026-11-03 from the committed single CSS file;
    * every figure is an exact re-pin target (rotation law + docs/runtime-floor.md
-   * "CSS features above 85"). The pair law: the 153 `:focus-visible` sites are
+   * "CSS features above 85"). The pair law: the `:focus-visible` sites (152 at the 2026-11-06 pin; 154 since TIZ-S8) are
    * admitted ONLY because the vendored `[data-tv] :focus` fallback rides in
    * the same file — both halves are asserted together, so a re-vendor that
    * drops the fallback reddens the suite instead of shipping blind D-pad focus.
@@ -494,10 +494,13 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       return total;
     }
 
-    it('the bundle emits exactly one stylesheet, and it is the entry-linked one', () => {
-      const files = cssFiles();
-      expect(files.length, 'CSS file count').toBe(1);
-      expect(files[0]).toBe(entryCssName());
+    it('the bundle emits exactly one entry stylesheet (index-*.css), and it is the linked one', () => {
+      // TIZ-S21 lazy route components: each lazy host page chunk now emits its own
+      // sidecar `<Page>-<hash>.css` (loaded on demand by the chunk's preload). The
+      // single-ENTRY law is unchanged: exactly one `index-*.css`, the one index.html links.
+      const entries = cssFiles().filter((f) => f.startsWith('index-'));
+      expect(entries.length, 'entry CSS file count').toBe(1);
+      expect(entries[0]).toBe(entryCssName());
     });
 
     it('pins the above-floor CSS census at measured counts (rotation = adjudication)', () => {
@@ -525,7 +528,7 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // files = −4 (host surface, attributed). Other figures held (RT-069's
       // removal of the dead `@media (max-width:640px)` density fallbacks in
       // RecommendationsScreen/MusicPage deleted no above-floor token).
-      // 153→152: RT-100/RT-101 (w13-L4) deleted the three overlay components —
+      // 153→152 (the 152 pin; superseded by 154 at TIZ-S8 below): RT-100/RT-101 (w13-L4) deleted the three overlay components —
       // their compiled focus arms left the bundle — and RT-103 added the
       // toggle-pill ring back: net −2 (two deleted host overlay arms) + 1
       // (`.toggle-pill:focus-visible`) = −1. Attributed by selector-set diff
