@@ -67,7 +67,7 @@ const boot = {
 };
 
 const hub = {
-  pausedNotice: 'ハブへの接続は一時停止中です — アプリを再度開くと再開されます',
+  pausedNotice: 'ハブへの接続は一時停止中です — アプリを再度開くと再開されます。',
 };
 
 const chapters = {
@@ -159,7 +159,7 @@ const recommendations = {
   headingCount: '{count}件のおすすめ',
   loadingAria: 'おすすめを読み込み中',
   loading: 'おすすめを読み込み中…',
-  empty: 'まだおすすめはありません。視聴を続けると、あなたに合った提案が届きます！',
+  empty: 'まだおすすめはありません。視聴を続けると、あなたに合った提案が届きます。',
   gridAria: '{count}件のおすすめ',
 };
 
@@ -204,7 +204,7 @@ const quickConnect = {
   choosePassword: 'パスワードでサインイン',
   chooseCode: 'ペアリングコードでサインイン',
   preparing: 'コードを準備しています…',
-  instruction: 'このコードをサインイン済みの他のPhlixデバイスに入力してテレビを連携します',
+  instruction: 'このコードをサインイン済みの他のPhlixデバイスに入力してテレビを連携します。',
   declined: '連携が拒否されました。',
   expired: 'このコードは期限切れです。',
   unreachable: 'サーバーに接続できませんでした。',

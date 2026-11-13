@@ -81,7 +81,7 @@ const boot = {
 } satisfies Record<string, string>;
 
 const hub = {
-  pausedNotice: 'Hub connection paused — resumes when you open the app again',
+  pausedNotice: 'Hub connection paused — resumes when you open the app again.',
 } satisfies Record<string, string>;
 
 const chapters = {
@@ -190,7 +190,7 @@ const recommendations = {
   headingCount: '{count} Recommendations',
   loadingAria: 'Loading recommendations',
   loading: 'Loading recommendations…',
-  empty: 'No recommendations yet. Keep watching to get personalized suggestions!',
+  empty: 'No recommendations yet. Keep watching to get personalized suggestions.',
   gridAria: '{count} recommendations',
 } satisfies Record<string, string>;
 
@@ -238,7 +238,7 @@ const quickConnect = {
   choosePassword: 'Sign in with password',
   chooseCode: 'Sign in with a pairing code',
   preparing: 'Preparing your code…',
-  instruction: 'Enter this code on another signed-in Phlix device to pair the TV',
+  instruction: 'Enter this code on another signed-in Phlix device to pair the TV.',
   declined: 'Pairing was declined.',
   expired: 'That code expired.',
   unreachable: 'Could not reach the server.',

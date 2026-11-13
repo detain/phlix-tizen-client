@@ -66,7 +66,7 @@ const boot = {
 };
 
 const hub = {
-  pausedNotice: 'Connexion au hub suspendue — elle reprend à la prochaine ouverture de l’application',
+  pausedNotice: 'Connexion au hub suspendue — elle reprend à la prochaine ouverture de l’application.',
 };
 
 const chapters = {
@@ -158,7 +158,7 @@ const recommendations = {
   headingCount: '{count} Recommandation | {count} Recommandations',
   loadingAria: 'Chargement des recommandations',
   loading: 'Chargement des recommandations…',
-  empty: 'Aucune recommandation pour l’instant. Continuez à regarder pour recevoir des suggestions personnalisées !',
+  empty: 'Aucune recommandation pour l’instant. Continuez à regarder pour recevoir des suggestions personnalisées.',
   gridAria: '{count} recommandation | {count} recommandations',
 };
 
@@ -203,7 +203,7 @@ const quickConnect = {
   choosePassword: 'Se connecter avec un mot de passe',
   chooseCode: 'Se connecter avec un code d’association',
   preparing: 'Préparation de votre code…',
-  instruction: 'Saisissez ce code sur un autre appareil Phlix connecté pour associer la TV',
+  instruction: 'Saisissez ce code sur un autre appareil Phlix connecté pour associer la TV.',
   declined: 'L’association a été refusée.',
   expired: 'Ce code a expiré.',
   unreachable: 'Impossible de joindre le serveur.',

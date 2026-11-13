@@ -67,7 +67,7 @@ const boot = {
 };
 
 const hub = {
-  pausedNotice: 'Conexão com o hub pausada — retoma quando você abrir o app novamente',
+  pausedNotice: 'Conexão com o hub pausada — retoma quando você abrir o app novamente.',
 };
 
 const chapters = {
@@ -159,7 +159,7 @@ const recommendations = {
   headingCount: '{count} Recomendação | {count} Recomendações',
   loadingAria: 'Carregando recomendações',
   loading: 'Carregando recomendações…',
-  empty: 'Ainda não há recomendações. Continue assistindo para receber sugestões personalizadas!',
+  empty: 'Ainda não há recomendações. Continue assistindo para receber sugestões personalizadas.',
   gridAria: '{count} recomendação | {count} recomendações',
 };
 
@@ -204,7 +204,7 @@ const quickConnect = {
   choosePassword: 'Entrar com senha',
   chooseCode: 'Entrar com um código de pareamento',
   preparing: 'Preparando seu código…',
-  instruction: 'Digite este código em outro dispositivo Phlix com sessão ativa para parear a TV',
+  instruction: 'Digite este código em outro dispositivo Phlix com sessão ativa para parear a TV.',
   declined: 'O pareamento foi recusado.',
   expired: 'Esse código expirou.',
   unreachable: 'Não foi possível acessar o servidor.',
