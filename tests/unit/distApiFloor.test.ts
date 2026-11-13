@@ -469,7 +469,7 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
    * where an unsupported selector/property silently DROPS THE WHOLE RULE. The
    * census below is measured 2026-11-03 from the committed single CSS file;
    * every figure is an exact re-pin target (rotation law + docs/runtime-floor.md
-   * "CSS features above 85"). The pair law: the `:focus-visible` sites (152 at the 2026-11-06 pin; 154 since TIZ-S8) are
+   * "CSS features above 85"). The pair law: the `:focus-visible` sites (152 at the 2026-11-06 pin; 155 since the v0.99.28 re-pin; 154 at TIZ-S8) are
    * admitted ONLY because the vendored `[data-tv] :focus` fallback rides in
    * the same file — both halves are asserted together, so a re-vendor that
    * drops the fallback reddens the suite instead of shipping blind D-pad focus.
@@ -545,7 +545,11 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // `.tv-settings__back` / `.tv-settings__row` `:focus-visible` ring arms (+2),
       // attributed by scoped-hash-stripped selector-set diff of old vs new chunk;
       // docs/runtime-floor.md table re-measured in the same change.
-      expect(countAcrossCss(':focus-visible')).toBe(154);
+      // 154→155: @phlix/ui v0.99.27→v0.99.28 re-pin — the ui bundle gains one
+      // `.device-sessions-page__card-title:focus:not(:focus-visible)` token (+1),
+      // attributed by scoped-hash-stripped selector-set diff of the old vs new
+      // committed package/ css; docs/runtime-floor.md re-measured in the same change.
+      expect(countAcrossCss(':focus-visible')).toBe(155);
       expect(countAcrossCss('inset:')).toBe(43);
       expect(countAcrossCss('aspect-ratio')).toBe(36);
       // 8→7: RT-103 (w15-L10) replaced the native schedule checkbox (whose

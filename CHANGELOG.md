@@ -114,6 +114,16 @@ ledger accepts deliberately:
   docs/signing.md does describe the published artifact ("the "latest" GitHub
   release publishes this RAW, UNSIGNED .wgt") but does not name an era.
 
+### Changed — deps: @phlix/ui #v0.99.27 → #v0.99.28 + @phlix/contracts #v0.5.7 → #v0.5.8 (CTR-S14 cascade re-pin)
+
+- **Pin leg:** `package.json` + lock rotated (ui `dfe8fc6586e41728b4dcdc1a22a2bf8d19e74e01`,
+  contracts `e5a33809e9659ab40325aae4e92411b464ddbcd7`, peels from `git ls-remote`); README /
+  DEVELOPER / AGENTS / CLAUDE / docs/i18n.md pin lines rotated with it.
+- **Locale re-vendor:** ui locale SOURCE moved (`git diff 1f906979..v0.99.28 -- src/i18n`
+  non-empty); bundles + PIN re-synced to `dfe8fc65` via `scripts/sync-ui-locale-bundles.mjs`.
+- **package/ re-vendored** (`npm run package`); `:focus-visible` census 154→155 (+1
+  `.device-sessions-page__card-title` token), distApiFloor + runtime-floor.md updated.
+
 ### Changed — deps: @phlix/ui #v0.99.26 → #v0.99.27 (session-rows wave cascade) — Settings gains the device-sessions tab, the locale vendor re-synced (+24 leaves, 542→566), package/ regenerated (63 chunk renames, deterministic ×2) — 2026-11-11
 
 - **User-visible delta:** the installed ui bundle now carries

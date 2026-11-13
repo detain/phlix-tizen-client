@@ -68,7 +68,7 @@ negative-inset declarations of the new keyframed layers minus one media-query
 rule hoisted at build time); re-measured again 2026-11-06 at tip 1c09f99 —
 dropping the two host `:focus-visible:focus-visible` redundant double arms
 (AudioTrackList / SubtitleTrackList, mirroring the ChapterList m14 cure)
-removed 4 `:focus-visible` tokens (157→153; then 153→152 at RT-100/RT-101/RT-103, then 152→154 at the TIZ-S8 stale-package rebuild — the current table figure); the deletion of the dead
+removed 4 `:focus-visible` tokens (157→153; then 153→152 at RT-100/RT-101/RT-103, then 152→154 at the TIZ-S8 stale-package rebuild, then 154→155 at the ui v0.99.28 re-pin (+1 `.device-sessions-page__card-title:focus:not(:focus-visible)`) — the current table figure); the deletion of the dead
 `@media (max-width:640px)` density fallbacks, reviewed in the same round,
 removed no above-floor token, so every other figure held; the `100dvh` row
 is added this wave; re-measured again 2026-11-09 at the `@phlix/ui`
@@ -81,7 +81,7 @@ below the table:
 
 | Feature | Engine | Occurrences | Degradation on a Chrome-85 webview |
 |---|---|---|---|
-| `:focus-visible` | Chrome **86** | 154 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (157→153 by collapsing two host `:focus-visible:focus-visible` double arms.) |
+| `:focus-visible` | Chrome **86** | 155 | Its rules drop — focus rings would vanish **except** for the vendored TV fallback below, which uses plain `:focus`. (157→153 by collapsing two host `:focus-visible:focus-visible` double arms.) |
 | `inset:` | Chrome **87** | 43 | Positioned elements fall back to their `top/left` (or static) geometry — layouts shift, nothing throws. |
 | `aspect-ratio` | Chrome **88** | 36 | Boxes size from content/height instead of the ratio — cards may stretch. |
 | `accent-color` | Chrome **93** | 7 | Form controls keep UA default colors — cosmetic only. |
@@ -117,7 +117,7 @@ stylesheet:
 surface `src/styles/tv-typography.css` documents), so on ≤ 85 engines the D-pad
 focus ring still renders — through plain `:focus`, universally supported. The
 tripwire test **hard-asserts** that selector pair verbatim: if a re-vendor ever
-drops it, the 154 `:focus-visible` census sites become unsupported-with-no-
+drops it, the 155 `:focus-visible` census sites become unsupported-with-no-
 fallback and the suite reddens on the same law that admits them today.
 
 ## Governance law (tripwire rotation rules)
