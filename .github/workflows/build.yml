@@ -105,6 +105,8 @@ jobs:
         # release (and a failed publish left none at all). Now the tag is moved
         # in place via the API and the existing release is updated by the
         # publish step, so a consumer always sees a release.
+        # NOTE (TIZ-S8): force-PATCHing the tag assumes no tag-protection /
+        # ruleset on `latest`; if one is added, exempt github-actions for it.
         run: |
           if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/latest" >/dev/null 2>&1; then
             gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/latest" -f sha="${GITHUB_SHA}" -F force=true

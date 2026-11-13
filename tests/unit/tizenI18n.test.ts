@@ -89,7 +89,7 @@ const EXPECTED: Record<string, string> = {
   "chapters.empty": "No chapters available for this media.",
   "chapters.countHeadingOne": "{count} Chapter",
   "chapters.countHeadingOther": "{count} Chapters",
-  "screensaver.wakeHint": "Press any key to wake",
+  "screensaver.wakeHint": "Press any key to wake.",
   "telemetry.aria": "Help improve Phlix",
   "telemetry.title": "Share anonymous usage stats?",
   "telemetry.body": "A single periodic signal (device id, app version) — no titles, no account. Nothing is sent until you choose; you can change this later in TV Settings.",

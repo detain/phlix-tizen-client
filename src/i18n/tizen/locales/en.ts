@@ -104,7 +104,7 @@ const chapters = {
 } satisfies Record<string, string>;
 
 const screensaver = {
-  wakeHint: 'Press any key to wake',
+  wakeHint: 'Press any key to wake.',
 } satisfies Record<string, string>;
 
 const tvSettings = {

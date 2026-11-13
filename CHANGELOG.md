@@ -34,6 +34,8 @@ ledger accepts deliberately:
 
 ## [Unreleased]
 
+### Changed — English screensaver wake hint is now a punctuated sentence ("Press any key to wake.") — 2026-11-13
+
 ### Changed — build toolchain upgraded to the newest mutually compatible set (ESLint 10, TypeScript 6.0, jsdom 31, @types/node 24, globals 17) — 2026-11-13
 
 - ESLint 10 + `@eslint/js` 10; the new recommended rules were satisfied in source (`no-useless-assignment`, `preserve-caught-error` — the SyncPlay REST timeout error now carries `{ cause }`), no rule weakened.
