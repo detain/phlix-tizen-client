@@ -1,7 +1,7 @@
 {
   "source": "phlix-ui",
   "branch": "master",
-  "ref": "dfe8fc6586e41728b4dcdc1a22a2bf8d19e74e01",
+  "ref": "5901e05518d14875087bfa99f2130e555d69ea9f",
   "directory": "src/i18n/locales",
   "transforms": [
     "rewrite `import type { PhlixMessages } from '../messages';` -> `import type { PhlixMessages } from '@phlix/ui';` (strict typing — `satisfies`/`Record<...>` annotations — is preserved verbatim)"
