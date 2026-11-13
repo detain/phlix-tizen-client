@@ -136,7 +136,7 @@ export function buildExtraRoutes(): RouteRecordRaw[] {
     // TIZ-S19 ruling: the three picker routes below are KEPT registered but
     // have NO in-app entry point — the sealed @phlix/ui panels that would
     // navigate here expose no seam. They are deep-link/consumer-ready pages
-    // (pinned by RouteWireShape + routeManifest gate tests); wiring an entry
+    // (pinned by RouteWireShape + main.test.ts route-table test); wiring an entry
     // is deferred until a ui seam exists. MusicPage is an unrouted orphan.
     { path: '/app/chapters/:id', name: 'chapters', component: ChaptersPage },
     { path: '/app/audio-tracks/:id', name: 'audio-tracks', component: AudioTracksPage },

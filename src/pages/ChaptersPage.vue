@@ -33,6 +33,7 @@ const playerStore = usePlayerStore();
 const chapters = ref<ChapterMarker[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
+const errorDetail = ref<string | null>(null);
 
 const mediaId = computed(() => String(route.params.id ?? ''));
 
@@ -46,6 +47,7 @@ async function loadChapters(): Promise<void> {
 
   loading.value = true;
   error.value = null;
+  errorDetail.value = null;
 
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
@@ -54,7 +56,8 @@ async function loadChapters(): Promise<void> {
     );
     chapters.value = response.chapters ?? [];
   } catch (e) {
-    error.value = e instanceof Error ? e.message : tTizen('chapters.loadFailed');
+    error.value = tTizen('chapters.loadFailed');
+    errorDetail.value = e instanceof Error ? e.message : null;
     chapters.value = [];
   } finally {
     loading.value = false;
@@ -131,6 +134,7 @@ watch(mediaId, loadChapters);
       role="alert"
     >
       <p>{{ error }}</p>
+      <p v-if="errorDetail">{{ errorDetail }}</p>
       <button
         type="button"
         class="chapters-page__retry"

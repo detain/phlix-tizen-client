@@ -68,8 +68,11 @@ const loadingTags = ref(false);
 const loadingLimits = ref(false);
 
 const errorSchedules = ref<string | null>(null);
+const errorSchedulesDetail = ref<string | null>(null);
 const errorTags = ref<string | null>(null);
+const errorTagsDetail = ref<string | null>(null);
 const errorLimits = ref<string | null>(null);
+const errorLimitsDetail = ref<string | null>(null);
 
 /**
  * w13: RT-099 (review tizen__exploiter #2) — inline mutation disclosures.
@@ -366,6 +369,7 @@ async function loadSchedules(): Promise<void> {
 
   loadingSchedules.value = true;
   errorSchedules.value = null;
+  errorSchedulesDetail.value = null;
 
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
@@ -379,7 +383,8 @@ async function loadSchedules(): Promise<void> {
     );
     schedules.value = normalizeScheduleRows(data.schedules);
   } catch (e) {
-    errorSchedules.value = e instanceof Error ? e.message : tTizen('parentalControls.failedSchedules');
+    errorSchedules.value = tTizen('parentalControls.failedSchedules');
+    errorSchedulesDetail.value = e instanceof Error ? e.message : null;
     schedules.value = [];
   } finally {
     loadingSchedules.value = false;
@@ -395,6 +400,7 @@ async function loadTags(): Promise<void> {
 
   loadingTags.value = true;
   errorTags.value = null;
+  errorTagsDetail.value = null;
 
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
@@ -403,7 +409,8 @@ async function loadTags(): Promise<void> {
     );
     blockedTags.value = (data.tags ?? []).filter(t => t.tag_type === 'blocked');
   } catch (e) {
-    errorTags.value = e instanceof Error ? e.message : tTizen('parentalControls.failedTags');
+    errorTags.value = tTizen('parentalControls.failedTags');
+    errorTagsDetail.value = e instanceof Error ? e.message : null;
     blockedTags.value = [];
   } finally {
     loadingTags.value = false;
@@ -419,6 +426,7 @@ async function loadStreamLimit(): Promise<void> {
 
   loadingLimits.value = true;
   errorLimits.value = null;
+  errorLimitsDetail.value = null;
 
   try {
     const client = new ApiClient({ baseUrl: apiBase.value });
@@ -430,7 +438,8 @@ async function loadStreamLimit(): Promise<void> {
     );
     streamLimit.value = data?.stream_limits ?? null;
   } catch (e) {
-    errorLimits.value = e instanceof Error ? e.message : tTizen('parentalControls.failedStreamLimits');
+    errorLimits.value = tTizen('parentalControls.failedStreamLimits');
+    errorLimitsDetail.value = e instanceof Error ? e.message : null;
     streamLimit.value = null;
   } finally {
     loadingLimits.value = false;
@@ -609,6 +618,7 @@ onMounted(loadAll);
         role="alert"
       >
         <p>{{ errorSchedules }}</p>
+        <p v-if="errorSchedulesDetail">{{ errorSchedulesDetail }}</p>
         <button
           type="button"
           class="retry-btn"
@@ -882,6 +892,7 @@ onMounted(loadAll);
         role="alert"
       >
         <p>{{ errorTags }}</p>
+        <p v-if="errorTagsDetail">{{ errorTagsDetail }}</p>
         <button
           type="button"
           class="retry-btn"
@@ -980,6 +991,7 @@ onMounted(loadAll);
         role="alert"
       >
         <p>{{ errorLimits }}</p>
+        <p v-if="errorLimitsDetail">{{ errorLimitsDetail }}</p>
         <button
           type="button"
           class="retry-btn"

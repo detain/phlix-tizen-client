@@ -58,6 +58,7 @@ const trackPreference = useTrackPreferenceStore();
 const subtitleTracks = ref<SubtitleTrack[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
+const errorDetail = ref<string | null>(null);
 
 const mediaId = computed(() => String(route.params.id ?? ''));
 
@@ -83,6 +84,7 @@ async function loadSubtitleTracks(): Promise<void> {
 
   loading.value = true;
   error.value = null;
+  errorDetail.value = null;
 
   try {
     // Rows pass through VERBATIM as the contracts wire `SubtitleTrack` —
@@ -109,7 +111,8 @@ async function loadSubtitleTracks(): Promise<void> {
       }
     }
   } catch (e) {
-    error.value = e instanceof Error ? e.message : tTizen('subtitleTracks.loadFailed');
+    error.value = tTizen('subtitleTracks.loadFailed');
+    errorDetail.value = e instanceof Error ? e.message : null;
     subtitleTracks.value = [];
   } finally {
     loading.value = false;
@@ -197,6 +200,7 @@ watch(mediaId, loadSubtitleTracks);
       role="alert"
     >
       <p>{{ error }}</p>
+      <p v-if="errorDetail">{{ errorDetail }}</p>
       <button
         type="button"
         class="subtitle-tracks-page__retry"

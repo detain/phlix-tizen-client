@@ -98,6 +98,7 @@ const trackPreference = useTrackPreferenceStore();
 const audioTracks = ref<AudioTrack[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
+const errorDetail = ref<string | null>(null);
 /** S407: the visible named refusal, set when the viewer picks a row. */
 const refusal = ref<string | null>(null);
 /** S511: the remembered audio language for this title (ladder result), if any. */
@@ -134,6 +135,7 @@ async function loadAudioTracks(): Promise<void> {
 
   loading.value = true;
   error.value = null;
+  errorDetail.value = null;
   refusal.value = null;
 
   try {
@@ -155,7 +157,8 @@ async function loadAudioTracks(): Promise<void> {
     );
     preferredLanguage.value = resolved.language;
   } catch (e) {
-    error.value = e instanceof Error ? e.message : tTizen('audioTracks.loadFailed');
+    error.value = tTizen('audioTracks.loadFailed');
+    errorDetail.value = e instanceof Error ? e.message : null;
     audioTracks.value = [];
     preferredLanguage.value = null;
   } finally {
@@ -258,6 +261,7 @@ watch(mediaId, loadAudioTracks);
       role="alert"
     >
       <p>{{ error }}</p>
+      <p v-if="errorDetail">{{ errorDetail }}</p>
       <button
         type="button"
         class="audio-tracks-page__retry"
