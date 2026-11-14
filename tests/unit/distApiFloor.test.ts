@@ -617,12 +617,12 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
      * ---------------------------------------------------------------- */
     it('pins the color-mix() (Chrome 111) census with machine-checked guard completeness (RT-107)', () => {
       // Measured 2026-11-09 at cc8a40f8, single stylesheet (hash-agnostic).
-      // 49 `color-mix(` tokens = 14 @supports probe CONDITIONS (one per
-      // guard block, never declarations) + 35 declaration sites spread
+      // Re-measured at ui v1.0.2 (was 49 = 14 probes + 35 sites). 51 `color-mix(` tokens = 15 @supports probe CONDITIONS (one per
+      // guard block, never declarations) + 36 declaration sites spread
       // across the vendored auth/badge/syncplay/invite/ambient surfaces.
       const css = readFileSync(join(ASSETS_DIR, entryCssName()), 'utf8');
-      expect(countAcrossCss('color-mix(')).toBe(49);
-      expect(countAcrossCss(COLOR_MIX_PROBE)).toBe(14);
+      expect(countAcrossCss('color-mix(')).toBe(51);
+      expect(countAcrossCss(COLOR_MIX_PROBE)).toBe(15);
       // Guard completeness: every declaration site rides a plain-color twin
       // of the SAME selector inside an @supports-not guard body. Zero same-
       // rule double-declares, ZERO unguarded sites → on ≤ 110 the whole
@@ -631,14 +631,14 @@ describe('distApiFloor — runtime engine floor of the committed package/ bundle
       // granularity is the single declaration. An unguarded arrival upstream
       // reddens this pin, it does not silently degrade the field.
       const census = classifyColorMixSites(css);
-      expect(census.declarationSites).toBe(35);
-      expect(census.blockGuarded).toBe(35);
+      expect(census.declarationSites).toBe(36);
+      expect(census.blockGuarded).toBe(36);
       expect(census.doubleDeclared).toBe(0);
       expect(census.unguarded.join(' , ')).toBe('');
       // Floor-doc completeness (the claim RT-107 exists to restore): the
       // census table must carry the color-mix row matching these numbers.
       const doc = readFileSync(join(PKG_DIR, '..', 'docs', 'runtime-floor.md'), 'utf8');
-      expect(doc).toContain('| `color-mix()` | Chrome **111** | 49 (14 probes + 35 sites) |');
+      expect(doc).toContain('| `color-mix()` | Chrome **111** | 51 (15 probes + 36 sites) |');
     });
   });
 

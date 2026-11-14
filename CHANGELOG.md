@@ -140,7 +140,7 @@ ledger accepts deliberately:
 - **Pin leg:** `package.json` + lock rotated (ui peel `ef4d07af0d46121ca4cd8b28121cd92a356a839e`
   from `git ls-remote`); README / DEVELOPER / AGENTS / CLAUDE / docs/i18n.md pin lines rotated.
 - **Locale re-vendor:** no `src/i18n` locale source change v1.0.0..v1.0.2; PIN + `SOURCE_REF` re-anchored.
-- **package/ re-vendored** (`npm run package`). typecheck, lint, vitest green.
+- **package/ re-vendored** (`npm run package`). `color-mix(` census re-measured 49 -> 51 (14 -> 15 probes, 35 -> 36 sites; still zero unguarded) in distApiFloor.test.ts + runtime-floor.md. typecheck, lint, vitest green.
 
 ### Changed — deps: @phlix/ui #v0.99.28 → #v1.0.0 (owner-approved cascade; ui v1.0.0 requests @phlix/contracts #v0.5.8)
 
