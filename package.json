@@ -35,7 +35,7 @@
   "dependencies": {
     "@phlix/contracts": "github:detain/phlix-contracts#v0.5.8",
     "@phlix/syncplay": "github:detain/phlix-syncplay#v0.1.8",
-    "@phlix/ui": "github:detain/phlix-ui#v1.0.0",
+    "@phlix/ui": "github:detain/phlix-ui#v1.0.2",
     "pinia": "^4.1.0",
     "vue": "^3.5.45"
   },

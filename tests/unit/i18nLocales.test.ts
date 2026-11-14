@@ -345,7 +345,7 @@ describe('ui bundles — key-set identity and installed coverage', () => {
   });
 
   it('bundles carry ZERO keys ahead of the installed pin (exact equality both ways)', async () => {
-    // Vendored @ 5901e055 == @phlix/ui v1.0.0 (re-anchored at the v1.0.0 adoption; locale SOURCE unchanged vs dfe8fc65 == v0.99.28; prior: 1f906979 == v0.99.27) — RE-SYNCED at this pin (the
+    // Vendored @ ef4d07af == @phlix/ui v1.0.2 (re-anchored at the v1.0.2 adoption; locale SOURCE unchanged vs 5901e055 == v1.0.0; locale SOURCE unchanged vs dfe8fc65 == v0.99.28; prior: 1f906979 == v0.99.27) — RE-SYNCED at this pin (the
     // .25→.26 held run ended here): the device-sessions payload moved ui
     // locale SOURCE — `git diff dc2e70fe..1f906979 -- src/i18n` NON-empty:
     // the six bundle files + the messages.ts catalog each gained the sessions

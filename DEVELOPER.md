@@ -11,7 +11,7 @@ The Tizen client is a **thin Vue 3 consumer of `@phlix/ui`**. It does not contai
 
 It mirrors the Windows/Electron client's thin-consumer shape (`electronBridge` ↔ `tizenBridge`, `resolveConfig` ↔ `resolveConfig`). To change a screen, a feature, theming, or the player, edit **`phlix-ui`** — not this repo.
 
-Pinned dependencies (source of truth: `package.json`; drift-gated by `tests/unit/docsPinConsistency.test.ts`): `@phlix/ui` `github:detain/phlix-ui#v1.0.0`, `@phlix/contracts` `github:detain/phlix-contracts#v0.5.8`, `@phlix/syncplay` `github:detain/phlix-syncplay#v0.1.8`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
+Pinned dependencies (source of truth: `package.json`; drift-gated by `tests/unit/docsPinConsistency.test.ts`): `@phlix/ui` `github:detain/phlix-ui#v1.0.2`, `@phlix/contracts` `github:detain/phlix-contracts#v0.5.8`, `@phlix/syncplay` `github:detain/phlix-syncplay#v0.1.8`. Peer runtime deps: Vue 3, Pinia, vue-router. Toolchain: Vite + `@vitejs/plugin-vue`, Vitest + jsdom + `@vue/test-utils`, flat ESLint, `vue-tsc`.
 
 Historical record: [`VERIFICATION.md`](VERIFICATION.md) is the **archived** implementation
 ledger from the gap-category passes — dated, kept verbatim, and not maintained against the

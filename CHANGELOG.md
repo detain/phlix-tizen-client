@@ -135,6 +135,13 @@ ledger accepts deliberately:
   docs/signing.md does describe the published artifact ("the "latest" GitHub
   release publishes this RAW, UNSIGNED .wgt") but does not name an era.
 
+### Changed — deps: @phlix/ui #v1.0.0 → #v1.0.2 (S181 pin-skew; contracts #v0.5.8 already latest)
+
+- **Pin leg:** `package.json` + lock rotated (ui peel `ef4d07af0d46121ca4cd8b28121cd92a356a839e`
+  from `git ls-remote`); README / DEVELOPER / AGENTS / CLAUDE / docs/i18n.md pin lines rotated.
+- **Locale re-vendor:** no `src/i18n` locale source change v1.0.0..v1.0.2; PIN + `SOURCE_REF` re-anchored.
+- **package/ re-vendored** (`npm run package`). typecheck, lint, vitest green.
+
 ### Changed — deps: @phlix/ui #v0.99.28 → #v1.0.0 (owner-approved cascade; ui v1.0.0 requests @phlix/contracts #v0.5.8)
 
 - **Pin leg:** `package.json` + lock rotated (ui peel `5901e05518d14875087bfa99f2130e555d69ea9f`
