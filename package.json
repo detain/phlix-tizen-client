@@ -33,15 +33,15 @@
   },
   "homepage": "https://github.com/detain/phlix-tizen-client",
   "dependencies": {
-    "@phlix/contracts": "github:detain/phlix-contracts#v0.5.8",
+    "@phlix/contracts": "github:detain/phlix-contracts#v0.5.7",
     "@phlix/syncplay": "github:detain/phlix-syncplay#v0.1.8",
-    "@phlix/ui": "github:detain/phlix-ui#v1.0.2",
+    "@phlix/ui": "github:detain/phlix-ui#v0.99.26",
     "pinia": "^4.1.0",
     "vue": "^3.5.45"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "^6.0.11",
     "@vitest/coverage-v8": "^5.1.0",
     "@vue/test-utils": "^2.5.1",
@@ -50,7 +50,7 @@
     "eslint-plugin-vue": "^10.12.1",
     "globals": "^17.14.0",
     "jsdom": "^31.0.1",
-    "typescript": "~6.0",
+    "typescript": "~7.0",
     "typescript-eslint": "^8.72.1",
     "vite": "^8.3.8",
     "vitest": "^5.1.0",
