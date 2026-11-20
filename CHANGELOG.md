@@ -135,6 +135,20 @@ ledger accepts deliberately:
   docs/signing.md does describe the published artifact ("the "latest" GitHub
   release publishes this RAW, UNSIGNED .wgt") but does not name an era.
 
+### Changed — deps: @phlix/ui #v1.0.2 → #v1.0.3 (v1.0.3 cascade — Player shortcut-gate + photo Spinner fixes; contracts #v0.5.8 + syncplay #v0.1.8 held)
+
+- **Pin leg:** `package.json` + lock rotated (ui peel `1381cab3314fd7099991866d1fc0636d140b024d` — tag object
+  `2149a26f` ls-remote-verified on origin, cross-checked against the npm git resolution); README / DEVELOPER /
+  AGENTS / CLAUDE / docs/i18n.md pin lines rotated. Lock shape 6+/6−: the 3+/3− pin trio + ui v1.0.3's own
+  `dependencies` ranges recorded verbatim from its package.json (apexcharts ^5.15.2→^5.16.0, hls.js
+  ^1.6.16→^1.7.4, vue3-apexcharts ^1.11.1→^1.11.3); all three RESOLVED bytes unchanged (5.16.0 / 1.7.4 / 1.11.3).
+- **Locale re-vendor:** no `src/i18n` locale source change v1.0.2..v1.0.3 (`git diff ef4d07af..1381cab3 -- src/i18n`
+  EMPTY in ui; re-vendor at the new pin yielded byte-identical bundles, all fourteen PIN hashes HELD); PIN +
+  `SOURCE_REF` re-anchored `ef4d07af`→`1381cab3`, era comment advanced stamp-only.
+- **package/ re-vendored** (`npm run package`, deterministic ×2 — aggregate md5 `e52801331ed5c8a246e8cd851d47b2d4`,
+  174 files; 39 chunk renames + index.html). CSS censuses re-measured UNCHANGED at the v1.0.3 bytes (`color-mix(`
+  51 = 15 probes + 36 sites, zero unguarded; `100dvh` 7 tokens + 2 guards). typecheck, lint, vitest green.
+
 ### Changed — deps: @phlix/ui #v1.0.0 → #v1.0.2 (S181 pin-skew; contracts #v0.5.8 already latest)
 
 - **Pin leg:** `package.json` + lock rotated (ui peel `ef4d07af0d46121ca4cd8b28121cd92a356a839e`
