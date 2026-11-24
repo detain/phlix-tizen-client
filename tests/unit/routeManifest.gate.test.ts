@@ -11,12 +11,20 @@
  * gate existed).
  *
  * Why VENDORING and not the pinned dependency: package.json pins
- * `@phlix/contracts` at #v0.5.6. Every tag this cite historically named
- * shipped a STALE embed for this gate's purpose — #v0.4.7 embedded server
- * `2f1d2ee6…` (md5 4f03cb2e…) — while the estate-wide canonical copy was the
- * untagged master regen at server `730e55b7` (md5 pinned below, contracts
- * b34651d) — and the package `exports` map blocks JSON subpath imports
- * anyway. Vendoring this one artifact is the sanctioned interim pattern —
+ * `@phlix/contracts` at #v0.5.8. Vendoring is NOT an access limitation —
+ * the package `exports` map ships the JSON subpaths
+ * (`./dist/server-route-manifest.json`, `./dist/error-codes.json`,
+ * `./dist/mcp-scopes.json`); the earlier claim here that the map "blocks
+ * JSON subpath imports" was FALSE (cured by S-contracts-20) — a tagged
+ * subpath import has been mechanically possible since the ≥v0.5.4-era map.
+ * The real sanctioned reason is the fixture-bytes-vs-tag ladder: the tags
+ * this cite historically named shipped STALE embeds for this gate's purpose
+ * (#v0.4.7 embedded server `2f1d2ee6…`/md5 `4f03cb2e…` while the
+ * estate-wide canonical copy was the untagged master regen at server
+ * `730e55b7`), and between tags the vendored copy rides the master regen
+ * staircase — AHEAD of the tag when master moves (the 2026-11-11 lag cure
+ * below) — which a tagged import could not follow. Vendoring this one
+ * artifact is the sanctioned interim pattern —
  * identical to mobile (dc45e5c3) and roku (1da0910e). cs#48 re-pin re-measured
  * the embed: the #v0.5.0 tag (peels to contracts 8ef65d30) carries server
  * `730e55b7…`/md5 `06ce7ec9…` — byte-identical to the vendored copy — so
@@ -112,6 +120,16 @@
  * this tree). Currency follows master until the next contracts tag; trio
  * (error-codes `5d1783a7…` 205 codes / mcp-scopes `8c92c070…`) untouched.
  * 0 behavior.)
+ * #v0.5.8 tag leg (released 2026-11-12; header currency note landed by
+ * S-contracts-20): contracts #v0.5.8 (tag obj 9be24a33, peel e5a33809) has
+ * since shipped carrying exactly these bytes — its
+ * `dist/server-route-manifest.json` is server `413765b6…`/418/md5
+ * `c2111cd3…`, identical to this fixture and to the installed
+ * node_modules copy at this leg (the 'until the next contracts tag'
+ * clause above is discharged; the ladder sits AT PARITY). The lead's pin
+ * cite was advanced #v0.5.6→#v0.5.8 and the false exports-map-blocks claim
+ * struck; re-adoption of the tagged import stays the W19 phlix-ui #349
+ * lane's coordinated call, unchanged. Comment-only, 0 behavior.
  *
  * MATCHING IS EXACT, NEVER SUBSTRING: `{param}` segments are compared as
  * whole path segments (both server `{id}` and client `${...}` canonicalise to
