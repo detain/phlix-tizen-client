@@ -104,8 +104,8 @@ const emit = defineEmits<{
 .recommendation-card {
   display: flex;
   flex-direction: column;
-  background: var(--surface-2, #1f1f23);
-  border: 1px solid var(--border-subtle, #3f3f46);
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg, 0.5rem);
   overflow: hidden;
   cursor: pointer;
@@ -117,13 +117,13 @@ const emit = defineEmits<{
 }
 
 .recommendation-card:hover {
-  background: var(--surface-3, #27272a);
-  border-color: var(--border-strong, #52525b);
+  background: var(--surface-3);
+  border-color: var(--border-strong);
 }
 
 .recommendation-card:focus-visible {
-  box-shadow: 0 0 0 5px var(--accent-ring, rgba(245, 158, 11, 0.5));
-  border-color: var(--accent, #f59e0b);
+  box-shadow: 0 0 0 5px var(--accent-ring);
+  border-color: var(--accent);
 }
 
 .recommendation-card:active {
@@ -135,7 +135,7 @@ const emit = defineEmits<{
   position: relative;
   width: 100%;
   aspect-ratio: 2 / 3;
-  background: var(--surface-3, #27272a);
+  background: var(--surface-3);
   overflow: hidden;
 }
 
@@ -149,7 +149,7 @@ const emit = defineEmits<{
 .recommendation-card__poster--placeholder {
   display: grid;
   place-items: center;
-  color: var(--text-muted, #a1a1aa);
+  color: var(--text-muted);
 }
 
 .recommendation-card__poster--placeholder svg {
@@ -169,7 +169,7 @@ const emit = defineEmits<{
 .recommendation-card__title {
   font-size: var(--text-base, 1rem);
   font-weight: 600;
-  color: var(--text, #e4e4e7);
+  color: var(--text);
   margin: 0;
   /* Truncate long titles gracefully */
   display: -webkit-box;
@@ -187,13 +187,13 @@ const emit = defineEmits<{
 
 .recommendation-card__year {
   font-size: var(--text-sm, 0.875rem);
-  color: var(--text-muted, #a1a1aa);
+  color: var(--text-muted);
 }
 
 .recommendation-card__score {
   font-size: var(--text-sm, 0.875rem);
   font-weight: 600;
-  color: var(--accent, #f59e0b);
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
 
@@ -202,8 +202,11 @@ const emit = defineEmits<{
   margin-top: var(--space-1, 0.25rem);
   padding: var(--space-1, 0.25rem) var(--space-2, 0.5rem);
   border-radius: var(--radius-sm, 0.25rem);
-  background: var(--accent-dim, rgba(245, 158, 11, 0.15));
-  color: var(--accent, #f59e0b);
+  /* S-tokens-17 (phlix-tokens-016): --accent-dim was never defined estate-wide;
+     the fallback was Tailwind amber-500 @ 15% forking off the package's
+     canonical translucent accent. --accent-soft is the package value. */
+  background: var(--accent-soft);
+  color: var(--accent);
   font-size: var(--text-xs, 0.75rem);
   font-weight: 500;
   letter-spacing: 0.02em;
